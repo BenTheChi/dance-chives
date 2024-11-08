@@ -1,13 +1,25 @@
-import { Button, Group, useMantineColorScheme } from '@mantine/core';
+import React from 'react';
+import { IconMoonFilled, IconMoonOff } from '@tabler/icons-react';
+import { Button, Group, MantineColorScheme, useMantineColorScheme } from '@mantine/core';
 
-export function ColorSchemeToggle() {
+export function DarkModeToggle() {
   const { setColorScheme } = useMantineColorScheme();
+  const [darkScheme, setDarkScheme] = React.useState<MantineColorScheme>('light');
 
   return (
-    <Group justify="center" mt="xl">
-      <Button onClick={() => setColorScheme('light')}>Light</Button>
-      <Button onClick={() => setColorScheme('dark')}>Dark</Button>
-      <Button onClick={() => setColorScheme('auto')}>Auto</Button>
+    <Group justify="left">
+      <Button
+        variant="outline"
+        radius="xl"
+        onClick={() => {
+          darkScheme === 'light'
+            ? setDarkScheme('dark' as MantineColorScheme)
+            : setDarkScheme('light' as MantineColorScheme);
+          setColorScheme(darkScheme);
+        }}
+      >
+        {darkScheme === 'light' ? <IconMoonOff /> : <IconMoonFilled />}
+      </Button>
     </Group>
   );
 }

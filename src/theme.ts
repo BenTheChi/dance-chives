@@ -1,5 +1,11 @@
-import { createTheme } from '@mantine/core';
+import { createTheme, NavLink } from '@mantine/core';
 
 export const theme = createTheme({
-  /** Put your mantine theme override here */
+  components: {
+    NavLink: NavLink.extend({
+      styles: {
+        root: { padding: 15 },
+      },
+    }),
+  },
 });
