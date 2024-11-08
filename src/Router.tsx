@@ -1,5 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AboutPage } from './pages/AboutPage';
+import { AddEventPage } from './pages/AddEventPage';
+import { AddSeriesPage } from './pages/AddSeriesPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { ContactPage } from './pages/ContactPage';
 import { EducationPage } from './pages/EducationPage';
@@ -54,6 +56,14 @@ const router = createBrowserRouter([
   {
     path: '/series',
     element: <CommunityPage />,
+  },
+  {
+    path: '/add-event',
+    element: <AddEventPage />,
+  },
+  {
+    path: '/add-series',
+    element: <AddSeriesPage />,
   },
 ]);
 

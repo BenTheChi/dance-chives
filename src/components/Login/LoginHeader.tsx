@@ -33,7 +33,7 @@ export function LoginHeader() {
   }
 
   return (
-    <Button component="a" href="/login">
+    <Button component={Link} href="/login">
       {' '}
       Login / Sign Up{' '}
     </Button>
