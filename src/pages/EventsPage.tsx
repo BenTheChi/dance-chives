@@ -7,15 +7,20 @@ import {
   Center,
   Checkbox,
   Group,
+  Pagination,
   Paper,
+  Text,
   TextInput,
   Title,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
+import { TallCard } from '../components/Cards/TallCard';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
+import testData from '../test-data.json';
 
 export function EventsPage() {
+  const [activePage, setPage] = useState(1);
   const [startValue, setStartValue] = useState<Date | null>(new Date());
   const [endValue, setEndValue] = useState<Date | null>(
     new Date(new Date().setDate(new Date().getDate() + 1))
@@ -66,8 +71,8 @@ export function EventsPage() {
       <Center mb="lg">
         <Title size="h1">Events</Title>
       </Center>
-      <Card>
-        <Group align="center" justify="space-between">
+      <Card p="lg">
+        <Group align="center" justify="center">
           <Group align="flex-start">
             <Paper component={Group} withBorder p="md" radius="md">
               <TextInput
@@ -128,6 +133,14 @@ export function EventsPage() {
             Search
           </Button>
         </Group>
+
+        <Group justify="center" mt="lg">
+          {testData.map((data, index) => (
+            <TallCard key={index} cardType="event" {...data} />
+          ))}
+        </Group>
+
+        <Pagination component={Center} total={10} value={2} onChange={setPage} mt="xl" />
       </Card>
     </BasicAppShell>
   );
