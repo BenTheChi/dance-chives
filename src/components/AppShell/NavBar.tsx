@@ -5,6 +5,7 @@ import {
   IconCoin,
   IconFriends,
 } from '@tabler/icons-react';
+import { Link } from 'react-router-dom';
 import { NavLink } from '@mantine/core';
 
 export function NavBar() {
@@ -12,42 +13,43 @@ export function NavBar() {
     <>
       {[
         {
-          href: '/events',
+          to: '/events',
           key: 'events-nav',
           label: 'Events',
           icon: <IconCalendarStar size="1rem" stroke={1.5} />,
         },
         {
-          href: '/series',
+          to: '/series',
           key: 'series-nav',
           label: 'Series',
           icon: <IconCalendarMonth size="1rem" stroke={1.5} />,
         },
         {
-          href: '/community',
+          to: '/community',
           key: 'community-nav',
           label: 'Community',
           icon: <IconFriends size="1rem" stroke={1.5} />,
         },
         {
-          href: '/education',
+          to: '/education',
           key: 'education-nav',
           label: 'Education',
           icon: <IconBook size="1rem" stroke={1.5} />,
         },
         {
-          href: '/support',
+          to: '/support',
           key: 'support-nav',
           label: 'Support',
           icon: <IconCoin size="1rem" stroke={1.5} />,
         },
       ].map((link) => (
         <NavLink
-          href={link.href}
+          component={Link}
+          to={link.to}
           key={link.key}
           label={link.label}
           leftSection={link.icon}
-          active={window.location.pathname === link.href}
+          active={window.location.pathname === link.to}
         />
       ))}
     </>

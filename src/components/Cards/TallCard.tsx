@@ -11,7 +11,6 @@ interface TallCardProps {
 }
 
 export function TallCard({ cardType, title, date, city, styles }: TallCardProps) {
-  console.log(cardType);
   return (
     <Card component={Link} to={`/${cardType}`} withBorder radius="md" shadow="sm" w="300">
       <Group>
