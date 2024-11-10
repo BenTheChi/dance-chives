@@ -134,13 +134,13 @@ export function EventsPage() {
           </Button>
         </Group>
 
-        <Group justify="center" mt="lg">
+        <Group justify="center" mt="40px">
           {testData.map((data, index) => (
             <TallCard key={index} cardType="event" {...data} />
           ))}
         </Group>
 
-        <Pagination component={Center} total={10} value={2} onChange={setPage} mt="xl" />
+        <Pagination component={Center} total={10} value={activePage} onChange={setPage} mt="xl" />
       </Card>
     </BasicAppShell>
   );

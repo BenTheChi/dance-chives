@@ -1,35 +1,41 @@
 [
   {
+    "id": 1,
     "title": "Book of Styles",
     "date": 1546300800,
     "city": "Seattle",
     "styles": ["Locking", "Waacking", "Popping", "Breaking", "House", "Hip Hop"]
   },
   {
+    "id": 2,
     "title": "Dance Legends",
     "date": 1609459200,
     "city": "New York",
     "styles": ["Ballet", "Jazz", "Contemporary", "Tap", "Hip Hop", "Salsa"]
   },
   {
+    "id": 3,
     "title": "Rhythm Masters",
     "date": 1577836800,
     "city": "Los Angeles",
     "styles": ["Krump", "Vogue", "Breaking", "House", "Waacking", "Locking"]
   },
   {
+    "id": 4,
     "title": "Groove Chronicles",
     "date": 1633046400,
     "city": "Chicago",
     "styles": ["Swing", "Lindy Hop", "Charleston", "Balboa", "Shag", "Blues"]
   },
   {
+    "id": 5,
     "title": "Urban Moves",
     "date": 1664582400,
     "city": "San Francisco",
     "styles": ["Hip Hop", "House", "Breaking", "Locking", "Popping", "Waacking"]
   },
   {
+    "id": 6,
     "title": "Dance Odyssey",
     "date": 1696118400,
     "city": "Miami",

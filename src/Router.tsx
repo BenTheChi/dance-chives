@@ -5,6 +5,7 @@ import { AddSeriesPage } from './pages/AddSeriesPage';
 import { CommunityPage } from './pages/CommunityPage';
 import { ContactPage } from './pages/ContactPage';
 import { EducationPage } from './pages/EducationPage';
+import { EventPage } from './pages/EventPage';
 import { EventsPage } from './pages/EventsPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -20,6 +21,10 @@ const router = createBrowserRouter([
   {
     path: '/events',
     element: <EventsPage />,
+  },
+  {
+    path: '/event/:id',
+    element: <EventPage />,
   },
   {
     path: '/profile',

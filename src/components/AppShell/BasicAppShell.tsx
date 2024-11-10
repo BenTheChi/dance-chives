@@ -17,7 +17,7 @@ export function BasicAppShell({ children }: { children: ReactNode }) {
       <AppShell.Header>
         <Group h="100%" justify="space-between" px="md">
           <Link to="/">
-            <Image src="src/assets/ChivesLogoTransparent.png" height="75px" ml="lg" />
+            <Image src="/src/assets/ChivesLogoTransparent.png" height="75px" ml="lg" />
           </Link>
           {/* Hide this when in mobile view */}
           <Text ml="lg" size="40px" className="desktop-view">
