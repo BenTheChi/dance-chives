@@ -1,0 +1,68 @@
+{
+  "id": 1,
+  "title": "Book of Styles",
+  "date": 1546300800,
+  "city": "Seattle",
+  "styles": ["Locking", "Waacking", "Popping", "Breaking", "House", "Hip Hop"],
+  "sections": [
+    {
+      "type": "battles",
+      "styles": ["Waacking", "Locking"],
+      "format": "2v2",
+      "brackets": [
+        {
+          "round": "Prelims",
+          "videos": ["video1.mp4", "video2.mp4"]
+        },
+        {
+          "round": "Top 16",
+          "videos": ["video3.mp4", "video4.mp4"]
+        }
+      ]
+    },
+    {
+      "type": "parties",
+      "image-cards": [
+        {
+          "title": "Pre-Party",
+          "image": "pre-party.jpg",
+          "date": 1546300800,
+          "location": "Seattle",
+          "cost": 20
+        }
+      ]
+    },
+    {
+      "type": "workshops",
+      "image": ["promo1.jpg"],
+      "videos": ["recap1.mp4", "recap2.mp4"],
+      "date": 1546300800,
+      "location": "Seattle",
+      "cost": 50,
+      "teacher": "John Doe",
+      "style": "Hip Hop"
+    },
+    {
+      "type": "promorecap",
+      "videos": ["promo.mp4", "recap.mp4"],
+      "videographer": "Jane Smith"
+    },
+    {
+      "type": "generic",
+      "media": [
+        {
+          "type": "video",
+          "title": "Introduction",
+          "description": "An introduction to the event",
+          "file": "intro.mp4"
+        },
+        {
+          "type": "image",
+          "title": "Flyer",
+          "description": "Event flyer",
+          "file": "flyer.jpg"
+        }
+      ]
+    }
+  ]
+}
