@@ -10,6 +10,7 @@ import { EventsPage } from './pages/EventsPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SeriesPage } from './pages/SeriesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SupportPage } from './pages/SupportPage';
 
@@ -60,7 +61,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/series',
-    element: <CommunityPage />,
+    element: <SeriesPage />,
   },
   {
     path: '/add-event',
