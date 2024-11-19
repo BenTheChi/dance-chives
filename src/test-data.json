@@ -1,10 +1,143 @@
 [
   {
     "id": 1,
-    "title": "Book of Styles",
-    "date": 1546300800,
-    "city": "Seattle",
-    "styles": ["Locking", "Waacking", "Popping", "Breaking", "House", "Hip Hop"]
+    "title": "Waack Crackle Lock",
+    "date": 1663452000,
+    "city": "San Jose",
+    "styles": ["Locking", "Waacking"],
+    "addressName": "East Bay Community Space",
+    "address": "507 55th St, Oakland, CA 94609",
+    "description": "Waack Crackle Lock is a dance event that celebrates the art of Locking and Waacking. The event features dance workshops, performances, and battles. The event is open to all ages and skill levels. Come join us for a day of fun and dance!",
+    "images": ["waackcracklelock.webp", "waackcracklelock2.webp"],
+    "organizers": ["Alice Hur"],
+    "mcs": ["Jamrock"],
+    "djs": ["Dennis Infante"],
+    "cost": "$10-$20 sliding scale",
+    "videographers": ["I Am Exclusv"],
+    "photographers": ["Camera Person"],
+    "sponsers": ["Dancers Group Ca$h Dance Grant Program"],
+    "prizes": "$400 2v2.  $200 Each Rookie 7 to smoke.  Custom plaques & rice krispy treats",
+    "promoVideo": "https://www.youtube.com/watch?v=UqIV6XodqlY",
+    "recapVideo": "https://www.youtube.com/watch?v=X59hkaBW8Rw",
+    "sections": [
+      {
+        "type": "battles",
+        "format": "2v2 Waacking/Locking",
+        "judges": ["Tracey Wong", "Weezy", "Riot", "Jaypee"],
+        "brackets": [
+          {
+            "bracket": "Prelims",
+            "videos": [
+              {
+                "title": "2v2 Waacking Prelims Group",
+                "src": "https://www.youtube.com/watch?v=4WMUpKsz7mg",
+                "dancers": [
+                  "Alice",
+                  "Jade Z",
+                  "Jasmine",
+                  "Jenny",
+                  "Katie",
+                  "Linda",
+                  "Mimi",
+                  "Nina",
+                  "Sara",
+                  "Tina"
+                ]
+              },
+              {
+                "title": "2v2 Locking Prelims Group",
+                "src": "https://www.youtube.com/watch?v=G1VjxLg76l0",
+                "dancers": [
+                  "Bob",
+                  "Charlie",
+                  "David",
+                  "Eddie",
+                  "Frank",
+                  "George",
+                  "Harry",
+                  "Ivan",
+                  "Jack",
+                  "Kevin"
+                ]
+              }
+            ]
+          },
+          {
+            "bracket": "Top 8",
+            "videos": [
+              {
+                "title": "Zuce/Arsenal vs C-Lay/G-Funk",
+                "src": "https://www.youtube.com/watch?v=CzGvRuoUeyI",
+                "dancers": ["Zuce", "Arsenal", "C-Lay", "G-Funk"],
+                "teams": [
+                  {
+                    "name": "Zuce/Arsenal",
+                    "members": ["Zuce", "Arsenal"],
+                    "winner": true
+                  },
+                  {
+                    "name": "C-Lay/G-Funk",
+                    "members": ["C-Lay", "G-Funk"],
+                    "winner": false
+                  }
+                ]
+              },
+              {
+                "title": "Adobolock/Xone vs Soul Arch/Tori Cristi",
+                "src": "https://www.youtube.com/watch?v=8djmfQ8aaeA",
+                "dancers": ["Adobolock", "Xone", "Soul Arch", "Tori Cristi"],
+                "teams": [
+                  {
+                    "name": "Adobolock/Xone",
+                    "members": ["Adobolock", "Xone"],
+                    "winner": true
+                  },
+                  {
+                    "name": "Soul Arch/Tori Cristi",
+                    "members": ["Soul Arch", "Tori Cristi"],
+                    "winner": false
+                  }
+                ]
+              },
+              {
+                "title": "Nana/Nightstorm v. Trouble/Danzel",
+                "src": "https://www.youtube.com/watch?v=iBpQmMizxnE",
+                "dancers": ["Nana", "Nightstorm", "Trouble", "Danzel"],
+                "teams": [
+                  {
+                    "name": "Nana/Nightstorm",
+                    "members": ["Nana", "Nightstorm"],
+                    "winner": true
+                  },
+                  {
+                    "name": "Trouble/Danzel",
+                    "members": ["Trouble", "Danzel"],
+                    "winner": false
+                  }
+                ]
+              },
+              {
+                "title": "Mad Ant/Heartbreaker v. Lockstatic/Char",
+                "src": "https://www.youtube.com/watch?v=rwMfQa9Cz7o",
+                "dancers": ["Mad Ant", "Heartbreaker", "Lockstatic", "Char"],
+                "teams": [
+                  {
+                    "name": "Mad Ant/Heartbreaker",
+                    "members": ["Nana", "Nightstorm"],
+                    "winner": true
+                  },
+                  {
+                    "name": "Lockstatic/Char",
+                    "members": ["Trouble", "Danzel"],
+                    "winner": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 2,

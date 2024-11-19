@@ -1,13 +1,6 @@
 import { useState } from 'react';
 import { CheckIcon, Combobox, Group, Pill, PillsInput, useCombobox } from '@mantine/core';
 
-const groceries = ['🍎 Apples', '🍌 Bananas', '🥦 Broccoli', '🥕 Carrots', '🍫 Chocolate'];
-
-const menuData = {
-  exists: ['Jacob', 'William', 'Olivia'],
-  notExists: ['John', 'Steve', 'Alice'],
-};
-
 interface MenuInputProps {
   exists: string[];
   notExists: string[];
@@ -20,8 +13,8 @@ export function MultiSelectCreatable({ exists, notExists }: MenuInputProps) {
   });
 
   const [search, setSearch] = useState('');
-  const [data, setData] = useState([...exists, ...notExists]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [data, setData] = useState([...notExists]);
+  const [selected, setSelected] = useState<string[]>(exists);
 
   const exactOptionMatch = data.some((item) => item === search);
   const handleValueSelect = (val: string) => {
