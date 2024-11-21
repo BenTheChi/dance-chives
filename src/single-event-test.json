@@ -23,11 +23,12 @@
     {
       "type": "battles",
       "format": "2v2 Waacking/Locking",
+      "styles": ["Locking", "Waacking"],
       "judges": ["Tracey Wong", "Weezy", "Riot", "Jaypee"],
       "brackets": [
         {
-          "bracket": "Prelims",
-          "videos": [
+          "type": "Prelims",
+          "battleCards": [
             {
               "title": "2v2 Waacking Prelims Group",
               "src": "https://www.youtube.com/watch?v=4WMUpKsz7mg",
@@ -42,7 +43,8 @@
                 "Nina",
                 "Sara",
                 "Tina"
-              ]
+              ],
+              "teams": []
             },
             {
               "title": "2v2 Locking Prelims Group",
@@ -58,13 +60,14 @@
                 "Ivan",
                 "Jack",
                 "Kevin"
-              ]
+              ],
+              "teams": []
             }
           ]
         },
         {
-          "bracket": "Top 8",
-          "videos": [
+          "type": "Top 8",
+          "battleCards": [
             {
               "title": "Zuce/Arsenal vs C-Lay/G-Funk",
               "src": "https://www.youtube.com/watch?v=CzGvRuoUeyI",
@@ -134,6 +137,21 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "workshops",
+      "workshopCards": [
+        {
+          "title": "Tracey Wong Workshop",
+          "images": ["waackcracklelock.jpeg", "waackcracklelock2.webp"],
+          "date": 1663452000,
+          "address": "507 55th St, Oakland, CA 94609",
+          "cost": "$15 at the door",
+          "styles": ["Waacking"],
+          "teacher": ["Tracey Wong"],
+          "recapSrc": "https://www.youtube.com/watch?v=B0Yy4elUH-0"
         }
       ]
     }
