@@ -154,6 +154,39 @@
           "recapSrc": "https://www.youtube.com/watch?v=B0Yy4elUH-0"
         }
       ]
+    },
+    {
+      "type": "parties",
+      "partyCards": [
+        {
+          "title": "Soul Electro Party",
+          "image": "soulectroparty.jpg",
+          "date": 1663452000,
+          "address": "507 55th St, Oakland, CA 94609",
+          "cost": "$15 at the door",
+          "dj": ["Sho Nuff"]
+        }
+      ]
+    },
+    {
+      "type": "performances",
+      "performanceCards": [
+        {
+          "title": "Tracey Wong Judge Showcase",
+          "src": "https://www.youtube.com/watch?v=k2LjXAKvGR8",
+          "dancers": ["Tracey Wong"]
+        },
+        {
+          "title": "Riot Judge Showcase",
+          "src": "https://www.youtube.com/watch?v=nBJ8Gynf3kc",
+          "dancers": ["Riot"]
+        },
+        {
+          "title": "Jaypee Judge Showcase",
+          "src": "https://www.youtube.com/watch?v=qvkx_qK_X-Q",
+          "dancers": ["Jaypee"]
+        }
+      ]
     }
   ]
 }

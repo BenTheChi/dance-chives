@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Button, Group, Image, Stack, Text, Title } from '@mantine/core';
+import { PromoRecapCard } from './Cards/PromoRecapCard';
 import { MultiTextField } from './Display/MultiTextField';
 import { TextField } from './Display/TextField';
 import { useEventContext } from './Providers/EventProvider';
 import { BattlesSection } from './Sections/BattlesSection';
+import { PartiesSection } from './Sections/PartiesSection';
+import { PerformancesSection } from './Sections/PerformancesSection';
 import { WorkshopsSection } from './Sections/WorkshopsSection';
 
 export function Event() {
@@ -15,7 +18,7 @@ export function Event() {
       <Title order={2} ml="md">
         {eventData.title}
       </Title>
-      <Group align="flex-start" m="md">
+      <Group align="center" m="md">
         <Image
           src={'/src/images/' + eventData.images[0]}
           alt={`${eventData.title} Poster`}
@@ -74,6 +77,8 @@ export function Event() {
             <Button>Delete</Button>
           </Group>
         </Stack>
+        {eventData.recapVideo && <PromoRecapCard title="Recap" src={eventData.recapVideo} />}
+        {eventData.promoVideo && <PromoRecapCard title="Promo" src={eventData.promoVideo} />}
       </Group>
       {eventData.sections.map(({ type }, index) => {
         switch (type) {
@@ -81,6 +86,10 @@ export function Event() {
             return <BattlesSection key={index} sectionIndex={index} />;
           case 'workshops':
             return <WorkshopsSection key={index} sectionIndex={index} />;
+          case 'parties':
+            return <PartiesSection key={index} sectionIndex={index} />;
+          case 'performances':
+            return <PerformancesSection key={index} sectionIndex={index} />;
           default:
             return null;
         }

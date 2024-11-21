@@ -7,7 +7,7 @@ export function DarkModeToggle() {
   const [darkScheme, setDarkScheme] = React.useState<MantineColorScheme>('light');
 
   return (
-    <Group justify="left">
+    <Group justify="right">
       <Button
         variant="outline"
         radius="xl"

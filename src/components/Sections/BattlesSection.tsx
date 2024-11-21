@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Accordion, Card, Center, Group, Text, Title } from '@mantine/core';
 import { Bracket } from '../Bracket';
-import { VideoCard } from '../Cards/VideoCard';
 import { useEventContext } from '../Providers/EventProvider';
 
 //Use this for choreography, non-dance performances, showcases, exhibition battles, etc.

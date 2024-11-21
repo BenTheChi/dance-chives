@@ -1,6 +1,4 @@
 import { Card, Center, Group, Image, Stack, Text, Title } from '@mantine/core';
-import myImage from '../assets/bookofstyles.jpg';
-import { VideoCard } from '../Cards/VideoCard';
 import { WorkshopCard } from '../Cards/WorkshopCard';
 import { useEventContext } from '../Providers/EventProvider';
 
