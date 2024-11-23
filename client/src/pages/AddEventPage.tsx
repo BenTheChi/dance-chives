@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Button, Card, Center, Code, FileInput, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Card, Center, FileInput, Text, TextInput } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { hasLength, isEmail, useForm } from '@mantine/form';
-import { MultiSelectCreatable } from '@/components/Inputs/MultiSelectCreatable';
+import { MultiSelectCreatable } from '../components/Inputs/MultiSelectCreatable';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 

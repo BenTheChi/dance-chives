@@ -1,25 +1,32 @@
 {
   "compilerOptions": {
-    "types": ["node", "@testing-library/jest-dom", "vitest/globals"],
-    "target": "ESNext",
-    "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": false,
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
     "skipLibCheck": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@test-utils": ["./test-utils"]
-    }
+    "incremental": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": "."
   },
-  "include": ["src", "test-utils"]
+  "include": [
+    "server/**/*.ts",
+    "server/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "client",
+    "dist"
+  ]
 }
