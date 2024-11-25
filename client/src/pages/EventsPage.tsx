@@ -9,7 +9,6 @@ import {
   Group,
   Pagination,
   Paper,
-  Text,
   TextInput,
   Title,
 } from '@mantine/core';

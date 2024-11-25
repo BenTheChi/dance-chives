@@ -1,16 +1,4 @@
-import { IconCirclePlus } from '@tabler/icons-react';
-import { Link } from 'react-router-dom';
-import {
-  AspectRatio,
-  Button,
-  Card,
-  Center,
-  Group,
-  Spoiler,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core';
+import { AspectRatio, Card, Spoiler, Stack, Text, Title } from '@mantine/core';
 
 interface VideoCardProps {
   id?: number;

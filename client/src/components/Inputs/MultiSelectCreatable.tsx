@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { CheckIcon, Combobox, Group, Pill, PillsInput, useCombobox } from '@mantine/core';
 
 interface MenuInputProps {
-  exists: string[];
   notExists: string[];
+  onChange: (selected: string[]) => void;
+  value: string[];
 }
 
-export function MultiSelectCreatable({ exists, notExists }: MenuInputProps) {
+export function MultiSelectCreatable({ notExists, onChange, value }: MenuInputProps) {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
     onDropdownOpen: () => combobox.updateSelectedOptionIndex('active'),
@@ -14,7 +15,9 @@ export function MultiSelectCreatable({ exists, notExists }: MenuInputProps) {
 
   const [search, setSearch] = useState('');
   const [data, setData] = useState([...notExists]);
-  const [selected, setSelected] = useState<string[]>(exists);
+  const selected = value;
+  // const [data, setData] = useState([...notExists]);
+  // const [selected, setSelected] = useState<string[]>(exists);
 
   const exactOptionMatch = data.some((item) => item === search);
   const handleValueSelect = (val: string) => {
@@ -22,16 +25,13 @@ export function MultiSelectCreatable({ exists, notExists }: MenuInputProps) {
 
     if (val === '$create') {
       setData((current) => [...current, search]);
-      setSelected((current) => [...current, search]);
+      onChange([...selected, search]);
     } else {
-      setSelected((current) =>
-        current.includes(val) ? current.filter((v) => v !== val) : [...current, val]
-      );
+      onChange(selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val]);
     }
   };
 
-  const handleValueRemove = (val: string) =>
-    setSelected((current) => current.filter((v) => v !== val));
+  const handleValueRemove = (val: string) => onChange(selected.filter((v) => v !== val));
 
   const values = selected.map((item) => (
     <Pill key={item} withRemoveButton onRemove={() => handleValueRemove(item)}>

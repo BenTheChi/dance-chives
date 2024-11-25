@@ -100,7 +100,7 @@ export function AddEventPage() {
           />
           <Text>Styles</Text>
           <MultiSelectCreatable
-            exists={[]}
+            value={[]}
             notExists={stylesList}
             {...form.getInputProps('styles')}
           />
@@ -130,35 +130,35 @@ export function AddEventPage() {
           <Center>Team</Center>
           <Text>Organizers</Text>
           <MultiSelectCreatable
-            exists={[]}
+            value={[]}
             notExists={notExists}
             {...form.getInputProps('organizers')}
           />
           <Text>DJ's</Text>
-          <MultiSelectCreatable exists={[]} notExists={notExists} {...form.getInputProps('djs')} />
+          <MultiSelectCreatable value={[]} notExists={notExists} {...form.getInputProps('djs')} />
           <Text>MC's</Text>
-          <MultiSelectCreatable exists={[]} notExists={notExists} {...form.getInputProps('mcs')} />
+          <MultiSelectCreatable value={[]} notExists={notExists} {...form.getInputProps('mcs')} />
           <Text>Videographers</Text>
           <MultiSelectCreatable
-            exists={[]}
+            value={[]}
             notExists={notExists}
             {...form.getInputProps('videographers')}
           />
           <Text>Photographers</Text>
           <MultiSelectCreatable
-            exists={[]}
+            value={[]}
             notExists={notExists}
             {...form.getInputProps('photographers')}
           />
           <Text>Sponsors</Text>
           <MultiSelectCreatable
-            exists={[]}
+            value={[]}
             notExists={notExists}
             {...form.getInputProps('sponsors')}
           />
           <Text>Graphic Designers</Text>
           <MultiSelectCreatable
-            exists={[]}
+            value={[]}
             notExists={notExists}
             {...form.getInputProps('graphicDesigners')}
           />
