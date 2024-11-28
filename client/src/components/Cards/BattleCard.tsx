@@ -1,33 +1,8 @@
 import { Card, Spoiler, Stack, Text, Title } from '@mantine/core';
+import { IBattlesSection } from '../../types/types';
 import { MultiTextField } from '../Display/MultiTextField';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
-
-interface BattleCard {
-  title: string;
-  src: string;
-  teams:
-    | {
-        name: string;
-        members: string[];
-        winner: boolean;
-      }[]
-    | [];
-  dancers: string[];
-}
-
-interface Bracket {
-  type: string;
-  battleCards: BattleCard[];
-}
-
-interface BattlesSection {
-  type: string;
-  format: string;
-  styles: string[];
-  judges: string[];
-  brackets: Bracket[];
-}
 
 export function BattleCard({
   sectionIndex,
@@ -40,7 +15,7 @@ export function BattleCard({
 }) {
   const { eventData } = useEventContext();
 
-  const card = (eventData.sections[sectionIndex] as BattlesSection).brackets[bracketIndex]
+  const card = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
     .battleCards[cardIndex];
 
   return (

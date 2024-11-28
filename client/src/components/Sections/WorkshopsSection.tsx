@@ -1,30 +1,38 @@
-import { Card, Center, Group, Image, Stack, Text, Title } from '@mantine/core';
+import { IconSquareXFilled } from '@tabler/icons-react';
+import { Button, Card, Center, CloseButton, Group, Title } from '@mantine/core';
+import { IWorkshopsSection } from '@/types/types';
 import { WorkshopCard } from '../Cards/WorkshopCard';
 import { useEventContext } from '../Providers/EventProvider';
 
-interface WorkshopCard {
-  title: string;
-  images: string[];
-  date: number;
-  address: string;
-  cost: string;
-  styles: string[];
-  teacher: string[];
-  recapSrc: string;
-}
-
-interface WorkshopsSection {
-  type: string;
-  workshopCards: WorkshopCard[];
-}
-
-export function WorkshopsSection({ sectionIndex }: { sectionIndex: number }) {
+export function WorkshopsSection({
+  sectionIndex,
+  deleteSection,
+  setEditSection,
+}: {
+  sectionIndex: number;
+  deleteSection: (sectionIndex: number) => void;
+  setEditSection: (value: boolean) => void;
+}) {
   const { eventData } = useEventContext();
 
-  const currentSection = eventData.sections[sectionIndex] as WorkshopsSection;
+  const currentSection = eventData.sections[sectionIndex] as IWorkshopsSection;
+
+  const handleDeleteSection = () => {
+    setEditSection(false);
+    deleteSection(sectionIndex);
+  };
 
   return (
     <Card m="md" withBorder>
+      <Group justify="space-between">
+        <CloseButton
+          onClick={handleDeleteSection}
+          icon={<IconSquareXFilled size={40} stroke={1.5} />}
+        />
+        <Group justify="right">
+          <Button onClick={() => setEditSection(true)}>Edit</Button>
+        </Group>
+      </Group>
       <Title component={Center} order={3}>
         Workshops
       </Title>

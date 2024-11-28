@@ -11,7 +11,8 @@ const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacki
 
 export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boolean) => void }) {
   const { eventData } = useEventContext();
-  //   const [image, setImage] = useState(eventData.images[0]);
+
+  //Event info
   const [file, setFile] = useState<File | null>(null);
   const [date, setDate] = useState(new Date(eventData.date * 1000));
   const [city, setCity] = useState(eventData.city);
@@ -22,6 +23,7 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
   const [promoVideo, setpromoVideo] = useState(eventData.promoVideo);
   const [recapVideo, setrecapVideo] = useState(eventData.recapVideo);
 
+  //Event team
   const [organizers, setOrganizers] = useState(eventData.organizers);
   const [mcs, setMcs] = useState(eventData.mcs);
   const [djs, setDjs] = useState(eventData.djs);
@@ -107,7 +109,11 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
         </Stack>
         <Stack gap="0">
           <Text fw="700">Organizer:</Text>
-          <MultiSelectCreatable notExists={notExists} value={organizers} onChange={setOrganizers} />
+          <MultiSelectCreatable
+            notExists={[...notExists, ...organizers]}
+            value={organizers}
+            onChange={setOrganizers}
+          />
 
           <Text fw="700">MC:</Text>
           <MultiSelectCreatable notExists={notExists} value={mcs} onChange={setMcs} />

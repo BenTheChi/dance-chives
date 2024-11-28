@@ -1,5 +1,5 @@
 // Party Interfaces
-export interface PartyCard {
+export interface IPartyCard {
   title: string;
   image: string;
   date: number;
@@ -8,25 +8,25 @@ export interface PartyCard {
   dj: string[];
 }
 
-export interface PartiesSection {
-  type: string;
-  partyCards: PartyCard[];
+export interface IPartiesSection {
+  type: 'parties';
+  partyCards: IPartyCard[];
 }
 
 // Performance Interfaces
-export interface PerformanceCard {
+export interface IPerformanceCard {
   title: string;
   src: string;
   dancers: string[];
 }
 
-export interface PerformancesSection {
-  type: string;
-  performanceCards: PerformanceCard[];
+export interface IPerformancesSection {
+  type: 'performances';
+  performanceCards: IPerformanceCard[];
 }
 
 // Workshop Interfaces
-export interface WorkshopCard {
+export interface IWorkshopCard {
   title: string;
   images: string[];
   date: number;
@@ -37,34 +37,44 @@ export interface WorkshopCard {
   recapSrc: string;
 }
 
-export interface WorkshopsSection {
-  type: string;
-  workshopCards: WorkshopCard[];
+export interface IWorkshopsSection {
+  type: 'workshops';
+  workshopCards: IWorkshopCard[];
 }
 
-// Battle Interfaces
-export interface BattleCard {
+export interface IBattleCard {
   title: string;
   src: string;
-  teams:
-    | {
-        name: string;
-        members: string[];
-        winner: boolean;
-      }[]
-    | [];
+  teams: {
+    name: string;
+    members: string[];
+    winner: boolean;
+  }[];
   dancers: string[];
 }
 
-export interface Bracket {
+export interface IBracket {
   type: string;
-  battleCards: BattleCard[];
+  battleCards: IBattleCard[];
 }
 
-export interface BattlesSection {
-  type: string;
+export interface IBattlesSection {
+  type: 'battles';
   format: string;
   styles: string[];
   judges: string[];
-  brackets: Bracket[];
+  brackets: IBracket[];
 }
+
+export interface IWorkshopCard {
+  title: string;
+  images: string[];
+  date: number;
+  address: string;
+  cost: string;
+  styles: string[];
+  teacher: string[];
+  recapSrc: string;
+}
+
+export type ISection = IBattlesSection | IPartiesSection | IPerformancesSection | IWorkshopsSection;

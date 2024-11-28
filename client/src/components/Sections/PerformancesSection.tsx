@@ -1,27 +1,39 @@
-import { Card, Center, Group, Image, Stack, Text, Title } from '@mantine/core';
-import { PartyCard } from '../Cards/PartyCard';
+import { IconSquareXFilled } from '@tabler/icons-react';
+import { Button, Card, Center, CloseButton, Group, Title } from '@mantine/core';
+import { IPerformancesSection } from '@/types/types';
 import { PerformanceCard } from '../Cards/PerformanceCard';
 import { useEventContext } from '../Providers/EventProvider';
 
-interface PerformanceCard {
-  title: string;
-  src: string;
-  dancers: string[];
-}
-
-interface PerformancesSection {
-  type: string;
-  performanceCards: PerformanceCard[];
-}
-
 //Use this for choreography, non-dance performances, showcases, exhibition battles, etc.
-export function PerformancesSection({ sectionIndex }: { sectionIndex: number }) {
+export function PerformancesSection({
+  sectionIndex,
+  deleteSection,
+  setEditSection,
+}: {
+  sectionIndex: number;
+  deleteSection: (sectionIndex: number) => void;
+  setEditSection: (value: boolean) => void;
+}) {
   const { eventData } = useEventContext();
 
-  const currentSection = eventData.sections[sectionIndex] as PerformancesSection;
+  const currentSection = eventData.sections[sectionIndex] as IPerformancesSection;
+
+  const handleDeleteSection = () => {
+    setEditSection(false);
+    deleteSection(sectionIndex);
+  };
 
   return (
     <Card m="md" withBorder>
+      <Group justify="space-between">
+        <CloseButton
+          onClick={handleDeleteSection}
+          icon={<IconSquareXFilled size={40} stroke={1.5} />}
+        />
+        <Group justify="right">
+          <Button onClick={() => setEditSection(true)}>Edit</Button>
+        </Group>
+      </Group>
       <Title component={Center} order={3}>
         Performances
       </Title>

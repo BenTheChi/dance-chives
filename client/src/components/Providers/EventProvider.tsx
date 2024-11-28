@@ -1,63 +1,36 @@
 import { createContext, useContext, useState } from 'react';
 import initialEventData from '../../single-event-test.json';
+import {
+  IBattleCard,
+  IBattlesSection,
+  IBracket,
+  IPartiesSection,
+  IPerformancesSection,
+  ISection,
+  IWorkshopsSection,
+} from '../../types/types';
 
 // Define the full context type
 interface EventContextType {
   eventData: typeof initialEventData;
-  updateSection: (sectionIndex: number, updatedSection: BattlesSection) => void;
-  updateBracket: (sectionIndex: number, bracketIndex: number, updatedBracket: Bracket) => void;
+  updateSection: (
+    sectionIndex: number,
+    updatedSection: IBattlesSection | IWorkshopsSection
+  ) => void;
+  updateBracket: (sectionIndex: number, bracketIndex: number, updatedBracket: IBracket) => void;
   updateBattleCard: (
     sectionIndex: number,
     bracketIndex: number,
     cardIndex: number,
-    updatedBattleCard: BattleCard
+    updatedBattleCard: IBattleCard
+  ) => void;
+  addSection: (
+    section: IBattlesSection | IWorkshopsSection | IPerformancesSection | IPartiesSection
   ) => void;
 }
 
 // Create context with explicit type
 const EventContext = createContext<EventContextType | null>(null);
-
-interface BattleCard {
-  title: string;
-  src: string;
-  teams:
-    | {
-        name: string;
-        members: string[];
-        winner: boolean;
-      }[]
-    | [];
-  dancers: string[];
-}
-
-interface Bracket {
-  type: string;
-  battleCards: BattleCard[];
-}
-
-interface BattlesSection {
-  type: string;
-  format: string;
-  styles: string[];
-  judges: string[];
-  brackets: Bracket[];
-}
-
-interface WorkshopCard {
-  title: string;
-  images: string[];
-  date: number;
-  address: string;
-  cost: string;
-  styles: string[];
-  teacher: string[];
-  recapSrc: string;
-}
-
-interface WorkshopsSection {
-  type: string;
-  workshopCards: WorkshopCard[];
-}
 
 interface EventProviderProps {
   initialEventData: typeof import('../../single-event-test.json');
@@ -67,25 +40,17 @@ interface EventProviderProps {
 export function EventProvider({ initialEventData, children }: EventProviderProps) {
   const [eventData, setEventData] = useState(initialEventData);
 
-  // Update any video battle result within the nested structure
-  //   const updateBattleResult = (sectionIndex: number, bracketIndex: number, videoIndex: number, winningTeamIndex: number) => {
-
-  //     setEventData(prevState => {
-  //       const newState = { ...prevState };
-  //       const battleCard = newState.sections[sectionIndex].brackets[bracketIndex].battleCards[videoIndex];
-
-  //       // Update the winner in the teams array
-  //       battleCard.teams.forEach((team, index) => {
-  //         team.winner = (index === winningTeamIndex);
-  //       });
-
-  //       return newState;
-  //     });
-  //   };
+  const addSection = (section: ISection) => {
+    setEventData((prevState) => {
+      const newState = { ...prevState };
+      newState.sections.push(section);
+      return newState;
+    });
+  };
 
   const updateSection = (
     sectionIndex: number,
-    updatedSection: BattlesSection | WorkshopsSection
+    updatedSection: IBattlesSection | IWorkshopsSection
   ) => {
     setEventData((prevState) => {
       const newState = { ...prevState };
@@ -97,14 +62,14 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
     });
   };
 
-  const updateBracket = (sectionIndex: number, bracketIndex: number, updatedBracket: Bracket) => {
+  const updateBracket = (sectionIndex: number, bracketIndex: number, updatedBracket: IBracket) => {
     setEventData((prevState) => {
       if (prevState.sections[sectionIndex].type !== 'battles') {
         return prevState;
       }
 
       const newState = { ...prevState };
-      (newState.sections[sectionIndex] as BattlesSection).brackets[bracketIndex] = {
+      (newState.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex] = {
         ...updatedBracket,
       };
 
@@ -116,7 +81,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
     sectionIndex: number,
     bracketIndex: number,
     cardIndex: number,
-    updatedBattleCard: BattleCard
+    updatedBattleCard: IBattleCard
   ) => {
     setEventData((prevState) => {
       if (prevState.sections[sectionIndex].type !== 'battles') {
@@ -124,7 +89,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
       }
 
       const newState = { ...prevState };
-      (newState.sections[sectionIndex] as BattlesSection).brackets[bracketIndex].battleCards[
+      (newState.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards[
         cardIndex
       ] = {
         ...updatedBattleCard,
@@ -141,6 +106,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
         updateSection,
         updateBracket,
         updateBattleCard,
+        addSection,
       }}
     >
       {children}

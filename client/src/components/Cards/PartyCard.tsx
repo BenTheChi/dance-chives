@@ -1,21 +1,8 @@
 import { Card, Group, Image, Stack, Title } from '@mantine/core';
+import { IPartiesSection } from '@/types/types';
 import { MultiTextField } from '../Display/MultiTextField';
 import { TextField } from '../Display/TextField';
 import { useEventContext } from '../Providers/EventProvider';
-
-interface PartyCard {
-  title: string;
-  image: string;
-  date: number;
-  address: string;
-  cost: string;
-  dj: string[];
-}
-
-interface PartiesSection {
-  type: string;
-  partyCards: PartyCard[];
-}
 
 export function PartyCard({
   cardIndex,
@@ -25,7 +12,7 @@ export function PartyCard({
   sectionIndex: number;
 }) {
   const { eventData } = useEventContext();
-  const card = (eventData.sections[sectionIndex] as PartiesSection).partyCards[cardIndex];
+  const card = (eventData.sections[sectionIndex] as IPartiesSection).partyCards[cardIndex];
 
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">

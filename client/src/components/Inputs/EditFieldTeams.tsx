@@ -1,13 +1,15 @@
 import { Text, Textarea } from '@mantine/core';
 
-export function EditField({
+export function EditFieldTeams({
   title,
   value,
+  index,
   onChange,
 }: {
   title: string;
   value: string;
-  onChange: (newValue: string) => void;
+  index: number;
+  onChange: (newValue: string, index: number) => void;
 }) {
   const initialValue = value;
 
@@ -20,7 +22,7 @@ export function EditField({
         w="350"
         pb="sm"
         value={initialValue}
-        onChange={(event) => onChange(event.currentTarget.value)}
+        onChange={(event) => onChange(event.currentTarget.value, index)}
       />
     </>
   );

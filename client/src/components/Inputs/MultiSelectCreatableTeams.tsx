@@ -3,11 +3,12 @@ import { CheckIcon, Combobox, Group, Pill, PillsInput, useCombobox } from '@mant
 
 interface MenuInputProps {
   notExists: string[];
-  onChange: (selected: string[]) => void;
+  onChange: (selected: string[], index: number) => void;
+  index: number;
   value: string[];
 }
 
-export function MultiSelectCreatable({ notExists, onChange, value }: MenuInputProps) {
+export function MultiSelectCreatableTeams({ notExists, onChange, value, index }: MenuInputProps) {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
     onDropdownOpen: () => combobox.updateSelectedOptionIndex('active'),
@@ -23,13 +24,20 @@ export function MultiSelectCreatable({ notExists, onChange, value }: MenuInputPr
 
     if (val === '$create') {
       setData((current) => [...current, search]);
-      onChange([...selected, search]);
+      onChange([...selected, search], index);
     } else {
-      onChange(selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val]);
+      onChange(
+        selected.includes(val) ? selected.filter((v) => v !== val) : [...selected, val],
+        index
+      );
     }
   };
 
-  const handleValueRemove = (val: string) => onChange(selected.filter((v) => v !== val));
+  const handleValueRemove = (val: string) =>
+    onChange(
+      selected.filter((v) => v !== val),
+      index
+    );
 
   const values = selected.map((item) => (
     <Pill key={item} withRemoveButton onRemove={() => handleValueRemove(item)}>
