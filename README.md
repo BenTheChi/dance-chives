@@ -26,6 +26,9 @@ Dance Chives is a single-page web app designed to collect, display, and track da
 
 *Please note that Dance Chives is still under development, so some features may be limited.*
 
+**Data Model**
+![Screenshot 2024-12-01 at 5 29 22 PM](https://github.com/user-attachments/assets/e2e33658-d33e-41f1-9d0f-e17b81f2ee3a)
+
 
 ## npm scripts
 - `npm install` - install dependencies
