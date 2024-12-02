@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Button, Card, Center, FileInput, Text, TextInput } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { hasLength, isEmail, useForm } from '@mantine/form';
-import { MultiSelectCreatable } from '../components/Inputs/MultiSelectCreatable';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
+import { MultiSelectCreatable } from '../components/Inputs/MultiSelectCreatable';
 
 const notExists = [
   'John',
@@ -62,7 +62,9 @@ export function AddEventPage() {
 
   const [submittedValues, setSubmittedValues] = useState<typeof form.values | null>(null);
 
-  console.log(submittedValues);
+  function handleClick() {
+    console.log(submittedValues);
+  }
 
   return (
     <BasicAppShell>
@@ -164,7 +166,7 @@ export function AddEventPage() {
           />
         </Card>
 
-        <Button type="submit" mt="md">
+        <Button type="submit" mt="md" onClick={handleClick}>
           Submit
         </Button>
       </form>
