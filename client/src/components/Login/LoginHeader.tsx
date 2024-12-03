@@ -2,14 +2,27 @@ import React from 'react';
 import { IconCaretDown } from '@tabler/icons-react';
 import { StyledFirebaseAuth } from 'react-firebaseui';
 import { Link } from 'react-router-dom';
-import { Avatar, Button, Center, Menu, Modal, Text, Title } from '@mantine/core';
+import {
+  Avatar,
+  Button,
+  Card,
+  Center,
+  Divider,
+  Menu,
+  Modal,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import firebase, { auth } from '../../lib/firebase'; // Import from centralized config
+import { UserInfoForm } from '../UserInfoForm';
 
 export function LoginHeader() {
   const [loggedIn, setLoggedIn] = React.useState(false);
   const [opened, { open, close }] = useDisclosure(false);
-  const [authStage, setAuthStage] = React.useState('initial');
+  const [title, setTitle] = React.useState('Login');
+  // const [newUser, ]
 
   // Configure FirebaseUI.
   const uiConfig = {
@@ -66,24 +79,36 @@ export function LoginHeader() {
 
   return (
     <>
-      <Button onClick={open}>Login/Signup</Button>
+      <Button
+        onClick={() => {
+          setTitle('Login');
+          open();
+        }}
+      >
+        Login
+      </Button>
+      <Button
+        onClick={() => {
+          setTitle('Sign Up');
+          open();
+        }}
+      >
+        Sign Up
+      </Button>
       <Modal.Root opened={opened} onClose={close} size="lg">
         <Modal.Overlay />
         <Modal.Content>
-          <Modal.CloseButton m="md" />
+          <Modal.CloseButton mt="md" ml="md" />
           <Center>
-            <Title order={2}>Log In / Sign Up</Title>
+            <Title order={2}>{title}</Title>
           </Center>
 
-          {authStage === 'initial' && (
-            <div>
-              <Modal.Body>
-                <StyledFirebaseAuth
-                  uiConfig={uiConfig}
-                  firebaseAuth={auth} // Use exported auth
-                />
-              </Modal.Body>
-            </div>
+          {title == 'Sign Up' ? (
+            <UserInfoForm setTitle={setTitle} />
+          ) : (
+            <Stack p="lg">
+              <StyledFirebaseAuth uiConfig={uiConfig} firebaseAuth={auth} />
+            </Stack>
           )}
         </Modal.Content>
       </Modal.Root>

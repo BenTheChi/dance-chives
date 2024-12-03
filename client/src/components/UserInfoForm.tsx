@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Button, Card, Stack, TextInput, Title } from '@mantine/core';
+import { Button, Card, Center, Stack, TextInput, Title } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 
-export function UserInfoForm() {
+export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }) {
   const form = useForm({
     mode: 'controlled',
     initialValues: {
@@ -16,23 +16,29 @@ export function UserInfoForm() {
       password: '',
       authCode: '',
     },
+    // Optional: Add validations if needed
     // validate: {
-    //   name: hasLength({ min: 3 }, 'Must be at least 3 characters'),
-    //   email: isEmail('Invalid email'),
-    // },
+    //   username: (value) => value.length < 3 ? 'Username must be at least 3 characters' : null,
+    //   // Add other validations
+    // }
   });
 
-  const [submittedValues, setSubmittedValues] = useState<typeof form.values | null>(null);
-
-  function handleClick() {
-    console.log(submittedValues);
-  }
+  const handleSubmit = (values: typeof form.values) => {
+    // Handle form submission here
+    console.log(values);
+    // setSubmittedValues(values);
+    setTitle('Choose login method');
+  };
 
   return (
-    <Card>
-      <Title>Register</Title>
-      <form onSubmit={form.onSubmit(setSubmittedValues)}>
-        <Stack>
+    <Card mr="120" ml="120" mt="xl" mb="xl" p="xl">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault(); // Prevent default form submission
+          form.onSubmit(handleSubmit)(event); // Correctly handle form submission
+        }}
+      >
+        <Stack gap="md" mb="lg">
           <TextInput
             {...form.getInputProps('firstname')}
             label="First Name"
@@ -51,8 +57,6 @@ export function UserInfoForm() {
             placeholder="Enter your username"
             required
           />
-        </Stack>
-        <Stack>
           <DateInput
             {...form.getInputProps('dob')}
             valueFormat="MM/DD/YYYY"
@@ -68,14 +72,13 @@ export function UserInfoForm() {
           />
           <TextInput
             {...form.getInputProps('authCode')}
-            label="Auth Code Priviledges (Leave blank if you don't have one)"
+            label="Auth Code Privileges (Leave blank if you don't have one)"
             placeholder="Enter your auth code"
           />
         </Stack>
-
-        <Button type="submit" mt="md" onClick={handleClick}>
-          Submit
-        </Button>
+        <Center>
+          <Button type="submit">Submit</Button>
+        </Center>
       </form>
     </Card>
   );
