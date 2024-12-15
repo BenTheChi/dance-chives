@@ -72,8 +72,8 @@ export function BattlesSection({
         </Stack>
       </Center>
 
-      <Group mt="sm" p="0" justify="center" gap="lg">
-        <Accordion radius="xs" variant="contained">
+      <Group mt="sm" p="0" justify="center" gap="lg" ml="5%" mr="5%">
+        <Accordion radius="xs" variant="contained" w="100%">
           {currentSection.brackets &&
             currentSection.brackets.map((bracket, index) => (
               <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>

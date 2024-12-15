@@ -1,0 +1,483 @@
+[
+  {
+    "id": 1,
+    "title": "Waack Crackle Lock",
+    "date": 1663452000,
+    "city": "San Jose",
+    "styles": ["Locking", "Waacking"],
+    "addressName": "East Bay Community Space",
+    "address": "507 55th St, Oakland, CA 94609",
+    "description": "Waack Crackle Lock is a dance event that celebrates the art of Locking and Waacking. The event features dance workshops, performances, and battles. The event is open to all ages and skill levels. Come join us for a day of fun and dance!",
+    "images": ["waackcracklelock.jpeg", "waackcracklelock2.webp"],
+    "organizers": ["Alice Hur", "Alice Nope"],
+    "mcs": ["Jamrock"],
+    "djs": ["Dennis Infante"],
+    "cost": "$10-$20 sliding scale",
+    "videographers": ["I Am Exclusv"],
+    "photographers": ["Camera Person"],
+    "sponsors": ["Dancers Group Ca$h Dance Grant Program"],
+    "prizes": "$400 2v2.  $200 Each Rookie 7 to smoke.  Custom plaques & rice krispy treats",
+    "promoVideo": "https://www.youtube.com/watch?v=UqIV6XodqlY",
+    "recapVideo": "https://www.youtube.com/watch?v=X59hkaBW8Rw",
+    "sections": [
+      {
+        "type": "battles",
+        "format": "2v2 Waacking/Locking",
+        "styles": ["Locking", "Waacking"],
+        "judges": ["Tracey Wong", "Weezy", "Riot", "Jaypee"],
+        "brackets": [
+          {
+            "type": "Prelims",
+            "battleCards": [
+              {
+                "title": "2v2 Waacking Prelims Group",
+                "src": "https://www.youtube.com/watch?v=4WMUpKsz7mg",
+                "dancers": [
+                  "Alice",
+                  "Jade Z",
+                  "Jasmine",
+                  "Jenny",
+                  "Katie",
+                  "Linda",
+                  "Mimi",
+                  "Nina",
+                  "Sara",
+                  "Tina"
+                ],
+                "winners": []
+              },
+              {
+                "title": "2v2 Locking Prelims Group",
+                "src": "https://www.youtube.com/watch?v=G1VjxLg76l0",
+                "dancers": [
+                  "Bob",
+                  "Charlie",
+                  "David",
+                  "Eddie",
+                  "Frank",
+                  "George",
+                  "Harry",
+                  "Ivan",
+                  "Jack",
+                  "Kevin"
+                ],
+                "winners": []
+              }
+            ]
+          },
+          {
+            "type": "Top 8",
+            "battleCards": [
+              {
+                "title": "Zuce/Arsenal vs C-Lay/G-Funk",
+                "src": "https://www.youtube.com/watch?v=CzGvRuoUeyI",
+                "dancers": ["Zuce", "Arsenal", "C-Lay", "G-Funk"],
+                "winners": ["Zuce", "Arsenal"]
+              },
+              {
+                "title": "Adobolock/Xone vs Soul Arch/Tori Cristi",
+                "src": "https://www.youtube.com/watch?v=8djmfQ8aaeA",
+                "dancers": ["Adobolock", "Xone", "Soul Arch", "Tori Cristi"],
+                "winners": ["Adobolock", "Xone"]
+              },
+              {
+                "title": "Nana/Nightstorm v. Trouble/Danzel",
+                "src": "https://www.youtube.com/watch?v=iBpQmMizxnE",
+                "dancers": ["Nana", "Nightstorm", "Trouble", "Danzel"],
+                "winners": ["Nana", "Nightstorm"]
+              },
+              {
+                "title": "Mad Ant/Heartbreaker v. Lockstatic/Char",
+                "src": "https://www.youtube.com/watch?v=rwMfQa9Cz7o",
+                "dancers": ["Mad Ant", "Heartbreaker", "Lockstatic", "Char"],
+                "winners": ["Mad Ant", "Heartbreaker"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "workshops",
+        "workshopCards": [
+          {
+            "title": "Tracey Wong Workshop",
+            "images": ["waackcracklelock.jpeg", "waackcracklelock2.webp"],
+            "date": 1663452000,
+            "address": "507 55th St, Oakland, CA 94609",
+            "cost": "$15 at the door",
+            "styles": ["Waacking"],
+            "teacher": ["Tracey Wong"],
+            "recapSrc": "https://www.youtube.com/watch?v=B0Yy4elUH-0"
+          }
+        ]
+      },
+      {
+        "type": "parties",
+        "partyCards": [
+          {
+            "title": "Soul Electro Party",
+            "image": "soulectroparty.jpg",
+            "date": 1663452000,
+            "address": "507 55th St, Oakland, CA 94609",
+            "cost": "$15 at the door",
+            "dj": ["Sho Nuff"]
+          }
+        ]
+      },
+      {
+        "type": "performances",
+        "performanceCards": [
+          {
+            "title": "Tracey Wong Judge Showcase",
+            "src": "https://www.youtube.com/watch?v=k2LjXAKvGR8",
+            "dancers": ["Tracey Wong"]
+          },
+          {
+            "title": "Riot Judge Showcase",
+            "src": "https://www.youtube.com/watch?v=nBJ8Gynf3kc",
+            "dancers": ["Riot"]
+          },
+          {
+            "title": "Jaypee Judge Showcase",
+            "src": "https://www.youtube.com/watch?v=qvkx_qK_X-Q",
+            "dancers": ["Jaypee"]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Frankenfunk",
+    "date": 1663452000,
+    "city": "Seattle",
+    "styles": ["Popping"],
+    "addressName": "Substation",
+    "address": "645 NW 45th St, Seattle, WA 98107",
+    "description": "Frankenfunk is a popping battle featuring monster themed battles",
+    "images": ["frankenfunk.jpg"],
+    "organizers": ["Riley Baird"],
+    "mcs": ["Orb"],
+    "djs": ["Sendo", "Magic Sean"],
+    "cost": "$20",
+    "videographers": ["Yoshi Wright"],
+    "photographers": ["Camera Person"],
+    "sponsors": [],
+    "prizes": "$750 1st place.  $250 2nd place.  $150 costume contest",
+    "promoVideo": "",
+    "recapVideo": "https://www.instagram.com/p/DBukFXpSMwQ/",
+    "sections": [
+      {
+        "type": "battles",
+        "format": "1v1 Popping",
+        "styles": ["Popping"],
+        "judges": ["Future", "Scorpio", "Marvel"],
+        "brackets": [
+          {
+            "type": "Prelims",
+            "battleCards": [
+              {
+                "title": "Slim vs Poppin Touch",
+                "src": "https://www.youtube.com/watch?v=TgF9Q5gWsVI",
+                "dancers": ["Slim", "Poppin Touch"],
+                "winners": []
+              },
+              {
+                "title": "Heartbreaker vs Studious P",
+                "src": "https://www.youtube.com/watch?v=3JSB50rk94E",
+                "dancers": ["Heartbreaker", "Studious P"],
+                "winners": []
+              },
+              {
+                "title": "Davyd vs KJ",
+                "src": "https://youtu.be/9gD81UTYXSY?si=oA0wC_Ip_Io1wWgU",
+                "dancers": ["Davyd", "KJ"],
+                "winners": []
+              },
+              {
+                "title": "Ultraman vs Yevheniia",
+                "src": "https://youtu.be/zGr9qJJDalQ?si=7BXQrjqbTee6OYgO",
+                "dancers": ["Ultraman", "Yevheniia"],
+                "winners": []
+              },
+              {
+                "title": "Jiawei vs Tre-Tuna",
+                "src": "https://youtu.be/_PM8qtk4rts?si=daX-ci9sQZKcodMx",
+                "dancers": ["Jiawei", "Tre-Tuna"],
+                "winners": []
+              },
+              {
+                "title": "Rita Spirit vs Sense",
+                "src": "https://youtu.be/sLkSiU1TgtE?si=LxCm1wZaluL3oDaM",
+                "dancers": ["Rita Spirit", "Sense"],
+                "winners": []
+              },
+              {
+                "title": "MT Pop vs Mactray",
+                "src": "https://youtu.be/29_bJwWjeK0?si=sbz4qnZ6E_-fh6PR",
+                "dancers": ["MT Pop", "Mactray"],
+                "winners": []
+              },
+              {
+                "title": "Lumpia Flex vs Junior Blue",
+                "src": "https://youtu.be/MXKEGJ49vEo?si=EKM0apVEJMBUKeiF",
+                "dancers": ["Lumpia Flex", "Junior Blue"],
+                "winners": []
+              },
+              {
+                "title": "Maverick vs Chipmunk",
+                "src": "https://youtu.be/GekgjLemMqs?si=SW4Ge89qjMJWs2G5",
+                "dancers": ["Maverick", "Chipmunk"],
+                "winners": []
+              },
+              {
+                "title": "Skinny vs Ethan",
+                "src": "https://youtu.be/7nyHl_KwkUs?si=WuqaS3NVv5QMtpqN",
+                "dancers": ["Skinny", "Ethan"],
+                "winners": []
+              },
+              {
+                "title": "Di vs Soren",
+                "src": "https://youtu.be/CcgWtsNmR1M?si=58HpSNr9nBXtmIxr",
+                "dancers": ["Di", "Soren"],
+                "winners": []
+              },
+              {
+                "title": "Poppin Dorthy vs B-Almighty",
+                "src": "https://youtu.be/J8cIBuSBNB8?si=mLJeSRihxYCpkeZA",
+                "dancers": ["Poppin Dorthy", "B-Almighty"],
+                "winners": []
+              },
+              {
+                "title": "Jay Tech vs Jaykidd",
+                "src": "https://youtu.be/j0J_2DNcEVM?si=s4T7hxBy5etX6wSN",
+                "dancers": ["Jay Tech", "Jaykidd"],
+                "winners": []
+              },
+              {
+                "title": "Sean vs Riaz",
+                "src": "https://youtu.be/JRO7AO5uPVM?si=fgL-1DRFfG6VhTcs",
+                "dancers": ["Sean", "Riaz"],
+                "winners": []
+              },
+              {
+                "title": "Dr. Browne vs Shock Boogie",
+                "src": "https://youtu.be/-Aql96VuHqc?si=Iwzq_e4WNTriQ2du",
+                "dancers": ["Dr. Browne", "Shock Boogie"],
+                "winners": []
+              },
+              {
+                "title": "Djuinith vs Turismo",
+                "src": "https://youtu.be/WvAOEg40w3Q?si=ug6_-PMEYbHIkkAz",
+                "dancers": ["Djuinith", "Turismo"],
+                "winners": []
+              },
+              {
+                "title": "Christian vs Jesse Kim",
+                "src": "https://youtu.be/qqqnnvl8wfI?si=lHloECZorKciEC4i",
+                "dancers": ["Christian", "Jesse Kim"],
+                "winners": []
+              },
+              {
+                "title": "Tai vs Tomas",
+                "src": "https://youtu.be/MjYL8JlGC9E?si=X-u1geJTad7S6nox",
+                "dancers": ["Tai", "Tomas"],
+                "winners": []
+              },
+              {
+                "title": "Funkatron vs Michael",
+                "src": "https://youtu.be/wfxX8dEoDpA?si=GaYGKLGmy-w3uXw_",
+                "dancers": ["Funkatron", "Michael"],
+                "winners": []
+              },
+              {
+                "title": "Hikari vs Aneet",
+                "src": "https://youtu.be/v-OjQzivU3g?si=uG6d_K_6JoujZUQm",
+                "dancers": ["Hikari", "Aneet"],
+                "winners": []
+              },
+              {
+                "title": "Comic vs Marty",
+                "src": "https://youtu.be/qoItKyvLBVk?si=MPTwQ6XJPcMqEFtJ",
+                "dancers": ["Comic", "Marty"],
+                "winners": []
+              },
+              {
+                "title": "Leah vs D-Shapes",
+                "src": "https://youtu.be/ULd2RzcU_fM?si=c7ymxDVRPswlZQRr",
+                "dancers": ["Leah", "D-Shapes"],
+                "winners": []
+              },
+              {
+                "title": "Bcomplex vs Bimori",
+                "src": "https://youtu.be/REYMKFkEBvA?si=FAKKk5koiD5VkAPe",
+                "dancers": ["Bcomplex", "Bimori"],
+                "winners": []
+              }
+            ]
+          },
+          {
+            "type": "Top 16",
+            "battleCards": [
+              {
+                "title": "Jesse Kim vs D-Shapes",
+                "src": "https://www.youtube.com/watch?v=CzGvRuoUeyI",
+                "dancers": ["Jesse Kim", "D-Shapes"],
+                "winners": ["D-Shapes"]
+              },
+              {
+                "title": "Davyd vs Intricate",
+                "src": "https://youtu.be/PfSaUwIp4p8?si=ImpzExoBlTpFRxLj",
+                "dancers": ["Davyd", "Intricate"],
+                "winners": ["Intricate"]
+              },
+              {
+                "title": "Rita Spirit vs Maverick",
+                "src": "https://youtu.be/slZglfTMTio?si=mkrub8jSPCrrMOPh",
+                "dancers": ["Rita Spirit", "Maverick"],
+                "winners": ["Maverick"]
+              },
+              {
+                "title": "Jiawei vs Ultraman",
+                "src": "https://youtu.be/d_ZmjEDaaK0?si=Si40rNDfnmpmu3Pf",
+                "dancers": ["Jiawei", "Ultraman"],
+                "winners": ["Ultraman"]
+              },
+              {
+                "title": "MT Pop vs Yevheniia",
+                "src": "https://youtu.be/70gqlBBJOaI?si=_kzipKEAC92pmEDD",
+                "dancers": ["MT Pop", "Yevheniia"],
+                "winners": ["MT Pop"]
+              },
+              {
+                "title": "Poppin Touch vs Hikari",
+                "src": "https://youtu.be/JOqu8VcWXds?si=6dCbI6CLHw24Azr7",
+                "dancers": ["Poppin Touch", "Hikari"],
+                "winners": ["Hikari"]
+              },
+              {
+                "title": "Aneet vs Funkatron",
+                "src": "https://youtu.be/w-sSOaq4g9E?si=QdCmB8O38N4V3zrR",
+                "dancers": ["Aneet", "Funkatron"],
+                "winners": ["Funkatron"]
+              },
+              {
+                "title": "Clocks vs Tomas",
+                "src": "https://youtu.be/6LIdcNrqxjs?si=FpZ_yN8ZKe2UdcjO",
+                "dancers": ["Clocks", "Tomas"],
+                "winners": ["Clocks"]
+              }
+            ]
+          },
+          {
+            "type": "Top 8",
+            "battleCards": [
+              {
+                "title": "Funkatron vs Ultraman",
+                "src": "https://www.youtube.com/watch?v=5DdQCxz4jU8",
+                "dancers": ["Funkatron", "Ultraman"],
+                "winners": ["Funkatron"]
+              },
+              {
+                "title": "Hikari vs Clocks",
+                "src": "https://www.youtube.com/watch?v=QfGrhh343PA",
+                "dancers": ["Hikari", "Clocks"],
+                "winners": ["Clocks"]
+              },
+              {
+                "title": "Maverick vs Intricate",
+                "src": "https://www.youtube.com/watch?v=a34P4yG0NAI",
+                "dancers": ["Maverick", "Intricate"],
+                "winners": ["Intricate"]
+              },
+              {
+                "title": "MT Pop vs D-Shapes",
+                "src": "https://www.youtube.com/watch?v=CVxDFRRTmxs",
+                "dancers": ["MT Pop", "D-Shapes"],
+                "winners": ["MT Pop"]
+              }
+            ]
+          },
+          {
+            "type": "Top 4",
+            "battleCards": [
+              {
+                "title": "Funkatron vs Clocks",
+                "src": "https://youtu.be/RfvoPkteoss?si=_Zb1WlFsThDaASqQ",
+                "dancers": ["Funkatron", "Clocks"],
+                "winners": ["Clocks"]
+              },
+              {
+                "title": "MT Pop vs Intricate",
+                "src": "https://youtu.be/fXsRCXwoJJ0?si=S9N_FWGVJMH2-T70",
+                "dancers": ["MT Pop", "Intricate"],
+                "winners": ["MT Pop"]
+              }
+            ]
+          },
+          {
+            "type": "Finals",
+            "battleCards": [
+              {
+                "title": "MT Pop vs Clocks",
+                "src": "https://youtu.be/4ESPNEKl4yM?si=TD2SBX4sVhBUUG-S",
+                "dancers": ["MT Pop", "Clocks"],
+                "winners": ["MT Pop"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "workshops",
+        "workshopCards": [
+          {
+            "title": "OG Scorpio & Clocks Workshop",
+            "images": ["frankenfunkworkshop.jpg"],
+            "date": 1729904400,
+            "address": "5959 Corson Ave S, Seattle, WA 98108",
+            "cost": "1 for $25, 2 for $45, 3 for $60, 4 for $75, 5 for $90",
+            "styles": ["Popping"],
+            "teacher": ["OG Scorpio", "Clocks"],
+            "recapSrc": ""
+          },
+          {
+            "title": "Future, Marvel, Intricate Workshop",
+            "images": ["frankenfunkworkshop.jpg"],
+            "date": 1730066400,
+            "address": "5959 Corson Ave S, Seattle, WA 98108",
+            "cost": "1 for $25, 2 for $45, 3 for $60, 4 for $75, 5 for $90",
+            "styles": ["Popping", "Turfing"],
+            "teacher": ["Future", "Marvel", "Intricate"],
+            "recapSrc": ""
+          }
+        ]
+      },
+      {
+        "type": "performances",
+        "performanceCards": [
+          {
+            "title": "Costume Contest",
+            "src": "https://youtu.be/IrlN161kA-g?si=IPtPlWggRZhZzhcV",
+            "dancers": []
+          },
+          {
+            "title": "Future Judge Solo",
+            "src": "https://youtu.be/G5UhgU68Wik?si=IuTrnKYCLHd8vqlN",
+            "dancers": ["Future"]
+          },
+          {
+            "title": "Marvel Judge Solo",
+            "src": "https://youtu.be/Th-KGOAnCfo?si=2HNoxvIUXN2ocC3R",
+            "dancers": ["Marvel"]
+          },
+          {
+            "title": "OG Scorpio Judge Solo",
+            "src": "https://youtu.be/xeB4xfgw8Pc?si=n-E36XqaoqlqR54n",
+            "dancers": ["OG Scorpio"]
+          }
+        ]
+      }
+    ]
+  }
+]

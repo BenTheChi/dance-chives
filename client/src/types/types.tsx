@@ -1,3 +1,15 @@
+export interface IUser {
+  uid: number;
+  firstName: string;
+  lastName: string;
+  userName: string;
+  dob: number;
+  city: string;
+  auth: string;
+  styles: string[];
+  createdEvents: string[];
+}
+
 // Party Interfaces
 export interface IPartyCard {
   title: string;

@@ -20,6 +20,7 @@
     "storybook:build": "storybook build"
   },
   "dependencies": {
+    "@apollo/client": "^3.12.3",
     "@mantine/core": "7.14.1",
     "@mantine/dates": "7.14.1",
     "@mantine/dropzone": "^7.14.1",
@@ -28,6 +29,7 @@
     "@tabler/icons-react": "^3.21.0",
     "dayjs": "^1.11.13",
     "firebase": "^11.0.2",
+    "graphql": "^16.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-firebaseui": "^6.0.0",

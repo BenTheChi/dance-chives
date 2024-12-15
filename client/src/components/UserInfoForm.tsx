@@ -7,7 +7,7 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
   const form = useForm({
     mode: 'controlled',
     initialValues: {
-      username: '',
+      displayName: '',
       firstname: '',
       lastname: '',
       dob: '',
@@ -52,9 +52,16 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
             required
           />
           <TextInput
-            {...form.getInputProps('username')}
-            label="User Name (This will be displayed to other users)"
-            placeholder="Enter your username"
+            {...form.getInputProps('displayName')}
+            label="Display Name (This will be displayed to other users)"
+            placeholder="Enter your display name"
+            required
+          />
+          <TextInput
+            {...form.getInputProps('email')}
+            label="Email"
+            placeholder="Enter your email"
+            type="email"
             required
           />
           <DateInput
