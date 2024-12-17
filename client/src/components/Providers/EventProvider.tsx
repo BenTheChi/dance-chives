@@ -1,9 +1,9 @@
 import { createContext, useContext, useState } from 'react';
-import initialEventData from '../../single-event-test.json';
 import {
   IBattleCard,
   IBattlesSection,
   IBracket,
+  IEvent,
   IPartiesSection,
   IPerformancesSection,
   ISection,
@@ -12,7 +12,7 @@ import {
 
 // Define the full context type
 interface EventContextType {
-  eventData: typeof initialEventData;
+  eventData: object;
   updateSection: (
     sectionIndex: number,
     updatedSection: IBattlesSection | IWorkshopsSection
@@ -33,7 +33,7 @@ interface EventContextType {
 const EventContext = createContext<EventContextType | null>(null);
 
 interface EventProviderProps {
-  initialEventData: typeof import('../../single-event-test.json');
+  initialEventData: IEvent;
   children: React.ReactNode;
 }
 

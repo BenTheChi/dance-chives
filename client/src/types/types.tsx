@@ -40,7 +40,7 @@ export interface IPerformancesSection {
 // Workshop Interfaces
 export interface IWorkshopCard {
   title: string;
-  images: string[];
+  image: string;
   date: number;
   address: string;
   cost: string;
@@ -57,11 +57,6 @@ export interface IWorkshopsSection {
 export interface IBattleCard {
   title: string;
   src: string;
-  teams: {
-    name: string;
-    members: string[];
-    winner: boolean;
-  }[];
   dancers: string[];
 }
 
@@ -78,15 +73,34 @@ export interface IBattlesSection {
   brackets: IBracket[];
 }
 
-export interface IWorkshopCard {
+export type ISection = IBattlesSection | IPartiesSection | IPerformancesSection | IWorkshopsSection;
+
+export interface TallCardProps {
   title: string;
-  images: string[];
   date: number;
-  address: string;
-  cost: string;
+  city: string;
   styles: string[];
-  teacher: string[];
-  recapSrc: string;
+  cardType: string;
 }
 
-export type ISection = IBattlesSection | IPartiesSection | IPerformancesSection | IWorkshopsSection;
+export interface IEvent {
+  id: string;
+  title: string;
+  date: number;
+  city: string;
+  styles: string[];
+  addressName: string;
+  address: string;
+  description: string;
+  images: string[];
+  prizes: string;
+  cost: string;
+  organizers: string[];
+  mcs: string[];
+  djs: string[];
+  videographers: string[];
+  photographers: string[];
+  promoVideo: string;
+  recapVideo: string;
+  sections: ISection[];
+}

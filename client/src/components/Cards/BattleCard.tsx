@@ -13,7 +13,7 @@ export function BattleCard({
   bracketIndex: number;
   cardIndex: number;
 }) {
-  const { eventData } = useEventContext();
+  const { eventData } = useEventContext() as { eventData: { sections: IBattlesSection[] } };
 
   const card = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
     .battleCards[cardIndex];
@@ -24,8 +24,8 @@ export function BattleCard({
       <Video title={card.title} src={card.src} />
       <Stack>
         {card.dancers?.length > 0 && <MultiTextField title="Dancers" values={card.dancers} />}
-        <Spoiler maxHeight={1} w="460" showLabel="See Teams/Winners" hideLabel="Hide">
-          {card.teams.map((team, index) => {
+        <Spoiler maxHeight={1} w="460" showLabel="See Winners" hideLabel="Hide">
+          {/* {card.teams.map((team, index) => {
             return (
               <Stack gap="0">
                 <Text fw="bolder">
@@ -34,7 +34,7 @@ export function BattleCard({
                 <MultiTextField title="--Members" values={team.members} />
               </Stack>
             );
-          })}
+          })} */}
         </Spoiler>
       </Stack>
     </Card>

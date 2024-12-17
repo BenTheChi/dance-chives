@@ -1,19 +1,18 @@
 import { Link } from 'react-router-dom';
-import { Box, Card, Group, Image, Stack, Text } from '@mantine/core';
+import { Card, Group, Image, Stack, Text } from '@mantine/core';
+import { TallCardProps } from '@/types/types';
 import myImage from '../../assets/bookofstyles.jpg';
 
-interface TallCardProps {
-  id: number;
-  title: string;
-  date: number;
-  city: string;
-  styles: string[];
-  cardType: string;
-}
-
-export function TallCard({ id, cardType, title, date, city, styles }: TallCardProps) {
+export function TallCard({ cardType, title, date, city, styles }: TallCardProps) {
   return (
-    <Card component={Link} to={`/${cardType}/${id}`} withBorder radius="md" shadow="sm" w="300">
+    <Card
+      component={Link}
+      to={`/${cardType}/${title.toLowerCase().replace(/\s+/g, '-')}`}
+      withBorder
+      radius="md"
+      shadow="sm"
+      w="300"
+    >
       <Group>
         <Group justify="center" gap="0">
           <Image src={myImage} alt="Book of Styles" height={200} w="auto" />

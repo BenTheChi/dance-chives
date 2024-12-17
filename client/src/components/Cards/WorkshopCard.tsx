@@ -12,15 +12,15 @@ export function WorkshopCard({
   cardIndex: number;
   sectionIndex: number;
 }) {
-  const { eventData } = useEventContext();
+  const { eventData } = useEventContext() as { eventData: { sections: IWorkshopsSection[] } };
   const card = (eventData.sections[sectionIndex] as IWorkshopsSection).workshopCards[cardIndex];
 
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
       <Group align="flex-start">
-        {card.images.length > 0 && (
+        {card.image && (
           <Image
-            src={'/src/images/' + card.images[0]}
+            src={'/src/images/' + card.image}
             alt={`${card.title} Poster`}
             height={300}
             w="auto"
