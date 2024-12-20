@@ -58,9 +58,7 @@ export function EditWorkshopCard({
       />
       <Group align="flex-start">
         <Stack>
-          {workshopCard.images && (
-            <Image src={'/src/images/' + workshopCard.images[0]} height={300} w="auto" />
-          )}
+          {workshopCard.images && <Image src={workshopCard.images[0]} height={300} w="auto" />}
 
           <FileButton onChange={setFile} accept="image/png,image/jpeg">
             {(props) => <Button {...props}>Upload image</Button>}

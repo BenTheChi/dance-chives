@@ -17,12 +17,7 @@ export function PartyCard({
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
       <Group align="flex-start">
-        <Image
-          src={'/src/images/' + card.image}
-          alt={`${card.title} Poster`}
-          height={300}
-          w="auto"
-        />
+        <Image src={card.image} alt={`${card.title} Poster`} height={300} w="auto" />
         <Stack gap="0">
           <Title order={4}>{card.title}</Title>
           <TextField title="Date & Time" value={new Date(card.date * 1000).toLocaleString()} />

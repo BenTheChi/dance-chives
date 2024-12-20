@@ -58,6 +58,7 @@ export interface IBattleCard {
   title: string;
   src: string;
   dancers: string[];
+  winners: string[];
 }
 
 export interface IBracket {
@@ -103,4 +104,8 @@ export interface IEvent {
   promoVideo: string;
   recapVideo: string;
   sections: ISection[];
+}
+
+export interface EventContextType {
+  eventData: IEvent;
 }

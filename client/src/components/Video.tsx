@@ -11,6 +11,9 @@ function convertYouTubeUrlToEmbed(url: string): string | null {
 
     // Embed URL (already in correct format)
     /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^?&]+)/,
+
+    //Youtube Short
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([^?&]+)/,
   ];
 
   // Try each pattern

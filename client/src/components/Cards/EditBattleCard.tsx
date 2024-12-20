@@ -1,9 +1,7 @@
 import { IconSquareXFilled } from '@tabler/icons-react';
-import { Button, Card, CloseButton, Group, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Card, CloseButton, Group, Text, Textarea, TextInput } from '@mantine/core';
 import { IBracket } from '../../types/types';
-import { EditFieldTeams } from '../Inputs/EditFieldTeams';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
-import { MultiSelectCreatableTeams } from '../Inputs/MultiSelectCreatableTeams';
 import { Video } from '../Video';
 
 const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
@@ -34,28 +32,7 @@ export function EditBattleCard({
 
   const setDancers = (dancers: string[]) => updateCard({ dancers });
 
-  const setTeamName = (name: string, index: number) => {
-    const updatedTeams = [...card.teams];
-    updatedTeams[index] = { ...updatedTeams[index], name };
-    updateCard({ teams: updatedTeams });
-  };
-
-  const setTeam = (members: string[], index: number) => {
-    const updatedTeams = [...card.teams];
-    updatedTeams[index] = { ...updatedTeams[index], members };
-    updateCard({ teams: updatedTeams });
-  };
-
-  const addTeam = () => {
-    const updatedTeams = [...card.teams, { name: '', members: [], winner: false }];
-    updateCard({ teams: updatedTeams });
-  };
-
-  const deleteTeam = (index: number) => {
-    const updatedTeams = [...card.teams];
-    updatedTeams.splice(index, 1);
-    updateCard({ teams: updatedTeams });
-  };
+  const setWinners = (winners: string[]) => updateCard({ winners });
 
   const deleteCard = () => {
     const updatedBrackets = [...brackets];
@@ -94,36 +71,12 @@ export function EditBattleCard({
         onChange={setDancers}
       />
 
-      {card.teams.map((team, index) => {
-        return (
-          <Card withBorder m="md">
-            <CloseButton
-              onClick={() => deleteTeam(index)}
-              mb="sm"
-              icon={<IconSquareXFilled size={40} stroke={1.5} />}
-            />
-            <EditFieldTeams
-              title={`Team ${index + 1}`}
-              value={team.name}
-              index={index}
-              onChange={setTeamName}
-            />
-            <Stack gap="0">
-              <Text fw="700">Members:</Text>
-              <MultiSelectCreatableTeams
-                notExists={[...team.members, ...card.dancers]}
-                value={team.members}
-                index={index}
-                onChange={setTeam}
-              />
-            </Stack>
-          </Card>
-        );
-      })}
-
-      <Button onClick={addTeam} m="md">
-        Add Team
-      </Button>
+      <Text fw="700">Winners:</Text>
+      <MultiSelectCreatable
+        notExists={[...notExists, ...card.winners]}
+        value={card.winners}
+        onChange={setWinners}
+      />
     </Card>
   );
 }

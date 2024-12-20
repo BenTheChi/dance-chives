@@ -25,16 +25,7 @@ export function BattleCard({
       <Stack>
         {card.dancers?.length > 0 && <MultiTextField title="Dancers" values={card.dancers} />}
         <Spoiler maxHeight={1} w="460" showLabel="See Winners" hideLabel="Hide">
-          {/* {card.teams.map((team, index) => {
-            return (
-              <Stack gap="0">
-                <Text fw="bolder">
-                  {team.name} {team.winner && '(W)'}
-                </Text>
-                <MultiTextField title="--Members" values={team.members} />
-              </Stack>
-            );
-          })} */}
+          {card.winners?.length > 0 && <MultiTextField title="Winners" values={card.winners} />}
         </Spoiler>
       </Stack>
     </Card>

@@ -21,7 +21,7 @@ export function EditBracket({
     const updatedBrackets = [...brackets];
     updatedBrackets[bracketIndex] = {
       ...bracket,
-      battleCards: [...bracket.battleCards, { title: '', src: '', teams: [], dancers: [] }],
+      battleCards: [...bracket.battleCards, { title: '', src: '', winners: [], dancers: [] }],
     };
 
     setBrackets(updatedBrackets);

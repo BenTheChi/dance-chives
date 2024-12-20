@@ -13,12 +13,7 @@ export function EventSection() {
         {eventData.title}
       </Title>
       <Group align="center" m="md">
-        <Image
-          src={'/src/images/' + eventData.images[0]}
-          alt={`${eventData.title} Poster`}
-          height={500}
-          w="auto"
-        />
+        <Image src={eventData.images[0]} alt={`${eventData.title} Poster`} height={500} w="auto" />
         <Stack gap="1" align="flex-start" w="600px">
           <TextField title="Date & Time" value={new Date(eventData.date * 1000).toLocaleString()} />
 
@@ -50,10 +45,6 @@ export function EventSection() {
 
           {eventData.photographers?.length > 0 && (
             <MultiTextField title="Photographer" values={eventData.photographers} />
-          )}
-
-          {eventData.sponsors?.length > 0 && (
-            <MultiTextField title="Sponsor" values={eventData.sponsors} />
           )}
         </Stack>
         {eventData.recapVideo && <PromoRecapCard title="Recap" src={eventData.recapVideo} />}

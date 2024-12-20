@@ -12,7 +12,7 @@ import {
 
 // Define the full context type
 interface EventContextType {
-  eventData: object;
+  eventData: IEvent;
   updateSection: (
     sectionIndex: number,
     updatedSection: IBattlesSection | IWorkshopsSection
@@ -38,7 +38,7 @@ interface EventProviderProps {
 }
 
 export function EventProvider({ initialEventData, children }: EventProviderProps) {
-  const [eventData, setEventData] = useState(initialEventData);
+  const [eventData, setEventData] = useState<IEvent>(initialEventData);
 
   const addSection = (section: ISection) => {
     setEventData((prevState) => {
@@ -102,7 +102,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
   return (
     <EventContext.Provider
       value={{
-        eventData,
+        eventData: eventData as IEvent,
         updateSection,
         updateBracket,
         updateBattleCard,

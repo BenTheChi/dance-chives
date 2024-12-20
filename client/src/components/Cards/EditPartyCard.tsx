@@ -57,12 +57,7 @@ export function EditPartyCard({
       <Group align="flex-start">
         <Stack>
           {partyCard.image && (
-            <Image
-              src={'/src/images/' + partyCard.image}
-              alt={`${partyCard.title} Poster`}
-              height={300}
-              w="auto"
-            />
+            <Image src={partyCard.image} alt={`${partyCard.title} Poster`} height={300} w="auto" />
           )}
 
           <FileButton onChange={setFile} accept="image/png,image/jpeg">

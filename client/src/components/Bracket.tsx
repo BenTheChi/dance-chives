@@ -1,32 +1,7 @@
 import { Accordion, Group } from '@mantine/core';
+import { IBattlesSection } from '@/types/types';
 import { BattleCard } from './Cards/BattleCard';
 import { useEventContext } from './Providers/EventProvider';
-
-interface BattleCard {
-  title: string;
-  src: string;
-  teams:
-    | {
-        name: string;
-        members: string[];
-        winner: boolean;
-      }[]
-    | [];
-  dancers: string[];
-}
-
-interface Bracket {
-  type: string;
-  battleCards: BattleCard[];
-}
-
-interface BattlesSection {
-  type: string;
-  format: string;
-  styles: string[];
-  judges: string[];
-  brackets: Bracket[];
-}
 
 export function Bracket({
   sectionIndex,
@@ -36,7 +11,7 @@ export function Bracket({
   bracketIndex: number;
 }) {
   const { eventData } = useEventContext();
-  const currentBracket = (eventData.sections[sectionIndex] as BattlesSection).brackets[
+  const currentBracket = (eventData.sections[sectionIndex] as IBattlesSection).brackets[
     bracketIndex
   ];
 

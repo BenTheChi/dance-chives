@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { Button, FileButton, Group, Image, Stack, Text, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { EditField } from '../Inputs/EditField';
@@ -12,43 +12,55 @@ const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacki
 export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boolean) => void }) {
   const { eventData } = useEventContext();
 
-  //Event info
-  const [file, setFile] = useState<File | null>(null);
-  const [date, setDate] = useState(new Date(eventData.date * 1000));
-  const [city, setCity] = useState(eventData.city);
-  const [cost, setCost] = useState(eventData.cost);
-  const [prizes, setPrizes] = useState(eventData.prizes);
-  const [description, setDescription] = useState(eventData.description);
-  const [address, setAddress] = useState(eventData.address);
-  const [promoVideo, setpromoVideo] = useState(eventData.promoVideo);
-  const [recapVideo, setrecapVideo] = useState(eventData.recapVideo);
+  const initialState = {
+    file: null,
+    date: new Date(eventData.date * 1000),
+    city: eventData.city,
+    cost: eventData.cost,
+    prizes: eventData.prizes,
+    description: eventData.description,
+    address: eventData.address,
+    promovideo: eventData.promoVideo,
+    recapvideo: eventData.recapVideo,
+    organizers: eventData.organizers,
+    mcs: eventData.mcs,
+    djs: eventData.djs,
+    videographers: eventData.videographers,
+    photographers: eventData.photographers,
+    styles: eventData.styles,
+  };
 
-  //Event team
-  const [organizers, setOrganizers] = useState(eventData.organizers);
-  const [mcs, setMcs] = useState(eventData.mcs);
-  const [djs, setDjs] = useState(eventData.djs);
-  const [videographers, setVideographers] = useState(eventData.videographers);
-  const [photographers, setPhotographers] = useState(eventData.photographers);
-  const [sponsors, setSponsors] = useState(eventData.sponsors);
-  const [styles, setStyles] = useState(eventData.styles);
+  const actionTypes = [
+    'SET_FILE',
+    'SET_DATE',
+    'SET_CITY',
+    'SET_COST',
+    'SET_PRIZES',
+    'SET_DESCRIPTION',
+    'SET_ADDRESS',
+    'SET_PROMOVIDEO',
+    'SET_RECAPVIDEO',
+    'SET_ORGANIZERS',
+    'SET_MCS',
+    'SET_DJS',
+    'SET_VIDEOGRAPHERS',
+    'SET_PHOTOGRAPHERS',
+    'SET_STYLES',
+    'RESET_FIELDS',
+  ];
+
+  function reducer(state: typeof initialState, action: { type: string; payload?: any }) {
+    if (action.type === 'RESET_FIELDS') return initialState;
+    if (actionTypes.includes(action.type)) {
+      return { ...state, [action.type.toLowerCase().replace('set_', '')]: action.payload };
+    }
+    return state;
+  }
+
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   const resetFields = () => {
-    setDate(new Date(eventData.date * 1000));
-    setCity(eventData.city);
-    setCost(eventData.cost);
-    setPrizes(eventData.prizes);
-    setDescription(eventData.description);
-    setAddress(eventData.address);
-    setpromoVideo(eventData.promoVideo);
-    setrecapVideo(eventData.recapVideo);
-
-    setOrganizers(eventData.organizers);
-    setMcs(eventData.mcs);
-    setDjs(eventData.djs);
-    setVideographers(eventData.videographers);
-    setPhotographers(eventData.photographers);
-    setSponsors(eventData.sponsors);
-    setStyles(eventData.styles);
+    dispatch({ type: 'RESET_FIELDS' });
   };
 
   return (
@@ -61,34 +73,41 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
         <Stack>
           {eventData.images && (
             <Image
-              src={'/src/images/' + eventData.images[0]}
+              src={eventData.images[0]}
               alt={`${eventData.title} Poster`}
               height={300}
               w="auto"
             />
           )}
 
-          <FileButton onChange={setFile} accept="image/png,image/jpeg">
+          <FileButton
+            onChange={(file) => dispatch({ type: 'SET_FILE', payload: file })}
+            accept="image/png,image/jpeg"
+          >
             {(props) => <Button {...props}>Upload image</Button>}
           </FileButton>
         </Stack>
 
         <Stack>
           <Stack gap="0">
-            {recapVideo ? <Video title="Recap" src={recapVideo} /> : null}
+            {state.recapvideo ? <Video title="Recap" src={state.recapvideo} /> : null}
             <Text fw="bold">Recap Video Youtube URL:</Text>
             <TextInput
-              value={recapVideo}
-              onChange={(event) => setrecapVideo(event.currentTarget.value)}
+              value={state.recapvideo}
+              onChange={(event) =>
+                dispatch({ type: 'SET_RECAPVIDEO', payload: event.currentTarget.value })
+              }
             />
           </Stack>
 
           <Stack gap="0">
-            {promoVideo ? <Video title="Promo" src={promoVideo} /> : null}
+            {state.promovideo ? <Video title="Promo" src={state.promovideo} /> : null}
             <Text fw="bold">Promo Video Youtube URL:</Text>
             <TextInput
-              value={promoVideo}
-              onChange={(event) => setpromoVideo(event.currentTarget.value)}
+              value={state.promovideo}
+              onChange={(event) =>
+                dispatch({ type: 'SET_PROMOVIDEO', payload: event.currentTarget.value })
+              }
             />
           </Stack>
         </Stack>
@@ -96,50 +115,79 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
           <Text fw="bold">Date & Time:</Text>
           <DateTimePicker
             pb="sm"
-            onChange={(newDate) => setDate(newDate || new Date())}
-            defaultValue={date}
+            onChange={(newDate) => dispatch({ type: 'SET_DATE', payload: newDate || new Date() })}
+            defaultValue={state.date}
             clearable
           />
 
-          <EditField title="City" value={city} onChange={setCity} />
-          <EditField title="Cost" value={cost} onChange={setCost} />
-          <EditField title="Prizes" value={prizes} onChange={setPrizes} />
-          <EditField title="Address" value={address} onChange={setAddress} />
-          <EditField title="Description" value={description} onChange={setDescription} />
+          <EditField
+            title="City"
+            value={state.city}
+            onChange={(value) => dispatch({ type: 'SET_CITY', payload: value })}
+          />
+          <EditField
+            title="Cost"
+            value={state.cost}
+            onChange={(value) => dispatch({ type: 'SET_COST', payload: value })}
+          />
+          <EditField
+            title="Prizes"
+            value={state.prizes}
+            onChange={(value) => dispatch({ type: 'SET_PRIZES', payload: value })}
+          />
+          <EditField
+            title="Address"
+            value={state.address}
+            onChange={(value) => dispatch({ type: 'SET_ADDRESS', payload: value })}
+          />
+          <EditField
+            title="Description"
+            value={state.description}
+            onChange={(value) => dispatch({ type: 'SET_DESCRIPTION', payload: value })}
+          />
         </Stack>
         <Stack gap="0">
           <Text fw="700">Organizer:</Text>
           <MultiSelectCreatable
-            notExists={[...notExists, ...organizers]}
-            value={organizers}
-            onChange={setOrganizers}
+            notExists={[...notExists, ...state.organizers]}
+            value={state.organizers}
+            onChange={(value) => dispatch({ type: 'SET_ORGANIZERS', payload: value })}
           />
 
           <Text fw="700">MC:</Text>
-          <MultiSelectCreatable notExists={notExists} value={mcs} onChange={setMcs} />
+          <MultiSelectCreatable
+            notExists={notExists}
+            value={state.mcs}
+            onChange={(value) => dispatch({ type: 'SET_MCS', payload: value })}
+          />
 
           <Text fw="700">DJ:</Text>
-          <MultiSelectCreatable notExists={notExists} value={djs} onChange={setDjs} />
+          <MultiSelectCreatable
+            notExists={notExists}
+            value={state.djs}
+            onChange={(value) => dispatch({ type: 'SET_DJS', payload: value })}
+          />
 
           <Text fw="700">Videographer:</Text>
           <MultiSelectCreatable
             notExists={notExists}
-            value={videographers}
-            onChange={setVideographers}
+            value={state.videographers}
+            onChange={(value) => dispatch({ type: 'SET_VIDEOGRAPHERS', payload: value })}
           />
 
           <Text fw="700">Photographer:</Text>
           <MultiSelectCreatable
             notExists={notExists}
-            value={photographers}
-            onChange={setPhotographers}
+            value={state.photographers}
+            onChange={(value) => dispatch({ type: 'SET_PHOTOGRAPHERS', payload: value })}
           />
 
-          <Text fw="700">Sponsor:</Text>
-          <MultiSelectCreatable notExists={notExists} value={sponsors} onChange={setSponsors} />
-
           <Text fw="700">Styles:</Text>
-          <MultiSelectCreatable notExists={allStyles} value={styles} onChange={setStyles} />
+          <MultiSelectCreatable
+            notExists={allStyles}
+            value={state.styles}
+            onChange={(value) => dispatch({ type: 'SET_STYLES', payload: value })}
+          />
         </Stack>
 
         <Stack mt="md">
