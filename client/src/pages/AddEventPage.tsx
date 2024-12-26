@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { gql, useMutation } from '@apollo/client';
 import { Button, Card, Center, FileInput, Text, TextInput } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { hasLength, isEmail, useForm } from '@mantine/form';
+import ImageInputWithPreview from '@/components/Inputs/ImageInputWithPreview';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { MultiSelectCreatable } from '../components/Inputs/MultiSelectCreatable';
@@ -37,6 +39,7 @@ export function AddEventPage() {
     initialValues: {
       title: '',
       datetime: '',
+      addressName: '',
       address: '',
       city: '',
       cost: '',
@@ -60,17 +63,179 @@ export function AddEventPage() {
     // },
   });
 
-  const [submittedValues, setSubmittedValues] = useState<typeof form.values | null>(null);
+  const CREATE_EVENTS = gql`
+    mutation CreateEvents($input: [EventCreateInput!]!) {
+      createEvents(input: $input) {
+        events {
+          uuid
+          title
+          date
+          addressName
+          address
+          cost
+          prizes
+          description
+          recapVideo
+          images
+          inCity {
+            name
+            state
+            country
+          }
+          styles {
+            name
+          }
+          organizers {
+            name
+            state
+            country
+          }
+          djs {
+            name
+            state
+            country
+          }
+          mcs {
+            name
+            state
+            country
+          }
+          videographers {
+            name
+            state
+            country
+          }
+          photographers {
+            name
+            state
+            country
+          }
+          graphicDesigners {
+            name
+            state
+            country
+          }
+        }
+      }
+    }
+  `;
 
-  function handleClick() {
-    console.log(submittedValues);
+  // const [submittedValues, setSubmittedValues] = useState<typeof form.values | null>(null);
+  const [createEvents, { data, loading, error }] = useMutation(CREATE_EVENTS);
+
+  loading! && console.log(data);
+
+  function handleSubmit(submittedValues: typeof form.values) {
+    const createConnectOrCreateList = (people: String[], role: String) => {
+      return people.map((person, index) => {
+        return {
+          where: {
+            node: {
+              displayName: person,
+            },
+          },
+          onCreate: {
+            node: {
+              uuid: `123-454aa6-3cs67${role}${index}`,
+              email: '',
+              displayName: person,
+              dob: '',
+            },
+          },
+        };
+      });
+    };
+
+    const djList = createConnectOrCreateList(submittedValues.djs, 'dj');
+    const organizerList = createConnectOrCreateList(submittedValues.organizers, 'org');
+    const mcList = createConnectOrCreateList(submittedValues.mcs, 'mc');
+    const videographerList = createConnectOrCreateList(submittedValues.videographers, 'vid');
+    const photographerList = createConnectOrCreateList(submittedValues.photographers, 'photo');
+    const graphicDesignerList = createConnectOrCreateList(submittedValues.graphicDesigners, 'gd');
+
+    const styleList = submittedValues.styles.map((style, index) => {
+      return {
+        where: {
+          node: {
+            name: style,
+          },
+        },
+        onCreate: {
+          node: {
+            uuid: '123-454aa6-3cs67' + index,
+            name: style,
+          },
+        },
+      };
+    });
+
+    createEvents({
+      variables: {
+        input: [
+          {
+            uuid: '123-456-2367',
+            title: submittedValues.title,
+            date: new Date(submittedValues.datetime).getTime().toString(),
+            addressName: submittedValues.addressName,
+            address: submittedValues.address,
+            inCity: {
+              connectOrCreate: {
+                where: {
+                  node: {
+                    name: submittedValues.city,
+                  },
+                },
+                onCreate: {
+                  node: {
+                    name: submittedValues.city,
+                    state: 'test',
+                    country: 'blah',
+                  },
+                },
+              },
+            },
+            djs: {
+              connectOrCreate: djList,
+            },
+            styles: {
+              connectOrCreate: styleList,
+            },
+            organizers: {
+              connectOrCreate: organizerList,
+            },
+            mcs: {
+              connectOrCreate: mcList,
+            },
+            videographers: {
+              connectOrCreate: videographerList,
+            },
+            photographers: {
+              connectOrCreate: photographerList,
+            },
+            graphicDesigners: {
+              connectOrCreate: graphicDesignerList,
+            },
+            cost: submittedValues.cost,
+            prizes: submittedValues.prizes,
+            description: submittedValues.description,
+            images: submittedValues.images.map((image: File) => image.name),
+            recapVideo: submittedValues.recapVideo,
+            promoVideo: submittedValues.promoVideo,
+          },
+        ],
+      },
+    });
   }
 
   return (
     <BasicAppShell>
       <DarkModeToggle />
 
-      <form onSubmit={form.onSubmit(setSubmittedValues)}>
+      <form
+        onSubmit={form.onSubmit((values) => {
+          handleSubmit(values);
+        })}
+      >
         <Card radius="md" m="md" withBorder>
           <Center>Event Info</Center>
           <TextInput
@@ -82,6 +247,11 @@ export function AddEventPage() {
             {...form.getInputProps('datetime')}
             label="Date & Time (required)"
             placeholder="ex. 2023-12-31 18:00"
+          />
+          <TextInput
+            {...form.getInputProps('addressName')}
+            label="Venue Name"
+            placeholder="ex. Eastside Dance Center"
           />
           <TextInput
             {...form.getInputProps('address')}
@@ -120,12 +290,7 @@ export function AddEventPage() {
             label="Recap Video"
             placeholder="www.youtube.com/watch?v=xxxxxx"
           />
-          <FileInput
-            {...form.getInputProps('images')}
-            label="Upload images"
-            placeholder="Upload images"
-            multiple
-          />
+          <ImageInputWithPreview form={form} />
         </Card>
 
         <Card radius="md" m="md" withBorder>
@@ -136,9 +301,9 @@ export function AddEventPage() {
             notExists={notExists}
             {...form.getInputProps('organizers')}
           />
-          <Text>DJ's</Text>
+          <Text>DJs</Text>
           <MultiSelectCreatable value={[]} notExists={notExists} {...form.getInputProps('djs')} />
-          <Text>MC's</Text>
+          <Text>MCs</Text>
           <MultiSelectCreatable value={[]} notExists={notExists} {...form.getInputProps('mcs')} />
           <Text>Videographers</Text>
           <MultiSelectCreatable
@@ -152,12 +317,6 @@ export function AddEventPage() {
             notExists={notExists}
             {...form.getInputProps('photographers')}
           />
-          <Text>Sponsors</Text>
-          <MultiSelectCreatable
-            value={[]}
-            notExists={notExists}
-            {...form.getInputProps('sponsors')}
-          />
           <Text>Graphic Designers</Text>
           <MultiSelectCreatable
             value={[]}
@@ -166,7 +325,7 @@ export function AddEventPage() {
           />
         </Card>
 
-        <Button type="submit" mt="md" onClick={handleClick}>
+        <Button type="submit" mt="md">
           Submit
         </Button>
       </form>

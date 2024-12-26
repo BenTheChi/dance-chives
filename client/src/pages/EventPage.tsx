@@ -1,4 +1,5 @@
 import { gql, useQuery } from '@apollo/client';
+import { useParams } from 'react-router-dom';
 import { EventProvider } from '@/components/Providers/EventProvider';
 import { IEvent } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
@@ -150,9 +151,9 @@ interface GQLEvent {
 }
 
 export function EventPage() {
-  function convertGQL(event: GQLEvent) {
-    console.log(event);
+  const { id } = useParams();
 
+  function convertGQL(event: GQLEvent) {
     let battleSections = event.battleSections.map((section) => {
       return {
         type: section.type as 'battles',
@@ -248,7 +249,6 @@ export function EventPage() {
       photographers: event.photographers.map((person) => {
         return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
       }),
-      // sponsors: ['Dancers Group Ca$h Dance Grant Program'],
       promoVideo: event.promoVideo,
       recapVideo: event.recapVideo,
       sections: [...battleSections, ...workshopSections, ...performanceSections],
@@ -257,7 +257,7 @@ export function EventPage() {
 
   const getEventQuery = gql`
     query GetEvent {
-      events(where: { title: "Frankenfunk vol 3" }) {
+      events(where: { titleSlug: "${id}"}) {
         uuid
         title
         date

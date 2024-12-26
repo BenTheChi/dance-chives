@@ -76,12 +76,29 @@ export interface IBattlesSection {
 
 export type ISection = IBattlesSection | IPartiesSection | IPerformancesSection | IWorkshopsSection;
 
-export interface TallCardProps {
+export interface EventCardProps {
   title: string;
   date: number;
   city: string;
   styles: string[];
-  cardType: string;
+  images: string[];
+}
+
+export interface IEventCard {
+  id: string;
+  title: string;
+  date: number;
+  city: string;
+  styles: string[];
+  hasBattle: boolean;
+  hasParty: boolean;
+  hasWorkshop: boolean;
+  hasPerformance: boolean;
+  images: string[];
+}
+
+export interface IEventCards {
+  events: IEventCard[];
 }
 
 export interface IEvent {

@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Card, Group, Image, Stack, Text } from '@mantine/core';
-import { TallCardProps } from '@/types/types';
-import myImage from '../../assets/bookofstyles.jpg';
+import { EventCardProps } from '@/types/types';
 
-export function TallCard({ cardType, title, date, city, styles }: TallCardProps) {
+// import myImage from '../../assets/bookofstyles.jpg';
+
+export function EventCard({ title, date, city, styles, images }: EventCardProps) {
   return (
     <Card
       component={Link}
-      to={`/${cardType}/${title.toLowerCase().replace(/\s+/g, '-')}`}
+      to={`/event/${title.toLowerCase().replace(/\s+/g, '-')}`}
       withBorder
       radius="md"
       shadow="sm"
@@ -15,7 +16,7 @@ export function TallCard({ cardType, title, date, city, styles }: TallCardProps)
     >
       <Group>
         <Group justify="center" gap="0">
-          <Image src={myImage} alt="Book of Styles" height={200} w="auto" />
+          <Image src={images[0]} alt={title} height={200} w="auto" />
           <Text size="xl" fw={700}>
             {title}
           </Text>

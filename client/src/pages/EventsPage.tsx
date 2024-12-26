@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { gql, useQuery } from '@apollo/client';
 import { Link } from 'react-router-dom';
 import {
   Autocomplete,
@@ -13,10 +14,34 @@ import {
   Title,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
+import { IEventCard, IEventCards } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
-import { TallCard } from '../components/Cards/TallCard';
+import { EventCard } from '../components/Cards/EventCard';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
-import testData from '../test-data.json';
+
+// import testData from '../test-data.json';
+
+interface GQLEventCard {
+  __typename: string;
+  uuid: string;
+  title: string;
+  date: number;
+  images: string[];
+  inCity: {
+    __typename: string;
+    name: string;
+    state: string;
+    country: string;
+  };
+  stylesFeaturedIn: {
+    __typename: string;
+    name: string;
+  }[];
+  hasBattle: boolean;
+  hasWorkshop: boolean;
+  hasPerformance: boolean;
+  hasParty: boolean;
+}
 
 export function EventsPage() {
   const [activePage, setPage] = useState(1);
@@ -29,6 +54,25 @@ export function EventsPage() {
   const [stylesValue, setStyleValue] = useState<string>('');
   const [hasWorkshop, setHasWorkshop] = useState(false);
   const [hasParty, setHasParty] = useState(false);
+
+  function convertGQL(events: GQLEventCard[]): IEventCards {
+    return {
+      events: events.map((event) => {
+        return {
+          id: event.uuid,
+          title: event.title,
+          date: event.date,
+          city: event.inCity.name,
+          styles: event.stylesFeaturedIn.map((style) => style.name),
+          images: event.images,
+          hasBattle: event.hasBattle,
+          hasParty: event.hasParty,
+          hasWorkshop: event.hasWorkshop,
+          hasPerformance: event.hasPerformance,
+        };
+      }),
+    };
+  }
 
   const submitSearch = () => {
     console.log('Search submitted');
@@ -58,6 +102,38 @@ export function EventsPage() {
     'Hip Hop',
     'Krump',
   ];
+
+  const getEventsQuery = gql`
+    query GetEvent {
+      events {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        stylesFeaturedIn {
+          name
+        }
+        hasBattle
+        hasPerformance
+        hasWorkshop
+        hasParty
+      }
+    }
+  `;
+
+  let eventsData: IEventCards | undefined;
+  const { loading, data, error } = useQuery(getEventsQuery);
+
+  if (!loading) {
+    eventsData = convertGQL(data.events);
+  }
+
+  if (loading || !eventsData) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <BasicAppShell>
@@ -134,9 +210,8 @@ export function EventsPage() {
         </Group>
 
         <Group justify="center" mt="40px">
-          {testData.map((data, index) => (
-            <TallCard key={index} cardType="event" {...data} />
-          ))}
+          {eventsData &&
+            eventsData.events.map((data, index) => <EventCard key={index} {...data} />)}
         </Group>
 
         <Pagination component={Center} total={10} value={activePage} onChange={setPage} mt="xl" />

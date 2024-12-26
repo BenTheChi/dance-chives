@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button, Center, Divider, Group, Stack, Text } from '@mantine/core';
-import { TallCard } from '@/components/Cards/TallCard';
+import { EventCard } from '@/components/Cards/EventCard';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import testData from '../test-data.json';
@@ -28,7 +28,7 @@ export function HomePage() {
           </Center>
           <Group justify="center">
             {testData.map((data, index) => (
-              <TallCard key={index} cardType="event" {...data} />
+              <EventCard key={index} cardType="event" {...data} />
             ))}
           </Group>
         </section>
@@ -41,7 +41,7 @@ export function HomePage() {
           </Center>
           <Group justify="center">
             {testData.map((data, index) => (
-              <TallCard key={index} cardType="event" {...data} />
+              <EventCard key={index} cardType="event" {...data} />
             ))}
           </Group>
         </section>
@@ -54,7 +54,7 @@ export function HomePage() {
           </Center>
           <Group justify="center">
             {testData.map((data, index) => (
-              <TallCard key={index} cardType="series" {...data} />
+              <EventCard key={index} cardType="series" {...data} />
             ))}
           </Group>
         </section>
