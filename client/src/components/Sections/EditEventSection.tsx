@@ -1,6 +1,9 @@
-import { useReducer } from 'react';
+import { useEffect, useReducer } from 'react';
+import { gql, useMutation } from '@apollo/client';
 import { Button, FileButton, Group, Image, Stack, Text, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
+import { IEvent } from '@/types/types';
+import { ObjectComparison } from '@/utilities/utility';
 import { EditField } from '../Inputs/EditField';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
@@ -10,28 +13,10 @@ const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
 export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boolean) => void }) {
-  const { eventData } = useEventContext();
-
-  const initialState = {
-    file: null,
-    date: new Date(eventData.date * 1000),
-    city: eventData.city,
-    cost: eventData.cost,
-    prizes: eventData.prizes,
-    description: eventData.description,
-    address: eventData.address,
-    promovideo: eventData.promoVideo,
-    recapvideo: eventData.recapVideo,
-    organizers: eventData.organizers,
-    mcs: eventData.mcs,
-    djs: eventData.djs,
-    videographers: eventData.videographers,
-    photographers: eventData.photographers,
-    styles: eventData.styles,
-  };
+  const { eventData, setEventData } = useEventContext();
 
   const actionTypes = [
-    'SET_FILE',
+    'SET_IMAGES',
     'SET_DATE',
     'SET_CITY',
     'SET_COST',
@@ -49,19 +34,157 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
     'RESET_FIELDS',
   ];
 
-  function reducer(state: typeof initialState, action: { type: string; payload?: any }) {
-    if (action.type === 'RESET_FIELDS') return initialState;
+  function reducer(state: typeof eventData, action: { type: string; payload?: any }) {
+    if (action.type === 'RESET_FIELDS') return eventData;
     if (actionTypes.includes(action.type)) {
       return { ...state, [action.type.toLowerCase().replace('set_', '')]: action.payload };
     }
     return state;
   }
 
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const UPDATE_EVENTS = gql`
+    mutation UpdateEvents($where: EventWhere!, $update: EventUpdateInput!) {
+      updateEvents(where: $where, update: $update) {
+        events {
+          uuid
+          title
+          date
+          addressName
+          address
+          cost
+          prizes
+          description
+          recapVideo
+          images
+          inCity {
+            name
+          }
+          styles {
+            name
+          }
+          organizers {
+            displayName
+          }
+          djs {
+            displayName
+          }
+          mcs {
+            displayName
+          }
+          videographers {
+            displayName
+          }
+          photographers {
+            displayName
+          }
+          graphicDesigners {
+            displayName
+          }
+        }
+      }
+    }
+  `;
+
+  const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
+  const [state, dispatch] = useReducer(reducer, eventData);
+
+  useEffect(() => {
+    if (!loading && data) {
+      console.log('Mutation completed:', data);
+      console.log(eventData);
+
+      let newData = data.updateEvents.events[0];
+      newData.city = newData.inCity.name;
+
+      newData.organizers?.length &&
+        (newData.organizers = newData.organizers.map((organizer: any) => organizer.displayName));
+      newData.mcs?.length && (newData.mcs = newData.mcs.map((mc: any) => mc.displayName));
+      newData.djs?.length && (newData.djs = newData.djs.map((dj: any) => dj.displayName));
+      newData.videographers?.length &&
+        (newData.videographers = newData.videographers.map(
+          (videographer: any) => videographer.displayName
+        ));
+      newData.photographers?.length &&
+        (newData.photographers = newData.photographers.map(
+          (photographer: any) => photographer.displayName
+        ));
+      newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
+
+      setEventData({ ...eventData, ...newData });
+    }
+  }, [loading, data]);
 
   const resetFields = () => {
     dispatch({ type: 'RESET_FIELDS' });
   };
+
+  function handleSubmit() {
+    const changes = ObjectComparison(eventData, state);
+
+    const createConnectOrCreateList = (people: String[], role: String) => {
+      return people.map((person, index) => {
+        return {
+          where: {
+            node: {
+              displayName: person,
+            },
+          },
+          onCreate: {
+            node: {
+              uuid: `123-454aa6-3cs67${role}${index}`,
+              email: '',
+              displayName: person,
+              dob: '0',
+            },
+          },
+        };
+      });
+    };
+
+    const roles = ['organizers', 'mcs', 'djs', 'videographers', 'photographers'];
+
+    roles.forEach((role) => {
+      if (changes[role]) {
+        const roleList = createConnectOrCreateList(changes[role], role.slice(0, -1));
+
+        changes[role] = {
+          disconnect: [{ where: {} }],
+          connectOrCreate: roleList,
+        };
+      }
+    });
+
+    if (changes.styles) {
+      const styleList = changes.styles.map((style: String) => {
+        return {
+          where: {
+            node: {
+              name: style,
+            },
+          },
+          onCreate: {
+            node: {
+              name: style,
+            },
+          },
+        };
+      });
+
+      changes.styles = {
+        disconnect: [{ where: {} }],
+        connectOrCreate: styleList,
+      };
+    }
+
+    updateEvents({
+      variables: {
+        where: {
+          uuid: eventData.uuid,
+        },
+        update: changes,
+      },
+    });
+  }
 
   return (
     <div>
@@ -90,10 +213,10 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
 
         <Stack>
           <Stack gap="0">
-            {state.recapvideo ? <Video title="Recap" src={state.recapvideo} /> : null}
+            {state.recapVideo ? <Video title="Recap" src={state.recapVideo} /> : null}
             <Text fw="bold">Recap Video Youtube URL:</Text>
             <TextInput
-              value={state.recapvideo}
+              value={state.recapVideo}
               onChange={(event) =>
                 dispatch({ type: 'SET_RECAPVIDEO', payload: event.currentTarget.value })
               }
@@ -101,10 +224,10 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
           </Stack>
 
           <Stack gap="0">
-            {state.promovideo ? <Video title="Promo" src={state.promovideo} /> : null}
+            {state.promoVideo ? <Video title="Promo" src={state.promoVideo} /> : null}
             <Text fw="bold">Promo Video Youtube URL:</Text>
             <TextInput
-              value={state.promovideo}
+              value={state.promoVideo}
               onChange={(event) =>
                 dispatch({ type: 'SET_PROMOVIDEO', payload: event.currentTarget.value })
               }
@@ -116,7 +239,7 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
           <DateTimePicker
             pb="sm"
             onChange={(newDate) => dispatch({ type: 'SET_DATE', payload: newDate || new Date() })}
-            defaultValue={state.date}
+            defaultValue={new Date(state.date * 1000)}
             clearable
           />
 
@@ -191,7 +314,9 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
         </Stack>
 
         <Stack mt="md">
-          <Button color="green">Save</Button>
+          <Button color="green" onClick={() => handleSubmit()}>
+            Save
+          </Button>
           <Button onClick={() => resetFields()}>Reset</Button>
           <Button color="red" onClick={() => setEditEvent(false)}>
             Cancel

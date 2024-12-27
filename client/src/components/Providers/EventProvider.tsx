@@ -27,6 +27,7 @@ interface EventContextType {
   addSection: (
     section: IBattlesSection | IWorkshopsSection | IPerformancesSection | IPartiesSection
   ) => void;
+  setEventData: (eventData: IEvent) => void;
 }
 
 // Create context with explicit type
@@ -50,7 +51,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
 
   const updateSection = (
     sectionIndex: number,
-    updatedSection: IBattlesSection | IWorkshopsSection
+    updatedSection: IBattlesSection | IWorkshopsSection | IPerformancesSection | IPartiesSection
   ) => {
     setEventData((prevState) => {
       const newState = { ...prevState };
@@ -107,6 +108,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
         updateBracket,
         updateBattleCard,
         addSection,
+        setEventData,
       }}
     >
       {children}

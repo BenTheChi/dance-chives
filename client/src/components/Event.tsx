@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { gql, useMutation } from '@apollo/client';
 import { Button, Group } from '@mantine/core';
 import { ISection } from '../types/types';
 import { useEventContext } from './Providers/EventProvider';
@@ -75,10 +76,45 @@ export function Event() {
     setEditSection(newEditSection);
   }
 
+  const UPDATE_EVENTS = gql`
+    mutation UpdateEvents($where: EventWhere!, $update: EventUpdateInput!) {
+      updateEvents(where: $where, update: $update) {
+        events {
+          uuid
+          cost
+          description
+        }
+      }
+    }
+  `;
+
+  const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
+
+  loading! && console.log(data);
+
+  function sendTest() {
+    // updateEvents({
+    //   variables: {
+    //     where: {
+    //       uuid: '123-456-2367',
+    //     },
+    //     update: {
+    //       cost: '500000000',
+    //     },
+    //     // prizes: submittedValues.prizes,
+    //     // description: submittedValues.description,
+    //     // images: submittedValues.images.map((image: File) => image.name),
+    //     // recapVideo: submittedValues.recapVideo,
+    //     // promoVideo: submittedValues.promoVideo,
+    //   },
+    // });
+  }
+
   return (
     <div>
       {editEvent ? null : (
         <Group m="md" grow>
+          <Button onClick={sendTest}>Send Test</Button>
           <Button onClick={() => setEditEvent(!editEvent)}>Edit</Button>
           <Button color="red">Delete</Button>
         </Group>

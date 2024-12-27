@@ -85,7 +85,7 @@ export interface EventCardProps {
 }
 
 export interface IEventCard {
-  id: string;
+  uuid: string;
   title: string;
   date: number;
   city: string;
@@ -102,7 +102,7 @@ export interface IEventCards {
 }
 
 export interface IEvent {
-  id: string;
+  uuid: string;
   title: string;
   date: number;
   city: string;

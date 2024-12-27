@@ -63,7 +63,7 @@ interface GQLEvent {
     state: string;
     country: string;
   };
-  stylesFeaturedIn: {
+  styles: {
     __typename: string;
     name: string;
   }[];
@@ -78,7 +78,7 @@ interface GQLEvent {
       email: string;
       displayName: string;
     }[];
-    stylesFeaturedIn: {
+    styles: {
       __typename: string;
       name: string;
     }[];
@@ -136,7 +136,7 @@ interface GQLEvent {
       address: string;
       image: string;
       recapSrc: string;
-      stylesFeaturedIn: {
+      styles: {
         __typename: string;
         name: string;
       }[];
@@ -158,7 +158,7 @@ export function EventPage() {
       return {
         type: section.type as 'battles',
         format: section.format,
-        styles: section.stylesFeaturedIn.map((style) => style.name),
+        styles: section.styles.map((style) => style.name),
         judges: section.judges.map((person) => {
           return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
         }),
@@ -198,7 +198,7 @@ export function EventPage() {
             address: workshopCard.address,
             cost: workshopCard.cost,
             recapSrc: workshopCard.recapSrc,
-            styles: workshopCard.stylesFeaturedIn.map((style) => style.name),
+            styles: workshopCard.styles.map((style) => style.name),
             teacher: workshopCard.teachers.map((person) => {
               return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
             }),
@@ -223,11 +223,11 @@ export function EventPage() {
     });
 
     return {
-      id: event.uuid,
+      uuid: event.uuid,
       title: event.title,
       date: event.date,
       city: event.inCity.name,
-      styles: event.stylesFeaturedIn.map((style) => style.name),
+      styles: event.styles.map((style) => style.name),
       addressName: event.addressName,
       address: event.address,
       description: event.description,
@@ -302,13 +302,13 @@ export function EventPage() {
         inCity {
           name
         }
-        stylesFeaturedIn {
+        styles {
           name
         }
         battleSections: sectionsPartOf(where: { type: "battles" }) {
           type
           format
-          stylesFeaturedIn {
+          styles {
             name
           }
           judges {
@@ -356,7 +356,7 @@ export function EventPage() {
             address
             image
             recapSrc
-            stylesFeaturedIn {
+            styles {
               name
             }
             teachers {

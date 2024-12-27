@@ -86,34 +86,22 @@ export function AddEventPage() {
             name
           }
           organizers {
-            name
-            state
-            country
+            displayName
           }
           djs {
-            name
-            state
-            country
+            displayName
           }
           mcs {
-            name
-            state
-            country
+            displayName
           }
           videographers {
-            name
-            state
-            country
+            displayName
           }
           photographers {
-            name
-            state
-            country
+            displayName
           }
           graphicDesigners {
-            name
-            state
-            country
+            displayName
           }
         }
       }
@@ -126,105 +114,116 @@ export function AddEventPage() {
   loading! && console.log(data);
 
   function handleSubmit(submittedValues: typeof form.values) {
-    const createConnectOrCreateList = (people: String[], role: String) => {
-      return people.map((person, index) => {
+    if (submittedValues) {
+      //inCity: {
+      //  create: {
+      //   node: {
+      //     name: submittedValues.city,
+      //     state: 'test',
+      //     country: 'blah'
+      //   }
+      // }
+      // },
+      const createConnectOrCreateList = (people: String[], role: String) => {
+        return people.map((person, index) => {
+          return {
+            where: {
+              node: {
+                displayName: person,
+              },
+            },
+            onCreate: {
+              node: {
+                uuid: `123-454aa6-3cs67${role}${index}`,
+                email: '',
+                displayName: person,
+                dob: '0',
+              },
+            },
+          };
+        });
+      };
+
+      const djList = createConnectOrCreateList(submittedValues.djs, 'dj');
+      const organizerList = createConnectOrCreateList(submittedValues.organizers, 'org');
+      const mcList = createConnectOrCreateList(submittedValues.mcs, 'mc');
+      const videographerList = createConnectOrCreateList(submittedValues.videographers, 'vid');
+      const photographerList = createConnectOrCreateList(submittedValues.photographers, 'photo');
+      const graphicDesignerList = createConnectOrCreateList(submittedValues.graphicDesigners, 'gd');
+
+      const styleList = submittedValues.styles.map((style, index) => {
         return {
           where: {
             node: {
-              displayName: person,
+              name: style,
             },
           },
           onCreate: {
             node: {
-              uuid: `123-454aa6-3cs67${role}${index}`,
-              email: '',
-              displayName: person,
-              dob: '',
+              name: style,
             },
           },
         };
       });
-    };
 
-    const djList = createConnectOrCreateList(submittedValues.djs, 'dj');
-    const organizerList = createConnectOrCreateList(submittedValues.organizers, 'org');
-    const mcList = createConnectOrCreateList(submittedValues.mcs, 'mc');
-    const videographerList = createConnectOrCreateList(submittedValues.videographers, 'vid');
-    const photographerList = createConnectOrCreateList(submittedValues.photographers, 'photo');
-    const graphicDesignerList = createConnectOrCreateList(submittedValues.graphicDesigners, 'gd');
-
-    const styleList = submittedValues.styles.map((style, index) => {
-      return {
-        where: {
-          node: {
-            name: style,
-          },
-        },
-        onCreate: {
-          node: {
-            uuid: '123-454aa6-3cs67' + index,
-            name: style,
-          },
-        },
-      };
-    });
-
-    createEvents({
-      variables: {
-        input: [
-          {
-            uuid: '123-456-2367',
-            title: submittedValues.title,
-            date: new Date(submittedValues.datetime).getTime().toString(),
-            addressName: submittedValues.addressName,
-            address: submittedValues.address,
-            inCity: {
-              connectOrCreate: {
-                where: {
-                  node: {
-                    name: submittedValues.city,
+      createEvents({
+        variables: {
+          input: [
+            {
+              uuid: '123-456-2367',
+              title: submittedValues.title,
+              titleSlug: submittedValues.title.toLowerCase().replace(/ /g, '-'),
+              date: (new Date(submittedValues.datetime).getTime() / 1000).toString(),
+              addressName: submittedValues.addressName,
+              address: submittedValues.address,
+              inCity: {
+                connectOrCreate: {
+                  where: {
+                    node: {
+                      name: submittedValues.city,
+                    },
                   },
-                },
-                onCreate: {
-                  node: {
-                    name: submittedValues.city,
-                    state: 'test',
-                    country: 'blah',
+                  onCreate: {
+                    node: {
+                      name: submittedValues.city,
+                      state: 'test',
+                      country: 'blah',
+                    },
                   },
                 },
               },
+              djs: {
+                connectOrCreate: djList,
+              },
+              styles: {
+                connectOrCreate: styleList,
+              },
+              organizers: {
+                connectOrCreate: organizerList,
+              },
+              mcs: {
+                connectOrCreate: mcList,
+              },
+              videographers: {
+                connectOrCreate: videographerList,
+              },
+              photographers: {
+                connectOrCreate: photographerList,
+              },
+              graphicDesigners: {
+                connectOrCreate: graphicDesignerList,
+              },
+              cost: submittedValues.cost,
+              prizes: submittedValues.prizes,
+              description: submittedValues.description,
+              images: submittedValues.images.map((image: File) => image.name),
+              recapVideo: submittedValues.recapVideo,
+              promoVideo: submittedValues.promoVideo,
             },
-            djs: {
-              connectOrCreate: djList,
-            },
-            styles: {
-              connectOrCreate: styleList,
-            },
-            organizers: {
-              connectOrCreate: organizerList,
-            },
-            mcs: {
-              connectOrCreate: mcList,
-            },
-            videographers: {
-              connectOrCreate: videographerList,
-            },
-            photographers: {
-              connectOrCreate: photographerList,
-            },
-            graphicDesigners: {
-              connectOrCreate: graphicDesignerList,
-            },
-            cost: submittedValues.cost,
-            prizes: submittedValues.prizes,
-            description: submittedValues.description,
-            images: submittedValues.images.map((image: File) => image.name),
-            recapVideo: submittedValues.recapVideo,
-            promoVideo: submittedValues.promoVideo,
-          },
-        ],
-      },
-    });
+          ],
+        },
+      });
+    }
   }
 
   return (

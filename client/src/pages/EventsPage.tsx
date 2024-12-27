@@ -33,7 +33,7 @@ interface GQLEventCard {
     state: string;
     country: string;
   };
-  stylesFeaturedIn: {
+  styles: {
     __typename: string;
     name: string;
   }[];
@@ -59,11 +59,11 @@ export function EventsPage() {
     return {
       events: events.map((event) => {
         return {
-          id: event.uuid,
+          uuid: event.uuid,
           title: event.title,
           date: event.date,
           city: event.inCity.name,
-          styles: event.stylesFeaturedIn.map((style) => style.name),
+          styles: event.styles.map((style) => style.name),
           images: event.images,
           hasBattle: event.hasBattle,
           hasParty: event.hasParty,
@@ -113,7 +113,7 @@ export function EventsPage() {
         inCity {
           name
         }
-        stylesFeaturedIn {
+        styles {
           name
         }
         hasBattle
