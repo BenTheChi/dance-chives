@@ -21,6 +21,7 @@ export interface IPartyCard {
 }
 
 export interface IPartiesSection {
+  uuid: string;
   type: 'parties';
   partyCards: IPartyCard[];
 }
@@ -33,6 +34,7 @@ export interface IPerformanceCard {
 }
 
 export interface IPerformancesSection {
+  uuid: string;
   type: 'performances';
   performanceCards: IPerformanceCard[];
 }
@@ -50,6 +52,7 @@ export interface IWorkshopCard {
 }
 
 export interface IWorkshopsSection {
+  uuid: string;
   type: 'workshops';
   workshopCards: IWorkshopCard[];
 }
@@ -59,6 +62,7 @@ export interface IBattleCard {
   src: string;
   dancers: string[];
   winners: string[];
+  isEditable: boolean;
 }
 
 export interface IBracket {
@@ -67,6 +71,7 @@ export interface IBracket {
 }
 
 export interface IBattlesSection {
+  uuid: string;
   type: 'battles';
   format: string;
   styles: string[];

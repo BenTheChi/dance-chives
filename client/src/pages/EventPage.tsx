@@ -156,6 +156,7 @@ export function EventPage() {
   function convertGQL(event: GQLEvent) {
     let battleSections = event.battleSections.map((section) => {
       return {
+        uuid: section.uuid,
         type: section.type as 'battles',
         format: section.format,
         styles: section.styles.map((style) => style.name),
@@ -168,6 +169,7 @@ export function EventPage() {
             order: bracket.order,
             battleCards: bracket.battleCardsIn.map((battleCard) => {
               return {
+                isEditable: false,
                 title: battleCard.title,
                 src: battleCard.src,
                 dancers: battleCard.dancers.map((person) => {
@@ -189,6 +191,7 @@ export function EventPage() {
 
     let workshopSections = event.workshopSections.map((section) => {
       return {
+        uuid: section.uuid,
         type: section.type as 'workshops',
         workshopCards: section.workshopCardsIn.map((workshopCard) => {
           return {
@@ -209,6 +212,7 @@ export function EventPage() {
 
     let performanceSections = event.performanceSections.map((section) => {
       return {
+        uuid: section.uuid,
         type: section.type as 'performances',
         performanceCards: section.performanceCardsIn.map((performanceCard) => {
           return {
@@ -306,6 +310,7 @@ export function EventPage() {
           name
         }
         battleSections: sectionsPartOf(where: { type: "battles" }) {
+          uuid
           type
           format
           styles {
@@ -336,6 +341,7 @@ export function EventPage() {
           }
         }
         performanceSections: sectionsPartOf(where: { type: "performances" }) {
+          uuid
           type
           performanceCardsIn {
             title
@@ -348,6 +354,7 @@ export function EventPage() {
           }
         }
         workshopSections: sectionsPartOf(where: { type: "workshops" }) {
+          uuid
           type
           workshopCardsIn {
             title

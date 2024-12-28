@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 import {
@@ -11,6 +12,7 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { IBattleCard, IBattlesSection } from '@/types/types';
 import { Bracket } from '../Bracket';
 import { useEventContext } from '../Providers/EventProvider';
 
@@ -30,7 +32,7 @@ export function BattlesSection({
   };
 
   const { eventData } = useEventContext();
-  const currentSection = eventData.sections[sectionIndex];
+  const currentSection = eventData.sections[sectionIndex] as IBattlesSection;
 
   return (
     <Card m="md" withBorder>
@@ -45,7 +47,7 @@ export function BattlesSection({
       </Group>
 
       <Title component={Center} order={3}>
-        {eventData.sections[sectionIndex].format}
+        {currentSection.format as IBattlesSection['format']}
       </Title>
 
       <Center mt="md">

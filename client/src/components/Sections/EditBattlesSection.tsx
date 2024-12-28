@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { gql, useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import {
   Button,
@@ -12,6 +13,7 @@ import {
   Title,
 } from '@mantine/core';
 import { IBracket } from '@/types/types';
+import { deepDiff, ObjectComparison } from '@/utilities/utility';
 import { EditBracket } from '../EditBracket';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
@@ -32,6 +34,51 @@ export function EditBattlesSection({
 
   //Create a copy of the value to avoid direct context changes
   const currentSection = JSON.parse(JSON.stringify(eventData.sections[sectionIndex]));
+
+  const UPDATE_EVENTS = gql`
+    mutation UpdateEvents($where: EventWhere!, $update: EventUpdateInput!) {
+      updateEvents(where: $where, update: $update) {
+        events {
+          uuid
+          title
+          date
+          addressName
+          address
+          cost
+          prizes
+          description
+          recapVideo
+          images
+          inCity {
+            name
+          }
+          styles {
+            name
+          }
+          organizers {
+            displayName
+          }
+          djs {
+            displayName
+          }
+          mcs {
+            displayName
+          }
+          videographers {
+            displayName
+          }
+          photographers {
+            displayName
+          }
+          graphicDesigners {
+            displayName
+          }
+        }
+      }
+    }
+  `;
+
+  const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
 
   const [title, setTitle] = useState(currentSection.format);
   const [judges, setJudges] = useState(currentSection.judges || []);
@@ -56,9 +103,123 @@ export function EditBattlesSection({
     deleteSection(sectionIndex);
   };
 
+  const handleSubmit = () => {
+    // console.log(eventData.sections[sectionIndex]);
+    // console.log(judges);
+    // console.log(styles);
+
+    console.log(eventData.sections[sectionIndex], {
+      format: title,
+      judges: judges,
+      styles: styles,
+      brackets: brackets,
+    });
+
+    const changes = deepDiff(eventData.sections[sectionIndex], {
+      format: title,
+      judges: judges,
+      styles: styles,
+      brackets: brackets,
+    });
+
+    console.log(changes);
+
+    // const createConnectOrCreateList = (people: String[], role: String) => {
+    //   return people.map((person, index) => {
+    //     return {
+    //       where: {
+    //         node: {
+    //           displayName: person,
+    //         },
+    //       },
+    //       onCreate: {
+    //         node: {
+    //           uuid: `123-454aa6-3cs67${role}${index}`,
+    //           email: '',
+    //           displayName: person,
+    //           dob: '0',
+    //         },
+    //       },
+    //     };
+    //   });
+    // };
+
+    // const roles = ['organizers', 'mcs', 'djs', 'videographers', 'photographers'];
+
+    // roles.forEach((role) => {
+    //   if (changes[role]) {
+    //     const roleList = createConnectOrCreateList(changes[role], role.slice(0, -1));
+
+    //     changes[role] = {
+    //       disconnect: [{ where: {} }],
+    //       connectOrCreate: roleList,
+    //     };
+    //   }
+    // });
+
+    // if (changes.styles) {
+    //   const styleList = changes.styles.map((style: String) => {
+    //     return {
+    //       where: {
+    //         node: {
+    //           name: style,
+    //         },
+    //       },
+    //       onCreate: {
+    //         node: {
+    //           name: style,
+    //         },
+    //       },
+    //     };
+    //   });
+
+    //   changes.styles = {
+    //     disconnect: [{ where: {} }],
+    //     connectOrCreate: styleList,
+    //   };
+    // }
+
+    // updateEvents({
+    //   variables: {
+    //     where: {
+    //       uuid: eventData.uuid,
+    //     },
+    //     update: {
+    //       where: {
+    //         uuid: eventData.sections[sectionIndex].uuid,
+    //       },
+    //     },
+    //   },
+    // });
+  };
+
   useEffect(() => {
     // Re-render the component when brackets change
   }, [eventData]);
+
+  useEffect(() => {
+    if (!loading && data) {
+      console.log(data);
+      // let newData = data.updateEvents.events[0];
+      // newData.city = newData.inCity.name;
+
+      // newData.organizers?.length &&
+      //   (newData.organizers = newData.organizers.map((organizer: any) => organizer.displayName));
+      // newData.mcs?.length && (newData.mcs = newData.mcs.map((mc: any) => mc.displayName));
+      // newData.djs?.length && (newData.djs = newData.djs.map((dj: any) => dj.displayName));
+      // newData.videographers?.length &&
+      //   (newData.videographers = newData.videographers.map(
+      //     (videographer: any) => videographer.displayName
+      //   ));
+      // newData.photographers?.length &&
+      //   (newData.photographers = newData.photographers.map(
+      //     (photographer: any) => photographer.displayName
+      //   ));
+      // newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
+
+      // setEventData({ ...eventData, ...newData });
+    }
+  }, [loading, data]);
 
   return (
     <Card m="md" withBorder>
@@ -68,7 +229,9 @@ export function EditBattlesSection({
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
         <Group>
-          <Button color="green">Save</Button>
+          <Button onClick={() => handleSubmit()} color="green">
+            Save
+          </Button>
           <Button onClick={() => resetFields()}>Reset</Button>
           <Button color="red" onClick={() => setEditSection(false)}>
             Cancel
@@ -89,7 +252,7 @@ export function EditBattlesSection({
         </Stack>
       </Center>
 
-      <Group mt="sm" p="0" justify="center" gap="lg">
+      <Stack mt="sm" p="0" justify="center" gap="lg">
         {brackets.map((bracket, index) => (
           <EditBracket
             key={index}
@@ -99,7 +262,7 @@ export function EditBattlesSection({
             setBrackets={setBrackets}
           ></EditBracket>
         ))}
-      </Group>
+      </Stack>
       <Center m="md">
         <Select
           size="md"

@@ -2,7 +2,6 @@ import { useEffect, useReducer } from 'react';
 import { gql, useMutation } from '@apollo/client';
 import { Button, FileButton, Group, Image, Stack, Text, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
-import { IEvent } from '@/types/types';
 import { ObjectComparison } from '@/utilities/utility';
 import { EditField } from '../Inputs/EditField';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
@@ -90,9 +89,6 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
 
   useEffect(() => {
     if (!loading && data) {
-      console.log('Mutation completed:', data);
-      console.log(eventData);
-
       let newData = data.updateEvents.events[0];
       newData.city = newData.inCity.name;
 
@@ -131,7 +127,7 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
           },
           onCreate: {
             node: {
-              uuid: `123-454aa6-3cs67${role}${index}`,
+              uuid: crypto.randomUUID(),
               email: '',
               displayName: person,
               dob: '0',

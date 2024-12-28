@@ -30,6 +30,7 @@ export function Event() {
     switch (type) {
       case 'battles':
         section = {
+          uuid: crypto.randomUUID(),
           type: 'battles',
           format: 'New Battle',
           styles: [],
@@ -39,24 +40,28 @@ export function Event() {
         break;
       case 'workshops':
         section = {
+          uuid: crypto.randomUUID(),
           type: 'workshops',
           workshopCards: [],
         };
         break;
       case 'parties':
         section = {
+          uuid: crypto.randomUUID(),
           type: 'parties',
           partyCards: [],
         };
         break;
       case 'performances':
         section = {
+          uuid: crypto.randomUUID(),
           type: 'performances',
           performanceCards: [],
         };
         break;
       default:
         section = {
+          uuid: crypto.randomUUID(),
           type: 'battles',
           format: 'New Battle',
           styles: [],
