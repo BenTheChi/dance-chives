@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 import {
@@ -12,37 +11,36 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IBattleCard, IBattlesSection } from '@/types/types';
+import { IBattlesSection } from '@/types/types';
 import { Bracket } from '../Bracket';
 import { useEventContext } from '../Providers/EventProvider';
+import { EditBattlesSection } from './EditBattlesSection';
 
 //Use this for choreography, non-dance performances, showcases, exhibition battles, etc.
-export function BattlesSection({
-  sectionIndex,
-  deleteSection,
-  setEditSection,
-}: {
-  sectionIndex: number;
-  deleteSection: (sectionIndex: number) => void;
-  setEditSection: (value: boolean) => void;
-}) {
-  const handleDeleteSection = () => {
-    setEditSection(false);
-    deleteSection(sectionIndex);
-  };
-
-  const { eventData } = useEventContext();
+export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
+  const { eventData, setEventData, deleteSection } = useEventContext();
   const currentSection = eventData.sections[sectionIndex] as IBattlesSection;
 
+  if (currentSection.isEditable) {
+    return <EditBattlesSection sectionIndex={sectionIndex}></EditBattlesSection>;
+  }
   return (
     <Card m="md" withBorder>
       <Group justify="space-between">
         <CloseButton
-          onClick={handleDeleteSection}
+          onClick={() => deleteSection(sectionIndex)}
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
         <Group justify="right">
-          <Button onClick={() => setEditSection(true)}>Edit</Button>
+          <Button
+            onClick={() => {
+              let updatedEvent = { ...eventData };
+              (updatedEvent.sections[sectionIndex] as IBattlesSection).isEditable = true;
+              setEventData(updatedEvent);
+            }}
+          >
+            Edit
+          </Button>
         </Group>
       </Group>
 

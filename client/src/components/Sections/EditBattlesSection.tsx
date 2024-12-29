@@ -21,16 +21,9 @@ import { useEventContext } from '../Providers/EventProvider';
 const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
-export function EditBattlesSection({
-  sectionIndex,
-  setEditSection,
-  deleteSection,
-}: {
-  sectionIndex: number;
-  setEditSection: (value: boolean) => void;
-  deleteSection: (sectionIndex: number) => void;
-}) {
-  const { eventData } = useEventContext();
+export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
+  const { eventData, deleteSection, updateBattlesSection, updateBattlesSectionEditable } =
+    useEventContext();
 
   //Create a copy of the value to avoid direct context changes
   const currentSection = JSON.parse(JSON.stringify(eventData.sections[sectionIndex]));
@@ -96,11 +89,6 @@ export function EditBattlesSection({
 
   const addBracket = () => {
     setBrackets([...brackets, { type: bracketName, battleCards: [] }]);
-  };
-
-  const handleDeleteSection = () => {
-    setEditSection(false);
-    deleteSection(sectionIndex);
   };
 
   const handleSubmit = () => {
@@ -191,6 +179,15 @@ export function EditBattlesSection({
     //     },
     //   },
     // });
+    updateBattlesSection(sectionIndex, {
+      uuid: currentSection.uuid,
+      type: 'battles',
+      format: title,
+      judges: judges,
+      styles: styles,
+      brackets: brackets,
+      isEditable: false,
+    });
   };
 
   useEffect(() => {
@@ -225,7 +222,7 @@ export function EditBattlesSection({
     <Card m="md" withBorder>
       <Group justify="space-between">
         <CloseButton
-          onClick={handleDeleteSection}
+          onClick={() => deleteSection(sectionIndex)}
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
         <Group>
@@ -233,7 +230,7 @@ export function EditBattlesSection({
             Save
           </Button>
           <Button onClick={() => resetFields()}>Reset</Button>
-          <Button color="red" onClick={() => setEditSection(false)}>
+          <Button color="red" onClick={() => updateBattlesSectionEditable(sectionIndex, false)}>
             Cancel
           </Button>
         </Group>
@@ -256,7 +253,6 @@ export function EditBattlesSection({
         {brackets.map((bracket, index) => (
           <EditBracket
             key={index}
-            sectionIndex={sectionIndex}
             bracketIndex={index}
             brackets={brackets}
             setBrackets={setBrackets}

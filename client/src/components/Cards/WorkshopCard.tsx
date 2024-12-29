@@ -1,9 +1,11 @@
-import { Card, Group, Image, Stack, Title } from '@mantine/core';
+import { IconSquareXFilled } from '@tabler/icons-react';
+import { Button, Card, CloseButton, Group, Image, Stack, Title } from '@mantine/core';
 import { IWorkshopsSection } from '@/types/types';
 import { MultiTextField } from '../Display/MultiTextField';
 import { TextField } from '../Display/TextField';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
+import { EditWorkshopCard } from './EditWorkshopCard';
 
 export function WorkshopCard({
   cardIndex,
@@ -12,11 +14,23 @@ export function WorkshopCard({
   cardIndex: number;
   sectionIndex: number;
 }) {
-  const { eventData } = useEventContext() as { eventData: { sections: IWorkshopsSection[] } };
+  const { eventData, deleteCard, updateCardEditable } = useEventContext();
   const card = (eventData.sections[sectionIndex] as IWorkshopsSection).workshopCards[cardIndex];
 
+  if (card.isEditable) {
+    return <EditWorkshopCard sectionIndex={sectionIndex} cardIndex={cardIndex} />;
+  }
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
+      <Group justify="space-between">
+        <CloseButton
+          onClick={() => deleteCard(sectionIndex, cardIndex)}
+          icon={<IconSquareXFilled size={40} stroke={1.5} />}
+        />
+        <Group justify="right">
+          <Button onClick={() => updateCardEditable(sectionIndex, cardIndex, true)}>Edit</Button>
+        </Group>
+      </Group>
       <Group align="flex-start">
         {card.image && (
           <Image src={card.image} alt={`${card.title} Poster`} height={300} w="auto" />

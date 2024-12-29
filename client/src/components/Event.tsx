@@ -4,11 +4,7 @@ import { Button, Group } from '@mantine/core';
 import { ISection } from '../types/types';
 import { useEventContext } from './Providers/EventProvider';
 import { BattlesSection } from './Sections/BattlesSection';
-import { EditBattlesSection } from './Sections/EditBattlesSection';
 import { EditEventSection } from './Sections/EditEventSection';
-import { EditPartiesSection } from './Sections/EditPartiesSection';
-import { EditPerformancesSection } from './Sections/EditPerformancesSection';
-import { EditWorkshopsSection } from './Sections/EditWorkshopsSection';
 import { EventSection } from './Sections/EventSection';
 import { PartiesSection } from './Sections/PartiesSection';
 import { PerformancesSection } from './Sections/PerformancesSection';
@@ -19,17 +15,13 @@ export function Event() {
   const [editEvent, setEditEvent] = useState(false);
   const [editSection, setEditSection] = useState<boolean[]>(eventData.sections.map(() => false));
 
-  function deleteSection(sectionIndex: number) {
-    //Make Ajax call to delete section
-    eventData.sections.splice(sectionIndex, 1);
-  }
-
   function createSection(type: string) {
     let section: ISection;
     //Make Ajax call to add section
     switch (type) {
       case 'battles':
         section = {
+          isEditable: true,
           uuid: crypto.randomUUID(),
           type: 'battles',
           format: 'New Battle',
@@ -59,8 +51,11 @@ export function Event() {
           performanceCards: [],
         };
         break;
+
+      //Default to battles
       default:
         section = {
+          isEditable: true,
           uuid: crypto.randomUUID(),
           type: 'battles',
           format: 'New Battle',
@@ -73,12 +68,6 @@ export function Event() {
 
     addSection(section);
     setEditSection([...editSection, true]);
-  }
-
-  function setEditSectionArray(value: boolean, sectionIndex: number) {
-    const newEditSection = [...editSection];
-    newEditSection[sectionIndex] = value;
-    setEditSection(newEditSection);
   }
 
   const UPDATE_EVENTS = gql`
@@ -129,69 +118,13 @@ export function Event() {
       {eventData.sections.map(({ type }: { type: string }, index: number) => {
         switch (type) {
           case 'battles':
-            return editSection[index] ? (
-              <EditBattlesSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            ) : (
-              <BattlesSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            );
+            return <BattlesSection key={index} sectionIndex={index} />;
           case 'workshops':
-            return editSection[index] ? (
-              <EditWorkshopsSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            ) : (
-              <WorkshopsSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            );
+            return <WorkshopsSection key={index} sectionIndex={index} />;
           case 'parties':
-            return editSection[index] ? (
-              <EditPartiesSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            ) : (
-              <PartiesSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            );
+            return <PartiesSection key={index} sectionIndex={index} />;
           case 'performances':
-            return editSection[index] ? (
-              <EditPerformancesSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            ) : (
-              <PerformancesSection
-                key={index}
-                sectionIndex={index}
-                deleteSection={deleteSection}
-                setEditSection={(value) => setEditSectionArray(value, index)}
-              />
-            );
+            return <PerformancesSection key={index} sectionIndex={index} />;
           default:
             return null;
         }

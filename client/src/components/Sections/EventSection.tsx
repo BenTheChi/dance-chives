@@ -1,4 +1,4 @@
-import { Button, Group, Image, Stack, Text, Title } from '@mantine/core';
+import { Group, Image, Stack, Title } from '@mantine/core';
 import { PromoRecapCard } from '../Cards/PromoRecapCard';
 import { MultiTextField } from '../Display/MultiTextField';
 import { TextField } from '../Display/TextField';

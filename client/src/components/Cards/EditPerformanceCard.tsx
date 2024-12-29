@@ -1,41 +1,73 @@
+import { useState } from 'react';
 import { IconSquareXFilled } from '@tabler/icons-react';
-import { Card, CloseButton, Stack, Text, Textarea, TextInput } from '@mantine/core';
-import { IPerformanceCard } from '@/types/types';
+import { Button, Card, CloseButton, Group, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { IPerformancesSection } from '@/types/types';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
 
 const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
 export function EditPerformanceCard({
+  sectionIndex,
   cardIndex,
-  deleteCard,
-  performanceCards,
-  setPerformanceCards,
 }: {
+  sectionIndex: number;
   cardIndex: number;
-  deleteCard: (index: number) => void;
-  performanceCards: IPerformanceCard[];
-  setPerformanceCards: (value: IPerformanceCard[]) => void;
 }) {
-  const performanceCard = performanceCards[cardIndex];
+  const { eventData, setEventData, updateCard, deleteCard } = useEventContext();
 
-  const updateCard = (update: Partial<typeof performanceCard>) => {
-    const updatePerformanceCards = [...performanceCards];
-    updatePerformanceCards[cardIndex] = { ...performanceCard, ...update };
-    setPerformanceCards(updatePerformanceCards);
+  const performanceCard = (eventData.sections[sectionIndex] as IPerformancesSection)
+    .performanceCards[cardIndex];
+
+  const [title, setTitle] = useState(performanceCard.title);
+  const [videoSrc, setVideoSrc] = useState(performanceCard.src);
+  const [dancers, setDancers] = useState(performanceCard.dancers);
+
+  const resetFields = () => {
+    setTitle(performanceCard.title);
+    setVideoSrc(performanceCard.src);
+    setDancers(performanceCard.dancers);
   };
-
-  const setTitle = (title: string) => updateCard({ title });
-  const setVideoSrc = (src: string) => updateCard({ src });
-  const setDancers = (dancers: string[]) => updateCard({ dancers });
 
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
-      <CloseButton
-        onClick={() => deleteCard(cardIndex)}
-        mb="sm"
-        icon={<IconSquareXFilled size={40} stroke={1.5} />}
-      />
+      <Group justify="space-between">
+        <CloseButton
+          onClick={() => deleteCard(sectionIndex, cardIndex)}
+          mb="sm"
+          icon={<IconSquareXFilled size={40} stroke={1.5} />}
+        />
+
+        <Group>
+          <Button
+            onClick={() =>
+              updateCard(sectionIndex, cardIndex, {
+                title,
+                src: videoSrc,
+                dancers,
+                isEditable: false,
+              })
+            }
+            color="green"
+          >
+            Save
+          </Button>
+          <Button onClick={() => resetFields()}>Reset</Button>
+          <Button
+            color="red"
+            onClick={() => {
+              const updatedEvent = { ...eventData };
+              (updatedEvent.sections[sectionIndex] as IPerformancesSection).performanceCards[
+                cardIndex
+              ].isEditable = false;
+              setEventData(updatedEvent);
+            }}
+          >
+            Cancel
+          </Button>
+        </Group>
+      </Group>
 
       <Stack gap="0">
         <Text fw="bold">Title:</Text>

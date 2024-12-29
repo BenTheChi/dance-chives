@@ -12,7 +12,7 @@ const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
 export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boolean) => void }) {
-  const { eventData, setEventData } = useEventContext();
+  const { eventData, updateEventData } = useEventContext();
 
   const actionTypes = [
     'SET_IMAGES',
@@ -106,7 +106,7 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
         ));
       newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
 
-      setEventData({ ...eventData, ...newData });
+      updateEventData(newData);
     }
   }, [loading, data]);
 

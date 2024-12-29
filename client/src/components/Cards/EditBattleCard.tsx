@@ -120,7 +120,7 @@ export function EditBattleCard({
       </Group>
 
       {videoSrc ? <Video title={title} src={videoSrc} /> : null}
-      <Text fw="bold">Recap Video Youtube URL:</Text>
+      <Text fw="bold">Video Youtube URL:</Text>
       <TextInput value={videoSrc} onChange={(event) => setVideoSrc(event.currentTarget.value)} />
       <Text fw="700">Dancers:</Text>
       <MultiSelectCreatable

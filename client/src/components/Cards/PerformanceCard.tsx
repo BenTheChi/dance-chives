@@ -1,19 +1,10 @@
-import { Card, Group, Image, Stack, Title } from '@mantine/core';
+import { IconSquareXFilled } from '@tabler/icons-react';
+import { Button, Card, CloseButton, Group, Stack, Title } from '@mantine/core';
+import { IPerformancesSection } from '@/types/types';
 import { MultiTextField } from '../Display/MultiTextField';
-import { TextField } from '../Display/TextField';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
-
-interface PerformanceCard {
-  title: string;
-  src: string;
-  dancers: string[];
-}
-
-interface PerformancesSection {
-  type: string;
-  performanceCards: PerformanceCard[];
-}
+import { EditPerformanceCard } from './EditPerformanceCard';
 
 export function PerformanceCard({
   cardIndex,
@@ -22,13 +13,24 @@ export function PerformanceCard({
   cardIndex: number;
   sectionIndex: number;
 }) {
-  const { eventData } = useEventContext();
-  const card = (eventData.sections[sectionIndex] as PerformancesSection).performanceCards[
+  const { eventData, updateCardEditable, deleteCard } = useEventContext();
+  const card = (eventData.sections[sectionIndex] as IPerformancesSection).performanceCards[
     cardIndex
   ];
 
+  if (card.isEditable) {
+    return <EditPerformanceCard cardIndex={cardIndex} sectionIndex={sectionIndex} />;
+  }
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
+      <Group justify="space-between">
+        <CloseButton
+          onClick={() => deleteCard(sectionIndex, cardIndex)}
+          mb="sm"
+          icon={<IconSquareXFilled size={40} stroke={1.5} />}
+        />
+        <Button onClick={() => updateCardEditable(sectionIndex, cardIndex, true)}>Edit</Button>
+      </Group>
       <Stack gap="0">
         <Title order={4}>{card.title}</Title>
 

@@ -6,8 +6,6 @@ import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { Event } from '../components/Event';
 
-// import eventData from '../single-event-test.json';
-
 interface GQLEvent {
   __typename: string;
   uuid: string;
@@ -156,6 +154,7 @@ export function EventPage() {
   function convertGQL(event: GQLEvent) {
     let battleSections = event.battleSections.map((section) => {
       return {
+        isEditable: false,
         uuid: section.uuid,
         type: section.type as 'battles',
         format: section.format,
@@ -195,6 +194,7 @@ export function EventPage() {
         type: section.type as 'workshops',
         workshopCards: section.workshopCardsIn.map((workshopCard) => {
           return {
+            isEditable: false,
             title: workshopCard.title,
             image: workshopCard.image,
             date: workshopCard.date,
@@ -216,6 +216,7 @@ export function EventPage() {
         type: section.type as 'performances',
         performanceCards: section.performanceCardsIn.map((performanceCard) => {
           return {
+            isEditable: false,
             title: performanceCard.title,
             src: performanceCard.src,
             dancers: performanceCard.dancers.map((person) => {

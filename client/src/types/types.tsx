@@ -18,6 +18,7 @@ export interface IPartyCard {
   address: string;
   cost: string;
   dj: string[];
+  isEditable: boolean;
 }
 
 export interface IPartiesSection {
@@ -31,6 +32,7 @@ export interface IPerformanceCard {
   title: string;
   src: string;
   dancers: string[];
+  isEditable: boolean;
 }
 
 export interface IPerformancesSection {
@@ -49,6 +51,7 @@ export interface IWorkshopCard {
   styles: string[];
   teacher: string[];
   recapSrc: string;
+  isEditable: boolean;
 }
 
 export interface IWorkshopsSection {
@@ -77,6 +80,7 @@ export interface IBattlesSection {
   styles: string[];
   judges: string[];
   brackets: IBracket[];
+  isEditable: boolean;
 }
 
 export type ISection = IBattlesSection | IPartiesSection | IPerformancesSection | IWorkshopsSection;
