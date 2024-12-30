@@ -14,7 +14,8 @@ import {
   Title,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
-import { IEventCard, IEventCards } from '@/types/types';
+import { GET_EVENTS } from '@/gql/returnQueries';
+import { IEventCards } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { EventCard } from '../components/Cards/EventCard';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
@@ -103,29 +104,8 @@ export function EventsPage() {
     'Krump',
   ];
 
-  const getEventsQuery = gql`
-    query GetEvent {
-      events {
-        uuid
-        title
-        date
-        images
-        inCity {
-          name
-        }
-        styles {
-          name
-        }
-        hasBattle
-        hasPerformance
-        hasWorkshop
-        hasParty
-      }
-    }
-  `;
-
   let eventsData: IEventCards | undefined;
-  const { loading, data, error } = useQuery(getEventsQuery);
+  const { loading, data, error } = useQuery(GET_EVENTS);
 
   if (!loading) {
     eventsData = convertGQL(data.events);

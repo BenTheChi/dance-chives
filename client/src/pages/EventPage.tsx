@@ -1,6 +1,7 @@
 import { gql, useQuery } from '@apollo/client';
 import { useParams } from 'react-router-dom';
 import { EventProvider } from '@/components/Providers/EventProvider';
+import { getEvent } from '@/gql/returnQueries';
 import { IEvent } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
@@ -260,126 +261,8 @@ export function EventPage() {
     };
   }
 
-  const getEventQuery = gql`
-    query GetEvent {
-      events(where: { titleSlug: "${id}"}) {
-        uuid
-        title
-        date
-        description
-        address
-        addressName
-        cost
-        images
-        prizes
-        promoVideo
-        recapVideo
-        organizers {
-          uuid
-          displayName
-          email
-        }
-        mcs {
-          uuid
-          displayName
-          email
-        }
-        djs {
-          uuid
-          displayName
-          email
-        }
-        videographers {
-          uuid
-          displayName
-          email
-        }
-        graphicDesigners {
-          uuid
-          displayName
-          email
-        }
-        photographers {
-          uuid
-          displayName
-          email
-        }
-        inCity {
-          name
-        }
-        styles {
-          name
-        }
-        battleSections: sectionsPartOf(where: { type: "battles" }) {
-          uuid
-          type
-          format
-          styles {
-            name
-          }
-          judges {
-            uuid
-            email
-            displayName
-          }
-          bracketsIn {
-            type
-            order
-            battleCardsIn {
-              title
-              src
-              dancers {
-                uuid
-                email
-                displayName
-              }
-              winners {
-                uuid
-                email
-                displayName
-              }
-            }
-          }
-        }
-        performanceSections: sectionsPartOf(where: { type: "performances" }) {
-          uuid
-          type
-          performanceCardsIn {
-            title
-            src
-            dancers {
-              uuid
-              email
-              displayName
-            }
-          }
-        }
-        workshopSections: sectionsPartOf(where: { type: "workshops" }) {
-          uuid
-          type
-          workshopCardsIn {
-            title
-            cost
-            date
-            address
-            image
-            recapSrc
-            styles {
-              name
-            }
-            teachers {
-              uuid
-              email
-              displayName
-            }
-          }
-        }
-      }
-    }
-  `;
-
   let eventData: IEvent | undefined;
-  const { loading, data } = useQuery(getEventQuery);
+  const { loading, data } = useQuery(getEvent(id || ''));
 
   if (!loading) {
     eventData = convertGQL(data.events[0]);

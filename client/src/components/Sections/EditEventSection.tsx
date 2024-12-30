@@ -1,7 +1,12 @@
 import { useEffect, useReducer } from 'react';
-import { gql, useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client';
 import { Button, FileButton, Group, Image, Stack, Text, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
+import { UPDATE_EVENTS } from '@/gql/returnQueries';
+import {
+  createConnectOrCreateListOfRoles,
+  createConnectOrCreateListOfStyles,
+} from '@/gql/utilities';
 import { ObjectComparison } from '@/utilities/utility';
 import { EditField } from '../Inputs/EditField';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
@@ -41,72 +46,34 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
     return state;
   }
 
-  const UPDATE_EVENTS = gql`
-    mutation UpdateEvents($where: EventWhere!, $update: EventUpdateInput!) {
-      updateEvents(where: $where, update: $update) {
-        events {
-          uuid
-          title
-          date
-          addressName
-          address
-          cost
-          prizes
-          description
-          recapVideo
-          images
-          inCity {
-            name
-          }
-          styles {
-            name
-          }
-          organizers {
-            displayName
-          }
-          djs {
-            displayName
-          }
-          mcs {
-            displayName
-          }
-          videographers {
-            displayName
-          }
-          photographers {
-            displayName
-          }
-          graphicDesigners {
-            displayName
-          }
-        }
-      }
-    }
-  `;
-
   const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
   const [state, dispatch] = useReducer(reducer, eventData);
 
+  function convertGQL(event: any) {
+    let newData = event;
+
+    newData.city = newData.inCity.name;
+
+    newData.organizers?.length &&
+      (newData.organizers = newData.organizers.map((organizer: any) => organizer.displayName));
+    newData.mcs?.length && (newData.mcs = newData.mcs.map((mc: any) => mc.displayName));
+    newData.djs?.length && (newData.djs = newData.djs.map((dj: any) => dj.displayName));
+    newData.videographers?.length &&
+      (newData.videographers = newData.videographers.map(
+        (videographer: any) => videographer.displayName
+      ));
+    newData.photographers?.length &&
+      (newData.photographers = newData.photographers.map(
+        (photographer: any) => photographer.displayName
+      ));
+    newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
+
+    return newData;
+  }
+
   useEffect(() => {
     if (!loading && data) {
-      let newData = data.updateEvents.events[0];
-      newData.city = newData.inCity.name;
-
-      newData.organizers?.length &&
-        (newData.organizers = newData.organizers.map((organizer: any) => organizer.displayName));
-      newData.mcs?.length && (newData.mcs = newData.mcs.map((mc: any) => mc.displayName));
-      newData.djs?.length && (newData.djs = newData.djs.map((dj: any) => dj.displayName));
-      newData.videographers?.length &&
-        (newData.videographers = newData.videographers.map(
-          (videographer: any) => videographer.displayName
-        ));
-      newData.photographers?.length &&
-        (newData.photographers = newData.photographers.map(
-          (photographer: any) => photographer.displayName
-        ));
-      newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
-
-      updateEventData(newData);
+      updateEventData(convertGQL(data.updateEvents.events[0]));
     }
   }, [loading, data]);
 
@@ -116,32 +83,11 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
 
   function handleSubmit() {
     const changes = ObjectComparison(eventData, state);
-
-    const createConnectOrCreateList = (people: String[], role: String) => {
-      return people.map((person, index) => {
-        return {
-          where: {
-            node: {
-              displayName: person,
-            },
-          },
-          onCreate: {
-            node: {
-              uuid: crypto.randomUUID(),
-              email: '',
-              displayName: person,
-              dob: '0',
-            },
-          },
-        };
-      });
-    };
-
     const roles = ['organizers', 'mcs', 'djs', 'videographers', 'photographers'];
 
     roles.forEach((role) => {
       if (changes[role]) {
-        const roleList = createConnectOrCreateList(changes[role], role.slice(0, -1));
+        const roleList = createConnectOrCreateListOfRoles(changes[role]);
 
         changes[role] = {
           disconnect: [{ where: {} }],
@@ -151,24 +97,9 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
     });
 
     if (changes.styles) {
-      const styleList = changes.styles.map((style: String) => {
-        return {
-          where: {
-            node: {
-              name: style,
-            },
-          },
-          onCreate: {
-            node: {
-              name: style,
-            },
-          },
-        };
-      });
-
       changes.styles = {
         disconnect: [{ where: {} }],
-        connectOrCreate: styleList,
+        connectOrCreate: createConnectOrCreateListOfStyles(changes.styles),
       };
     }
 

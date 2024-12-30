@@ -6,9 +6,6 @@ export function ObjectComparison(
 
   for (const [key, value] of Object.entries(changed)) {
     if (Array.isArray(initial[key]) && Array.isArray(value)) {
-      console.log(initial[key]);
-      console.log(value);
-
       if (JSON.stringify(initial[key]) !== JSON.stringify(value)) {
         result[key] = value;
       }

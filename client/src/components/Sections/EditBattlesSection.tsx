@@ -112,26 +112,6 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
 
     console.log(changes);
 
-    // const createConnectOrCreateList = (people: String[], role: String) => {
-    //   return people.map((person, index) => {
-    //     return {
-    //       where: {
-    //         node: {
-    //           displayName: person,
-    //         },
-    //       },
-    //       onCreate: {
-    //         node: {
-    //           uuid: `123-454aa6-3cs67${role}${index}`,
-    //           email: '',
-    //           displayName: person,
-    //           dob: '0',
-    //         },
-    //       },
-    //     };
-    //   });
-    // };
-
     // const roles = ['organizers', 'mcs', 'djs', 'videographers', 'photographers'];
 
     // roles.forEach((role) => {

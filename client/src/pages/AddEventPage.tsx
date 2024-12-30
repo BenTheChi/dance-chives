@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { gql, useMutation } from '@apollo/client';
-import { Button, Card, Center, FileInput, Text, TextInput } from '@mantine/core';
+import { useMutation } from '@apollo/client';
+import { Button, Card, Center, Text, TextInput } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { hasLength, isEmail, useForm } from '@mantine/form';
 import ImageInputWithPreview from '@/components/Inputs/ImageInputWithPreview';
+import { CREATE_EVENTS } from '@/gql/returnQueries';
+import { createConnectOrCreateListOfRoles } from '@/gql/utilities';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { MultiSelectCreatable } from '../components/Inputs/MultiSelectCreatable';
@@ -63,51 +65,6 @@ export function AddEventPage() {
     // },
   });
 
-  const CREATE_EVENTS = gql`
-    mutation CreateEvents($input: [EventCreateInput!]!) {
-      createEvents(input: $input) {
-        events {
-          uuid
-          title
-          date
-          addressName
-          address
-          cost
-          prizes
-          description
-          recapVideo
-          images
-          inCity {
-            name
-            state
-            country
-          }
-          styles {
-            name
-          }
-          organizers {
-            displayName
-          }
-          djs {
-            displayName
-          }
-          mcs {
-            displayName
-          }
-          videographers {
-            displayName
-          }
-          photographers {
-            displayName
-          }
-          graphicDesigners {
-            displayName
-          }
-        }
-      }
-    }
-  `;
-
   // const [submittedValues, setSubmittedValues] = useState<typeof form.values | null>(null);
   const [createEvents, { data, loading, error }] = useMutation(CREATE_EVENTS);
 
@@ -115,41 +72,14 @@ export function AddEventPage() {
 
   function handleSubmit(submittedValues: typeof form.values) {
     if (submittedValues) {
-      //inCity: {
-      //  create: {
-      //   node: {
-      //     name: submittedValues.city,
-      //     state: 'test',
-      //     country: 'blah'
-      //   }
-      // }
-      // },
-      const createConnectOrCreateList = (people: String[], role: String) => {
-        return people.map((person, index) => {
-          return {
-            where: {
-              node: {
-                displayName: person,
-              },
-            },
-            onCreate: {
-              node: {
-                uuid: `123-454aa6-3cs67${role}${index}`,
-                email: '',
-                displayName: person,
-                dob: '0',
-              },
-            },
-          };
-        });
-      };
-
-      const djList = createConnectOrCreateList(submittedValues.djs, 'dj');
-      const organizerList = createConnectOrCreateList(submittedValues.organizers, 'org');
-      const mcList = createConnectOrCreateList(submittedValues.mcs, 'mc');
-      const videographerList = createConnectOrCreateList(submittedValues.videographers, 'vid');
-      const photographerList = createConnectOrCreateList(submittedValues.photographers, 'photo');
-      const graphicDesignerList = createConnectOrCreateList(submittedValues.graphicDesigners, 'gd');
+      const djList = createConnectOrCreateListOfRoles(submittedValues.djs);
+      const organizerList = createConnectOrCreateListOfRoles(submittedValues.organizers);
+      const mcList = createConnectOrCreateListOfRoles(submittedValues.mcs);
+      const videographerList = createConnectOrCreateListOfRoles(submittedValues.videographers);
+      const photographerList = createConnectOrCreateListOfRoles(submittedValues.photographers);
+      const graphicDesignerList = createConnectOrCreateListOfRoles(
+        submittedValues.graphicDesigners
+      );
 
       const styleList = submittedValues.styles.map((style, index) => {
         return {
@@ -170,7 +100,7 @@ export function AddEventPage() {
         variables: {
           input: [
             {
-              uuid: '123-456-2367',
+              uuid: crypto.randomUUID(),
               title: submittedValues.title,
               titleSlug: submittedValues.title.toLowerCase().replace(/ /g, '-'),
               date: (new Date(submittedValues.datetime).getTime() / 1000).toString(),
