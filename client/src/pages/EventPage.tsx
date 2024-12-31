@@ -81,12 +81,12 @@ interface GQLEvent {
       __typename: string;
       name: string;
     }[];
-    bracketsIn: {
+    brackets: {
       __typename: string;
       uuid: string;
       type: string;
-      order: string;
-      battleCardsIn: {
+      order: number;
+      battleCards: {
         __typename: string;
         title: string;
         src: string;
@@ -163,29 +163,32 @@ export function EventPage() {
         judges: section.judges.map((person) => {
           return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
         }),
-        brackets: section.bracketsIn.map((bracket) => {
-          return {
-            type: bracket.type,
-            order: bracket.order,
-            battleCards: bracket.battleCardsIn.map((battleCard) => {
-              return {
-                isEditable: false,
-                title: battleCard.title,
-                src: battleCard.src,
-                dancers: battleCard.dancers.map((person) => {
-                  return person.email
-                    ? `${person.displayName}__${person.uuid}`
-                    : person.displayName;
-                }),
-                winners: battleCard.winners.map((person) => {
-                  return person.email
-                    ? `${person.displayName}__${person.uuid}`
-                    : person.displayName;
-                }),
-              };
-            }),
-          };
-        }),
+        brackets: section.brackets
+          .map((bracket) => {
+            return {
+              uuid: bracket.uuid,
+              type: bracket.type,
+              order: bracket.order,
+              battleCards: bracket.battleCards.map((battleCard) => {
+                return {
+                  isEditable: false,
+                  title: battleCard.title,
+                  src: battleCard.src,
+                  dancers: battleCard.dancers.map((person) => {
+                    return person.email
+                      ? `${person.displayName}__${person.uuid}`
+                      : person.displayName;
+                  }),
+                  winners: battleCard.winners.map((person) => {
+                    return person.email
+                      ? `${person.displayName}__${person.uuid}`
+                      : person.displayName;
+                  }),
+                };
+              }),
+            };
+          })
+          .sort((a, b) => a.order - b.order),
       };
     });
 

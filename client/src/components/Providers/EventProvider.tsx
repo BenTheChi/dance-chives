@@ -93,7 +93,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           dancers: [],
         });
       } else if (newState.sections[sectionIndex].type === 'battles') {
-        if (bracketIndex) {
+        if (bracketIndex !== undefined) {
           (newState.sections[sectionIndex] as IBattlesSection).brackets[
             bracketIndex
           ].battleCards.unshift({
@@ -203,14 +203,12 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
   };
 
   const updateBattlesSection = (sectionIndex: number, updatedSection: IBattlesSection) => {
-    setEventData((prevState) => {
-      const newState = { ...prevState };
-      newState.sections[sectionIndex] = {
-        ...updatedSection,
-      };
-
-      return newState;
-    });
+    setEventData((prevState) => ({
+      ...prevState,
+      sections: prevState.sections.map((section, index) =>
+        index === sectionIndex ? { ...updatedSection } : section
+      ),
+    }));
   };
 
   return (

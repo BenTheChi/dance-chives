@@ -22,9 +22,9 @@ export function Event() {
       case 'battles':
         section = {
           isEditable: true,
-          uuid: crypto.randomUUID(),
+          uuid: '',
           type: 'battles',
-          format: 'New Battle',
+          format: '1v1 All Styles',
           styles: [],
           judges: [],
           brackets: [],
@@ -32,21 +32,21 @@ export function Event() {
         break;
       case 'workshops':
         section = {
-          uuid: crypto.randomUUID(),
+          uuid: '',
           type: 'workshops',
           workshopCards: [],
         };
         break;
       case 'parties':
         section = {
-          uuid: crypto.randomUUID(),
+          uuid: '',
           type: 'parties',
           partyCards: [],
         };
         break;
       case 'performances':
         section = {
-          uuid: crypto.randomUUID(),
+          uuid: '',
           type: 'performances',
           performanceCards: [],
         };
@@ -56,9 +56,9 @@ export function Event() {
       default:
         section = {
           isEditable: true,
-          uuid: crypto.randomUUID(),
+          uuid: '',
           type: 'battles',
-          format: 'New Battle',
+          format: '2v2 Popping',
           styles: [],
           judges: [],
           brackets: [],

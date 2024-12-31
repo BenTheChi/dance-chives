@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
 import {
@@ -11,6 +13,7 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { DELETE_BATTLE_SECTION } from '@/gql/returnQueries';
 import { IBattlesSection } from '@/types/types';
 import { Bracket } from '../Bracket';
 import { useEventContext } from '../Providers/EventProvider';
@@ -21,6 +24,26 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
   const { eventData, setEventData, deleteSection } = useEventContext();
   const currentSection = eventData.sections[sectionIndex] as IBattlesSection;
 
+  const [deleteBattlesSection, deleteResults] = useMutation(DELETE_BATTLE_SECTION);
+
+  const handleDelete = (sectionIndex: number) => {
+    deleteBattlesSection({
+      variables: {
+        where: {
+          uuid: eventData.sections[sectionIndex].uuid,
+        },
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!deleteResults.loading && deleteResults.data) {
+      console.log('SUCCESSFUL DELETE');
+      console.log(deleteResults.data);
+      deleteSection(sectionIndex);
+    }
+  }, [deleteResults.loading, deleteResults.data]);
+
   if (currentSection.isEditable) {
     return <EditBattlesSection sectionIndex={sectionIndex}></EditBattlesSection>;
   }
@@ -28,7 +51,7 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
     <Card m="md" withBorder>
       <Group justify="space-between">
         <CloseButton
-          onClick={() => deleteSection(sectionIndex)}
+          onClick={() => handleDelete(sectionIndex)}
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
         <Group justify="right">

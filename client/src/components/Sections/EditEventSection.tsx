@@ -74,6 +74,7 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
   useEffect(() => {
     if (!loading && data) {
       updateEventData(convertGQL(data.updateEvents.events[0]));
+      setEditEvent(false);
     }
   }, [loading, data]);
 

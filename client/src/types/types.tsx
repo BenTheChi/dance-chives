@@ -69,7 +69,9 @@ export interface IBattleCard {
 }
 
 export interface IBracket {
+  uuid: string;
   type: string;
+  order: number;
   battleCards: IBattleCard[];
 }
 

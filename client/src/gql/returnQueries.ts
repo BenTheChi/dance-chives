@@ -62,10 +62,11 @@ query GetEvent {
         email
         displayName
       }
-      bracketsIn {
+      brackets {
+        uuid
         type
         order
-        battleCardsIn {
+        battleCards {
           title
           src
           dancers {
@@ -255,6 +256,119 @@ export const CREATE_EVENTS = gql`
         }
         graphicDesigners {
           displayName
+        }
+      }
+    }
+  }
+`;
+
+export const UPDATE_BATTLE_SECTION = gql`
+  mutation UpdateSections($where: SectionWhere!, $update: SectionUpdateInput) {
+    updateSections(where: $where, update: $update) {
+      sections {
+        uuid
+        type
+        format
+        styles {
+          name
+        }
+        judges {
+          uuid
+          email
+          displayName
+        }
+        brackets {
+          uuid
+          type
+          order
+          battleCards {
+            title
+            src
+            dancers {
+              uuid
+              email
+              displayName
+            }
+            winners {
+              uuid
+              email
+              displayName
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_BATTLE_SECTION = gql`
+  mutation CreateSections($input: [SectionCreateInput!]!) {
+    createSections(input: $input) {
+      sections {
+        uuid
+        type
+        format
+        styles {
+          name
+        }
+        judges {
+          uuid
+          email
+          displayName
+        }
+        brackets {
+          uuid
+          type
+          order
+          battleCards {
+            title
+            src
+            dancers {
+              uuid
+              email
+              displayName
+            }
+            winners {
+              uuid
+              email
+              displayName
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const DELETE_BATTLE_SECTION = gql`
+  mutation DeleteSections($where: SectionWhere!) {
+    deleteSections(where: $where, delete: { brackets: { delete: { battleCards: {} } } }) {
+      nodesDeleted
+      relationshipsDeleted
+    }
+  }
+`;
+
+export const UPDATE_BRACKET = gql`
+  mutation UpdateBrackets($where: BracketWhere!, $update: BracketUpdateInput) {
+    updateBrackets(where: $where, update: $update) {
+      brackets {
+        uuid
+        type
+        order
+        battleCards {
+          title
+          src
+          dancers {
+            uuid
+            email
+            displayName
+          }
+          winners {
+            uuid
+            email
+            displayName
+          }
         }
       }
     }
