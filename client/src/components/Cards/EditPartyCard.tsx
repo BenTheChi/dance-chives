@@ -58,6 +58,8 @@ export function EditPartyCard({
           <Button
             onClick={() =>
               updateCard(sectionIndex, cardIndex, {
+                order: cardIndex,
+                uuid: partyCard.uuid,
                 isEditable: false,
                 title,
                 dj: djs,

@@ -43,6 +43,8 @@ export function EditPerformanceCard({
           <Button
             onClick={() =>
               updateCard(sectionIndex, cardIndex, {
+                order: cardIndex,
+                uuid: performanceCard.uuid,
                 title,
                 src: videoSrc,
                 dancers,

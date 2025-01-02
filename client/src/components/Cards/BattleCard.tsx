@@ -15,24 +15,16 @@ export function BattleCard({
   bracketIndex: number;
   cardIndex: number;
 }) {
-  const { eventData, setEventData } = useEventContext();
+  const { eventData, updateCardEditable } = useEventContext();
 
   const card = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
     .battleCards[cardIndex];
 
   if (!card.isEditable)
     return (
-      <Card withBorder radius="md" shadow="sm" h="100%" w="460">
+      <Card withBorder radius="md" shadow="sm" h="100%" w="460" m="md">
         <Group justify="right">
-          <Button
-            onClick={() => {
-              const updatedEvent = { ...eventData };
-              (updatedEvent.sections[sectionIndex] as IBattlesSection).brackets[
-                bracketIndex
-              ].battleCards[cardIndex].isEditable = true;
-              setEventData(updatedEvent);
-            }}
-          >
+          <Button onClick={() => updateCardEditable(sectionIndex, cardIndex, true, bracketIndex)}>
             Edit
           </Button>
         </Group>

@@ -1,18 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
-import { isNullableType } from 'graphql';
-import {
-  Button,
-  Card,
-  Center,
-  CloseButton,
-  Group,
-  Select,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core';
+import { Button, Card, Center, CloseButton, Group, Select, Stack, Text } from '@mantine/core';
 import {
   createConnectOrCreateListOfRoles,
   createConnectOrCreateListOfStyles,
@@ -22,7 +11,7 @@ import {
   createDeleteListOfStyles,
 } from '@/gql/utilities';
 import { IBattlesSection, IBracket } from '@/types/types';
-import { deepDiff, ObjectComparison } from '@/utilities/utility';
+import { ObjectComparison } from '@/utilities/utility';
 import {
   CREATE_BATTLE_SECTION,
   DELETE_BATTLE_SECTION,

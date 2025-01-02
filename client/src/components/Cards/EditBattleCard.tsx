@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Text, Textarea, TextInput } from '@mantine/core';
+import { CREATE_BATTLE_CARD } from '@/gql/returnQueries';
+import { createConnectOrCreateListOfRoles } from '@/gql/utilities';
 import { IBattlesSection, IBracket } from '../../types/types';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
@@ -23,10 +26,14 @@ export function EditBattleCard({
   // setBrackets: (value: IBracket[]) => void;
   // setEditCard: (value: boolean) => void;
 }) {
-  const { eventData, setEventData } = useEventContext();
+  const { eventData, setEventData, updateCardEditable, deleteCard } = useEventContext();
 
   const card = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
     .battleCards[cardIndex];
+
+  const [createBattleCard, createResults] = useMutation(CREATE_BATTLE_CARD);
+  // const [updateBattleCard, updateResults] = useMutation(UPDATE_BATTLE_CARD);
+
   // const card = brackets[bracketIndex].battleCards[cardIndex];
 
   // const updateCard = (update: Partial<typeof card>) => {
@@ -59,32 +66,77 @@ export function EditBattleCard({
   };
 
   const handleSubmit = () => {
-    let newEventData = { ...eventData };
-    (newEventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards[
-      cardIndex
-    ] = {
-      title,
-      src: videoSrc,
-      dancers,
-      winners,
-      isEditable: false,
-    };
-    setEventData(newEventData);
+    //New Card
+    if (card.uuid === '') {
+      createBattleCard({
+        variables: {
+          input: [
+            {
+              order: card.order.toString(),
+              uuid: crypto.randomUUID(),
+              src: videoSrc,
+              title,
+              dancers: {
+                connectOrCreate: createConnectOrCreateListOfRoles(dancers),
+              },
+              winners: {
+                connectOrCreate: createConnectOrCreateListOfRoles(winners),
+              },
+              inBrackets: {
+                connect: {
+                  where: {
+                    node: {
+                      uuid: (eventData.sections[sectionIndex] as IBattlesSection).brackets[
+                        bracketIndex
+                      ].uuid,
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      });
+    }
   };
 
-  const deleteCard = () => {
-    let newEventData = { ...eventData };
-    (newEventData.sections[sectionIndex] as IBattlesSection).brackets[
-      bracketIndex
-    ].battleCards.splice(cardIndex, 1);
-    setEventData(newEventData);
-  };
+  // const deleteCard = () => {
+  //   let newEventData = { ...eventData };
+  //   (newEventData.sections[sectionIndex] as IBattlesSection).brackets[
+  //     bracketIndex
+  //   ].battleCards.splice(cardIndex, 1);
+  //   setEventData(newEventData);
+  // };
+
+  console.log(cardIndex);
+
+  useEffect(() => {
+    if (!createResults.loading && createResults.data) {
+      console.log('SUCCESSFUL CREATE');
+      console.log(createResults.data);
+
+      let newEventData = { ...eventData };
+      (newEventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards[
+        cardIndex
+      ] = {
+        order: card.order,
+        uuid: createResults.data.createBattleCards.battleCards[0].uuid,
+        title,
+        src: videoSrc,
+        dancers,
+        winners,
+        isEditable: false,
+      };
+
+      setEventData(newEventData);
+    }
+  }, [createResults.loading, createResults.data]);
 
   return (
-    <Card withBorder radius="md" shadow="sm" h="100%" w="470">
+    <Card withBorder radius="md" shadow="sm" h="100%" w="470" m="md">
       <Group>
         <CloseButton
-          onClick={deleteCard}
+          onClick={() => deleteCard(sectionIndex, cardIndex, bracketIndex)}
           mb="sm"
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
@@ -96,11 +148,13 @@ export function EditBattleCard({
           <Button
             color="red"
             onClick={() => {
-              const updatedEvent = { ...eventData };
-              (updatedEvent.sections[sectionIndex] as IBattlesSection).brackets[
-                bracketIndex
-              ].battleCards[cardIndex].isEditable = false;
-              setEventData(updatedEvent);
+              console.log(eventData);
+              console.log(sectionIndex, cardIndex, bracketIndex);
+              if (title === '' && videoSrc === '') {
+                deleteCard(sectionIndex, cardIndex, bracketIndex);
+                return;
+              }
+              updateCardEditable(sectionIndex, cardIndex, false, bracketIndex);
             }}
           >
             Cancel

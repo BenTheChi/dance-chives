@@ -27,7 +27,12 @@ interface EventContextType {
     bracketIndex?: number
   ) => void;
   deleteCard: (sectionIndex: number, cardIndex: number, bracketIndex?: number) => void;
-  updateCardEditable: (sectionIndex: number, cardIndex: number, isEditable: boolean) => void;
+  updateCardEditable: (
+    sectionIndex: number,
+    cardIndex: number,
+    isEditable: boolean,
+    bracketIndex?: number
+  ) => void;
   addSection: (
     section: IBattlesSection | IWorkshopsSection | IPerformancesSection | IPartiesSection
   ) => void;
@@ -64,7 +69,9 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
       const newState = { ...prevState };
 
       if (newState.sections[sectionIndex].type === 'workshops') {
-        (newState.sections[sectionIndex] as IWorkshopsSection).workshopCards.unshift({
+        (newState.sections[sectionIndex] as IWorkshopsSection).workshopCards.push({
+          order: newState.sections[sectionIndex].workshopCards.length,
+          uuid: '',
           isEditable: true,
           title: '',
           image: '',
@@ -76,7 +83,9 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           recapSrc: '',
         });
       } else if (newState.sections[sectionIndex].type === 'parties') {
-        (newState.sections[sectionIndex] as IPartiesSection).partyCards.unshift({
+        (newState.sections[sectionIndex] as IPartiesSection).partyCards.push({
+          order: newState.sections[sectionIndex].partyCards.length,
+          uuid: '',
           title: '',
           image: '',
           date: 0,
@@ -86,7 +95,9 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           isEditable: true,
         });
       } else if (newState.sections[sectionIndex].type === 'performances') {
-        (newState.sections[sectionIndex] as IPerformancesSection).performanceCards.unshift({
+        (newState.sections[sectionIndex] as IPerformancesSection).performanceCards.push({
+          order: newState.sections[sectionIndex].performanceCards.length,
+          uuid: '',
           isEditable: true,
           title: '',
           src: '',
@@ -94,9 +105,12 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
         });
       } else if (newState.sections[sectionIndex].type === 'battles') {
         if (bracketIndex !== undefined) {
+          console.log(newState.sections[sectionIndex].brackets[bracketIndex].battleCards);
           (newState.sections[sectionIndex] as IBattlesSection).brackets[
             bracketIndex
-          ].battleCards.unshift({
+          ].battleCards.push({
+            order: newState.sections[sectionIndex].brackets[bracketIndex].battleCards.length,
+            uuid: '',
             title: '',
             src: '',
             winners: [],
@@ -151,7 +165,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
       } else if (newState.sections[sectionIndex].type === 'performances') {
         newState.sections[sectionIndex].performanceCards.splice(cardIndex, 1);
       } else if (newState.sections[sectionIndex].type === 'battles') {
-        if (bracketIndex) {
+        if (bracketIndex !== undefined) {
           newState.sections[sectionIndex].brackets[bracketIndex].battleCards.splice(cardIndex, 1);
         }
       }
@@ -176,7 +190,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
       } else if (newState.sections[sectionIndex].type === 'performances') {
         newState.sections[sectionIndex].performanceCards[cardIndex].isEditable = isEditable;
       } else if (newState.sections[sectionIndex].type === 'battles') {
-        if (bracketIndex) {
+        if (bracketIndex !== undefined) {
           newState.sections[sectionIndex].brackets[bracketIndex].battleCards[cardIndex].isEditable =
             isEditable;
         }

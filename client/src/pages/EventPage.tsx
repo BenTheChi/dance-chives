@@ -1,4 +1,4 @@
-import { gql, useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client';
 import { useParams } from 'react-router-dom';
 import { EventProvider } from '@/components/Providers/EventProvider';
 import { getEvent } from '@/gql/returnQueries';
@@ -8,7 +8,6 @@ import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggl
 import { Event } from '../components/Event';
 
 interface GQLEvent {
-  __typename: string;
   uuid: string;
   title: string;
   date: number;
@@ -21,83 +20,70 @@ interface GQLEvent {
   promoVideo: string;
   recapVideo: string;
   organizers: {
-    __typename: string;
     uuid: string;
     email: string;
     displayName: string;
   }[];
   mcs: {
-    __typename: string;
     uuid: string;
     email: string;
     displayName: string;
   }[];
   djs: {
-    __typename: string;
     uuid: string;
     email: string;
     displayName: string;
   }[];
   videographers: {
-    __typename: string;
     uuid: string;
     email: string;
     displayName: string;
   }[];
   graphicDesigners: {
-    __typename: string;
     uuid: string;
     email: string;
     displayName: string;
   }[];
   photographers: {
-    __typename: string;
     uuid: string;
     email: string;
     displayName: string;
   }[];
   inCity: {
-    __typename: string;
     name: string;
     state: string;
     country: string;
   };
   styles: {
-    __typename: string;
     name: string;
   }[];
   battleSections: {
-    __typename: string;
     uuid: string;
     type: 'battles';
     format: string;
     judges: {
-      __typename: string;
       uuid: string;
       email: string;
       displayName: string;
     }[];
     styles: {
-      __typename: string;
       name: string;
     }[];
     brackets: {
-      __typename: string;
       uuid: string;
       type: string;
-      order: number;
+      order: string;
       battleCards: {
-        __typename: string;
+        order: string;
+        uuid: string;
         title: string;
         src: string;
         dancers: {
-          __typename: string;
           uuid: string;
           email: string;
           displayName: string;
         }[];
         winners: {
-          __typename: string;
           uuid: string;
           email: string;
           displayName: string;
@@ -106,16 +92,14 @@ interface GQLEvent {
     }[];
   }[];
   performanceSections: {
-    __typename: string;
     uuid: string;
     type: 'performances';
     performanceCardsIn: {
-      __typename: string;
+      order: string;
       uuid: string;
       title: string;
       src: string;
       dancers: {
-        __typename: string;
         uuid: string;
         email: string;
         displayName: string;
@@ -123,11 +107,10 @@ interface GQLEvent {
     }[];
   }[];
   workshopSections: {
-    __typename: string;
     uuid: string;
     type: 'workshops';
     workshopCardsIn: {
-      __typename: string;
+      order: string;
       uuid: string;
       title: string;
       cost: string;
@@ -136,11 +119,9 @@ interface GQLEvent {
       image: string;
       recapSrc: string;
       styles: {
-        __typename: string;
         name: string;
       }[];
       teachers: {
-        __typename: string;
         uuid: string;
         email: string;
         displayName: string;
@@ -168,9 +149,11 @@ export function EventPage() {
             return {
               uuid: bracket.uuid,
               type: bracket.type,
-              order: bracket.order,
+              order: Number(bracket.order),
               battleCards: bracket.battleCards.map((battleCard) => {
                 return {
+                  order: Number(battleCard.order),
+                  uuid: battleCard.uuid,
                   isEditable: false,
                   title: battleCard.title,
                   src: battleCard.src,
@@ -198,6 +181,8 @@ export function EventPage() {
         type: section.type as 'workshops',
         workshopCards: section.workshopCardsIn.map((workshopCard) => {
           return {
+            order: Number(workshopCard.order),
+            uuid: workshopCard.uuid,
             isEditable: false,
             title: workshopCard.title,
             image: workshopCard.image,
@@ -220,6 +205,8 @@ export function EventPage() {
         type: section.type as 'performances',
         performanceCards: section.performanceCardsIn.map((performanceCard) => {
           return {
+            order: Number(performanceCard.order),
+            uuid: performanceCard.uuid,
             isEditable: false,
             title: performanceCard.title,
             src: performanceCard.src,

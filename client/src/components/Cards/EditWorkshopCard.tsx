@@ -65,6 +65,8 @@ export function EditWorkshopCard({
           <Button
             onClick={() =>
               updateCard(sectionIndex, cardIndex, {
+                order: cardIndex,
+                uuid: workshopCard.uuid,
                 isEditable: false,
                 styles,
                 title,

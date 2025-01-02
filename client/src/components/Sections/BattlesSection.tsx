@@ -98,9 +98,13 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
       <Group mt="sm" p="0" justify="center" gap="lg" ml="5%" mr="5%">
         <Accordion radius="xs" variant="contained" w="100%">
           {currentSection.brackets &&
-            currentSection.brackets.map((bracket, index) => (
-              <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>
-            ))}
+            currentSection.brackets
+              .sort((a, b) => {
+                return a.order - b.order;
+              })
+              .map((bracket, index) => (
+                <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>
+              ))}
         </Accordion>
       </Group>
     </Card>

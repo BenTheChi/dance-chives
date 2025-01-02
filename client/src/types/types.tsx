@@ -12,6 +12,8 @@ export interface IUser {
 
 // Party Interfaces
 export interface IPartyCard {
+  order: number;
+  uuid: string;
   title: string;
   image: string;
   date: number;
@@ -29,6 +31,8 @@ export interface IPartiesSection {
 
 // Performance Interfaces
 export interface IPerformanceCard {
+  order: number;
+  uuid: string;
   title: string;
   src: string;
   dancers: string[];
@@ -43,6 +47,8 @@ export interface IPerformancesSection {
 
 // Workshop Interfaces
 export interface IWorkshopCard {
+  order: number;
+  uuid: string;
   title: string;
   image: string;
   date: number;
@@ -61,6 +67,8 @@ export interface IWorkshopsSection {
 }
 
 export interface IBattleCard {
+  order: number;
+  uuid: string;
   title: string;
   src: string;
   dancers: string[];

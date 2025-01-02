@@ -32,16 +32,20 @@ export function Bracket({
           </Group>
         </Button>
         <Group>
-          {currentBracket.battleCards.map((battleCard, index) => {
-            return (
-              <BattleCard
-                key={index}
-                sectionIndex={sectionIndex}
-                bracketIndex={bracketIndex}
-                cardIndex={index}
-              />
-            );
-          })}
+          {currentBracket.battleCards
+            .sort((a, b) => {
+              return b.order - a.order;
+            })
+            .map((battleCard, index) => {
+              return (
+                <BattleCard
+                  key={index}
+                  sectionIndex={sectionIndex}
+                  bracketIndex={bracketIndex}
+                  cardIndex={index}
+                />
+              );
+            })}
         </Group>
       </Accordion.Panel>
     </Accordion.Item>

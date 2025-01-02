@@ -67,6 +67,8 @@ query GetEvent {
         type
         order
         battleCards {
+          order
+          uuid
           title
           src
           dancers {
@@ -86,6 +88,7 @@ query GetEvent {
       uuid
       type
       performanceCardsIn {
+        order
         title
         src
         dancers {
@@ -99,6 +102,7 @@ query GetEvent {
       uuid
       type
       workshopCardsIn {
+        order
         title
         cost
         date
@@ -282,6 +286,8 @@ export const UPDATE_BATTLE_SECTION = gql`
           type
           order
           battleCards {
+            order
+            uuid
             title
             src
             dancers {
@@ -321,6 +327,8 @@ export const CREATE_BATTLE_SECTION = gql`
           type
           order
           battleCards {
+            order
+            uuid
             title
             src
             dancers {
@@ -357,6 +365,8 @@ export const UPDATE_BRACKET = gql`
         type
         order
         battleCards {
+          order
+          uuid
           title
           src
           dancers {
@@ -369,6 +379,29 @@ export const UPDATE_BRACKET = gql`
             email
             displayName
           }
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_BATTLE_CARD = gql`
+  mutation CreateBattleCards($input: [BattleCardCreateInput!]!) {
+    createBattleCards(input: $input) {
+      battleCards {
+        order
+        uuid
+        title
+        src
+        dancers {
+          uuid
+          email
+          displayName
+        }
+        winners {
+          uuid
+          email
+          displayName
         }
       }
     }
