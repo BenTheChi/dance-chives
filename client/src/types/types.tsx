@@ -24,6 +24,7 @@ export interface IPartyCard {
 }
 
 export interface IPartiesSection {
+  order: number;
   uuid: string;
   type: 'parties';
   partyCards: IPartyCard[];
@@ -40,6 +41,7 @@ export interface IPerformanceCard {
 }
 
 export interface IPerformancesSection {
+  order: number;
   uuid: string;
   type: 'performances';
   performanceCards: IPerformanceCard[];
@@ -61,6 +63,7 @@ export interface IWorkshopCard {
 }
 
 export interface IWorkshopsSection {
+  order: number;
   uuid: string;
   type: 'workshops';
   workshopCards: IWorkshopCard[];
@@ -84,6 +87,7 @@ export interface IBracket {
 }
 
 export interface IBattlesSection {
+  order: number;
   uuid: string;
   type: 'battles';
   format: string;

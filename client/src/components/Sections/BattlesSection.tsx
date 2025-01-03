@@ -1,18 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
-import {
-  Accordion,
-  Button,
-  Card,
-  Center,
-  CloseButton,
-  Group,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core';
+import { Button, Card, Center, CloseButton, Group, Stack, Tabs, Text, Title } from '@mantine/core';
 import { DELETE_BATTLE_SECTION } from '@/gql/returnQueries';
 import { IBattlesSection } from '@/types/types';
 import { Bracket } from '../Bracket';
@@ -23,6 +13,9 @@ import { EditBattlesSection } from './EditBattlesSection';
 export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
   const { eventData, setEventData, deleteSection } = useEventContext();
   const currentSection = eventData.sections[sectionIndex] as IBattlesSection;
+  const [activeTab, setActiveTab] = useState<string | null>(
+    currentSection.brackets.length > 0 ? currentSection.brackets[0].type.toLowerCase() : 'add'
+  );
 
   const [deleteBattlesSection, deleteResults] = useMutation(DELETE_BATTLE_SECTION);
 
@@ -48,7 +41,7 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
     return <EditBattlesSection sectionIndex={sectionIndex}></EditBattlesSection>;
   }
   return (
-    <Card m="md" withBorder>
+    <Card m="md" w="95%" withBorder>
       <Group justify="space-between">
         <CloseButton
           onClick={() => handleDelete(sectionIndex)}
@@ -95,18 +88,20 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
         </Stack>
       </Center>
 
-      <Group mt="sm" p="0" justify="center" gap="lg" ml="5%" mr="5%">
-        <Accordion radius="xs" variant="contained" w="100%">
+      <Tabs value={activeTab} onChange={setActiveTab}>
+        <Tabs.List>
           {currentSection.brackets &&
-            currentSection.brackets
-              .toSorted((a, b) => {
-                return a.order - b.order;
-              })
-              .map((bracket, index) => (
-                <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>
-              ))}
-        </Accordion>
-      </Group>
+            currentSection.brackets.map((bracket, index) => (
+              <Tabs.Tab key={index} value={bracket.type.toLowerCase()}>
+                {bracket.type}
+              </Tabs.Tab>
+            ))}
+        </Tabs.List>
+        {currentSection.brackets &&
+          currentSection.brackets.map((bracket, index) => (
+            <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>
+          ))}
+      </Tabs>
     </Card>
   );
 }

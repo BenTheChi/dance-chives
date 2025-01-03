@@ -84,7 +84,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
   const addBracket = () => {
     setBrackets([
       ...brackets,
-      { uuid: crypto.randomUUID(), type: bracketName, battleCards: [], order: -1 },
+      { uuid: crypto.randomUUID(), type: bracketName, battleCards: [], order: brackets.length },
     ]);
   };
 
@@ -300,7 +300,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
   }, [updateBracketResults.loading, updateBracketResults.data]);
 
   return (
-    <Card m="md" withBorder>
+    <Card m="md" withBorder w="95%">
       <Group justify="space-between">
         <CloseButton
           onClick={() => handleDelete(sectionIndex)}

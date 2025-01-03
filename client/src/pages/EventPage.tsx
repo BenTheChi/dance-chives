@@ -58,6 +58,7 @@ interface GQLEvent {
     name: string;
   }[];
   battleSections: {
+    order: number;
     uuid: string;
     type: 'battles';
     format: string;
@@ -92,6 +93,7 @@ interface GQLEvent {
     }[];
   }[];
   performanceSections: {
+    order: number;
     uuid: string;
     type: 'performances';
     performanceCardsIn: {
@@ -107,6 +109,7 @@ interface GQLEvent {
     }[];
   }[];
   workshopSections: {
+    order: number;
     uuid: string;
     type: 'workshops';
     workshopCardsIn: {
@@ -136,6 +139,7 @@ export function EventPage() {
   function convertGQL(event: GQLEvent) {
     let battleSections = event.battleSections.map((section) => {
       return {
+        order: section.order,
         isEditable: false,
         uuid: section.uuid,
         type: section.type as 'battles',
@@ -177,6 +181,7 @@ export function EventPage() {
 
     let workshopSections = event.workshopSections.map((section) => {
       return {
+        order: section.order,
         uuid: section.uuid,
         type: section.type as 'workshops',
         workshopCards: section.workshopCardsIn.map((workshopCard) => {
@@ -201,6 +206,7 @@ export function EventPage() {
 
     let performanceSections = event.performanceSections.map((section) => {
       return {
+        order: section.order,
         uuid: section.uuid,
         type: section.type as 'performances',
         performanceCards: section.performanceCardsIn.map((performanceCard) => {
@@ -247,7 +253,9 @@ export function EventPage() {
       }),
       promoVideo: event.promoVideo,
       recapVideo: event.recapVideo,
-      sections: [...battleSections, ...workshopSections, ...performanceSections],
+      sections: [...battleSections, ...workshopSections, ...performanceSections].sort((a, b) => {
+        return a.order - b.order;
+      }),
     };
   }
 
@@ -256,6 +264,7 @@ export function EventPage() {
 
   if (!loading) {
     eventData = convertGQL(data.events[0]);
+    console.log(eventData);
   }
 
   if (loading || !eventData) {

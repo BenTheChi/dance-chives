@@ -33,9 +33,7 @@ interface EventContextType {
     isEditable: boolean,
     bracketIndex?: number
   ) => void;
-  addSection: (
-    section: IBattlesSection | IWorkshopsSection | IPerformancesSection | IPartiesSection
-  ) => void;
+  addSection: (section: string) => void;
   setEventData: (eventData: IEvent) => void;
 }
 
@@ -208,9 +206,64 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
     });
   };
 
-  const addSection = (section: ISection) => {
+  const addSection = (type: string) => {
     setEventData((prevState) => {
       const newState = { ...prevState };
+      let section: ISection;
+
+      switch (type) {
+        case 'battles':
+          section = {
+            order: eventData.sections.length,
+            isEditable: true,
+            uuid: '',
+            type: 'battles',
+            format: '1v1 All Styles',
+            styles: [],
+            judges: [],
+            brackets: [],
+          };
+          break;
+        case 'workshops':
+          section = {
+            order: eventData.sections.length,
+            uuid: '',
+            type: 'workshops',
+            workshopCards: [],
+          };
+          break;
+        case 'parties':
+          section = {
+            order: eventData.sections.length,
+            uuid: '',
+            type: 'parties',
+            partyCards: [],
+          };
+          break;
+        case 'performances':
+          section = {
+            order: eventData.sections.length,
+            uuid: '',
+            type: 'performances',
+            performanceCards: [],
+          };
+          break;
+
+        //Default to battles
+        default:
+          section = {
+            order: eventData.sections.length,
+            isEditable: true,
+            uuid: '',
+            type: 'battles',
+            format: '2v2 Popping',
+            styles: [],
+            judges: [],
+            brackets: [],
+          };
+          break;
+      }
+
       newState.sections.push(section);
       return newState;
     });

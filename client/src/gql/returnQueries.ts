@@ -51,6 +51,7 @@ query GetEvent {
       name
     }
     battleSections: sectionsPartOf(where: { type: "battles" }) {
+      order
       uuid
       type
       format
@@ -85,6 +86,7 @@ query GetEvent {
       }
     }
     performanceSections: sectionsPartOf(where: { type: "performances" }) {
+      order
       uuid
       type
       performanceCardsIn {
@@ -99,6 +101,7 @@ query GetEvent {
       }
     }
     workshopSections: sectionsPartOf(where: { type: "workshops" }) {
+      order
       uuid
       type
       workshopCardsIn {
@@ -307,10 +310,23 @@ export const UPDATE_BATTLE_SECTION = gql`
   }
 `;
 
+export const CREATE_SECTION = gql`
+  mutation CreateSections($input: [SectionCreateInput!]!) {
+    createSections(input: $input) {
+      sections {
+        order
+        uuid
+        type
+      }
+    }
+  }
+`;
+
 export const CREATE_BATTLE_SECTION = gql`
   mutation CreateSections($input: [SectionCreateInput!]!) {
     createSections(input: $input) {
       sections {
+        order
         uuid
         type
         format

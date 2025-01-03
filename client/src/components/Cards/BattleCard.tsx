@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button, Card, Group, Spoiler, Stack, Text, Title } from '@mantine/core';
 import { IBattlesSection } from '../../types/types';
 import { MultiTextField } from '../Display/MultiTextField';
@@ -22,7 +21,7 @@ export function BattleCard({
 
   if (!card.isEditable)
     return (
-      <Card withBorder radius="md" shadow="sm" h="100%" w="460" m="md">
+      <Card withBorder radius="md" shadow="sm" h="100%" w="450">
         <Group justify="right">
           <Button onClick={() => updateCardEditable(sectionIndex, cardIndex, true, bracketIndex)}>
             Edit

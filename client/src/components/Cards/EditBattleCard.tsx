@@ -5,7 +5,7 @@ import { Button, Card, CloseButton, Group, Text, Textarea, TextInput } from '@ma
 import { CREATE_BATTLE_CARD, DELETE_BATTLE_CARD, UPDATE_BATTLE_CARD } from '@/gql/returnQueries';
 import { createConnectOrCreateListOfRoles, createDeleteListOfRoles } from '@/gql/utilities';
 import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
-import { IBattlesSection, IBracket } from '../../types/types';
+import { IBattlesSection } from '../../types/types';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
@@ -221,7 +221,7 @@ export function EditBattleCard({
   }, [deleteResults.loading, deleteResults.data]);
 
   return (
-    <Card withBorder radius="md" shadow="sm" h="100%" w="470" m="md">
+    <Card withBorder radius="md" shadow="sm" h="100%" w="450">
       <Group>
         <CloseButton
           onClick={() => handleDelete()}
