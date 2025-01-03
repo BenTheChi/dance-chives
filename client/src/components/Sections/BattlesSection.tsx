@@ -99,7 +99,7 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
         <Accordion radius="xs" variant="contained" w="100%">
           {currentSection.brackets &&
             currentSection.brackets
-              .sort((a, b) => {
+              .toSorted((a, b) => {
                 return a.order - b.order;
               })
               .map((bracket, index) => (

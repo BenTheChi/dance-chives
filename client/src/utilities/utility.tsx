@@ -28,3 +28,27 @@ export function ArrayComparison(initial: any[], changed: any[]): any[] {
 
   return result;
 }
+
+export function reorderCards(cards: any[]) {
+  let sorted = cards.map((card) => ({ ...card })).toSorted((a, b) => a.order - b.order);
+  let updatedCards = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].order !== i) {
+      console.log('Card: ', sorted[i].order);
+      console.log('Index: ', i);
+
+      sorted[i].order = i;
+      updatedCards.push(sorted[i]);
+    }
+  }
+
+  return { sorted, updatedCards };
+}
+
+export function buildMutation(original: string[], updated: string[]) {
+  const toDelete = original.filter((person) => !updated.includes(person));
+  const toCreate = updated.filter((person) => !original.includes(person));
+
+  return { toDelete, toCreate };
+}

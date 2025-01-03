@@ -407,3 +407,35 @@ export const CREATE_BATTLE_CARD = gql`
     }
   }
 `;
+
+export const DELETE_BATTLE_CARD = gql`
+  mutation DeleteBattleCards($where: BattleCardWhere!) {
+    deleteBattleCards(where: $where) {
+      nodesDeleted
+      relationshipsDeleted
+    }
+  }
+`;
+
+export const UPDATE_BATTLE_CARD = gql`
+  mutation UpdateBattleCards($where: BattleCardWhere!, $update: BattleCardUpdateInput) {
+    updateBattleCards(where: $where, update: $update) {
+      battleCards {
+        order
+        uuid
+        title
+        src
+        dancers {
+          uuid
+          email
+          displayName
+        }
+        winners {
+          uuid
+          email
+          displayName
+        }
+      }
+    }
+  }
+`;

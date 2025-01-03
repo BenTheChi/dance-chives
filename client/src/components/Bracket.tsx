@@ -33,7 +33,7 @@ export function Bracket({
         </Button>
         <Group>
           {currentBracket.battleCards
-            .sort((a, b) => {
+            .toSorted((a, b) => {
               return b.order - a.order;
             })
             .map((battleCard, index) => {

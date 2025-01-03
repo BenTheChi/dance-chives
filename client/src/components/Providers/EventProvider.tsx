@@ -69,7 +69,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
       const newState = { ...prevState };
 
       if (newState.sections[sectionIndex].type === 'workshops') {
-        (newState.sections[sectionIndex] as IWorkshopsSection).workshopCards.push({
+        (newState.sections[sectionIndex] as IWorkshopsSection).workshopCards.unshift({
           order: newState.sections[sectionIndex].workshopCards.length,
           uuid: '',
           isEditable: true,
@@ -83,7 +83,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           recapSrc: '',
         });
       } else if (newState.sections[sectionIndex].type === 'parties') {
-        (newState.sections[sectionIndex] as IPartiesSection).partyCards.push({
+        (newState.sections[sectionIndex] as IPartiesSection).partyCards.unshift({
           order: newState.sections[sectionIndex].partyCards.length,
           uuid: '',
           title: '',
@@ -95,7 +95,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           isEditable: true,
         });
       } else if (newState.sections[sectionIndex].type === 'performances') {
-        (newState.sections[sectionIndex] as IPerformancesSection).performanceCards.push({
+        (newState.sections[sectionIndex] as IPerformancesSection).performanceCards.unshift({
           order: newState.sections[sectionIndex].performanceCards.length,
           uuid: '',
           isEditable: true,
@@ -108,7 +108,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           console.log(newState.sections[sectionIndex].brackets[bracketIndex].battleCards);
           (newState.sections[sectionIndex] as IBattlesSection).brackets[
             bracketIndex
-          ].battleCards.push({
+          ].battleCards.unshift({
             order: newState.sections[sectionIndex].brackets[bracketIndex].battleCards.length,
             uuid: '',
             title: '',

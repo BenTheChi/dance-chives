@@ -11,7 +11,7 @@ import {
   createDeleteListOfStyles,
 } from '@/gql/utilities';
 import { IBattlesSection, IBracket } from '@/types/types';
-import { ObjectComparison } from '@/utilities/utility';
+import { buildMutation, ObjectComparison } from '@/utilities/utility';
 import {
   CREATE_BATTLE_SECTION,
   DELETE_BATTLE_SECTION,
@@ -65,20 +65,6 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
       toCreateBrackets,
       toUpdateBrackets,
     };
-  }
-
-  function buildJudgesMutation(originalJudges: string[], updatedJudges: string[]) {
-    const judgesToDelete = originalJudges.filter((judge) => !updatedJudges.includes(judge));
-    const judgesToCreate = updatedJudges.filter((judge) => !originalJudges.includes(judge));
-
-    return { judgesToDelete, judgesToCreate };
-  }
-
-  function buildStylesMutation(originalStyles: string[], updatedStyles: string[]) {
-    const stylesToDelete = originalStyles.filter((style) => !updatedStyles.includes(style));
-    const stylesToCreate = updatedStyles.filter((style) => !originalStyles.includes(style));
-
-    return { stylesToDelete, stylesToCreate };
   }
 
   const [title, setTitle] = useState(currentSection.format);
@@ -146,7 +132,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
     } else {
       const originalBrackets = (eventData.sections[sectionIndex] as IBattlesSection).brackets;
 
-      let results: {
+      let bracketsMutation: {
         toCreateBrackets: { type: string; order: number; uuid: string }[];
         toUpdateBrackets: { uuid: string; type: string; order: number }[];
         toDeleteBrackets: string[];
@@ -164,17 +150,40 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
           })
         );
 
-        results.toCreateBrackets = mutationResult.toCreateBrackets;
-        results.toUpdateBrackets = mutationResult.toUpdateBrackets;
-        results.toDeleteBrackets = mutationResult.toDeleteBrackets;
+        bracketsMutation.toCreateBrackets = mutationResult.toCreateBrackets;
+        bracketsMutation.toUpdateBrackets = mutationResult.toUpdateBrackets;
+        bracketsMutation.toDeleteBrackets = mutationResult.toDeleteBrackets;
       }
 
-      const { judgesToDelete, judgesToCreate } = buildJudgesMutation(
+      let judgesMutation: { toCreate: string[]; toDelete: string[] } = {
+        toCreate: [],
+        toDelete: [],
+      };
+
+      if (changes.judges) {
+        judgesMutation = buildMutation(
+          (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
+          changes.judges || []
+        );
+      }
+
+      let stylesMutation: { toCreate: string[]; toDelete: string[] } = {
+        toCreate: [],
+        toDelete: [],
+      };
+
+      if (changes.styles) {
+        stylesMutation = buildMutation(
+          (eventData.sections[sectionIndex] as IBattlesSection).styles || [],
+          changes.styles || []
+        );
+      }
+
+      judgesMutation = buildMutation(
         (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
         changes.judges || []
       );
-
-      const { stylesToDelete, stylesToCreate } = buildStylesMutation(
+      stylesMutation = buildMutation(
         (eventData.sections[sectionIndex] as IBattlesSection).styles || [],
         changes.styles || []
       );
@@ -187,24 +196,24 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
           update: {
             format: title,
             brackets: {
-              create: createCreateListOfBrackets(results.toCreateBrackets),
-              delete: createDeleteListOfBrackets(results.toDeleteBrackets),
+              create: createCreateListOfBrackets(bracketsMutation.toCreateBrackets),
+              delete: createDeleteListOfBrackets(bracketsMutation.toDeleteBrackets),
             },
             judges: {
-              connectOrCreate: createConnectOrCreateListOfRoles(judgesToCreate),
-              delete: createDeleteListOfRoles(judgesToDelete),
+              connectOrCreate: createConnectOrCreateListOfRoles(judgesMutation.toCreate),
+              delete: createDeleteListOfRoles(judgesMutation.toDelete),
             },
             styles: {
-              connectOrCreate: createConnectOrCreateListOfStyles(stylesToCreate),
-              delete: createDeleteListOfStyles(stylesToDelete),
+              connectOrCreate: createConnectOrCreateListOfStyles(stylesMutation.toCreate),
+              delete: createDeleteListOfStyles(stylesMutation.toDelete),
             },
           },
         },
       });
 
       //Update each bracket in a separate query
-      for (let index = 0; index < results.toUpdateBrackets.length; index++) {
-        const bracket = results.toUpdateBrackets[index];
+      for (let index = 0; index < bracketsMutation.toUpdateBrackets.length; index++) {
+        const bracket = bracketsMutation.toUpdateBrackets[index];
         updateBracket({
           variables: {
             where: {

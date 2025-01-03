@@ -171,7 +171,7 @@ export function EventPage() {
               }),
             };
           })
-          .sort((a, b) => a.order - b.order),
+          .toSorted((a, b) => a.order - b.order),
       };
     });
 

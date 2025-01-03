@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Text, Textarea, TextInput } from '@mantine/core';
-import { CREATE_BATTLE_CARD } from '@/gql/returnQueries';
-import { createConnectOrCreateListOfRoles } from '@/gql/utilities';
+import { CREATE_BATTLE_CARD, DELETE_BATTLE_CARD, UPDATE_BATTLE_CARD } from '@/gql/returnQueries';
+import { createConnectOrCreateListOfRoles, createDeleteListOfRoles } from '@/gql/utilities';
+import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
 import { IBattlesSection, IBracket } from '../../types/types';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
@@ -15,48 +16,25 @@ export function EditBattleCard({
   sectionIndex,
   bracketIndex,
   cardIndex,
-  // brackets,
-  // setBrackets,
-  // setEditCard,
 }: {
   sectionIndex: number;
   bracketIndex: number;
   cardIndex: number;
-  // brackets: IBracket[];
-  // setBrackets: (value: IBracket[]) => void;
-  // setEditCard: (value: boolean) => void;
 }) {
-  const { eventData, setEventData, updateCardEditable, deleteCard } = useEventContext();
+  const { eventData, setEventData, updateCardEditable, deleteCard, updateBattlesSection } =
+    useEventContext();
 
   const card = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
     .battleCards[cardIndex];
 
   const [createBattleCard, createResults] = useMutation(CREATE_BATTLE_CARD);
-  // const [updateBattleCard, updateResults] = useMutation(UPDATE_BATTLE_CARD);
-
-  // const card = brackets[bracketIndex].battleCards[cardIndex];
-
-  // const updateCard = (update: Partial<typeof card>) => {
-  //   // const updatedBrackets = [...brackets];
-  //   // updatedBrackets[bracketIndex].battleCards[cardIndex] = { ...card, ...update };
-  //   // setBrackets(updatedBrackets);
-  // };
+  const [deleteBattleCard, deleteResults] = useMutation(DELETE_BATTLE_CARD);
+  const [updateBattleCard, updateResults] = useMutation(UPDATE_BATTLE_CARD);
 
   const [videoSrc, setVideoSrc] = useState(card.src);
   const [title, setTitle] = useState(card.title);
   const [dancers, setDancers] = useState(card.dancers);
   const [winners, setWinners] = useState(card.winners);
-
-  // const updateCard = (update: Partial<typeof card>) => {
-  //   // const updatedCard = { ...card, ...update };
-  //   // setVideoSrc(updatedCard.src);
-  //   // setTitle(updatedtitle);
-  //   // setDancers(updatedCard.dancers);
-  //   // setWinners(updatedCard.winners);
-  //   // const updatedBrackets = [...brackets];
-  //   // updatedBrackets[bracketIndex].battleCards[cardIndex] = updatedCard;
-  //   // setBrackets(updatedBrackets);
-  // };
 
   const resetFields = () => {
     setTitle(card.title);
@@ -97,18 +75,73 @@ export function EditBattleCard({
           ],
         },
       });
+    } else {
+      const changes = ObjectComparison(
+        (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards[
+          cardIndex
+        ],
+        {
+          order: card.order,
+          title: title,
+          src: videoSrc,
+          dancers: dancers,
+          winners: winners,
+        }
+      );
+
+      let dancersMutation: { toCreate: string[]; toDelete: string[] } = {
+        toCreate: [],
+        toDelete: [],
+      };
+      let winnersMutation: { toCreate: string[]; toDelete: string[] } = {
+        toCreate: [],
+        toDelete: [],
+      };
+
+      if (changes.dancers) {
+        dancersMutation = buildMutation(card.dancers || [], changes.dancers || []);
+      }
+
+      if (changes.winners) {
+        winnersMutation = buildMutation(card.winners || [], changes.winners || []);
+      }
+
+      updateBattleCard({
+        variables: {
+          where: {
+            uuid: card.uuid,
+          },
+          update: {
+            order: card.order.toString(),
+            title,
+            src: videoSrc,
+            dancers: {
+              connectOrCreate: createConnectOrCreateListOfRoles(dancersMutation.toCreate),
+              delete: createDeleteListOfRoles(dancersMutation.toDelete),
+            },
+            winners: {
+              connectOrCreate: createConnectOrCreateListOfRoles(winnersMutation.toCreate),
+              delete: createDeleteListOfRoles(winnersMutation.toDelete),
+            },
+          },
+        },
+      });
     }
   };
 
-  // const deleteCard = () => {
-  //   let newEventData = { ...eventData };
-  //   (newEventData.sections[sectionIndex] as IBattlesSection).brackets[
-  //     bracketIndex
-  //   ].battleCards.splice(cardIndex, 1);
-  //   setEventData(newEventData);
-  // };
-
-  console.log(cardIndex);
+  const handleDelete = () => {
+    if (card.uuid === '') {
+      deleteCard(sectionIndex, cardIndex, bracketIndex);
+    } else {
+      deleteBattleCard({
+        variables: {
+          where: {
+            uuid: card.uuid,
+          },
+        },
+      });
+    }
+  };
 
   useEffect(() => {
     if (!createResults.loading && createResults.data) {
@@ -132,11 +165,66 @@ export function EditBattleCard({
     }
   }, [createResults.loading, createResults.data]);
 
+  useEffect(() => {
+    if (!updateResults.loading && updateResults.data) {
+      console.log('SUCCESSFUL UPDATE');
+      console.log(updateResults.data);
+
+      updateCardEditable(sectionIndex, cardIndex, false, bracketIndex);
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IBattlesSection;
+      updatedSection.brackets[bracketIndex].battleCards[cardIndex] = {
+        order: card.order,
+        uuid: card.uuid,
+        title,
+        src: videoSrc,
+        dancers,
+        winners,
+        isEditable: false,
+      };
+
+      updateBattlesSection(sectionIndex, updatedSection);
+    }
+  }, [updateResults.loading, updateResults.data]);
+
+  useEffect(() => {
+    if (!deleteResults.loading && deleteResults.data) {
+      console.log('SUCCESSFUL DELETE');
+      console.log(deleteResults.data);
+
+      deleteCard(sectionIndex, cardIndex, bracketIndex);
+
+      let reorderedCards = reorderCards(
+        (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards
+      );
+
+      for (let i = 0; i < reorderedCards.updatedCards.length; i++) {
+        let updatedCard = reorderedCards.updatedCards[i];
+
+        updateBattleCard({
+          variables: {
+            where: {
+              uuid: updatedCard.uuid,
+            },
+            update: {
+              order: updatedCard.order.toString(),
+            },
+          },
+        });
+      }
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IBattlesSection;
+      updatedSection.brackets[bracketIndex].battleCards = reorderedCards.sorted;
+
+      updateBattlesSection(sectionIndex, updatedSection);
+    }
+  }, [deleteResults.loading, deleteResults.data]);
+
   return (
     <Card withBorder radius="md" shadow="sm" h="100%" w="470" m="md">
       <Group>
         <CloseButton
-          onClick={() => deleteCard(sectionIndex, cardIndex, bracketIndex)}
+          onClick={() => handleDelete()}
           mb="sm"
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
@@ -148,8 +236,6 @@ export function EditBattleCard({
           <Button
             color="red"
             onClick={() => {
-              console.log(eventData);
-              console.log(sectionIndex, cardIndex, bracketIndex);
               if (title === '' && videoSrc === '') {
                 deleteCard(sectionIndex, cardIndex, bracketIndex);
                 return;
