@@ -21,36 +21,36 @@ export function EditBattleCard({
   bracketIndex: number;
   cardIndex: number;
 }) {
-  const { eventData, setEventData, updateCardEditable, deleteCard, updateBattlesSection } =
+  const { eventData, setEventData, updateCardEditable, deleteCard, updateSection } =
     useEventContext();
 
-  const card = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
+  const battleCard = (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex]
     .battleCards[cardIndex];
 
   const [createBattleCard, createResults] = useMutation(CREATE_BATTLE_CARD);
   const [deleteBattleCard, deleteResults] = useMutation(DELETE_BATTLE_CARD);
   const [updateBattleCard, updateResults] = useMutation(UPDATE_BATTLE_CARD);
 
-  const [videoSrc, setVideoSrc] = useState(card.src);
-  const [title, setTitle] = useState(card.title);
-  const [dancers, setDancers] = useState(card.dancers);
-  const [winners, setWinners] = useState(card.winners);
+  const [videoSrc, setVideoSrc] = useState(battleCard.src);
+  const [title, setTitle] = useState(battleCard.title);
+  const [dancers, setDancers] = useState(battleCard.dancers);
+  const [winners, setWinners] = useState(battleCard.winners);
 
   const resetFields = () => {
-    setTitle(card.title);
-    setVideoSrc(card.src);
-    setDancers(card.dancers);
-    setWinners(card.winners);
+    setTitle(battleCard.title);
+    setVideoSrc(battleCard.src);
+    setDancers(battleCard.dancers);
+    setWinners(battleCard.winners);
   };
 
   const handleSubmit = () => {
     //New Card
-    if (card.uuid === '') {
+    if (battleCard.uuid === '') {
       createBattleCard({
         variables: {
           input: [
             {
-              order: card.order.toString(),
+              order: battleCard.order.toString(),
               uuid: crypto.randomUUID(),
               src: videoSrc,
               title,
@@ -81,7 +81,7 @@ export function EditBattleCard({
           cardIndex
         ],
         {
-          order: card.order,
+          order: battleCard.order,
           title: title,
           src: videoSrc,
           dancers: dancers,
@@ -99,20 +99,20 @@ export function EditBattleCard({
       };
 
       if (changes.dancers) {
-        dancersMutation = buildMutation(card.dancers || [], changes.dancers || []);
+        dancersMutation = buildMutation(battleCard.dancers || [], changes.dancers || []);
       }
 
       if (changes.winners) {
-        winnersMutation = buildMutation(card.winners || [], changes.winners || []);
+        winnersMutation = buildMutation(battleCard.winners || [], changes.winners || []);
       }
 
       updateBattleCard({
         variables: {
           where: {
-            uuid: card.uuid,
+            uuid: battleCard.uuid,
           },
           update: {
-            order: card.order.toString(),
+            order: battleCard.order.toString(),
             title,
             src: videoSrc,
             dancers: {
@@ -130,17 +130,25 @@ export function EditBattleCard({
   };
 
   const handleDelete = () => {
-    if (card.uuid === '') {
+    if (battleCard.uuid === '') {
       deleteCard(sectionIndex, cardIndex, bracketIndex);
     } else {
       deleteBattleCard({
         variables: {
           where: {
-            uuid: card.uuid,
+            uuid: battleCard.uuid,
           },
         },
       });
     }
+  };
+
+  const handleCancel = () => {
+    if (battleCard.uuid === '') {
+      deleteCard(sectionIndex, cardIndex, bracketIndex);
+      return;
+    }
+    updateCardEditable(sectionIndex, cardIndex, false, bracketIndex);
   };
 
   useEffect(() => {
@@ -152,7 +160,7 @@ export function EditBattleCard({
       (newEventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards[
         cardIndex
       ] = {
-        order: card.order,
+        order: battleCard.order,
         uuid: createResults.data.createBattleCards.battleCards[0].uuid,
         title,
         src: videoSrc,
@@ -174,8 +182,8 @@ export function EditBattleCard({
 
       let updatedSection = { ...eventData.sections[sectionIndex] } as IBattlesSection;
       updatedSection.brackets[bracketIndex].battleCards[cardIndex] = {
-        order: card.order,
-        uuid: card.uuid,
+        order: battleCard.order,
+        uuid: battleCard.uuid,
         title,
         src: videoSrc,
         dancers,
@@ -183,7 +191,7 @@ export function EditBattleCard({
         isEditable: false,
       };
 
-      updateBattlesSection(sectionIndex, updatedSection);
+      updateSection(sectionIndex, updatedSection);
     }
   }, [updateResults.loading, updateResults.data]);
 
@@ -216,7 +224,7 @@ export function EditBattleCard({
       let updatedSection = { ...eventData.sections[sectionIndex] } as IBattlesSection;
       updatedSection.brackets[bracketIndex].battleCards = reorderedCards.sorted;
 
-      updateBattlesSection(sectionIndex, updatedSection);
+      updateSection(sectionIndex, updatedSection);
     }
   }, [deleteResults.loading, deleteResults.data]);
 
@@ -233,16 +241,7 @@ export function EditBattleCard({
             Save
           </Button>
           <Button onClick={() => resetFields()}>Reset</Button>
-          <Button
-            color="red"
-            onClick={() => {
-              if (title === '' && videoSrc === '') {
-                deleteCard(sectionIndex, cardIndex, bracketIndex);
-                return;
-              }
-              updateCardEditable(sectionIndex, cardIndex, false, bracketIndex);
-            }}
-          >
+          <Button color="red" onClick={() => handleCancel()}>
             Cancel
           </Button>
         </Group>

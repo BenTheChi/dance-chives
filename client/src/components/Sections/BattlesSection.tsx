@@ -20,13 +20,17 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
   const [deleteBattlesSection, deleteResults] = useMutation(DELETE_BATTLE_SECTION);
 
   const handleDelete = (sectionIndex: number) => {
-    deleteBattlesSection({
-      variables: {
-        where: {
-          uuid: eventData.sections[sectionIndex].uuid,
+    if (eventData.sections[sectionIndex].uuid === '') {
+      deleteSection(sectionIndex);
+    } else {
+      deleteBattlesSection({
+        variables: {
+          where: {
+            uuid: eventData.sections[sectionIndex].uuid,
+          },
         },
-      },
-    });
+      });
+    }
   };
 
   useEffect(() => {

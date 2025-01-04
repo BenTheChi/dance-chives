@@ -44,22 +44,6 @@ export const createCreateListOfBrackets = (brackets: any) => {
   });
 };
 
-// export const createUpdateOfBracket = (bracket: any) => {
-//   return {
-//     where: {
-//       node: {
-//         uuid: bracket.uuid,
-//       },
-//     },
-//     update: {
-//       node: {
-//         type: bracket.type,
-//         order: bracket.order.toString(),
-//       },
-//     },
-//   };
-// };
-
 export const createDeleteListOfBrackets = (uuids: string[]) => {
   return uuids.map((uuid) => {
     return {
@@ -91,13 +75,3 @@ export const createDeleteListOfStyles = (styles: string[]) => {
     };
   });
 };
-// export const updateListofBrackets = (brackets: any) => {
-//     return brackets.map((bracket: {uuid: string, type: string, order: number}) => {
-//         return {
-//             where: {
-//                 uuid: bracket.uuid
-//             }
-//             update: {}
-//         }
-//     })
-// }

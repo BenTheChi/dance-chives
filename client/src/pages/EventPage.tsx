@@ -264,6 +264,7 @@ export function EventPage() {
 
   if (!loading) {
     eventData = convertGQL(data.events[0]);
+    console.log('SUCCESSFUL GET EVENT');
     console.log(eventData);
   }
 

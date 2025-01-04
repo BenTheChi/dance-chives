@@ -90,6 +90,7 @@ query GetEvent {
       uuid
       type
       performanceCardsIn {
+        uuid
         order
         title
         src
@@ -105,6 +106,7 @@ query GetEvent {
       uuid
       type
       workshopCardsIn {
+        uuid
         order
         title
         cost
@@ -273,6 +275,7 @@ export const UPDATE_BATTLE_SECTION = gql`
   mutation UpdateSections($where: SectionWhere!, $update: SectionUpdateInput) {
     updateSections(where: $where, update: $update) {
       sections {
+        order
         uuid
         type
         format
@@ -303,6 +306,28 @@ export const UPDATE_BATTLE_SECTION = gql`
               email
               displayName
             }
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_PERFORMANCE_SECTION = gql`
+  mutation CreateSections($input: [SectionCreateInput!]!) {
+    createSections(input: $input) {
+      sections {
+        order
+        uuid
+        type
+        performanceCardsIn {
+          order
+          title
+          src
+          dancers {
+            uuid
+            email
+            displayName
           }
         }
       }
@@ -384,6 +409,24 @@ export const CREATE_BATTLE_SECTION = gql`
 export const DELETE_BATTLE_SECTION = gql`
   mutation DeleteSections($where: SectionWhere!) {
     deleteSections(where: $where, delete: { brackets: { delete: { battleCards: {} } } }) {
+      nodesDeleted
+      relationshipsDeleted
+    }
+  }
+`;
+
+export const DELETE_WORKSHOP_SECTION = gql`
+  mutation DeleteSections($where: SectionWhere!) {
+    deleteSections(where: $where, delete: { workshopCards: {} }) {
+      nodesDeleted
+      relationshipsDeleted
+    }
+  }
+`;
+
+export const DELETE_PERFORMANCE_SECTION = gql`
+  mutation DeleteSections($where: SectionWhere!) {
+    deleteSections(where: $where, delete: { performanceCards: {} }) {
       nodesDeleted
       relationshipsDeleted
     }
@@ -477,6 +520,7 @@ export const CREATE_WORKSHOP_CARD = gql`
   mutation CreateWorkshopCards($input: [WorkshopCardCreateInput!]!) {
     createWorkshopCards(input: $input) {
       workshopCards {
+        uuid
         order
         title
         cost
@@ -491,6 +535,118 @@ export const CREATE_WORKSHOP_CARD = gql`
         }
         styles {
           name
+        }
+      }
+    }
+  }
+`;
+
+export const DELETE_WORKSHOP_CARD = gql`
+  mutation DeleteWorkshopCards($where: WorkshopCardWhere!) {
+    deleteWorkshopCards(where: $where) {
+      nodesDeleted
+      relationshipsDeleted
+    }
+  }
+`;
+
+export const UPDATE_WORKSHOP_CARD = gql`
+  mutation UpdateWorkshopCards($where: WorkshopCardWhere!, $update: WorkshopCardUpdateInput) {
+    updateWorkshopCards(where: $where, update: $update) {
+      workshopCards {
+        uuid
+        order
+        title
+        cost
+        date
+        address
+        image
+        recapSrc
+        teachers {
+          uuid
+          email
+          displayName
+        }
+        styles {
+          name
+        }
+      }
+    }
+  }
+`;
+
+export const UPDATE_WORKSHOP_SECTION = gql`
+  mutation UpdateSections($where: SectionWhere!, $update: SectionUpdateInput) {
+    updateSections(where: $where, update: $update) {
+      sections {
+        order
+        uuid
+        type
+        workshopCardsIn {
+          uuid
+          order
+          title
+          cost
+          date
+          address
+          image
+          recapSrc
+          styles {
+            name
+          }
+          teachers {
+            uuid
+            email
+            displayName
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const DELETE_PERFORMANCE_CARD = gql`
+  mutation DeletePerformanceCards($where: PerformanceCardWhere!) {
+    deletePerformanceCards(where: $where) {
+      nodesDeleted
+      relationshipsDeleted
+    }
+  }
+`;
+
+export const UPDATE_PERFORMANCE_CARD = gql`
+  mutation UpdatePerformanceCards(
+    $where: PerformanceCardWhere!
+    $update: PerformanceCardUpdateInput
+  ) {
+    updatePerformanceCards(where: $where, update: $update) {
+      performanceCards {
+        uuid
+        order
+        title
+        src
+        dancers {
+          uuid
+          email
+          displayName
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_PERFORMANCE_CARD = gql`
+  mutation CreatePerformanceCards($input: [PerformanceCardCreateInput!]!) {
+    createPerformanceCards(input: $input) {
+      performanceCards {
+        uuid
+        order
+        title
+        src
+        dancers {
+          uuid
+          email
+          displayName
         }
       }
     }

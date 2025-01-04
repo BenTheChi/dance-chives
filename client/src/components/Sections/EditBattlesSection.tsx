@@ -27,7 +27,7 @@ const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
 export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
-  const { eventData, deleteSection, updateBattlesSection, updateBattlesSectionEditable } =
+  const { eventData, deleteSection, updateSection, updateBattlesSectionEditable } =
     useEventContext();
 
   //Create a copy of the value to avoid direct context changes
@@ -156,38 +156,28 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
         bracketsMutation.toDeleteBrackets = mutationResult.toDeleteBrackets;
       }
 
-      let judgesMutation: { toCreate: string[]; toDelete: string[] } = {
-        toCreate: [],
-        toDelete: [],
-      };
+      const judgesMutation = changes.judges
+        ? buildMutation(
+            (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
+            changes.judges || []
+          )
+        : { toCreate: [], toDelete: [] };
 
-      if (changes.judges) {
-        judgesMutation = buildMutation(
-          (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
-          changes.judges || []
-        );
-      }
+      const stylesMutation = changes.styles
+        ? buildMutation(
+            (eventData.sections[sectionIndex] as IBattlesSection).styles || [],
+            changes.styles || []
+          )
+        : { toCreate: [], toDelete: [] };
 
-      let stylesMutation: { toCreate: string[]; toDelete: string[] } = {
-        toCreate: [],
-        toDelete: [],
-      };
-
-      if (changes.styles) {
-        stylesMutation = buildMutation(
-          (eventData.sections[sectionIndex] as IBattlesSection).styles || [],
-          changes.styles || []
-        );
-      }
-
-      judgesMutation = buildMutation(
-        (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
-        changes.judges || []
-      );
-      stylesMutation = buildMutation(
-        (eventData.sections[sectionIndex] as IBattlesSection).styles || [],
-        changes.styles || []
-      );
+      // judgesMutation = buildMutation(
+      //   (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
+      //   changes.judges || []
+      // );
+      // stylesMutation = buildMutation(
+      //   (eventData.sections[sectionIndex] as IBattlesSection).styles || [],
+      //   changes.styles || []
+      // );
 
       updateBattleSection({
         variables: {
@@ -231,13 +221,17 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
   };
 
   const handleDelete = (sectionIndex: number) => {
-    deleteBattlesSection({
-      variables: {
-        where: {
-          uuid: eventData.sections[sectionIndex].uuid,
+    if (eventData.sections[sectionIndex].uuid === '') {
+      deleteSection(sectionIndex);
+    } else {
+      deleteBattlesSection({
+        variables: {
+          where: {
+            uuid: eventData.sections[sectionIndex].uuid,
+          },
         },
-      },
-    });
+      });
+    }
   };
 
   useEffect(() => {
@@ -263,7 +257,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
       newSection.judges = judges;
       newSection.styles = styles;
 
-      updateBattlesSection(sectionIndex, newSection);
+      updateSection(sectionIndex, newSection);
     }
   }, [updateResults.loading, updateResults.data]);
 
@@ -279,7 +273,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
       newSection.judges = judges;
       newSection.styles = styles;
 
-      updateBattlesSection(sectionIndex, newSection);
+      updateSection(sectionIndex, newSection);
     }
   }, [createResults.loading, createResults.data]);
 
@@ -296,7 +290,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
       newSection.judges = judges;
       newSection.styles = styles;
 
-      updateBattlesSection(sectionIndex, newSection);
+      updateSection(sectionIndex, newSection);
     }
   }, [updateBracketResults.loading, updateBracketResults.data]);
 

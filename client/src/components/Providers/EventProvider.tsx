@@ -19,7 +19,7 @@ interface EventContextType {
   addCard: (sectionIndex: number, bracketIndex?: number) => void;
   deleteSection: (sectionIndex: number) => void;
   updateBattlesSectionEditable: (sectionIndex: number, isEditable: boolean) => void;
-  updateBattlesSection: (sectionIndex: number, updatedSection: IBattlesSection) => void;
+  updateSection: (sectionIndex: number, updatedSection: ISection) => void;
   updateCard: (
     sectionIndex: number,
     cardIndex: number,
@@ -269,7 +269,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
     });
   };
 
-  const updateBattlesSection = (sectionIndex: number, updatedSection: IBattlesSection) => {
+  const updateSection = (sectionIndex: number, updatedSection: ISection) => {
     setEventData((prevState) => ({
       ...prevState,
       sections: prevState.sections.map((section, index) =>
@@ -289,7 +289,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
         deleteCard,
         updateCardEditable,
         updateBattlesSectionEditable,
-        updateBattlesSection,
+        updateSection,
         addSection,
         setEventData,
       }}

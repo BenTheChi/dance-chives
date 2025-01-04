@@ -1,6 +1,10 @@
+import { useEffect } from 'react';
+import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Stack, Title } from '@mantine/core';
+import { DELETE_PERFORMANCE_CARD, UPDATE_PERFORMANCE_CARD } from '@/gql/returnQueries';
 import { IPerformancesSection } from '@/types/types';
+import { reorderCards } from '@/utilities/utility';
 import { MultiTextField } from '../Display/MultiTextField';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
@@ -13,29 +17,78 @@ export function PerformanceCard({
   cardIndex: number;
   sectionIndex: number;
 }) {
-  const { eventData, updateCardEditable, deleteCard } = useEventContext();
-  const card = (eventData.sections[sectionIndex] as IPerformancesSection).performanceCards[
-    cardIndex
-  ];
+  const [deletePerformanceCard, deleteResults] = useMutation(DELETE_PERFORMANCE_CARD);
+  const [updatePerformanceCard, updateResults] = useMutation(UPDATE_PERFORMANCE_CARD);
 
-  if (card.isEditable) {
-    return <EditPerformanceCard cardIndex={cardIndex} sectionIndex={sectionIndex} />;
+  const { eventData, deleteCard, updateCardEditable, updateSection } = useEventContext();
+  const performanceCard = (eventData.sections[sectionIndex] as IPerformancesSection)
+    .performanceCards[cardIndex];
+
+  const handleDelete = () => {
+    deletePerformanceCard({
+      variables: {
+        where: { uuid: performanceCard.uuid },
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!deleteResults.loading && deleteResults.data) {
+      console.log('SUCCESSFUL DELETE');
+      console.log(deleteResults.data);
+
+      deleteCard(sectionIndex, cardIndex);
+
+      let reorderedCards = reorderCards(
+        (eventData.sections[sectionIndex] as IPerformancesSection).performanceCards
+      );
+
+      console.log(reorderedCards);
+
+      for (let i = 0; i < reorderedCards.updatedCards.length; i++) {
+        let updatedCard = reorderedCards.updatedCards[i];
+
+        updatePerformanceCard({
+          variables: {
+            where: {
+              uuid: updatedCard.uuid,
+            },
+            update: {
+              order: updatedCard.order.toString(),
+            },
+          },
+        });
+      }
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IPerformancesSection;
+      updatedSection.performanceCards = reorderedCards.sorted;
+
+      updateSection(sectionIndex, updatedSection);
+      console.log(eventData);
+    }
+  }, [deleteResults.loading, deleteResults.data]);
+
+  if (performanceCard.isEditable) {
+    return <EditPerformanceCard sectionIndex={sectionIndex} cardIndex={cardIndex} />;
   }
+
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
       <Group justify="space-between">
         <CloseButton
-          onClick={() => deleteCard(sectionIndex, cardIndex)}
-          mb="sm"
+          onClick={() => handleDelete()}
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
-        <Button onClick={() => updateCardEditable(sectionIndex, cardIndex, true)}>Edit</Button>
+        <Group justify="right">
+          <Button onClick={() => updateCardEditable(sectionIndex, cardIndex, true)}>Edit</Button>
+        </Group>
       </Group>
       <Stack gap="0">
-        <Title order={4}>{card.title}</Title>
-
-        <Video title={card.title} src={card.src} />
-        {card.dancers?.length > 0 && <MultiTextField title="Dancers" values={card.dancers} />}
+        <Title order={4}>{performanceCard.title}</Title>
+        <Video title={performanceCard.title} src={performanceCard.src} />
+        {performanceCard.dancers?.length > 0 && (
+          <MultiTextField title="Dancers" values={performanceCard.dancers} />
+        )}
       </Stack>
     </Card>
   );

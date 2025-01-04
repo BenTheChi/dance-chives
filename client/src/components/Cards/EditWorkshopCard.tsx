@@ -14,12 +14,20 @@ import {
   TextInput,
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
-import { CREATE_WORKSHOP_CARD, CREATE_WORKSHOP_SECTION } from '@/gql/returnQueries';
+import {
+  CREATE_WORKSHOP_CARD,
+  CREATE_WORKSHOP_SECTION,
+  DELETE_WORKSHOP_CARD,
+  UPDATE_WORKSHOP_CARD,
+} from '@/gql/returnQueries';
 import {
   createConnectOrCreateListOfRoles,
   createConnectOrCreateListOfStyles,
+  createDeleteListOfBrackets,
+  createDeleteListOfStyles,
 } from '@/gql/utilities';
 import { IWorkshopsSection } from '@/types/types';
+import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
 import { EditField } from '../Inputs/EditField';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
@@ -36,15 +44,16 @@ export function EditWorkshopCard({
   sectionIndex: number;
   cardIndex: number;
 }) {
-  const { eventData, deleteCard, updateCard, updateCardEditable } = useEventContext();
+  const { eventData, deleteCard, updateCard, updateCardEditable, updateSection, deleteSection } =
+    useEventContext();
   const workshopCard = (eventData.sections[sectionIndex] as IWorkshopsSection).workshopCards[
     cardIndex
   ];
 
   const [createSection, createSectionResults] = useMutation(CREATE_WORKSHOP_SECTION);
-  // const [deleteWorkshopCard, deleteResults] = useMutation(DELETE_WORKSHOP_CARD);
+  const [deleteWorkshopCard, deleteResults] = useMutation(DELETE_WORKSHOP_CARD);
   const [createWorkshopCard, createResults] = useMutation(CREATE_WORKSHOP_CARD);
-  // const [updateWorkshopCard, updateResults] = useMutation(UPDATE_WORKSHOP_CARD);
+  const [updateWorkshopCard, updateResults] = useMutation(UPDATE_WORKSHOP_CARD);
 
   const [title, setTitle] = useState(workshopCard.title);
   const [recapSrc, setRecapSrc] = useState(workshopCard.recapSrc);
@@ -67,6 +76,22 @@ export function EditWorkshopCard({
     setFile(null);
   };
 
+  const handleDelete = () => {
+    if (workshopCard.uuid === '') {
+      deleteCard(sectionIndex, cardIndex);
+    } else {
+      deleteWorkshopCard({
+        variables: {
+          where: { uuid: workshopCard.uuid },
+        },
+      });
+    }
+
+    if (eventData.sections[sectionIndex].uuid === '') {
+      deleteSection(sectionIndex);
+    }
+  };
+
   const handleSubmit = () => {
     //New Section with new card
     if (eventData.sections[sectionIndex].uuid === '') {
@@ -81,7 +106,7 @@ export function EditWorkshopCard({
                 create: [
                   {
                     node: {
-                      order: cardIndex.toString(),
+                      order: workshopCard.order.toString(),
                       uuid: crypto.randomUUID(),
                       title,
                       recapSrc,
@@ -114,11 +139,11 @@ export function EditWorkshopCard({
         variables: {
           input: [
             {
-              order: cardIndex.toString(),
+              order: workshopCard.order.toString(),
               uuid: crypto.randomUUID(),
               title,
               recapSrc,
-              date: (new Date(date).getTime() / 1000).toString(),
+              date: Math.floor(new Date(date).getTime() / 1000).toString(),
               address,
               cost,
               image,
@@ -136,6 +161,60 @@ export function EditWorkshopCard({
         },
       });
     }
+
+    //Update existing Card
+    else {
+      const changes = ObjectComparison(workshopCard, {
+        title,
+        recapSrc,
+        date,
+        address,
+        cost,
+        image,
+        teachers,
+        styles: styles,
+      });
+
+      const teachersMutation = changes.teachers
+        ? buildMutation(workshopCard.teachers || [], changes.teachers || [])
+        : { toCreate: [], toDelete: [] };
+
+      const stylesMutation = changes.styles
+        ? buildMutation(workshopCard.styles || [], changes.styles || [])
+        : { toCreate: [], toDelete: [] };
+
+      updateWorkshopCard({
+        variables: {
+          where: {
+            uuid: workshopCard.uuid,
+          },
+          update: {
+            title,
+            recapSrc,
+            date: Math.floor(new Date(date).getTime() / 1000).toString(),
+            address,
+            cost,
+            image,
+            teachers: {
+              connectOrCreate: createConnectOrCreateListOfRoles(teachersMutation.toCreate),
+              delete: createDeleteListOfBrackets(teachersMutation.toDelete),
+            },
+            styles: {
+              connectOrCreate: createConnectOrCreateListOfStyles(stylesMutation.toCreate),
+              delete: createDeleteListOfStyles(stylesMutation.toDelete),
+            },
+          },
+        },
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    if (workshopCard.uuid === '') {
+      deleteCard(sectionIndex, cardIndex);
+      return;
+    }
+    updateCardEditable(sectionIndex, cardIndex, false);
   };
 
   useEffect(() => {
@@ -145,7 +224,7 @@ export function EditWorkshopCard({
 
       updateCard(sectionIndex, cardIndex, {
         order: cardIndex,
-        uuid: workshopCard.uuid,
+        uuid: createSectionResults.data.createWorkshopCards.workshopCards[0].uuid,
         isEditable: false,
         styles,
         title,
@@ -161,12 +240,12 @@ export function EditWorkshopCard({
 
   useEffect(() => {
     if (!createResults.loading && createResults.data) {
-      console.log('SUCCESSFUL CREATE');
+      console.log('SUCCESSFUL CREATE CARD');
       console.log(createResults.data);
 
       updateCard(sectionIndex, cardIndex, {
-        order: cardIndex,
-        uuid: workshopCard.uuid,
+        order: workshopCard.order,
+        uuid: createResults.data.createWorkshopCards.workshopCards[0].uuid,
         isEditable: false,
         styles,
         title,
@@ -180,11 +259,68 @@ export function EditWorkshopCard({
     }
   }, [createResults.loading, createResults.data]);
 
+  useEffect(() => {
+    if (!deleteResults.loading && deleteResults.data) {
+      console.log('SUCCESSFUL DELETE');
+      console.log(deleteResults.data);
+
+      deleteCard(sectionIndex, cardIndex);
+
+      let reorderedCards = reorderCards(
+        (eventData.sections[sectionIndex] as IWorkshopsSection).workshopCards
+      );
+
+      console.log(reorderedCards);
+
+      for (let i = 0; i < reorderedCards.updatedCards.length; i++) {
+        let updatedCard = reorderedCards.updatedCards[i];
+
+        updateWorkshopCard({
+          variables: {
+            where: {
+              uuid: updatedCard.uuid,
+            },
+            update: {
+              order: updatedCard.order.toString(),
+            },
+          },
+        });
+      }
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IWorkshopsSection;
+      updatedSection.workshopCards = reorderedCards.sorted;
+
+      updateSection(sectionIndex, updatedSection);
+      console.log(eventData);
+    }
+  }, [deleteResults.loading, deleteResults.data]);
+
+  useEffect(() => {
+    if (!updateResults.loading && updateResults.data) {
+      console.log('SUCCESSFUL UPDATE CARD');
+      console.log(updateResults.data);
+
+      updateCard(sectionIndex, cardIndex, {
+        order: workshopCard.order,
+        uuid: updateResults.data.updateWorkshopCards.workshopCards[0].uuid,
+        isEditable: false,
+        styles,
+        title,
+        recapSrc,
+        teachers,
+        date,
+        address,
+        cost,
+        image: file ? file.name : workshopCard.image,
+      });
+    }
+  }, [updateResults.loading, updateResults.data]);
+
   return (
     <Card withBorder radius="md" shadow="sm" h="100%" w="100%">
       <Group justify="space-between">
         <CloseButton
-          onClick={() => deleteCard(sectionIndex, cardIndex)}
+          onClick={() => handleDelete()}
           icon={<IconSquareXFilled size={40} stroke={1.5} />}
         />
         <Group>
@@ -192,7 +328,7 @@ export function EditWorkshopCard({
             Save
           </Button>
           <Button onClick={() => resetFields()}>Reset</Button>
-          <Button color="red" onClick={() => updateCardEditable(sectionIndex, cardIndex, false)}>
+          <Button color="red" onClick={() => handleCancel()}>
             Cancel
           </Button>
         </Group>
