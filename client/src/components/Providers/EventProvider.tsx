@@ -73,11 +73,11 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           isEditable: true,
           title: '',
           image: '',
-          date: Date.now(),
+          date: new Date().getTime() / 1000,
           address: '',
           cost: '',
           styles: [],
-          teacher: [],
+          teachers: [],
           recapSrc: '',
         });
       } else if (newState.sections[sectionIndex].type === 'parties') {
@@ -86,7 +86,7 @@ export function EventProvider({ initialEventData, children }: EventProviderProps
           uuid: '',
           title: '',
           image: '',
-          date: 0,
+          date: new Date().getTime() / 1000,
           address: '',
           cost: '',
           dj: [],

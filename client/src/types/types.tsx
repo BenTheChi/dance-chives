@@ -57,7 +57,7 @@ export interface IWorkshopCard {
   address: string;
   cost: string;
   styles: string[];
-  teacher: string[];
+  teachers: string[];
   recapSrc: string;
   isEditable: boolean;
 }

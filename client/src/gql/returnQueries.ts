@@ -310,13 +310,30 @@ export const UPDATE_BATTLE_SECTION = gql`
   }
 `;
 
-export const CREATE_SECTION = gql`
+export const CREATE_WORKSHOP_SECTION = gql`
   mutation CreateSections($input: [SectionCreateInput!]!) {
     createSections(input: $input) {
       sections {
         order
         uuid
         type
+        workshopCardsIn {
+          order
+          title
+          cost
+          date
+          address
+          image
+          recapSrc
+          styles {
+            name
+          }
+          teachers {
+            uuid
+            email
+            displayName
+          }
+        }
       }
     }
   }
@@ -450,6 +467,30 @@ export const UPDATE_BATTLE_CARD = gql`
           uuid
           email
           displayName
+        }
+      }
+    }
+  }
+`;
+
+export const CREATE_WORKSHOP_CARD = gql`
+  mutation CreateWorkshopCards($input: [WorkshopCardCreateInput!]!) {
+    createWorkshopCards(input: $input) {
+      workshopCards {
+        order
+        title
+        cost
+        date
+        address
+        image
+        recapSrc
+        teachers {
+          uuid
+          email
+          displayName
+        }
+        styles {
+          name
         }
       }
     }

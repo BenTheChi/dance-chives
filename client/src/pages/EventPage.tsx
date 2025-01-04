@@ -196,7 +196,7 @@ export function EventPage() {
             cost: workshopCard.cost,
             recapSrc: workshopCard.recapSrc,
             styles: workshopCard.styles.map((style) => style.name),
-            teacher: workshopCard.teachers.map((person) => {
+            teachers: workshopCard.teachers.map((person) => {
               return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
             }),
           };

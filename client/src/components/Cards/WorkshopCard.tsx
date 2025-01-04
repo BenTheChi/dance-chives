@@ -20,6 +20,7 @@ export function WorkshopCard({
   if (card.isEditable) {
     return <EditWorkshopCard sectionIndex={sectionIndex} cardIndex={cardIndex} />;
   }
+
   return (
     <Card withBorder radius="md" shadow="sm" h="100%">
       <Group justify="space-between">
@@ -41,7 +42,7 @@ export function WorkshopCard({
           <TextField title="Address" value={card.address} />
           <TextField title="Cost" value={card.cost} />
           {card.styles?.length > 0 && <MultiTextField title="Styles" values={card.styles} />}
-          {card.teacher?.length > 0 && <MultiTextField title="Teachers" values={card.teacher} />}
+          {card.teachers?.length > 0 && <MultiTextField title="Teachers" values={card.teachers} />}
         </Stack>
         <Video title={card.title} src={card.recapSrc} />
       </Group>

@@ -51,7 +51,6 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
 
   function convertGQL(event: any) {
     let newData = event;
-
     newData.city = newData.inCity.name;
 
     newData.organizers?.length &&
@@ -102,6 +101,10 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
         disconnect: [{ where: {} }],
         connectOrCreate: createConnectOrCreateListOfStyles(changes.styles),
       };
+    }
+
+    if (changes.date) {
+      changes.date = (new Date(changes.date).getTime() / 1000).toString();
     }
 
     updateEvents({
@@ -166,7 +169,12 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
           <Text fw="bold">Date & Time:</Text>
           <DateTimePicker
             pb="sm"
-            onChange={(newDate) => dispatch({ type: 'SET_DATE', payload: newDate || new Date() })}
+            onChange={(newDate) =>
+              dispatch({
+                type: 'SET_DATE',
+                payload: newDate ? newDate.getTime() : new Date().getTime(),
+              })
+            }
             defaultValue={new Date(state.date * 1000)}
             clearable
           />

@@ -110,6 +110,7 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
         variables: {
           input: [
             {
+              order: sectionIndex.toString(),
               uuid: crypto.randomUUID(),
               format: newSection.format,
               type: newSection.type,
