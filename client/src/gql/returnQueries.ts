@@ -417,7 +417,7 @@ export const DELETE_BATTLE_SECTION = gql`
 
 export const DELETE_WORKSHOP_SECTION = gql`
   mutation DeleteSections($where: SectionWhere!) {
-    deleteSections(where: $where, delete: { workshopCards: {} }) {
+    deleteSections(where: $where, delete: { workshopCardsIn: {} }) {
       nodesDeleted
       relationshipsDeleted
     }
@@ -426,7 +426,7 @@ export const DELETE_WORKSHOP_SECTION = gql`
 
 export const DELETE_PERFORMANCE_SECTION = gql`
   mutation DeleteSections($where: SectionWhere!) {
-    deleteSections(where: $where, delete: { performanceCards: {} }) {
+    deleteSections(where: $where, delete: { performanceCardsIn: {} }) {
       nodesDeleted
       relationshipsDeleted
     }

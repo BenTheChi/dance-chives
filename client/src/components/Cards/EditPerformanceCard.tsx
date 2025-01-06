@@ -69,7 +69,7 @@ export function EditPerformanceCard({
             {
               order: sectionIndex.toString(),
               uuid: crypto.randomUUID(),
-              type: 'workshops',
+              type: 'performances',
               performanceCardsIn: {
                 create: [
                   {
@@ -145,11 +145,13 @@ export function EditPerformanceCard({
   };
 
   const handleCancel = () => {
-    if (performanceCard.uuid === '') {
+    if (eventData.sections[sectionIndex].uuid === '') {
+      deleteSection(sectionIndex);
+    } else if (performanceCard.uuid === '') {
       deleteCard(sectionIndex, cardIndex);
-      return;
+    } else {
+      updateCardEditable(sectionIndex, cardIndex, false);
     }
-    updateCardEditable(sectionIndex, cardIndex, false);
   };
 
   useEffect(() => {
@@ -159,12 +161,16 @@ export function EditPerformanceCard({
 
       updateCard(sectionIndex, cardIndex, {
         order: performanceCard.order,
-        uuid: updateResults.data.updatePerformanceCards.performanceCards[0].uuid,
+        uuid: createSectionResults.data.createSections.sections[0].performanceCardsIn[0].uuid,
         isEditable: false,
         title,
         src: videoSrc,
         dancers,
       });
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IPerformancesSection;
+      updatedSection.uuid = createSectionResults.data.createSections.sections[0].uuid;
+      updateSection(sectionIndex, updatedSection);
     }
   }, [createSectionResults.loading, createSectionResults.data]);
 

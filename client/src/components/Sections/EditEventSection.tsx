@@ -1,5 +1,7 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { useMutation } from '@apollo/client';
+import { AdvancedImage, placeholder, responsive } from '@cloudinary/react';
+import { Cloudinary } from '@cloudinary/url-gen';
 import { Button, FileButton, Group, Image, Stack, Text, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { UPDATE_EVENTS } from '@/gql/returnQueries';
@@ -8,6 +10,7 @@ import {
   createConnectOrCreateListOfStyles,
 } from '@/gql/utilities';
 import { ObjectComparison } from '@/utilities/utility';
+import CloudinaryUploadWidget from '../CloudinaryUploadWidget';
 import { EditField } from '../Inputs/EditField';
 import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
 import { useEventContext } from '../Providers/EventProvider';
@@ -17,6 +20,46 @@ const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
 export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boolean) => void }) {
+  // Cloudinary Configuration
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_UPLOAD_PRESET;
+
+  // State
+  const [publicId, setPublicId] = useState('');
+
+  // Cloudinary configuration
+  const cld = new Cloudinary({
+    cloud: {
+      cloudName,
+    },
+  });
+
+  // Upload Widget Configuration
+  const uwConfig = {
+    cloudName,
+    uploadPreset,
+    cropping: true, // Enable if you want cropping
+    showAdvancedOptions: false,
+    sources: ['local', 'url'],
+    multiple: false,
+    maxImageFileSize: 5000000, // 5MB
+    folder: 'events', // Store in specific folder
+    // Add a callback to handle successful uploads
+    callbacks: {
+      onSuccess: (result: any) => {
+        // Update the publicId and trigger image update in your state
+        const uploadInfo = result.info;
+        setPublicId(uploadInfo.public_id);
+
+        // Update your event state with the new image URL
+        dispatch({
+          type: 'SET_IMAGES',
+          payload: [uploadInfo.secure_url],
+        });
+      },
+    },
+  };
+
   const { eventData, updateEventData } = useEventContext();
 
   const actionTypes = [
@@ -126,20 +169,16 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
       <Group align="flex-start" m="md">
         <Stack>
           {eventData.images && (
-            <Image
-              src={eventData.images[0]}
-              alt={`${eventData.title} Poster`}
-              height={300}
-              w="auto"
-            />
+            <Image src={state.images} alt={`${eventData.title} Poster`} height={300} w="auto" />
           )}
 
-          <FileButton
-            onChange={(file) => dispatch({ type: 'SET_FILE', payload: file })}
-            accept="image/png,image/jpeg"
-          >
-            {(props) => <Button {...props}>Upload image</Button>}
-          </FileButton>
+          <CloudinaryUploadWidget
+            uwConfig={uwConfig}
+            setPublicId={setPublicId}
+            setImageUrl={(imageUrl: string) => {
+              dispatch({ type: 'SET_IMAGES', payload: [imageUrl] });
+            }}
+          />
         </Stack>
 
         <Stack>

@@ -20,7 +20,22 @@ export function Bracket({
     <Tabs.Panel key={bracketIndex} value={currentBracket.type.toLowerCase()}>
       <ScrollArea h={450}>
         <Grid justify="flex-start" align="stretch" p="sm">
-          <Grid.Col span={4}>
+          {/* First, render the battle cards in reverse order */}
+          {currentBracket.battleCards.map((battleCard, index) => (
+            <Grid.Col
+              key={`battle-${index}`}
+              span={4}
+              order={currentBracket.battleCards.length - index}
+            >
+              <BattleCard
+                sectionIndex={sectionIndex}
+                bracketIndex={bracketIndex}
+                cardIndex={index}
+              />
+            </Grid.Col>
+          ))}
+          {/* Then render the Add Battle button with highest order to appear last */}
+          <Grid.Col span={4} order={-1}>
             <Button
               onClick={() => addCard(sectionIndex, bracketIndex)}
               variant="outline"
@@ -33,18 +48,6 @@ export function Bracket({
               </Group>
             </Button>
           </Grid.Col>
-          {currentBracket.battleCards.map((battleCard, index) => {
-            return (
-              <Grid.Col span={4}>
-                <BattleCard
-                  key={index}
-                  sectionIndex={sectionIndex}
-                  bracketIndex={bracketIndex}
-                  cardIndex={index}
-                />
-              </Grid.Col>
-            );
-          })}
         </Grid>
       </ScrollArea>
     </Tabs.Panel>

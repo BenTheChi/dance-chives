@@ -103,7 +103,7 @@ export function AddEventPage() {
               uuid: crypto.randomUUID(),
               title: submittedValues.title,
               titleSlug: submittedValues.title.toLowerCase().replace(/ /g, '-'),
-              date: (new Date(submittedValues.datetime).getTime() / 1000).toString(),
+              date: Math.floor(new Date(submittedValues.datetime).getTime() / 1000).toString(),
               addressName: submittedValues.addressName,
               address: submittedValues.address,
               inCity: {

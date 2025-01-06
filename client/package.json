@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.3",
+    "@cloudinary/react": "^1.13.1",
+    "@cloudinary/url-gen": "^1.21.0",
     "@mantine/core": "7.14.1",
     "@mantine/dates": "7.14.1",
     "@mantine/dropzone": "^7.14.1",

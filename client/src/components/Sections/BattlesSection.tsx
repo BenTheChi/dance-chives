@@ -14,7 +14,7 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
   const { eventData, setEventData, deleteSection } = useEventContext();
   const currentSection = eventData.sections[sectionIndex] as IBattlesSection;
   const [activeTab, setActiveTab] = useState<string | null>(
-    currentSection.brackets.length > 0 ? currentSection.brackets[0].type.toLowerCase() : 'add'
+    currentSection.brackets.length > 0 ? currentSection.brackets[0].type.toLowerCase() : null
   );
 
   const [deleteBattlesSection, deleteResults] = useMutation(DELETE_BATTLE_SECTION);
@@ -42,7 +42,12 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
   }, [deleteResults.loading, deleteResults.data]);
 
   if (currentSection.isEditable) {
-    return <EditBattlesSection sectionIndex={sectionIndex}></EditBattlesSection>;
+    return (
+      <EditBattlesSection
+        sectionIndex={sectionIndex}
+        setActiveTab={setActiveTab}
+      ></EditBattlesSection>
+    );
   }
   return (
     <Card m="md" w="95%" withBorder>
@@ -85,27 +90,31 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
             <Group gap="6px">
               <Text fw="700">Styles:</Text>
               {currentSection.styles.map((style) => (
-                <Link to="/education/#">{style}</Link>
+                <Link to="/education/#" key={style}>
+                  {style}
+                </Link>
               ))}
             </Group>
           )}
         </Stack>
       </Center>
 
-      <Tabs value={activeTab} onChange={setActiveTab}>
-        <Tabs.List>
+      {currentSection.brackets.length > 0 && (
+        <Tabs value={activeTab} onChange={setActiveTab}>
+          <Tabs.List>
+            {currentSection.brackets &&
+              currentSection.brackets.map((bracket, index) => (
+                <Tabs.Tab key={index} value={bracket.type.toLowerCase()}>
+                  {bracket.type}
+                </Tabs.Tab>
+              ))}
+          </Tabs.List>
           {currentSection.brackets &&
             currentSection.brackets.map((bracket, index) => (
-              <Tabs.Tab key={index} value={bracket.type.toLowerCase()}>
-                {bracket.type}
-              </Tabs.Tab>
+              <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>
             ))}
-        </Tabs.List>
-        {currentSection.brackets &&
-          currentSection.brackets.map((bracket, index) => (
-            <Bracket key={index} sectionIndex={sectionIndex} bracketIndex={index}></Bracket>
-          ))}
-      </Tabs>
+        </Tabs>
+      )}
     </Card>
   );
 }

@@ -110,7 +110,7 @@ export function EditWorkshopCard({
                       uuid: crypto.randomUUID(),
                       title,
                       recapSrc,
-                      date: (new Date(date).getTime() / 1000).toString(),
+                      date: Math.floor(new Date(date).getTime() / 1000).toString(),
                       address,
                       cost,
                       image,
@@ -210,11 +210,13 @@ export function EditWorkshopCard({
   };
 
   const handleCancel = () => {
-    if (workshopCard.uuid === '') {
+    if (eventData.sections[sectionIndex].uuid === '') {
+      deleteSection(sectionIndex);
+    } else if (workshopCard.uuid === '') {
       deleteCard(sectionIndex, cardIndex);
-      return;
+    } else {
+      updateCardEditable(sectionIndex, cardIndex, false);
     }
-    updateCardEditable(sectionIndex, cardIndex, false);
   };
 
   useEffect(() => {
@@ -224,7 +226,7 @@ export function EditWorkshopCard({
 
       updateCard(sectionIndex, cardIndex, {
         order: cardIndex,
-        uuid: createSectionResults.data.createWorkshopCards.workshopCards[0].uuid,
+        uuid: createSectionResults.data.createSections.sections[0].workshopCardsIn[0].uuid,
         isEditable: false,
         styles,
         title,
@@ -235,6 +237,10 @@ export function EditWorkshopCard({
         cost,
         image: file ? file.name : workshopCard.image,
       });
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IWorkshopsSection;
+      updatedSection.uuid = createSectionResults.data.createSections.sections[0].uuid;
+      updateSection(sectionIndex, updatedSection);
     }
   }, [createSectionResults.loading, createSectionResults.data]);
 

@@ -49,7 +49,7 @@ export function WorkshopsSection({ sectionIndex }: { sectionIndex: number }) {
       <ScrollArea h={450}>
         <Grid justify="flex-start" align="stretch" p="sm">
           {currentSection.uuid !== '' && (
-            <Grid.Col span={4}>
+            <Grid.Col span={4} order={-1}>
               <Button onClick={() => addCard(sectionIndex)} variant="outline" h="375" w="460">
                 <Group align="center" justify="space-between">
                   <IconCirclePlus size={100} />
@@ -61,7 +61,11 @@ export function WorkshopsSection({ sectionIndex }: { sectionIndex: number }) {
 
           {currentSection.workshopCards.map((workshopCard, index) => {
             return (
-              <Grid.Col span={4}>
+              <Grid.Col
+                span={4}
+                order={currentSection.workshopCards.length - index}
+                key={currentSection.workshopCards.length - index}
+              >
                 <WorkshopCard key={index} cardIndex={index} sectionIndex={sectionIndex} />
               </Grid.Col>
             );

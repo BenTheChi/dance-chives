@@ -26,7 +26,13 @@ import { useEventContext } from '../Providers/EventProvider';
 const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
-export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
+export function EditBattlesSection({
+  sectionIndex,
+  setActiveTab,
+}: {
+  sectionIndex: number;
+  setActiveTab: (value: string) => void;
+}) {
   const { eventData, deleteSection, updateSection, updateBattlesSectionEditable } =
     useEventContext();
 
@@ -217,6 +223,16 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
           },
         });
       }
+
+      let newSection = eventData.sections[sectionIndex] as IBattlesSection;
+      newSection.brackets = brackets;
+      if (brackets.length > 0) {
+        setActiveTab(brackets[0].type.toLowerCase());
+      } else {
+        setActiveTab('');
+      }
+
+      updateSection(sectionIndex, newSection);
     }
   };
 
@@ -272,6 +288,13 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
       newSection.format = title;
       newSection.judges = judges;
       newSection.styles = styles;
+      newSection.uuid = createResults.data.createSections.sections[0].uuid;
+
+      if (brackets.length > 0) {
+        setActiveTab(brackets[0].type.toLowerCase());
+      } else {
+        setActiveTab('');
+      }
 
       updateSection(sectionIndex, newSection);
     }
@@ -282,15 +305,6 @@ export function EditBattlesSection({ sectionIndex }: { sectionIndex: number }) {
       console.log('SUCCESSFUL UPDATE BRACKET');
       console.log(updateBracketResults.data);
       console.log(eventData.sections[sectionIndex]);
-
-      let newSection = eventData.sections[sectionIndex] as IBattlesSection;
-      newSection.brackets = brackets;
-      newSection.isEditable = false;
-      newSection.format = title;
-      newSection.judges = judges;
-      newSection.styles = styles;
-
-      updateSection(sectionIndex, newSection);
     }
   }, [updateBracketResults.loading, updateBracketResults.data]);
 

@@ -50,18 +50,24 @@ export function PerformancesSection({ sectionIndex }: { sectionIndex: number }) 
       </Title>
       <ScrollArea h={450}>
         <Grid justify="flex-start" align="stretch" p="sm">
-          <Grid.Col span={4}>
-            <Button onClick={() => addCard(sectionIndex)} variant="outline" h="375" w="460">
-              <Group align="center" justify="space-between">
-                <IconCirclePlus size={100} />
-                <Title order={4}>Add Performance</Title>
-              </Group>
-            </Button>
-          </Grid.Col>
+          {currentSection.uuid !== '' && (
+            <Grid.Col span={4} order={-1}>
+              <Button onClick={() => addCard(sectionIndex)} variant="outline" h="375" w="460">
+                <Group align="center" justify="space-between">
+                  <IconCirclePlus size={100} />
+                  <Title order={4}>Add Performance</Title>
+                </Group>
+              </Button>
+            </Grid.Col>
+          )}
 
           {currentSection.performanceCards.map((performanceCard, index) => {
             return (
-              <Grid.Col span={4}>
+              <Grid.Col
+                span={4}
+                order={currentSection.performanceCards.length - index}
+                key={currentSection.performanceCards.length - index}
+              >
                 <PerformanceCard key={index} cardIndex={index} sectionIndex={sectionIndex} />
               </Grid.Col>
             );
