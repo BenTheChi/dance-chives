@@ -1,14 +1,45 @@
 export interface IUser {
-  uid: number;
-  firstName: string;
-  lastName: string;
-  userName: string;
+  uuid: string;
+  displayName: string;
+  email: string;
+  fname: string;
+  lname: string;
   dob: number;
-  city: string;
+  createdAt: number;
+  aboutMe?: string;
+  image?: string;
+  socials?: string[];
   auth: string;
-  styles: string[];
-  createdEvents: string[];
+  styles?: string[];
 }
+
+// uuid: String! @unique
+// displayName: String! @unique
+// email: String! @unique
+// fname: String!
+// lname: String!
+// dob: BigInt!
+// createdAt: BigInt!
+// auth: String!
+// aboutme: String
+// image: String
+// socials: [String!]
+// city: City! @relationship(type: "LIVES_IN", direction: OUT)
+// winnerOf: [BattleCard!]! @relationship(type: "WINNER_OF", direction: OUT)
+// dancesInBattleCards: [BattleCard!]!
+//   @relationship(type: "DANCES_IN", direction: OUT)
+// dancesInPerformanceCards: [PerformanceCard!]!
+//   @relationship(type: "DANCES_IN", direction: OUT)
+// organizes: [Event!]! @relationship(type: "ORGANIZES", direction: OUT)
+// mcs: [Event!]! @relationship(type: "MCS", direction: OUT)
+// djs: [Event!]! @relationship(type: "DJS", direction: OUT)
+// videographs: [Event!]! @relationship(type: "VIDEOGRAPHS", direction: OUT)
+// photographs: [Event!]! @relationship(type: "PHOTOGRAPHS", direction: OUT)
+// judges: [Section!]! @relationship(type: "JUDGES", direction: OUT)
+// graphicDesigns: [Event!]!
+//   @relationship(type: "GRAPHIC_DESIGNS", direction: OUT)
+// teachesInWorkshopCards: [WorkshopCard!]!
+//   @relationship(type: "TEACHES_IN", direction: OUT)
 
 // Party Interfaces
 export interface IPartyCard {

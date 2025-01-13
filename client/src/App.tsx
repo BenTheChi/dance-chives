@@ -9,11 +9,13 @@ import {
   InMemoryCache,
 } from '@apollo/client';
 import { MantineProvider } from '@mantine/core';
+import { UserProvider } from './components/Providers/UserProvider';
 import { Router } from './Router';
 import { theme } from './theme';
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:4000/', // Replace with your GraphQL server URL
+  uri: 'http://localhost:4000/graphql', // Replace with your GraphQL server URL
+  // credentials: 'include',
 });
 
 const omitTypenameLink = new ApolloLink((operation, forward) => {
@@ -45,11 +47,28 @@ export const apolloClient = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
+const initialUserData = {
+  uuid: '',
+  displayName: '',
+  email: '',
+  fname: '',
+  lname: '',
+  dob: 0,
+  createdAt: 0,
+  aboutMe: '',
+  image: '',
+  socials: [],
+  auth: '',
+  styles: [],
+};
+
 export default function App() {
   return (
     <ApolloProvider client={apolloClient}>
       <MantineProvider theme={theme}>
-        <Router />
+        <UserProvider initialUser={initialUserData}>
+          <Router />
+        </UserProvider>
       </MantineProvider>
     </ApolloProvider>
   );

@@ -1,19 +1,20 @@
-import { useState } from 'react';
 import { Button, Card, Center, Stack, TextInput, Title } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
+import { useUserContext } from './Providers/UserProvider';
 
 export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }) {
+  const { setInitialUserData } = useUserContext();
+
   const form = useForm({
     mode: 'controlled',
     initialValues: {
       displayName: '',
-      firstname: '',
-      lastname: '',
+      fname: '',
+      lname: '',
       dob: '',
       city: '',
       email: '',
-      password: '',
       authCode: '',
     },
     // Optional: Add validations if needed
@@ -26,7 +27,8 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
   const handleSubmit = (values: typeof form.values) => {
     // Handle form submission here
     console.log(values);
-    // setSubmittedValues(values);
+    const convertedDob = new Date(values.dob).getTime();
+    setInitialUserData({ ...values, dob: convertedDob });
     setTitle('Choose login method');
   };
 
@@ -40,13 +42,13 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
       >
         <Stack gap="md" mb="lg">
           <TextInput
-            {...form.getInputProps('firstname')}
+            {...form.getInputProps('fname')}
             label="First Name"
             placeholder="Enter your firstname"
             required
           />
           <TextInput
-            {...form.getInputProps('lastname')}
+            {...form.getInputProps('lname')}
             label="Last Name"
             placeholder="Enter your lastname"
             required

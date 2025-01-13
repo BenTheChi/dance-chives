@@ -16,12 +16,14 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import firebase, { auth } from '../../lib/firebase'; // Import from centralized config
+
+import { useUserContext } from '../Providers/UserProvider';
 import { UserInfoForm } from '../UserInfoForm';
 
 export function LoginHeader() {
-  const [loggedIn, setLoggedIn] = React.useState(false);
   const [opened, { open, close }] = useDisclosure(false);
   const [title, setTitle] = React.useState('Login');
+  const { signup, loggedIn, login, logout, register } = useUserContext();
   // const [newUser, ]
 
   // Configure FirebaseUI.
@@ -35,11 +37,32 @@ export function LoginHeader() {
     callbacks: {
       // Avoid redirects after sign-in.
       signInSuccessWithAuthResult: (result: any) => {
-        setLoggedIn(true);
+        console.log('SUCCESS');
+        console.log('Full result:', result);
 
-        //Close modal window
+        // Wait for next tick to ensure Firebase user is fully initialized
+        setTimeout(() => {
+          // Get current user directly from Firebase
+          const currentUser = firebase.auth().currentUser;
+
+          if (currentUser) {
+            currentUser
+              .getIdToken()
+              .then((firebaseToken) => {
+                return signup ? register(firebaseToken) : login(firebaseToken, currentUser.uid);
+              })
+              .then(() => {
+                console.log(signup ? 'Registered' : 'Logged in');
+              })
+              .catch((error) => {
+                console.error('Authentication error:', error);
+              });
+          } else {
+            console.error('No current user found');
+          }
+        }, 1000);
+
         close();
-        console.log(result);
         return false;
       },
     },
@@ -66,7 +89,7 @@ export function LoginHeader() {
             </Menu.Item>
             <Menu.Item
               onClick={() => {
-                setLoggedIn(false);
+                logout();
               }}
             >
               Logout
