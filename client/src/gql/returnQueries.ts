@@ -1,5 +1,44 @@
 import { gql } from '@apollo/client';
 
+// export const getAllUsers = gql`
+//   query GetAllUsers {
+//     users {
+//       username
+//       displayName
+//     }
+//   }
+// `;
+
+export const getUsers = (keyword: string) => gql`
+  query GetUsers {
+    users(where: { displayName_CONTAINS: "${keyword}" }) {
+      username
+      displayName
+    }
+  }
+`;
+
+export const getUser = (username: string) => gql`
+  query GetUser {
+    users(where: { username: "${username}" }) {
+      uuid
+      username
+      displayName
+      email
+      fname
+      lname
+      dob
+      createdAt
+      auth
+      aboutMe
+      image
+      socials
+      city
+      styles
+    }
+  }
+`;
+
 export const getEvent = (id: string) => gql`
 query GetEvent {
   events(where: { titleSlug: "${id}"}) {
@@ -15,34 +54,28 @@ query GetEvent {
     promoVideo
     recapVideo
     organizers {
-      uuid
       displayName
-      email
+      username
     }
     mcs {
-      uuid
       displayName
-      email
+      username
     }
     djs {
-      uuid
       displayName
-      email
+      username
     }
     videographers {
-      uuid
       displayName
-      email
+      username
     }
     graphicDesigners {
-      uuid
       displayName
-      email
+      username
     }
     photographers {
-      uuid
       displayName
-      email
+      username
     }
     inCity {
       name
@@ -59,8 +92,7 @@ query GetEvent {
         name
       }
       judges {
-        uuid
-        email
+        username
         displayName
       }
       brackets {
@@ -73,13 +105,11 @@ query GetEvent {
           title
           src
           dancers {
-            uuid
-            email
+            username
             displayName
           }
           winners {
-            uuid
-            email
+            username
             displayName
           }
         }
@@ -95,8 +125,7 @@ query GetEvent {
         title
         src
         dancers {
-          uuid
-          email
+          username
           displayName
         }
       }
@@ -118,8 +147,7 @@ query GetEvent {
           name
         }
         teachers {
-          uuid
-          email
+          username
           displayName
         }
       }
@@ -149,40 +177,6 @@ export const GET_EVENTS = gql`
   }
 `;
 
-export const UPDATE_EVENT = gql`
-  mutation UpdateEvents($where: EventWhere!, $update: EventUpdateInput!) {
-    updateEvents(where: $where, update: $update) {
-      events {
-        uuid
-        title
-        date
-        addressName
-        address
-        cost
-        prizes
-        description
-        recapVideo
-        images
-        inCity {
-          name
-        }
-        styles {
-          name
-        }
-        organizers {
-          displayName
-        }
-        djs {
-          displayName
-        }
-        mcs {
-          displayName
-        }
-      }
-    }
-  }
-`;
-
 export const UPDATE_EVENTS = gql`
   mutation UpdateEvents($where: EventWhere!, $update: EventUpdateInput!) {
     updateEvents(where: $where, update: $update) {
@@ -204,21 +198,27 @@ export const UPDATE_EVENTS = gql`
           name
         }
         organizers {
+          username
           displayName
         }
         djs {
+          username
           displayName
         }
         mcs {
+          username
           displayName
         }
         videographers {
+          username
           displayName
         }
         photographers {
+          username
           displayName
         }
         graphicDesigners {
+          username
           displayName
         }
       }
@@ -249,21 +249,27 @@ export const CREATE_EVENTS = gql`
           name
         }
         organizers {
+          username
           displayName
         }
         djs {
+          username
           displayName
         }
         mcs {
+          username
           displayName
         }
         videographers {
+          username
           displayName
         }
         photographers {
+          username
           displayName
         }
         graphicDesigners {
+          username
           displayName
         }
       }
@@ -283,8 +289,7 @@ export const UPDATE_BATTLE_SECTION = gql`
           name
         }
         judges {
-          uuid
-          email
+          username
           displayName
         }
         brackets {
@@ -297,13 +302,11 @@ export const UPDATE_BATTLE_SECTION = gql`
             title
             src
             dancers {
-              uuid
-              email
+              username
               displayName
             }
             winners {
-              uuid
-              email
+              username
               displayName
             }
           }
@@ -325,8 +328,7 @@ export const CREATE_PERFORMANCE_SECTION = gql`
           title
           src
           dancers {
-            uuid
-            email
+            username
             displayName
           }
         }
@@ -354,8 +356,7 @@ export const CREATE_WORKSHOP_SECTION = gql`
             name
           }
           teachers {
-            uuid
-            email
+            username
             displayName
           }
         }
@@ -376,8 +377,7 @@ export const CREATE_BATTLE_SECTION = gql`
           name
         }
         judges {
-          uuid
-          email
+          username
           displayName
         }
         brackets {
@@ -390,13 +390,11 @@ export const CREATE_BATTLE_SECTION = gql`
             title
             src
             dancers {
-              uuid
-              email
+              username
               displayName
             }
             winners {
-              uuid
-              email
+              username
               displayName
             }
           }
@@ -446,13 +444,11 @@ export const UPDATE_BRACKET = gql`
           title
           src
           dancers {
-            uuid
-            email
+            username
             displayName
           }
           winners {
-            uuid
-            email
+            username
             displayName
           }
         }
@@ -470,13 +466,11 @@ export const CREATE_BATTLE_CARD = gql`
         title
         src
         dancers {
-          uuid
-          email
+          username
           displayName
         }
         winners {
-          uuid
-          email
+          username
           displayName
         }
       }
@@ -502,13 +496,11 @@ export const UPDATE_BATTLE_CARD = gql`
         title
         src
         dancers {
-          uuid
-          email
+          username
           displayName
         }
         winners {
-          uuid
-          email
+          username
           displayName
         }
       }
@@ -529,8 +521,7 @@ export const CREATE_WORKSHOP_CARD = gql`
         image
         recapSrc
         teachers {
-          uuid
-          email
+          username
           displayName
         }
         styles {
@@ -563,8 +554,7 @@ export const UPDATE_WORKSHOP_CARD = gql`
         image
         recapSrc
         teachers {
-          uuid
-          email
+          username
           displayName
         }
         styles {
@@ -595,8 +585,7 @@ export const UPDATE_WORKSHOP_SECTION = gql`
             name
           }
           teachers {
-            uuid
-            email
+            username
             displayName
           }
         }
@@ -626,8 +615,7 @@ export const UPDATE_PERFORMANCE_CARD = gql`
         title
         src
         dancers {
-          uuid
-          email
+          username
           displayName
         }
       }
@@ -644,8 +632,7 @@ export const CREATE_PERFORMANCE_CARD = gql`
         title
         src
         dancers {
-          uuid
-          email
+          username
           displayName
         }
       }

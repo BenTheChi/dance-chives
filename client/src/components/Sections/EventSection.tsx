@@ -1,11 +1,54 @@
+import { useEffect } from 'react';
+import { useMutation } from '@apollo/client';
 import { Group, Image, Stack, Title } from '@mantine/core';
+import { UPDATE_EVENTS } from '@/gql/returnQueries';
+import { createListOfRoles } from '@/gql/utilities';
+import { UserBasicInfo } from '../../types/types';
 import { PromoRecapCard } from '../Cards/PromoRecapCard';
 import { MultiTextField } from '../Display/MultiTextField';
+import { MultiTextStyleField } from '../Display/MultiTextStyleField';
 import { TextField } from '../Display/TextField';
 import { useEventContext } from '../Providers/EventProvider';
 
 export function EventSection() {
-  const { eventData } = useEventContext();
+  const { eventData, updateEventData } = useEventContext();
+
+  const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
+
+  // function convertUpdateGQL(event: any) {
+  //   event.city = event.inCity.name;
+  //   event.styles?.length && (event.styles = event.styles.map((style: any) => style.name));
+
+  //   return event;
+  // }
+
+  const updateEvent = (updatedValues: UserBasicInfo[], role: string) => {
+    const changes = {
+      [role]: {
+        disconnect: [{ where: {} }],
+        connect: createListOfRoles(updatedValues),
+      },
+    };
+
+    // Update the event with the processed changes
+    updateEvents({
+      variables: {
+        where: {
+          uuid: eventData.uuid,
+        },
+        update: changes,
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!loading && data) {
+      let newData = data.updateEvents.events[0];
+      newData.city = newData.inCity.name;
+      newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
+      updateEventData(newData);
+    }
+  }, [loading, data]);
 
   return (
     <div>
@@ -27,25 +70,29 @@ export function EventSection() {
 
           <TextField title="Address" value={eventData.address} />
 
-          {eventData.organizers?.length > 0 && (
-            <MultiTextField title="Organizer" values={eventData.organizers} />
-          )}
+          <MultiTextField
+            title="Organizers"
+            values={eventData.organizers}
+            updateEvent={updateEvent}
+          />
 
-          {eventData.mcs?.length > 0 && <MultiTextField title="MC" values={eventData.mcs} />}
+          <MultiTextField title="MCs" values={eventData.mcs} updateEvent={updateEvent} />
 
-          {eventData.djs?.length > 0 && <MultiTextField title="DJ" values={eventData.djs} />}
+          <MultiTextField title="DJs" values={eventData.djs} updateEvent={updateEvent} />
 
-          {eventData.styles?.length > 0 && (
-            <MultiTextField title="Styles" values={eventData.styles} />
-          )}
+          <MultiTextField
+            title="Videographers"
+            values={eventData.videographers}
+            updateEvent={updateEvent}
+          />
 
-          {eventData.videographers?.length > 0 && (
-            <MultiTextField title="Videographer" values={eventData.videographers} />
-          )}
+          <MultiTextField
+            title="Photographers"
+            values={eventData.photographers}
+            updateEvent={updateEvent}
+          />
 
-          {eventData.photographers?.length > 0 && (
-            <MultiTextField title="Photographer" values={eventData.photographers} />
-          )}
+          <MultiTextStyleField values={eventData.styles} />
         </Stack>
         {eventData.recapVideo && <PromoRecapCard title="Recap" src={eventData.recapVideo} />}
         {eventData.promoVideo && <PromoRecapCard title="Promo" src={eventData.promoVideo} />}

@@ -1,18 +1,11 @@
-export const createConnectOrCreateListOfRoles = (people: String[]) => {
-  return people.map((person) => {
+import { UserBasicInfo } from '@/types/types';
+
+export const createListOfRoles = (users: UserBasicInfo[]) => {
+  return users.map((user) => {
     return {
       where: {
         node: {
-          displayName: person,
-        },
-      },
-      onCreate: {
-        node: {
-          uuid: crypto.randomUUID(),
-          email: '',
-          displayName: person,
-          dob: '0',
-          name: '',
+          username: user.username,
         },
       },
     };
@@ -57,7 +50,7 @@ export const createDeleteListOfRoles = (people: string[]) => {
     return {
       where: {
         node: {
-          displayName: person,
+          username: person,
         },
       },
     };

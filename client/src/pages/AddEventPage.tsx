@@ -1,37 +1,15 @@
-import { useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { Button, Card, Center, Text, TextInput } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { hasLength, isEmail, useForm } from '@mantine/form';
 import ImageInputWithPreview from '@/components/Inputs/ImageInputWithPreview';
+import { StringsMultiSelectCreatable } from '@/components/Inputs/StringsMultiSelectCreatable';
+import { UsersMultiSelect } from '@/components/Inputs/UsersMultiSelect';
 import { CREATE_EVENTS } from '@/gql/returnQueries';
-import { createConnectOrCreateListOfRoles } from '@/gql/utilities';
+import { createListOfRoles } from '@/gql/utilities';
+import { UserBasicInfo } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
-import { MultiSelectCreatable } from '../components/Inputs/MultiSelectCreatable';
-
-const notExists = [
-  'John',
-  'Steve',
-  'Alice',
-  'Emma',
-  'Ava',
-  'Sophia',
-  'Isabella',
-  'Mia',
-  'Charlotte',
-  'Amelia',
-  'Harper',
-  'Evelyn',
-  'Abigail',
-  'Emily',
-  'Ella',
-  'Elizabeth',
-  'Camila',
-  'Luna',
-  'Sofia',
-  'Avery',
-];
 
 const stylesList = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking'];
 
@@ -47,41 +25,34 @@ export function AddEventPage() {
       cost: '',
       prizes: '',
       description: '',
-      styles: [],
-      organizers: [],
-      djs: [],
-      mcs: [],
-      videographers: [],
-      photographers: [],
-      sponsors: [],
-      graphicDesigners: [],
+      styles: [] as string[],
+      organizers: [] as UserBasicInfo[],
+      djs: [] as UserBasicInfo[],
+      mcs: [] as UserBasicInfo[],
+      videographers: [] as UserBasicInfo[],
+      photographers: [] as UserBasicInfo[],
+      sponsors: [] as UserBasicInfo[],
+      graphicDesigners: [] as UserBasicInfo[],
       recapVideo: '',
       promoVideo: '',
       images: [],
     },
-    // validate: {
-    //   name: hasLength({ min: 3 }, 'Must be at least 3 characters'),
-    //   email: isEmail('Invalid email'),
-    // },
   });
 
-  // const [submittedValues, setSubmittedValues] = useState<typeof form.values | null>(null);
   const [createEvents, { data, loading, error }] = useMutation(CREATE_EVENTS);
 
   loading! && console.log(data);
 
   function handleSubmit(submittedValues: typeof form.values) {
     if (submittedValues) {
-      const djList = createConnectOrCreateListOfRoles(submittedValues.djs);
-      const organizerList = createConnectOrCreateListOfRoles(submittedValues.organizers);
-      const mcList = createConnectOrCreateListOfRoles(submittedValues.mcs);
-      const videographerList = createConnectOrCreateListOfRoles(submittedValues.videographers);
-      const photographerList = createConnectOrCreateListOfRoles(submittedValues.photographers);
-      const graphicDesignerList = createConnectOrCreateListOfRoles(
-        submittedValues.graphicDesigners
-      );
+      const djList = createListOfRoles(submittedValues.djs);
+      const organizerList = createListOfRoles(submittedValues.organizers);
+      const mcList = createListOfRoles(submittedValues.mcs);
+      const videographerList = createListOfRoles(submittedValues.videographers);
+      const photographerList = createListOfRoles(submittedValues.photographers);
+      const graphicDesignerList = createListOfRoles(submittedValues.graphicDesigners);
 
-      const styleList = submittedValues.styles.map((style, index) => {
+      const styleList = submittedValues.styles.map((style) => {
         return {
           where: {
             node: {
@@ -123,25 +94,25 @@ export function AddEventPage() {
                 },
               },
               djs: {
-                connectOrCreate: djList,
+                connect: djList,
               },
               styles: {
-                connectOrCreate: styleList,
+                connect: styleList,
               },
               organizers: {
-                connectOrCreate: organizerList,
+                connect: organizerList,
               },
               mcs: {
-                connectOrCreate: mcList,
+                connect: mcList,
               },
               videographers: {
-                connectOrCreate: videographerList,
+                connect: videographerList,
               },
               photographers: {
-                connectOrCreate: photographerList,
+                connect: photographerList,
               },
               graphicDesigners: {
-                connectOrCreate: graphicDesignerList,
+                connect: graphicDesignerList,
               },
               cost: submittedValues.cost,
               prizes: submittedValues.prizes,
@@ -200,10 +171,10 @@ export function AddEventPage() {
             placeholder="Freestyle session is a celebration of breaking and Hip Hop culture"
           />
           <Text>Styles</Text>
-          <MultiSelectCreatable
-            value={[]}
+          <StringsMultiSelectCreatable
+            value={form.values.styles}
             notExists={stylesList}
-            {...form.getInputProps('styles')}
+            onChange={(value: string[]) => form.setFieldValue('styles', value)}
           />
         </Card>
 
@@ -225,32 +196,34 @@ export function AddEventPage() {
         <Card radius="md" m="md" withBorder>
           <Center>Team</Center>
           <Text>Organizers</Text>
-          <MultiSelectCreatable
-            value={[]}
-            notExists={notExists}
-            {...form.getInputProps('organizers')}
+          <UsersMultiSelect
+            value={form.values.organizers}
+            onChange={(value) => form.setFieldValue('organizers', value)}
           />
           <Text>DJs</Text>
-          <MultiSelectCreatable value={[]} notExists={notExists} {...form.getInputProps('djs')} />
+          <UsersMultiSelect
+            value={form.values.djs}
+            onChange={(value) => form.setFieldValue('djs', value)}
+          />
           <Text>MCs</Text>
-          <MultiSelectCreatable value={[]} notExists={notExists} {...form.getInputProps('mcs')} />
+          <UsersMultiSelect
+            value={form.values.mcs}
+            onChange={(value) => form.setFieldValue('mcs', value)}
+          />
           <Text>Videographers</Text>
-          <MultiSelectCreatable
-            value={[]}
-            notExists={notExists}
-            {...form.getInputProps('videographers')}
+          <UsersMultiSelect
+            value={form.values.videographers}
+            onChange={(value) => form.setFieldValue('videographers', value)}
           />
           <Text>Photographers</Text>
-          <MultiSelectCreatable
-            value={[]}
-            notExists={notExists}
-            {...form.getInputProps('photographers')}
+          <UsersMultiSelect
+            value={form.values.photographers}
+            onChange={(value) => form.setFieldValue('photographers', value)}
           />
           <Text>Graphic Designers</Text>
-          <MultiSelectCreatable
-            value={[]}
-            notExists={notExists}
-            {...form.getInputProps('graphicDesigners')}
+          <UsersMultiSelect
+            value={form.values.graphicDesigners}
+            onChange={(value) => form.setFieldValue('graphicDesigners', value)}
           />
         </Card>
 

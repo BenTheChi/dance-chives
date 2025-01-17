@@ -1,6 +1,12 @@
+export interface UserBasicInfo {
+  username: string;
+  displayName: string;
+}
+
 export interface IUser {
   uuid: string;
   displayName: string;
+  username: string;
   email: string;
   fname: string;
   lname: string;
@@ -11,6 +17,7 @@ export interface IUser {
   socials?: string[];
   auth: string;
   styles?: string[];
+  city: string;
 }
 
 // uuid: String! @unique
@@ -50,7 +57,7 @@ export interface IPartyCard {
   date: number;
   address: string;
   cost: string;
-  dj: string[];
+  dj: UserBasicInfo[];
   isEditable: boolean;
 }
 
@@ -67,7 +74,7 @@ export interface IPerformanceCard {
   uuid: string;
   title: string;
   src: string;
-  dancers: string[];
+  dancers: UserBasicInfo[];
   isEditable: boolean;
 }
 
@@ -88,7 +95,7 @@ export interface IWorkshopCard {
   address: string;
   cost: string;
   styles: string[];
-  teachers: string[];
+  teachers: UserBasicInfo[];
   recapSrc: string;
   isEditable: boolean;
 }
@@ -105,8 +112,8 @@ export interface IBattleCard {
   uuid: string;
   title: string;
   src: string;
-  dancers: string[];
-  winners: string[];
+  dancers: UserBasicInfo[];
+  winners: UserBasicInfo[];
   isEditable: boolean;
 }
 
@@ -123,7 +130,7 @@ export interface IBattlesSection {
   type: 'battles';
   format: string;
   styles: string[];
-  judges: string[];
+  judges: UserBasicInfo[];
   brackets: IBracket[];
   isEditable: boolean;
 }
@@ -167,11 +174,11 @@ export interface IEvent {
   images: string[];
   prizes: string;
   cost: string;
-  organizers: string[];
-  mcs: string[];
-  djs: string[];
-  videographers: string[];
-  photographers: string[];
+  organizers: UserBasicInfo[];
+  mcs: UserBasicInfo[];
+  djs: UserBasicInfo[];
+  videographers: UserBasicInfo[];
+  photographers: UserBasicInfo[];
   promoVideo: string;
   recapVideo: string;
   sections: ISection[];

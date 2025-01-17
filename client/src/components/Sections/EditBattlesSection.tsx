@@ -3,14 +3,14 @@ import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, Center, CloseButton, Group, Select, Stack, Text } from '@mantine/core';
 import {
-  createConnectOrCreateListOfRoles,
   createConnectOrCreateListOfStyles,
   createCreateListOfBrackets,
   createDeleteListOfBrackets,
   createDeleteListOfRoles,
   createDeleteListOfStyles,
+  createListOfRoles,
 } from '@/gql/utilities';
-import { IBattlesSection, IBracket } from '@/types/types';
+import { IBattlesSection, IBracket, UserBasicInfo } from '@/types/types';
 import { buildMutation, ObjectComparison } from '@/utilities/utility';
 import {
   CREATE_BATTLE_SECTION,
@@ -20,10 +20,10 @@ import {
 } from '../../gql/returnQueries';
 import { EditBracket } from '../EditBracket';
 import { EditField } from '../Inputs/EditField';
-import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { StringsMultiSelectCreatable } from '../Inputs/StringsMultiSelectCreatable';
+import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 
-const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
 const allStyles = ['Breaking', 'Popping', 'Locking', 'Hip Hop', 'House', 'Waacking', 'Vogue'];
 
 export function EditBattlesSection({
@@ -121,7 +121,7 @@ export function EditBattlesSection({
               format: newSection.format,
               type: newSection.type,
               judges: {
-                connectOrCreate: createConnectOrCreateListOfRoles(newSection.judges),
+                connect: createListOfRoles(newSection.judges),
               },
               styles: {
                 connectOrCreate: createConnectOrCreateListOfStyles(newSection.styles),
@@ -162,12 +162,12 @@ export function EditBattlesSection({
         bracketsMutation.toDeleteBrackets = mutationResult.toDeleteBrackets;
       }
 
-      const judgesMutation = changes.judges
-        ? buildMutation(
-            (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
-            changes.judges || []
-          )
-        : { toCreate: [], toDelete: [] };
+      // const judgesMutation = changes.judges
+      //   ? buildMutation(
+      //       (eventData.sections[sectionIndex] as IBattlesSection).judges || [],
+      //       changes.judges || []
+      //     )
+      //   : { toCreate: [], toDelete: [] };
 
       const stylesMutation = changes.styles
         ? buildMutation(
@@ -197,8 +197,8 @@ export function EditBattlesSection({
               delete: createDeleteListOfBrackets(bracketsMutation.toDeleteBrackets),
             },
             judges: {
-              connectOrCreate: createConnectOrCreateListOfRoles(judgesMutation.toCreate),
-              delete: createDeleteListOfRoles(judgesMutation.toDelete),
+              disconnect: [{ where: {} }],
+              connect: createListOfRoles(judges),
             },
             styles: {
               connectOrCreate: createConnectOrCreateListOfStyles(stylesMutation.toCreate),
@@ -330,11 +330,15 @@ export function EditBattlesSection({
           <EditField title="Format" value={title} onChange={(value) => setTitle(value)} />
           <Group gap="6px">
             <Text fw="700">Judges:</Text>
-            <MultiSelectCreatable notExists={notExists} value={judges} onChange={setJudges} />
+            <UsersMultiSelect value={judges} onChange={(value) => setJudges(value)} />
           </Group>
           <Group gap="6px">
             <Text fw="700">Styles:</Text>
-            <MultiSelectCreatable notExists={allStyles} value={styles} onChange={setStyles} />
+            <StringsMultiSelectCreatable
+              value={styles}
+              onChange={(value) => setStyles(value)}
+              notExists={allStyles}
+            />
           </Group>
         </Stack>
       </Center>

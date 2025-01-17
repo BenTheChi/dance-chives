@@ -8,10 +8,10 @@ import {
   DELETE_PERFORMANCE_CARD,
   UPDATE_PERFORMANCE_CARD,
 } from '@/gql/returnQueries';
-import { createConnectOrCreateListOfRoles, createDeleteListOfBrackets } from '@/gql/utilities';
-import { IPerformancesSection } from '@/types/types';
-import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
-import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { createDeleteListOfBrackets, createListOfRoles } from '@/gql/utilities';
+import { IPerformancesSection, UserBasicInfo } from '@/types/types';
+import { ObjectComparison, reorderCards } from '@/utilities/utility';
+import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
 
@@ -79,7 +79,7 @@ export function EditPerformanceCard({
                       title,
                       src: videoSrc,
                       dancers: {
-                        connectOrCreate: createConnectOrCreateListOfRoles(dancers),
+                        connect: createListOfRoles(dancers),
                       },
                     },
                   },
@@ -105,42 +105,46 @@ export function EditPerformanceCard({
               title,
               src: videoSrc,
               dancers: {
-                connectOrCreate: createConnectOrCreateListOfRoles(dancers),
+                connect: createListOfRoles(dancers),
               },
-              inSections: {
-                connect: { where: { node: { uuid: eventData.sections[sectionIndex].uuid } } },
+              inPerformanceSection: {
+                connect: {
+                  where: {
+                    node: {
+                      uuid: eventData.sections[sectionIndex].uuid,
+                    },
+                  },
+                },
               },
             },
           ],
         },
       });
     } else {
-      // Update existing Card
       const changes = ObjectComparison(performanceCard, {
+        order: performanceCard.order,
         title,
         src: videoSrc,
         dancers,
       });
 
-      const dancersMutation = changes.dancers
-        ? buildMutation(performanceCard.dancers || [], changes.dancers || [])
-        : { toCreate: [], toDelete: [] };
-
-      updatePerformanceCard({
-        variables: {
-          where: {
-            uuid: performanceCard.uuid,
-          },
-          update: {
-            title,
-            src: videoSrc,
-            dancers: {
-              connectOrCreate: createConnectOrCreateListOfRoles(dancersMutation.toCreate),
-              delete: createDeleteListOfBrackets(dancersMutation.toDelete),
+      if (Object.keys(changes).length > 0) {
+        updatePerformanceCard({
+          variables: {
+            where: {
+              uuid: performanceCard.uuid,
+            },
+            update: {
+              title: changes.title,
+              src: changes.src,
+              dancers: changes.dancers && {
+                disconnect: [{ where: {} }],
+                connect: createListOfRoles(dancers),
+              },
             },
           },
-        },
-      });
+        });
+      }
     }
   };
 
@@ -281,11 +285,7 @@ export function EditPerformanceCard({
         </Stack>
 
         <Text fw="700">Dancers:</Text>
-        <MultiSelectCreatable
-          notExists={[...notExists, ...dancers]}
-          value={dancers}
-          onChange={setDancers}
-        />
+        <UsersMultiSelect value={dancers} onChange={(value) => setDancers(value)} />
       </Stack>
     </Card>
   );

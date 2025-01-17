@@ -14,7 +14,7 @@ import {
 import { DateTimePicker } from '@mantine/dates';
 import { IPartiesSection } from '@/types/types';
 import { EditField } from '../Inputs/EditField';
-import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 
 const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
@@ -111,7 +111,7 @@ export function EditPartyCard({
           <EditField title="Cost" value={cost} onChange={setCost} />
 
           <Text fw="700">DJs:</Text>
-          <MultiSelectCreatable notExists={[...notExists, ...djs]} value={djs} onChange={setDJs} />
+          <UsersMultiSelect value={djs} onChange={(value) => setDJs(value)} />
         </Stack>
       </Group>
     </Card>

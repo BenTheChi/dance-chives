@@ -22,6 +22,7 @@ interface UserProviderProps {
 
 interface INewUser {
   displayName: string;
+  username: string;
   fname: string;
   lname: string;
   dob: number;

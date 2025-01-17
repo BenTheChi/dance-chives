@@ -1,6 +1,7 @@
-import { Button, Card, Center, Stack, TextInput, Title } from '@mantine/core';
+import { Button, Card, Center, Stack, TextInput } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
+import { UserBasicInfo } from '../types/types';
 import { useUserContext } from './Providers/UserProvider';
 
 export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }) {
@@ -9,6 +10,7 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
   const form = useForm({
     mode: 'controlled',
     initialValues: {
+      username: '',
       displayName: '',
       fname: '',
       lname: '',
@@ -55,7 +57,13 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
           />
           <TextInput
             {...form.getInputProps('displayName')}
-            label="Display Name (This will be displayed to other users)"
+            label="Display Name (This will be displayed to other users in tags.  Non Unique.  Case sensitive.)"
+            placeholder="Enter your display name"
+            required
+          />
+          <TextInput
+            {...form.getInputProps('username')}
+            label="Username (This will be used for your profile URL.  Unique.  Case insensitive.)"
             placeholder="Enter your display name"
             required
           />

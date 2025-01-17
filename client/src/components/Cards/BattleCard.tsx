@@ -3,8 +3,9 @@ import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Spoiler, Stack, Text, Title } from '@mantine/core';
 import { DELETE_BATTLE_CARD, UPDATE_BATTLE_CARD } from '@/gql/returnQueries';
+import { createListOfRoles } from '@/gql/utilities';
 import { reorderCards } from '@/utilities/utility';
-import { IBattlesSection } from '../../types/types';
+import { IBattlesSection, UserBasicInfo } from '../../types/types';
 import { MultiTextField } from '../Display/MultiTextField';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
@@ -26,6 +27,24 @@ export function BattleCard({
 
   const [deleteBattleCard, deleteResults] = useMutation(DELETE_BATTLE_CARD);
   const [updateBattleCard, updateResults] = useMutation(UPDATE_BATTLE_CARD);
+
+  const updateEvent = (updatedValues: UserBasicInfo[], role: string) => {
+    const changes = {
+      [role]: {
+        disconnect: [{ where: {} }],
+        connect: createListOfRoles(updatedValues),
+      },
+    };
+
+    updateBattleCard({
+      variables: {
+        where: {
+          uuid: battleCard.uuid,
+        },
+        update: changes,
+      },
+    });
+  };
 
   const handleDelete = () => {
     if (battleCard.uuid === '') {
@@ -74,6 +93,22 @@ export function BattleCard({
     }
   }, [deleteResults.loading, deleteResults.data]);
 
+  useEffect(() => {
+    if (!updateResults.loading && updateResults.data) {
+      console.log('SUCCESSFUL UPDATE');
+      console.log(updateResults.data);
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IBattlesSection;
+      const updatedCard = updateResults.data.updateBattleCards.battleCards[0];
+      updatedSection.brackets[bracketIndex].battleCards[cardIndex] = {
+        ...battleCard,
+        dancers: updatedCard.dancers,
+        winners: updatedCard.winners,
+      };
+      updateSection(sectionIndex, updatedSection);
+    }
+  }, [updateResults.loading, updateResults.data]);
+
   if (!battleCard.isEditable)
     return (
       <Card withBorder radius="md" shadow="sm" h="100%" w="450">
@@ -90,13 +125,9 @@ export function BattleCard({
         <Title order={4}>{battleCard.title}</Title>
         <Video title={battleCard.title} src={battleCard.src} />
         <Stack>
-          {battleCard.dancers?.length > 0 && (
-            <MultiTextField title="Dancers" values={battleCard.dancers} />
-          )}
+          <MultiTextField title="Dancers" values={battleCard.dancers} updateEvent={updateEvent} />
           <Spoiler maxHeight={1} w="460" showLabel="See Winners" hideLabel="Hide">
-            {battleCard.winners?.length > 0 && (
-              <MultiTextField title="Winners" values={battleCard.winners} />
-            )}
+            <MultiTextField title="Winners" values={battleCard.winners} updateEvent={updateEvent} />
           </Spoiler>
         </Stack>
       </Card>

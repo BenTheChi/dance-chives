@@ -21,15 +21,16 @@ import {
   UPDATE_WORKSHOP_CARD,
 } from '@/gql/returnQueries';
 import {
-  createConnectOrCreateListOfRoles,
   createConnectOrCreateListOfStyles,
   createDeleteListOfBrackets,
   createDeleteListOfStyles,
+  createListOfRoles,
 } from '@/gql/utilities';
-import { IWorkshopsSection } from '@/types/types';
+import { IWorkshopsSection, UserBasicInfo } from '@/types/types';
 import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
 import { EditField } from '../Inputs/EditField';
-import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { StringsMultiSelectCreatable } from '../Inputs/StringsMultiSelectCreatable';
+import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
 
@@ -115,7 +116,7 @@ export function EditWorkshopCard({
                       cost,
                       image,
                       teachers: {
-                        connectOrCreate: createConnectOrCreateListOfRoles(teachers),
+                        connect: createListOfRoles(teachers),
                       },
                       styles: {
                         connectOrCreate: createConnectOrCreateListOfStyles(styles),
@@ -148,7 +149,7 @@ export function EditWorkshopCard({
               cost,
               image,
               teachers: {
-                connectOrCreate: createConnectOrCreateListOfRoles(teachers),
+                connect: createListOfRoles(teachers),
               },
               styles: {
                 connectOrCreate: createConnectOrCreateListOfStyles(styles),
@@ -175,9 +176,9 @@ export function EditWorkshopCard({
         styles: styles,
       });
 
-      const teachersMutation = changes.teachers
-        ? buildMutation(workshopCard.teachers || [], changes.teachers || [])
-        : { toCreate: [], toDelete: [] };
+      // const teachersMutation = changes.teachers
+      //   ? buildMutation(workshopCard.teachers || [], changes.teachers || [])
+      //   : { toCreate: [], toDelete: [] };
 
       const stylesMutation = changes.styles
         ? buildMutation(workshopCard.styles || [], changes.styles || [])
@@ -196,8 +197,8 @@ export function EditWorkshopCard({
             cost,
             image,
             teachers: {
-              connectOrCreate: createConnectOrCreateListOfRoles(teachersMutation.toCreate),
-              delete: createDeleteListOfBrackets(teachersMutation.toDelete),
+              disconnect: [{ where: {} }],
+              connect: createListOfRoles(teachers),
             },
             styles: {
               connectOrCreate: createConnectOrCreateListOfStyles(stylesMutation.toCreate),
@@ -370,17 +371,13 @@ export function EditWorkshopCard({
           <EditField title="Address" value={address} onChange={setAddress} />
           <EditField title="Cost" value={cost} onChange={setCost} />
           <Text fw="700">Styles:</Text>
-          <MultiSelectCreatable
+          <StringsMultiSelectCreatable
             notExists={[...stylesList, ...styles]}
             value={styles}
             onChange={setStyles}
           />
           <Text fw="700">Teachers:</Text>
-          <MultiSelectCreatable
-            notExists={[...notExists, ...teachers]}
-            value={teachers}
-            onChange={setTeachers}
-          />
+          <UsersMultiSelect value={teachers} onChange={(value) => setTeachers(value)} />
         </Stack>
         <Stack gap="0">
           {recapSrc ? <Video title={title} src={recapSrc} /> : null}

@@ -3,9 +3,11 @@ import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Image, Stack, Title } from '@mantine/core';
 import { DELETE_WORKSHOP_CARD, UPDATE_WORKSHOP_CARD } from '@/gql/returnQueries';
-import { IWorkshopsSection } from '@/types/types';
+import { createConnectOrCreateListOfStyles, createListOfRoles } from '@/gql/utilities';
+import { IWorkshopsSection, UserBasicInfo } from '@/types/types';
 import { reorderCards } from '@/utilities/utility';
 import { MultiTextField } from '../Display/MultiTextField';
+import { MultiTextStyleField } from '../Display/MultiTextStyleField';
 import { TextField } from '../Display/TextField';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
@@ -26,6 +28,33 @@ export function WorkshopCard({
   const workshopCard = (eventData.sections[sectionIndex] as IWorkshopsSection).workshopCards[
     cardIndex
   ];
+
+  const updateEvent = (updatedValues: UserBasicInfo[] | string[], role: string) => {
+    let changes;
+    if (role === 'styles') {
+      changes = {
+        styles: {
+          connectOrCreate: createConnectOrCreateListOfStyles(updatedValues as string[]),
+        },
+      };
+    } else {
+      changes = {
+        [role]: {
+          disconnect: [{ where: {} }],
+          connect: createListOfRoles(updatedValues as UserBasicInfo[]),
+        },
+      };
+    }
+
+    updateWorkshopCard({
+      variables: {
+        where: {
+          uuid: workshopCard.uuid,
+        },
+        update: changes,
+      },
+    });
+  };
 
   const handleDelete = () => {
     if (workshopCard.uuid === '') {
@@ -79,6 +108,22 @@ export function WorkshopCard({
     }
   }, [deleteResults.loading, deleteResults.data]);
 
+  useEffect(() => {
+    if (!updateResults.loading && updateResults.data) {
+      console.log('SUCCESSFUL UPDATE');
+      console.log(updateResults.data);
+
+      let updatedSection = { ...eventData.sections[sectionIndex] } as IWorkshopsSection;
+      const updatedCard = updateResults.data.updateWorkshopCards.workshopCards[0];
+      updatedSection.workshopCards[cardIndex] = {
+        ...workshopCard,
+        teachers: updatedCard.teachers,
+        styles: updatedCard.styles?.map((style: any) => style.name),
+      };
+      updateSection(sectionIndex, updatedSection);
+    }
+  }, [updateResults.loading, updateResults.data]);
+
   if (workshopCard.isEditable) {
     return <EditWorkshopCard sectionIndex={sectionIndex} cardIndex={cardIndex} />;
   }
@@ -111,12 +156,12 @@ export function WorkshopCard({
           />
           <TextField title="Address" value={workshopCard.address} />
           <TextField title="Cost" value={workshopCard.cost} />
-          {workshopCard.styles?.length > 0 && (
-            <MultiTextField title="Styles" values={workshopCard.styles} />
-          )}
-          {workshopCard.teachers?.length > 0 && (
-            <MultiTextField title="Teachers" values={workshopCard.teachers} />
-          )}
+          {workshopCard.styles?.length > 0 && <MultiTextStyleField values={workshopCard.styles} />}
+          <MultiTextField
+            title="Teachers"
+            values={workshopCard.teachers}
+            updateEvent={updateEvent}
+          />
         </Stack>
         <Video title={workshopCard.title} src={workshopCard.recapSrc} />
       </Group>

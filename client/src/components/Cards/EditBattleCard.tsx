@@ -3,14 +3,12 @@ import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Text, Textarea, TextInput } from '@mantine/core';
 import { CREATE_BATTLE_CARD, DELETE_BATTLE_CARD, UPDATE_BATTLE_CARD } from '@/gql/returnQueries';
-import { createConnectOrCreateListOfRoles, createDeleteListOfRoles } from '@/gql/utilities';
+import { createDeleteListOfRoles, createListOfRoles } from '@/gql/utilities';
 import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
-import { IBattlesSection } from '../../types/types';
-import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { IBattlesSection, UserBasicInfo } from '../../types/types';
+import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
-
-const notExists = ['Bob', 'Alice', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
 
 export function EditBattleCard({
   sectionIndex,
@@ -55,10 +53,10 @@ export function EditBattleCard({
               src: videoSrc,
               title,
               dancers: {
-                connectOrCreate: createConnectOrCreateListOfRoles(dancers),
+                connect: createListOfRoles(dancers),
               },
               winners: {
-                connectOrCreate: createConnectOrCreateListOfRoles(winners),
+                connect: createListOfRoles(winners),
               },
               inBrackets: {
                 connect: {
@@ -89,22 +87,22 @@ export function EditBattleCard({
         }
       );
 
-      let dancersMutation: { toCreate: string[]; toDelete: string[] } = {
-        toCreate: [],
-        toDelete: [],
-      };
-      let winnersMutation: { toCreate: string[]; toDelete: string[] } = {
-        toCreate: [],
-        toDelete: [],
-      };
+      // let dancersMutation: { toCreate: string[]; toDelete: string[] } = {
+      //   toCreate: [],
+      //   toDelete: [],
+      // };
+      // let winnersMutation: { toCreate: string[]; toDelete: string[] } = {
+      //   toCreate: [],
+      //   toDelete: [],
+      // };
 
-      if (changes.dancers) {
-        dancersMutation = buildMutation(battleCard.dancers || [], changes.dancers || []);
-      }
+      // if (changes.dancers) {
+      //   dancersMutation = buildMutation(battleCard.dancers || [], changes.dancers || []);
+      // }
 
-      if (changes.winners) {
-        winnersMutation = buildMutation(battleCard.winners || [], changes.winners || []);
-      }
+      // if (changes.winners) {
+      //   winnersMutation = buildMutation(battleCard.winners || [], changes.winners || []);
+      // }
 
       updateBattleCard({
         variables: {
@@ -116,12 +114,12 @@ export function EditBattleCard({
             title,
             src: videoSrc,
             dancers: {
-              connectOrCreate: createConnectOrCreateListOfRoles(dancersMutation.toCreate),
-              delete: createDeleteListOfRoles(dancersMutation.toDelete),
+              disconnect: [{ where: {} }],
+              connect: createListOfRoles(dancers),
             },
             winners: {
-              connectOrCreate: createConnectOrCreateListOfRoles(winnersMutation.toCreate),
-              delete: createDeleteListOfRoles(winnersMutation.toDelete),
+              disconnect: [{ where: {} }],
+              connect: createListOfRoles(winners),
             },
           },
         },
@@ -262,18 +260,10 @@ export function EditBattleCard({
       <Text fw="bold">Video Youtube URL:</Text>
       <TextInput value={videoSrc} onChange={(event) => setVideoSrc(event.currentTarget.value)} />
       <Text fw="700">Dancers:</Text>
-      <MultiSelectCreatable
-        notExists={[...notExists, ...dancers]}
-        value={dancers}
-        onChange={setDancers}
-      />
+      <UsersMultiSelect value={dancers} onChange={(value) => setDancers(value)} />
 
       <Text fw="700">Winners:</Text>
-      <MultiSelectCreatable
-        notExists={[...notExists, ...winners]}
-        value={winners}
-        onChange={setWinners}
-      />
+      <UsersMultiSelect value={winners} onChange={(value) => setWinners(value)} />
     </Card>
   );
 }

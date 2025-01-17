@@ -2,7 +2,7 @@ import { useQuery } from '@apollo/client';
 import { useParams } from 'react-router-dom';
 import { EventProvider } from '@/components/Providers/EventProvider';
 import { getEvent } from '@/gql/returnQueries';
-import { IEvent } from '@/types/types';
+import { IEvent, UserBasicInfo } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
 import { Event } from '../components/Event';
@@ -19,36 +19,12 @@ interface GQLEvent {
   prizes: string;
   promoVideo: string;
   recapVideo: string;
-  organizers: {
-    uuid: string;
-    email: string;
-    displayName: string;
-  }[];
-  mcs: {
-    uuid: string;
-    email: string;
-    displayName: string;
-  }[];
-  djs: {
-    uuid: string;
-    email: string;
-    displayName: string;
-  }[];
-  videographers: {
-    uuid: string;
-    email: string;
-    displayName: string;
-  }[];
-  graphicDesigners: {
-    uuid: string;
-    email: string;
-    displayName: string;
-  }[];
-  photographers: {
-    uuid: string;
-    email: string;
-    displayName: string;
-  }[];
+  organizers: UserBasicInfo[];
+  mcs: UserBasicInfo[];
+  djs: UserBasicInfo[];
+  videographers: UserBasicInfo[];
+  graphicDesigners: UserBasicInfo[];
+  photographers: UserBasicInfo[];
   inCity: {
     name: string;
     state: string;
@@ -62,11 +38,7 @@ interface GQLEvent {
     uuid: string;
     type: 'battles';
     format: string;
-    judges: {
-      uuid: string;
-      email: string;
-      displayName: string;
-    }[];
+    judges: UserBasicInfo[];
     styles: {
       name: string;
     }[];
@@ -79,16 +51,8 @@ interface GQLEvent {
         uuid: string;
         title: string;
         src: string;
-        dancers: {
-          uuid: string;
-          email: string;
-          displayName: string;
-        }[];
-        winners: {
-          uuid: string;
-          email: string;
-          displayName: string;
-        }[];
+        dancers: UserBasicInfo[];
+        winners: UserBasicInfo[];
       }[];
     }[];
   }[];
@@ -101,11 +65,7 @@ interface GQLEvent {
       uuid: string;
       title: string;
       src: string;
-      dancers: {
-        uuid: string;
-        email: string;
-        displayName: string;
-      }[];
+      dancers: UserBasicInfo[];
     }[];
   }[];
   workshopSections: {
@@ -124,11 +84,7 @@ interface GQLEvent {
       styles: {
         name: string;
       }[];
-      teachers: {
-        uuid: string;
-        email: string;
-        displayName: string;
-      }[];
+      teachers: UserBasicInfo[];
     }[];
   }[];
 }
@@ -137,92 +93,64 @@ export function EventPage() {
   const { id } = useParams();
 
   function convertGQL(event: GQLEvent) {
-    let battleSections = event.battleSections.map((section) => {
-      return {
-        order: section.order,
+    let battleSections = event.battleSections.map((section) => ({
+      order: section.order,
+      isEditable: false,
+      uuid: section.uuid,
+      type: section.type as 'battles',
+      format: section.format,
+      styles: section.styles.map((style) => style.name),
+      judges: section.judges,
+      brackets: section.brackets
+        .map((bracket) => ({
+          uuid: bracket.uuid,
+          type: bracket.type,
+          order: Number(bracket.order),
+          battleCards: bracket.battleCards.map((battleCard) => ({
+            order: Number(battleCard.order),
+            uuid: battleCard.uuid,
+            isEditable: false,
+            title: battleCard.title,
+            src: battleCard.src,
+            dancers: battleCard.dancers,
+            winners: battleCard.winners,
+          })),
+        }))
+        .toSorted((a, b) => a.order - b.order),
+    }));
+
+    let workshopSections = event.workshopSections.map((section) => ({
+      order: section.order,
+      uuid: section.uuid,
+      type: section.type as 'workshops',
+      workshopCards: section.workshopCardsIn.map((workshopCard) => ({
+        order: Number(workshopCard.order),
+        uuid: workshopCard.uuid,
         isEditable: false,
-        uuid: section.uuid,
-        type: section.type as 'battles',
-        format: section.format,
-        styles: section.styles.map((style) => style.name),
-        judges: section.judges.map((person) => {
-          return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-        }),
-        brackets: section.brackets
-          .map((bracket) => {
-            return {
-              uuid: bracket.uuid,
-              type: bracket.type,
-              order: Number(bracket.order),
-              battleCards: bracket.battleCards.map((battleCard) => {
-                return {
-                  order: Number(battleCard.order),
-                  uuid: battleCard.uuid,
-                  isEditable: false,
-                  title: battleCard.title,
-                  src: battleCard.src,
-                  dancers: battleCard.dancers.map((person) => {
-                    return person.email
-                      ? `${person.displayName}__${person.uuid}`
-                      : person.displayName;
-                  }),
-                  winners: battleCard.winners.map((person) => {
-                    return person.email
-                      ? `${person.displayName}__${person.uuid}`
-                      : person.displayName;
-                  }),
-                };
-              }),
-            };
-          })
-          .toSorted((a, b) => a.order - b.order),
-      };
-    });
+        title: workshopCard.title,
+        image: workshopCard.image,
+        date: workshopCard.date,
+        address: workshopCard.address,
+        cost: workshopCard.cost,
+        recapSrc: workshopCard.recapSrc,
+        styles: workshopCard.styles.map((style) => style.name),
+        teachers: workshopCard.teachers,
+      })),
+    }));
 
-    let workshopSections = event.workshopSections.map((section) => {
-      return {
-        order: section.order,
-        uuid: section.uuid,
-        type: section.type as 'workshops',
-        workshopCards: section.workshopCardsIn.map((workshopCard) => {
-          return {
-            order: Number(workshopCard.order),
-            uuid: workshopCard.uuid,
-            isEditable: false,
-            title: workshopCard.title,
-            image: workshopCard.image,
-            date: workshopCard.date,
-            address: workshopCard.address,
-            cost: workshopCard.cost,
-            recapSrc: workshopCard.recapSrc,
-            styles: workshopCard.styles.map((style) => style.name),
-            teachers: workshopCard.teachers.map((person) => {
-              return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-            }),
-          };
-        }),
-      };
-    });
-
-    let performanceSections = event.performanceSections.map((section) => {
-      return {
-        order: section.order,
-        uuid: section.uuid,
-        type: section.type as 'performances',
-        performanceCards: section.performanceCardsIn.map((performanceCard) => {
-          return {
-            order: Number(performanceCard.order),
-            uuid: performanceCard.uuid,
-            isEditable: false,
-            title: performanceCard.title,
-            src: performanceCard.src,
-            dancers: performanceCard.dancers.map((person) => {
-              return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-            }),
-          };
-        }),
-      };
-    });
+    let performanceSections = event.performanceSections.map((section) => ({
+      order: section.order,
+      uuid: section.uuid,
+      type: section.type as 'performances',
+      performanceCards: section.performanceCardsIn.map((performanceCard) => ({
+        order: Number(performanceCard.order),
+        uuid: performanceCard.uuid,
+        isEditable: false,
+        title: performanceCard.title,
+        src: performanceCard.src,
+        dancers: performanceCard.dancers,
+      })),
+    }));
 
     return {
       uuid: event.uuid,
@@ -236,26 +164,17 @@ export function EventPage() {
       images: event.images,
       prizes: event.prizes,
       cost: event.cost,
-      organizers: event.organizers.map((person) => {
-        return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-      }),
-      mcs: event.mcs.map((person) => {
-        return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-      }),
-      djs: event.djs.map((person) => {
-        return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-      }),
-      videographers: event.videographers.map((person) => {
-        return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-      }),
-      photographers: event.photographers.map((person) => {
-        return person.email ? `${person.displayName}__${person.uuid}` : person.displayName;
-      }),
+      organizers: event.organizers,
+      mcs: event.mcs,
+      djs: event.djs,
+      videographers: event.videographers,
+      graphicDesigners: event.graphicDesigners,
+      photographers: event.photographers,
       promoVideo: event.promoVideo,
       recapVideo: event.recapVideo,
-      sections: [...battleSections, ...workshopSections, ...performanceSections].sort((a, b) => {
-        return a.order - b.order;
-      }),
+      sections: [...battleSections, ...workshopSections, ...performanceSections].sort(
+        (a, b) => a.order - b.order
+      ),
     };
   }
 

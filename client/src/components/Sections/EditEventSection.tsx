@@ -5,14 +5,12 @@ import { Cloudinary } from '@cloudinary/url-gen';
 import { Button, FileButton, Group, Image, Stack, Text, TextInput, Title } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { UPDATE_EVENTS } from '@/gql/returnQueries';
-import {
-  createConnectOrCreateListOfRoles,
-  createConnectOrCreateListOfStyles,
-} from '@/gql/utilities';
+import { createConnectOrCreateListOfStyles, createListOfRoles } from '@/gql/utilities';
 import { ObjectComparison } from '@/utilities/utility';
 import CloudinaryUploadWidget from '../CloudinaryUploadWidget';
 import { EditField } from '../Inputs/EditField';
-import { MultiSelectCreatable } from '../Inputs/MultiSelectCreatable';
+import { StringsMultiSelectCreatable } from '../Inputs/StringsMultiSelectCreatable';
+import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
 
@@ -92,30 +90,33 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
   const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
   const [state, dispatch] = useReducer(reducer, eventData);
 
-  function convertGQL(event: any) {
-    let newData = event;
-    newData.city = newData.inCity.name;
+  // function convertUpdateGQL(event: any) {
+  //   let newData = event;
+  //   newData.city = newData.inCity.name;
 
-    newData.organizers?.length &&
-      (newData.organizers = newData.organizers.map((organizer: any) => organizer.displayName));
-    newData.mcs?.length && (newData.mcs = newData.mcs.map((mc: any) => mc.displayName));
-    newData.djs?.length && (newData.djs = newData.djs.map((dj: any) => dj.displayName));
-    newData.videographers?.length &&
-      (newData.videographers = newData.videographers.map(
-        (videographer: any) => videographer.displayName
-      ));
-    newData.photographers?.length &&
-      (newData.photographers = newData.photographers.map(
-        (photographer: any) => photographer.displayName
-      ));
-    newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
+  //   newData.organizers?.length &&
+  //     (newData.organizers = newData.organizers.map((organizer: any) => organizer.displayName));
+  //   newData.mcs?.length && (newData.mcs = newData.mcs.map((mc: any) => mc.displayName));
+  //   newData.djs?.length && (newData.djs = newData.djs.map((dj: any) => dj.displayName));
+  //   newData.videographers?.length &&
+  //     (newData.videographers = newData.videographers.map(
+  //       (videographer: any) => videographer.displayName
+  //     ));
+  //   newData.photographers?.length &&
+  //     (newData.photographers = newData.photographers.map(
+  //       (photographer: any) => photographer.displayName
+  //     ));
+  //   newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
 
-    return newData;
-  }
+  //   return newData;
+  // }
 
   useEffect(() => {
     if (!loading && data) {
-      updateEventData(convertGQL(data.updateEvents.events[0]));
+      let newData = data.updateEvents.events[0];
+      newData.city = newData.inCity.name;
+      newData.styles?.length && (newData.styles = newData.styles.map((style: any) => style.name));
+      updateEventData(newData);
       setEditEvent(false);
     }
   }, [loading, data]);
@@ -130,11 +131,11 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
 
     roles.forEach((role) => {
       if (changes[role]) {
-        const roleList = createConnectOrCreateListOfRoles(changes[role]);
+        const roleList = createListOfRoles(changes[role]);
 
         changes[role] = {
           disconnect: [{ where: {} }],
-          connectOrCreate: roleList,
+          connect: roleList,
         };
       }
     });
@@ -246,42 +247,37 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
         </Stack>
         <Stack gap="0">
           <Text fw="700">Organizer:</Text>
-          <MultiSelectCreatable
-            notExists={[...notExists, ...state.organizers]}
+          <UsersMultiSelect
             value={state.organizers}
             onChange={(value) => dispatch({ type: 'SET_ORGANIZERS', payload: value })}
           />
 
           <Text fw="700">MC:</Text>
-          <MultiSelectCreatable
-            notExists={notExists}
+          <UsersMultiSelect
             value={state.mcs}
             onChange={(value) => dispatch({ type: 'SET_MCS', payload: value })}
           />
 
           <Text fw="700">DJ:</Text>
-          <MultiSelectCreatable
-            notExists={notExists}
+          <UsersMultiSelect
             value={state.djs}
             onChange={(value) => dispatch({ type: 'SET_DJS', payload: value })}
           />
 
           <Text fw="700">Videographer:</Text>
-          <MultiSelectCreatable
-            notExists={notExists}
+          <UsersMultiSelect
             value={state.videographers}
             onChange={(value) => dispatch({ type: 'SET_VIDEOGRAPHERS', payload: value })}
           />
 
           <Text fw="700">Photographer:</Text>
-          <MultiSelectCreatable
-            notExists={notExists}
+          <UsersMultiSelect
             value={state.photographers}
             onChange={(value) => dispatch({ type: 'SET_PHOTOGRAPHERS', payload: value })}
           />
 
           <Text fw="700">Styles:</Text>
-          <MultiSelectCreatable
+          <StringsMultiSelectCreatable
             notExists={allStyles}
             value={state.styles}
             onChange={(value) => dispatch({ type: 'SET_STYLES', payload: value })}

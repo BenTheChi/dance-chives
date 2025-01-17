@@ -7,7 +7,7 @@ interface MenuInputProps {
   value: string[];
 }
 
-export function MultiSelectCreatable({ notExists, onChange, value }: MenuInputProps) {
+export function StringsMultiSelectCreatable({ notExists, onChange, value }: MenuInputProps) {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
     onDropdownOpen: () => combobox.updateSelectedOptionIndex('active'),
