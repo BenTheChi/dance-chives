@@ -28,7 +28,7 @@ const router = createBrowserRouter([
     element: <EventPage />,
   },
   {
-    path: '/profile',
+    path: '/profile/:id',
     element: <ProfilePage />,
   },
   {

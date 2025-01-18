@@ -24,17 +24,149 @@ export const getUser = (username: string) => gql`
       uuid
       username
       displayName
-      email
-      fname
-      lname
-      dob
-      createdAt
-      auth
-      aboutMe
+      aboutme
       image
       socials
-      city
-      styles
+      city {
+        name
+        state
+        country
+      }
+      organizes {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        styles {
+          name
+        }
+      }
+      mcs {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        styles {
+          name
+        }
+      }
+      djs {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        styles {
+          name
+        }
+      }
+      videographs {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        styles {
+          name
+        }
+      }
+      photographs {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        styles {
+          name
+        }
+      }
+      graphicDesigns {
+        uuid
+        title
+        date
+        images
+        inCity {
+          name
+        }
+        styles {
+          name
+        }
+      }
+      judges {
+        uuid
+        type
+        format
+        styles {
+          name
+        }
+        partOfEvent {
+          uuid
+          title
+          date
+          inCity {
+            name
+          }
+        }
+      }
+      dancesInBattleCards {
+        uuid
+        title
+        src
+        winners {
+          username
+          displayName
+        }
+        inBrackets {
+          uuid
+          inSections {
+            uuid
+            partOfEvent {
+              uuid
+              title
+              titleSlug
+              date
+              inCity {
+                name
+              }
+            }
+          }
+        }
+      }
+      teachesInWorkshopCards {
+        uuid
+        title
+        date
+        cost
+        address
+        image
+        recapSrc
+        styles {
+          name
+        }
+        inSections {
+          uuid
+          partOfEvent {
+            uuid
+            title
+            date
+            inCity {
+              name
+            }
+          }
+        }
+      }
     }
   }
 `;

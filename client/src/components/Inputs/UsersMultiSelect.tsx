@@ -52,7 +52,7 @@ export function UsersMultiSelect({ onChange, value }: MenuInputProps) {
     if (search.trim()) {
       searchTimeout.current = setTimeout(() => {
         fetchUsers({ variables: { keyword: search.trim() } });
-      }, 1500);
+      }, 500);
     } else {
       setData([...value]);
     }

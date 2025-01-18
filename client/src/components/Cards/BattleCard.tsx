@@ -111,7 +111,7 @@ export function BattleCard({
 
   if (!battleCard.isEditable)
     return (
-      <Card withBorder radius="md" shadow="sm" h="100%" w="450">
+      <Card withBorder radius="md" shadow="sm" h="100%" w="100%">
         <Group justify="space-between">
           <CloseButton
             onClick={() => handleDelete()}
@@ -126,7 +126,7 @@ export function BattleCard({
         <Video title={battleCard.title} src={battleCard.src} />
         <Stack>
           <MultiTextField title="Dancers" values={battleCard.dancers} updateEvent={updateEvent} />
-          <Spoiler maxHeight={1} w="460" showLabel="See Winners" hideLabel="Hide">
+          <Spoiler maxHeight={1} w="100%" showLabel="See Winners" hideLabel="Hide">
             <MultiTextField title="Winners" values={battleCard.winners} updateEvent={updateEvent} />
           </Spoiler>
         </Stack>
@@ -138,6 +138,6 @@ export function BattleCard({
         sectionIndex={sectionIndex}
         bracketIndex={bracketIndex}
         cardIndex={cardIndex}
-      ></EditBattleCard>
+      />
     );
 }

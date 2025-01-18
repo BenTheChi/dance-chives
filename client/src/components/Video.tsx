@@ -37,6 +37,7 @@ export function Video({ title, src }: { title: string; src: string }) {
   return (
     <AspectRatio ratio={16 / 9}>
       <iframe
+        loading="lazy"
         src={convertYouTubeUrlToEmbed(src) || ''}
         title={title}
         style={{ border: 0 }}

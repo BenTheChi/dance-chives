@@ -129,7 +129,7 @@ export function EditBattlesSection({
               brackets: {
                 create: createCreateListOfBrackets(newSection.brackets),
               },
-              partOfEvents: {
+              partOfEvent: {
                 connect: { where: { node: { uuid: eventData.uuid } } },
               },
             },

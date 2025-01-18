@@ -85,7 +85,7 @@ export function EditPerformanceCard({
                   },
                 ],
               },
-              partOfEvents: {
+              partOfEvent: {
                 connect: { where: { node: { uuid: eventData.uuid } } },
               },
             },
@@ -247,7 +247,7 @@ export function EditPerformanceCard({
   }, [updateResults.loading, updateResults.data]);
 
   return (
-    <Card withBorder radius="md" shadow="sm" h="100%">
+    <Card withBorder radius="md" shadow="sm" h="100%" w="100%">
       <Group justify="space-between">
         <CloseButton
           onClick={() => handleDelete()}
@@ -269,7 +269,7 @@ export function EditPerformanceCard({
         <Textarea
           autosize
           minRows={1}
-          w="350"
+          w="100%"
           pb="sm"
           value={title}
           onChange={(event) => setTitle(event.currentTarget.value)}

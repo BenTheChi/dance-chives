@@ -52,7 +52,7 @@ export function PerformancesSection({ sectionIndex }: { sectionIndex: number }) 
         <Grid justify="flex-start" align="stretch" p="sm">
           {currentSection.uuid !== '' && (
             <Grid.Col span={4} order={-1}>
-              <Button onClick={() => addCard(sectionIndex)} variant="outline" h="375" w="460">
+              <Button onClick={() => addCard(sectionIndex)} variant="outline" h="100%" w="100%">
                 <Group align="center" justify="space-between">
                   <IconCirclePlus size={100} />
                   <Title order={4}>Add Performance</Title>

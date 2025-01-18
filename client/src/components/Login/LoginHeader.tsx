@@ -23,7 +23,7 @@ import { UserInfoForm } from '../UserInfoForm';
 export function LoginHeader() {
   const [opened, { open, close }] = useDisclosure(false);
   const [title, setTitle] = React.useState('Login');
-  const { signup, loggedIn, login, logout, register } = useUserContext();
+  const { signup, loggedIn, login, logout, register, userData } = useUserContext();
   // const [newUser, ]
 
   // Configure FirebaseUI.
@@ -68,20 +68,23 @@ export function LoginHeader() {
     },
   };
 
-  const fullName = 'Ben Chi';
-
   if (loggedIn) {
     return (
       <>
         <Menu trigger="hover" openDelay={100}>
           <Menu.Target>
             <Button variant="outline" h="3.5rem">
-              <Avatar radius="xl" name={fullName} color="orange" />
+              <Avatar
+                radius="xl"
+                name={userData.fname + ' ' + userData.lname}
+                src={userData.image}
+                color="orange"
+              />
               <IconCaretDown size="1.5rem" stroke={1.5} />
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item component={Link} to="/profile">
+            <Menu.Item component={Link} to={`/profile/${userData.username}`}>
               Profile
             </Menu.Item>
             <Menu.Item component={Link} to="/settings">

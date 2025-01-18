@@ -8,6 +8,7 @@ import { createListOfRoles } from '@/gql/utilities';
 import { IBattlesSection, UserBasicInfo } from '@/types/types';
 import { Bracket } from '../Bracket';
 import { MultiTextField } from '../Display/MultiTextField';
+import { MultiTextStyleField } from '../Display/MultiTextStyleField';
 import { useEventContext } from '../Providers/EventProvider';
 import { EditBattlesSection } from './EditBattlesSection';
 
@@ -115,16 +116,7 @@ export function BattlesSection({ sectionIndex }: { sectionIndex: number }) {
             />
           )}
 
-          {currentSection.styles && (
-            <Group gap="6px">
-              <Text fw="700">Styles:</Text>
-              {currentSection.styles.map((style) => (
-                <Link to="/education/#" key={style}>
-                  {style}
-                </Link>
-              ))}
-            </Group>
-          )}
+          {currentSection.styles && <MultiTextStyleField values={currentSection.styles} />}
         </Stack>
       </Center>
 

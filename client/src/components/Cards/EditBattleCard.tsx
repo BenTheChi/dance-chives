@@ -3,9 +3,9 @@ import { useMutation } from '@apollo/client';
 import { IconSquareXFilled } from '@tabler/icons-react';
 import { Button, Card, CloseButton, Group, Text, Textarea, TextInput } from '@mantine/core';
 import { CREATE_BATTLE_CARD, DELETE_BATTLE_CARD, UPDATE_BATTLE_CARD } from '@/gql/returnQueries';
-import { createDeleteListOfRoles, createListOfRoles } from '@/gql/utilities';
-import { buildMutation, ObjectComparison, reorderCards } from '@/utilities/utility';
-import { IBattlesSection, UserBasicInfo } from '../../types/types';
+import { createListOfRoles } from '@/gql/utilities';
+import { reorderCards } from '@/utilities/utility';
+import { IBattlesSection } from '../../types/types';
 import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
 import { useEventContext } from '../Providers/EventProvider';
 import { Video } from '../Video';
@@ -74,36 +74,6 @@ export function EditBattleCard({
         },
       });
     } else {
-      const changes = ObjectComparison(
-        (eventData.sections[sectionIndex] as IBattlesSection).brackets[bracketIndex].battleCards[
-          cardIndex
-        ],
-        {
-          order: battleCard.order,
-          title: title,
-          src: videoSrc,
-          dancers: dancers,
-          winners: winners,
-        }
-      );
-
-      // let dancersMutation: { toCreate: string[]; toDelete: string[] } = {
-      //   toCreate: [],
-      //   toDelete: [],
-      // };
-      // let winnersMutation: { toCreate: string[]; toDelete: string[] } = {
-      //   toCreate: [],
-      //   toDelete: [],
-      // };
-
-      // if (changes.dancers) {
-      //   dancersMutation = buildMutation(battleCard.dancers || [], changes.dancers || []);
-      // }
-
-      // if (changes.winners) {
-      //   winnersMutation = buildMutation(battleCard.winners || [], changes.winners || []);
-      // }
-
       updateBattleCard({
         variables: {
           where: {
@@ -227,7 +197,7 @@ export function EditBattleCard({
   }, [deleteResults.loading, deleteResults.data]);
 
   return (
-    <Card withBorder radius="md" shadow="sm" h="100%" w="450">
+    <Card withBorder radius="md" shadow="sm" h="100%" w="100%">
       <Group>
         <CloseButton
           onClick={() => handleDelete()}
@@ -248,7 +218,7 @@ export function EditBattleCard({
           <Textarea
             autosize
             minRows={1}
-            w="350"
+            w="100%"
             pb="sm"
             value={title}
             onChange={(event) => setTitle(event.currentTarget.value)}

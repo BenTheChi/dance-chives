@@ -107,7 +107,7 @@ export function PerformanceCard({
   }
 
   return (
-    <Card withBorder radius="md" shadow="sm" h="100%">
+    <Card withBorder radius="md" shadow="sm" h="100%" w="100%">
       <Group justify="space-between">
         <CloseButton
           onClick={() => handleDelete()}
