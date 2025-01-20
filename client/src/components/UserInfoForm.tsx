@@ -1,7 +1,7 @@
 import { Button, Card, Center, Stack, TextInput } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { UserBasicInfo } from '../types/types';
+import CountryCitySelector from './Inputs/CountryCitySelector';
 import { useUserContext } from './Providers/UserProvider';
 
 export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }) {
@@ -15,7 +15,7 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
       fname: '',
       lname: '',
       dob: '',
-      city: '',
+      city: { name: '', country: '' },
       email: '',
       authCode: '',
     },
@@ -81,11 +81,12 @@ export function UserInfoForm({ setTitle }: { setTitle: (title: string) => void }
             placeholder="MM/DD/YYYY"
             required
           />
-          <TextInput
-            {...form.getInputProps('city')}
-            label="City"
-            placeholder="Enter your city"
-            required
+          <CountryCitySelector
+            selectedCountry={form.values.city.country}
+            selectedCity={form.values.city.name}
+            onChange={(name, country) => {
+              form.setFieldValue('city', { name, country });
+            }}
           />
           <TextInput
             {...form.getInputProps('authCode')}

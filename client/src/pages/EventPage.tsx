@@ -27,7 +27,6 @@ interface GQLEvent {
   photographers: UserBasicInfo[];
   inCity: {
     name: string;
-    state: string;
     country: string;
   };
   styles: {
@@ -156,7 +155,7 @@ export function EventPage() {
       uuid: event.uuid,
       title: event.title,
       date: event.date,
-      city: event.inCity.name,
+      city: event.inCity,
       styles: event.styles.map((style) => style.name),
       addressName: event.addressName,
       address: event.address,

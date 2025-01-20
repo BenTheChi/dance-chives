@@ -50,7 +50,7 @@ export const apolloClient = new ApolloClient({
 const initialUserData = {
   uuid: '',
   displayName: '',
-  city: '',
+  city: { name: '', country: '' },
   username: '',
   email: '',
   fname: '',

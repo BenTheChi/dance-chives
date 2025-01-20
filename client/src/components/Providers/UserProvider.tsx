@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { IUser } from '../../types/types';
+import { ICity, IUser } from '../../types/types';
 
 // Define the full context type
 interface UserContextType {
@@ -26,7 +26,7 @@ interface INewUser {
   fname: string;
   lname: string;
   dob: number;
-  city: string;
+  city: ICity;
   email: string;
   authCode: string;
 }

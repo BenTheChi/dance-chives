@@ -29,7 +29,6 @@ export const getUser = (username: string) => gql`
       socials
       city {
         name
-        state
         country
       }
       organizes {
@@ -39,6 +38,7 @@ export const getUser = (username: string) => gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -51,6 +51,7 @@ export const getUser = (username: string) => gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -63,6 +64,7 @@ export const getUser = (username: string) => gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -75,6 +77,7 @@ export const getUser = (username: string) => gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -87,6 +90,7 @@ export const getUser = (username: string) => gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -99,6 +103,7 @@ export const getUser = (username: string) => gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -117,6 +122,7 @@ export const getUser = (username: string) => gql`
           date
           inCity {
             name
+            country
           }
         }
       }
@@ -139,6 +145,7 @@ export const getUser = (username: string) => gql`
               date
               inCity {
                 name
+                country
               }
             }
           }
@@ -163,6 +170,7 @@ export const getUser = (username: string) => gql`
             date
             inCity {
               name
+              country
             }
           }
         }
@@ -211,6 +219,7 @@ query GetEvent {
     }
     inCity {
       name
+      country
     }
     styles {
       name
@@ -297,6 +306,7 @@ export const GET_EVENTS = gql`
       images
       inCity {
         name
+        country
       }
       styles {
         name
@@ -325,6 +335,7 @@ export const UPDATE_EVENTS = gql`
         images
         inCity {
           name
+          country
         }
         styles {
           name
@@ -374,7 +385,6 @@ export const CREATE_EVENTS = gql`
         images
         inCity {
           name
-          state
           country
         }
         styles {

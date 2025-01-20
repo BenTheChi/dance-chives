@@ -8,6 +8,7 @@ import { UPDATE_EVENTS } from '@/gql/returnQueries';
 import { createConnectOrCreateListOfStyles, createListOfRoles } from '@/gql/utilities';
 import { ObjectComparison } from '@/utilities/utility';
 import CloudinaryUploadWidget from '../CloudinaryUploadWidget';
+import CountryCitySelector from '../Inputs/CountryCitySelector';
 import { EditField } from '../Inputs/EditField';
 import { StringsMultiSelectCreatable } from '../Inputs/StringsMultiSelectCreatable';
 import { UsersMultiSelect } from '../Inputs/UsersMultiSelect';
@@ -82,7 +83,16 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
   function reducer(state: typeof eventData, action: { type: string; payload?: any }) {
     if (action.type === 'RESET_FIELDS') return eventData;
     if (actionTypes.includes(action.type)) {
-      return { ...state, [action.type.toLowerCase().replace('set_', '')]: action.payload };
+      // Map SET_PROMOVIDEO to promoVideo and SET_RECAPVIDEO to recapVideo
+      const fieldMap: { [key: string]: string } = {
+        SET_PROMOVIDEO: 'promoVideo',
+        SET_RECAPVIDEO: 'recapVideo',
+      };
+
+      const field = action.type.replace('SET_', '');
+      const mappedField = fieldMap[action.type] || field.toLowerCase();
+
+      return { ...state, [mappedField]: action.payload };
     }
     return state;
   }
@@ -219,11 +229,19 @@ export function EditEventSection({ setEditEvent }: { setEditEvent: (value: boole
             clearable
           />
 
-          <EditField
+          <CountryCitySelector
+            onChange={(name, country) => {
+              dispatch({ type: 'SET_CITY', payload: { name, country } });
+            }}
+            selectedCountry={state.city.country}
+            selectedCity={state.city.name}
+          />
+
+          {/* <EditField
             title="City"
             value={state.city}
             onChange={(value) => dispatch({ type: 'SET_CITY', payload: value })}
-          />
+          /> */}
           <EditField
             title="Cost"
             value={state.cost}

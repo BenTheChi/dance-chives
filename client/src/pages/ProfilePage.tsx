@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { Avatar, Card, Grid, Group, ScrollArea, Stack, Tabs, Text, Title } from '@mantine/core';
 import { Video } from '@/components/Video';
 import { getUser } from '@/gql/returnQueries';
-import { UserBasicInfo } from '@/types/types';
+import { ICity, UserBasicInfo } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { EventCard } from '../components/Cards/EventCard';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
@@ -15,17 +15,13 @@ interface GQLUser {
   aboutme?: string;
   image?: string;
   socials?: string[];
-  city: {
-    name: string;
-    state: string;
-    country: string;
-  };
+  city: ICity;
   organizes: {
     uuid: string;
     title: string;
     date: number;
     images: string[];
-    inCity: { name: string };
+    inCity: ICity;
     styles: { name: string }[];
   }[];
   mcs: {
@@ -33,7 +29,7 @@ interface GQLUser {
     title: string;
     date: number;
     images: string[];
-    inCity: { name: string };
+    inCity: ICity;
     styles: { name: string }[];
   }[];
   djs: {
@@ -41,7 +37,7 @@ interface GQLUser {
     title: string;
     date: number;
     images: string[];
-    inCity: { name: string };
+    inCity: ICity;
     styles: { name: string }[];
   }[];
   videographs: {
@@ -49,7 +45,7 @@ interface GQLUser {
     title: string;
     date: number;
     images: string[];
-    inCity: { name: string };
+    inCity: ICity;
     styles: { name: string }[];
   }[];
   photographs: {
@@ -57,7 +53,7 @@ interface GQLUser {
     title: string;
     date: number;
     images: string[];
-    inCity: { name: string };
+    inCity: ICity;
     styles: { name: string }[];
   }[];
   graphicDesigns: {
@@ -65,7 +61,7 @@ interface GQLUser {
     title: string;
     date: number;
     images: string[];
-    inCity: { name: string };
+    inCity: ICity;
     styles: { name: string }[];
   }[];
   judges: {
@@ -77,7 +73,7 @@ interface GQLUser {
       uuid: string;
       title: string;
       date: number;
-      inCity: { name: string };
+      inCity: ICity;
     }[];
   }[];
   dancesInBattleCards: {
@@ -92,7 +88,7 @@ interface GQLUser {
           title: string;
           titleSlug: string;
           date: number;
-          inCity: { name: string };
+          inCity: ICity;
         }[];
       }[];
     }[];
@@ -111,7 +107,7 @@ interface GQLUser {
         uuid: string;
         title: string;
         date: number;
-        inCity: { name: string };
+        inCity: ICity;
       }[];
     };
   }[];
@@ -209,7 +205,7 @@ export function ProfilePage() {
                         <EventCard
                           title={event.title}
                           date={event.date}
-                          city={event.inCity.name}
+                          city={event.inCity}
                           styles={event.styles?.map((s) => s.name) || []}
                           images={event.images}
                         />

@@ -2,6 +2,7 @@ import { useMutation } from '@apollo/client';
 import { Button, Card, Center, Text, TextInput } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
 import { hasLength, isEmail, useForm } from '@mantine/form';
+import CountryCitySelector from '@/components/Inputs/CountryCitySelector';
 import ImageInputWithPreview from '@/components/Inputs/ImageInputWithPreview';
 import { StringsMultiSelectCreatable } from '@/components/Inputs/StringsMultiSelectCreatable';
 import { UsersMultiSelect } from '@/components/Inputs/UsersMultiSelect';
@@ -21,7 +22,7 @@ export function AddEventPage() {
       datetime: '',
       addressName: '',
       address: '',
-      city: '',
+      city: { name: '', country: '' },
       cost: '',
       prizes: '',
       description: '',
@@ -81,14 +82,13 @@ export function AddEventPage() {
                 connectOrCreate: {
                   where: {
                     node: {
-                      name: submittedValues.city,
+                      name: submittedValues.city.name,
                     },
                   },
                   onCreate: {
                     node: {
-                      name: submittedValues.city,
-                      state: 'test',
-                      country: 'blah',
+                      name: submittedValues.city.name,
+                      country: submittedValues.city.country,
                     },
                   },
                 },
@@ -158,10 +158,12 @@ export function AddEventPage() {
             label="Address"
             placeholder="ex. 123 Dance St."
           />
-          <TextInput
-            {...form.getInputProps('city')}
-            label="City (required)"
-            placeholder="ex. Los Angeles"
+          <CountryCitySelector
+            selectedCountry={form.values.city.country}
+            selectedCity={form.values.city.name}
+            onChange={(country, city) => {
+              form.setFieldValue('city', { name: city, country });
+            }}
           />
           <TextInput {...form.getInputProps('cost')} label="Cost" placeholder="ex. $20" />
           <TextInput {...form.getInputProps('prizes')} label="Prizes" placeholder="ex. $1000" />

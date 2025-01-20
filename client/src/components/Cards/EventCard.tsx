@@ -26,7 +26,7 @@ export function EventCard({ title, date, city, styles, images }: EventCardProps)
             <b>Date:</b> {new Date(date * 1000).toLocaleDateString()}
           </Text>
           <Text>
-            <b>City:</b> {city}
+            <b>City:</b> {city.name}
           </Text>
           <Text>
             <b>Styles:</b> {styles.join(', ')}

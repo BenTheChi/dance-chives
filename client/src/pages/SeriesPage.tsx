@@ -1,5 +1,4 @@
 import { Button, Group, Text } from '@mantine/core';
-import { AutocompleteClearable } from '@/components/Inputs/AutocompleteClearable';
 import { MultiSelectCreatable } from '@/components/Inputs/StringsMultiSelectCreatable';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';

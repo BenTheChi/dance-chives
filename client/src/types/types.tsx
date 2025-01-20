@@ -3,6 +3,11 @@ export interface UserBasicInfo {
   displayName: string;
 }
 
+export interface ICity {
+  name: string;
+  country: string;
+}
+
 export interface IUser {
   uuid: string;
   displayName: string;
@@ -17,7 +22,7 @@ export interface IUser {
   socials?: string[];
   auth: string;
   styles?: string[];
-  city: string;
+  city: ICity;
 }
 
 // uuid: String! @unique
@@ -140,7 +145,7 @@ export type ISection = IBattlesSection | IPartiesSection | IPerformancesSection 
 export interface EventCardProps {
   title: string;
   date: number;
-  city: string;
+  city: ICity;
   styles: string[];
   images: string[];
 }
@@ -149,7 +154,7 @@ export interface IEventCard {
   uuid: string;
   title: string;
   date: number;
-  city: string;
+  city: ICity;
   styles: string[];
   hasBattle: boolean;
   hasParty: boolean;
@@ -166,7 +171,7 @@ export interface IEvent {
   uuid: string;
   title: string;
   date: number;
-  city: string;
+  city: ICity;
   styles: string[];
   addressName: string;
   address: string;

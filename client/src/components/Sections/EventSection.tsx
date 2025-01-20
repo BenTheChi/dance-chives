@@ -60,7 +60,7 @@ export function EventSection() {
         <Stack gap="1" align="flex-start" w="600px">
           <TextField title="Date & Time" value={new Date(eventData.date * 1000).toLocaleString()} />
 
-          <TextField title="City" value={eventData.city} />
+          <TextField title="City" value={eventData.city.name} />
 
           <TextField title="Cost" value={eventData.cost} />
 

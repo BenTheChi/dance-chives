@@ -14,8 +14,9 @@ import {
   Title,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
+import CountryCitySelector from '@/components/Inputs/CountryCitySelector';
 import { GET_EVENTS } from '@/gql/returnQueries';
-import { IEventCards } from '@/types/types';
+import { ICity, IEventCards } from '@/types/types';
 import { BasicAppShell } from '../components/AppShell/BasicAppShell';
 import { EventCard } from '../components/Cards/EventCard';
 import { DarkModeToggle } from '../components/ColorSchemeToggle/ColorSchemeToggle';
@@ -31,7 +32,6 @@ interface GQLEventCard {
   inCity: {
     __typename: string;
     name: string;
-    state: string;
     country: string;
   };
   styles: {
@@ -51,7 +51,7 @@ export function EventsPage() {
     new Date(new Date().setDate(new Date().getDate() + 1))
   );
   const [titleValue, setTitleValue] = useState<string>('');
-  const [cityValue, setCityValue] = useState<string>('');
+  const [cityValue, setCityValue] = useState<ICity>({ name: '', country: '' });
   const [stylesValue, setStyleValue] = useState<string>('');
   const [hasWorkshop, setHasWorkshop] = useState(false);
   const [hasParty, setHasParty] = useState(false);
@@ -63,7 +63,7 @@ export function EventsPage() {
           uuid: event.uuid,
           title: event.title,
           date: event.date,
-          city: event.inCity.name,
+          city: event.inCity,
           styles: event.styles.map((style) => style.name),
           images: event.images,
           hasBattle: event.hasBattle,
@@ -143,12 +143,12 @@ export function EventsPage() {
                 placeholder="Select style"
                 data={styles}
               />
-              <Autocomplete
-                value={cityValue}
-                onChange={setCityValue}
-                label="City"
-                placeholder="Select city"
-                data={cities}
+              <CountryCitySelector
+                selectedCountry={cityValue.country}
+                selectedCity={cityValue.name}
+                onChange={(name, country) => {
+                  setCityValue({ name, country });
+                }}
               />
             </Paper>
             <Paper component={Group} withBorder p="md" radius="md">
