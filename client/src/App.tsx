@@ -45,6 +45,16 @@ const omitTypenameLink = new ApolloLink((operation, forward) => {
 export const apolloClient = new ApolloClient({
   link: ApolloLink.from([omitTypenameLink, httpLink]),
   cache: new InMemoryCache(),
+  defaultOptions: {
+    watchQuery: {
+      fetchPolicy: 'no-cache',
+      errorPolicy: 'ignore',
+    },
+    query: {
+      fetchPolicy: 'no-cache',
+      errorPolicy: 'all',
+    },
+  },
 });
 
 const initialUserData = {

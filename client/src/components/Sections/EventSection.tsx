@@ -12,7 +12,6 @@ import { useEventContext } from '../Providers/EventProvider';
 
 export function EventSection() {
   const { eventData, updateEventData } = useEventContext();
-
   const [updateEvents, { data, loading, error }] = useMutation(UPDATE_EVENTS);
 
   // function convertUpdateGQL(event: any) {

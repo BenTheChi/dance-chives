@@ -92,7 +92,7 @@ export function UserProvider({ initialUser, children }: UserProviderProps) {
     try {
       const response = await fetch('http://localhost:4000/login', {
         method: 'POST',
-        credentials: 'include', // Ensure cookies are included in the request
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -105,14 +105,14 @@ export function UserProvider({ initialUser, children }: UserProviderProps) {
       }
 
       const result = await response.json();
-      console.log('User logged in successfully:', result);
+      console.log('Login response:', result);
 
-      setUserData((prevState) => {
-        return { ...prevState, ...result };
-      });
+      const userData = result.user;
 
+      setUserData(userData);
       setLoggedIn(true);
-      console.log('User data updated:', userData);
+
+      console.log('Updated user data:', userData);
     } catch (error) {
       console.error('Error during login:', error);
     }

@@ -24,7 +24,6 @@ export function LoginHeader() {
   const [opened, { open, close }] = useDisclosure(false);
   const [title, setTitle] = React.useState('Login');
   const { signup, loggedIn, login, logout, register, userData } = useUserContext();
-  // const [newUser, ]
 
   // Configure FirebaseUI.
   const uiConfig = {
@@ -69,6 +68,9 @@ export function LoginHeader() {
   };
 
   if (loggedIn) {
+    console.log('LOGGED IN');
+    console.log(userData);
+
     return (
       <>
         <Menu trigger="hover" openDelay={100}>
