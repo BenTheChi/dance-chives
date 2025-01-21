@@ -67,7 +67,7 @@ const initialUserData = {
   lname: '',
   dob: 0,
   createdAt: 0,
-  aboutMe: '',
+  aboutme: '',
   image: '',
   socials: [],
   auth: '',

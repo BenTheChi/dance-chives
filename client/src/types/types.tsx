@@ -17,7 +17,7 @@ export interface IUser {
   lname: string;
   dob: number;
   createdAt: number;
-  aboutMe?: string;
+  aboutme?: string;
   image?: string;
   socials?: string[];
   auth: string;

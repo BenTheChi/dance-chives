@@ -179,6 +179,24 @@ export const getUser = (username: string) => gql`
   }
 `;
 
+export const UPDATE_USER = gql`
+  mutation UpdateUser($where: UserWhere!, $update: UserUpdateInput!) {
+    updateUsers(where: $where, update: $update) {
+      users {
+        username
+        displayName
+        aboutme
+        image
+        city {
+          name
+          country
+        }
+        socials
+      }
+    }
+  }
+`;
+
 export const getEvent = (id: string) => gql`
 query GetEvent {
   events(where: { titleSlug: "${id}"}) {

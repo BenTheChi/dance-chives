@@ -1,6 +1,20 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@apollo/client';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Avatar, Card, Grid, Group, ScrollArea, Stack, Tabs, Text, Title } from '@mantine/core';
+import {
+  Avatar,
+  Button,
+  Card,
+  Grid,
+  Group,
+  ScrollArea,
+  Stack,
+  Tabs,
+  Text,
+  Title,
+} from '@mantine/core';
+import { EditProfileSection } from '@/components/Sections/EditProfileSection';
+import { ProfileSection } from '@/components/Sections/ProfileSection';
 import { Video } from '@/components/Video';
 import { getUser } from '@/gql/returnQueries';
 import { ICity, UserBasicInfo } from '@/types/types';
@@ -116,13 +130,22 @@ interface GQLUser {
 export function ProfilePage() {
   const { id } = useParams();
   const { loading, data } = useQuery(getUser(id || ''));
-  useLocation();
+  const [editProfile, setEditProfile] = useState(false);
+  const [userData, setUserData] = useState<GQLUser | null>(null);
 
-  if (loading || !data) {
+  useEffect(() => {
+    if (data) {
+      setUserData(data.users[0]);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    console.log(userData);
+  }, [editProfile, userData]);
+
+  if (loading || !userData) {
     return <div>Loading...</div>;
   }
-
-  const userData: GQLUser = data.users[0];
 
   // Prepare role tabs data
   const roleTabs = [
@@ -157,29 +180,21 @@ export function ProfilePage() {
     <BasicAppShell>
       <DarkModeToggle />
 
-      {/* Profile Section */}
-      <Card withBorder shadow="sm" radius="md" m="md">
-        <Group align="flex-start" wrap="nowrap">
-          <Avatar size={150} src={userData.image} alt={userData.displayName} radius="md" />
-          <Stack gap="0">
-            <Title order={2}>{userData.displayName}</Title>
-            <Text c="dimmed" size="sm">
-              @{userData.username}
-            </Text>
-            <Text>{userData.aboutme || 'No bio yet...'}</Text>
-            <Text>📍 {userData.city.name || 'Location not set'}</Text>
-            {userData.socials && userData.socials.length > 0 && (
-              <Group gap="xs">
-                {userData.socials.map((social, index) => (
-                  <Text key={index} size="sm" c="blue">
-                    {social}
-                  </Text>
-                ))}
-              </Group>
-            )}
-          </Stack>
+      {editProfile ? null : (
+        <Group m="md" grow>
+          <Button onClick={() => setEditProfile(!editProfile)}>Edit</Button>
+          <Button color="red">Delete</Button>
         </Group>
-      </Card>
+      )}
+      {editProfile ? (
+        <EditProfileSection
+          setEditProfile={setEditProfile}
+          setUserData={setUserData}
+          currUserData={userData}
+        />
+      ) : (
+        <ProfileSection userData={userData} />
+      )}
 
       {/* Roles Section */}
       {roleTabs.length > 0 && (

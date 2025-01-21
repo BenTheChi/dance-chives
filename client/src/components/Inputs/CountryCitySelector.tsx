@@ -79,7 +79,7 @@ const CountryCitySelector: React.FC<CountryCitySelectorProps> = ({
       setCities([]);
     }
 
-    onChange?.(value, '');
+    onChange?.('', value);
   };
 
   // Handle city selection

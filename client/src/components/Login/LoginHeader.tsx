@@ -68,9 +68,6 @@ export function LoginHeader() {
   };
 
   if (loggedIn) {
-    console.log('LOGGED IN');
-    console.log(userData);
-
     return (
       <>
         <Menu trigger="hover" openDelay={100}>

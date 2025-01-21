@@ -7,6 +7,7 @@ interface UserContextType {
   signup: boolean;
   loggedIn: boolean;
   setInitialUserData: (newUserData: INewUser) => void;
+  updateUserData: (newUserData: INewUser) => void;
   logout: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (idToken: string) => Promise<void>;
@@ -158,6 +159,12 @@ export function UserProvider({ initialUser, children }: UserProviderProps) {
     }
   };
 
+  const updateUserData = (newUserData: INewUser) => {
+    setUserData((prevState) => {
+      return { ...prevState, ...newUserData };
+    });
+  };
+
   return (
     <UserContext.Provider
       value={{
@@ -168,6 +175,7 @@ export function UserProvider({ initialUser, children }: UserProviderProps) {
         logout,
         login,
         register,
+        updateUserData,
       }}
     >
       {children}
