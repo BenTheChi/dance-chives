@@ -24,6 +24,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="shortcut icon" href="/vercel.svg" />
+        <meta
+          name="viewport"
+          content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
+        />
+        <meta property="og:title" content="Dance Chives" />
+        <meta
+          property="og:description"
+          content="Freestyle Dance Culture, Media, and Community"
+        />
+        <meta property="og:url" content="https://www.dancechives.com/" />
+        <meta property="og:type" content="website" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
