@@ -1,16 +1,9 @@
 "use client";
 
-import {
-  BookIcon,
-  LogInIcon,
-  SearchIcon,
-  SquareArrowDown,
-  SquareArrowUp,
-} from "lucide-react";
+import { BookIcon, LogInIcon, SearchIcon, SquareArrowUp } from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuItem,
@@ -28,7 +21,9 @@ const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
   { title: "Education", url: "/styles", icon: BookIcon },
 ];
-
+// function a(){
+//   console.log()
+// }
 export function AppSidebar() {
   const { state } = useSidebar();
 
