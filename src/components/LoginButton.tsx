@@ -1,8 +1,9 @@
 "use client";
-
+// import { signIn } from "@/auth/authOptions"
 import { Link, LogInIcon } from "lucide-react";
-import { Button } from "./ui/button";
+// import { Button } from "./ui/button";
 import { useSidebar } from "./ui/sidebar";
+import { Button } from "./ui/button";
 
 export function LoginButton() {
   const { state } = useSidebar();
