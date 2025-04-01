@@ -3,6 +3,7 @@
 import {
   BookIcon,
   LogInIcon,
+  LogOutIcon,
   SearchIcon,
   SquareArrowDown,
   SquareArrowUp,
@@ -23,6 +24,12 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "./ui/button";
+import {
+  signInWithGoogle,
+  signOutAccount,
+} from "@/lib/server_actions/auth_actions";
+
+import { usePathname } from "next/navigation";
 
 const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
@@ -31,6 +38,10 @@ const menuItems = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
+
+  if (usePathname() === "/signup") {
+    return <></>;
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -62,18 +73,35 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="flex flex-col align-center pb-5">
         <SidebarMenuButton asChild>
-          <Link href="/login" className="w-full">
-            {state === "collapsed" ? (
-              <LogInIcon className="w-80 h-80" />
-            ) : (
-              <Button className="bg-orange-400 w-full cursor-pointer">
-                Login
-              </Button>
-            )}
-          </Link>
+          {state === "collapsed" ? (
+            <LogInIcon className="w-80 h-80" />
+          ) : (
+            <Button
+              className="w-full cursor-pointer"
+              onClick={signInWithGoogle}
+            >
+              <Image
+                src="/GLogo.svg"
+                alt="Google"
+                width={20}
+                height={20}
+                className="mr-2"
+              />
+              Signup/Login with Google
+            </Button>
+          )}
+        </SidebarMenuButton>
+        <SidebarMenuButton asChild>
+          {state === "collapsed" ? (
+            <LogOutIcon className="w-80 h-80" />
+          ) : (
+            <Button className="w-full cursor-pointer" onClick={signOutAccount}>
+              Logout
+            </Button>
+          )}
         </SidebarMenuButton>
 
-        <SidebarMenuButton asChild>
+        {/* <SidebarMenuButton asChild>
           <Link href="/signup" className="w-full">
             {state === "collapsed" ? (
               <SquareArrowUp className="w-80 h-80" />
@@ -83,7 +111,7 @@ export function AppSidebar() {
               </Button>
             )}
           </Link>
-        </SidebarMenuButton>
+        </SidebarMenuButton> */}
       </SidebarFooter>
     </Sidebar>
   );
