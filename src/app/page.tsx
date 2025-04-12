@@ -1,4 +1,16 @@
-export default function Home() {
+import { auth } from "@/auth";
+import { getUser } from "@/db/queries/user";
+export default async function Home() {
+  const session = await auth();
+
+  if (!session) {
+    return <div>Not logged in</div>;
+  }
+
+  const result = await getUser(session?.user.id);
+
+  console.log(result);
+
   return (
     <main>
       <header>
