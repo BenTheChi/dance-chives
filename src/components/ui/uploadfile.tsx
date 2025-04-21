@@ -15,6 +15,7 @@ interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
   name: Path<T>;
   onFileChange?: (file: File | null) => void;
+  className?: string;
 }
 
 export default function UploadFile<T extends FieldValues>({
