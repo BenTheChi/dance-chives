@@ -39,7 +39,7 @@ export default function DateRangePicker({
       control={form.control}
       name={name}
       render={({ field }) => (
-        <FormItem className={cn("grid gap-2", className)}>
+        <FormItem className={cn("grid gap-2 rounded-lg", className)}>
           {label && <FormLabel>{label}</FormLabel>}
           <Popover>
             <PopoverTrigger asChild>
@@ -47,7 +47,7 @@ export default function DateRangePicker({
                 <Button
                   variant={"outline"}
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    "justify-start text-left font-normal",
                     !field.value && "text-muted-foreground"
                   )}
                 >
