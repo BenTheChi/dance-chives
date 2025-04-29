@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/db/queries/user";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function Home() {
   const session = await auth();
@@ -18,7 +18,9 @@ export default async function Home() {
     <main>
       <header>
         <h1>Home</h1>
-        <Button onClick={redirect("/add-event")}>Add Event</Button>
+        <Link href="/add-event">
+          <Button>Add Event</Button>
+        </Link>
       </header>
       <section>Content here</section>
     </main>
