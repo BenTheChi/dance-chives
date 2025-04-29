@@ -28,9 +28,11 @@ export async function signup(formData: FormData) {
     return;
   }
 
-  console.log(formData);
-
-  if (!formData.get("displayName") || !formData.get("username") || !formData.get("date")) {
+  if (
+    !formData.get("displayName") ||
+    !formData.get("username") ||
+    !formData.get("date")
+  ) {
     console.error("Missing required fields");
     return;
   }
