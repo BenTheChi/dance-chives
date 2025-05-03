@@ -29,12 +29,12 @@ import { addEvent } from "@/lib/server_actions/event_actions";
 const formSchema = z.object({
   eventTitle: z.string().nonempty(),
   city: z.string().nonempty(),
-  address: z.string().nonempty(),
+  address: z.string().optional(),
   date: z.any(),
-  time: z.string().nonempty(),
-  description: z.string().nonempty(),
-  entryCost: z.string().nonempty(),
-  prize: z.string().nonempty(),
+  time: z.string().optional(),
+  description: z.string().optional(),
+  entryCost: z.string().optional(),
+  prize: z.string().optional(),
   poster: z.any(),
   // Make roles validation optional or allow empty strings
   roles: z
@@ -88,11 +88,11 @@ export default function AddEventPage() {
     const formData = new FormData();
     formData.append("eventTitle", finalData.eventTitle);
     formData.append("city", finalData.city);
-    formData.append("address", finalData.address);
-    formData.append("time", finalData.time);
-    formData.append("description", finalData.description);
-    formData.append("entryCost", finalData.entryCost);
-    formData.append("prize", finalData.prize);
+    formData.append("address", finalData.address || "");
+    formData.append("time", finalData.time || "");
+    formData.append("description", finalData.description || "");
+    formData.append("entryCost", finalData.entryCost || "");
+    formData.append("prize", finalData.prize || "");
 
     if (finalData.poster) {
       formData.append("poster", finalData.poster); // poster is a real File

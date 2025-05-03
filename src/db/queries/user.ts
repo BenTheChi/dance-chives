@@ -1,4 +1,3 @@
-import { User } from "@/types/user";
 import driver from "../driver";
 
 export const getUser = async (id: string) => {
