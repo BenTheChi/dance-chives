@@ -1,5 +1,6 @@
 export interface Image {
   id?: string;
+  title: string;
   src: string;
   type: "photo" | "poster";
 }

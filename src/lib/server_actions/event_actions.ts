@@ -30,6 +30,7 @@ export async function addEvent(formData: FormData) {
 
   const poster = formData.get("poster");
   let posterSrc = "";
+  let posterId = "";
   const date = JSON.parse(formData.get("date") as string);
 
   if (poster instanceof File) {
@@ -37,6 +38,7 @@ export async function addEvent(formData: FormData) {
 
     if (result.success) {
       posterSrc = result.url || "";
+      posterId = result.id || "";
       console.log("Poster uploaded successfully:", posterSrc);
     } else {
       console.error("Failed to upload poster");
@@ -53,11 +55,12 @@ export async function addEvent(formData: FormData) {
     description: formData.get("description")?.toString() || "",
     startDate: date.from,
     endDate: date.to,
-    // endDate: formData.get("endDate"),
     address: formData.get("address")?.toString() || "",
     time: formData.get("time")?.toString() || "",
     roles: roles,
     poster: {
+      id: posterId,
+      title: (poster as File).name,
       src: posterSrc,
       type: "poster" as "poster",
     },

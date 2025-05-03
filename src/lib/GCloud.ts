@@ -2,9 +2,10 @@ import { Storage } from "@google-cloud/storage";
 
 export async function uploadToGCloudStorage(
   file: File
-): Promise<{ success: boolean; url?: string }> {
+): Promise<{ success: boolean; url?: string; id?: string }> {
   const storage = new Storage();
-  const uniqueFileName = `${crypto.randomUUID()}-${file.name}`;
+  const id = crypto.randomUUID();
+  const uniqueFileName = `${id}-${file.name}`;
 
   try {
     const data = await storage
@@ -13,6 +14,7 @@ export async function uploadToGCloudStorage(
       .save(Buffer.from(await file.arrayBuffer()));
 
     return {
+      id: id,
       success: true,
       url: `https://storage.googleapis.com/dance-chives-posters/${uniqueFileName}`,
     };
