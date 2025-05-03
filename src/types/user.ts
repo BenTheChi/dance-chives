@@ -1,3 +1,4 @@
+// A User is not registered until they sign up.  They only have OAuth credentials.
 export interface User {
   id: string;
   email: string;
