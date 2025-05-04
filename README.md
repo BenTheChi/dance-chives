@@ -1,10 +1,11 @@
-# Overview
+# Dance Chives - An event archive app for the street dance community
+## Problem
 The street and club dance community thrives as an event-driven subculture centered around high-energy competitions known as battles. Through the collective grassroots efforts of dancers and organizers, thousands of these battles take place across the globe each year, generating extensive footage. While most events are promoted, shared, and documented on social media, platforms like Facebook, Instagram, and YouTube lack the structure to systematically organize dance events and their metadata in an accessible way. As a result, the culture remains fragmented online, leaving many talented dancers, event hosts, and creators without proper recognition.  
 
 That’s where **Dance Chives** comes in.
 
-## About Dance Chives
-Dance Chives is a web app designed to collect, display, and track dance event data. Our goal is to unify all metadata, media, and social connection through our site. Most of the data we need is sourced from Instagram and YouTube, so we are only displaying them as iFrames. We aim for **high SEO** and organic search to drive traffic.  
+## Solution
+**Dance Chives** is a web app archive designed to collect, display, and track dance event data. Our goal is to unify all metadata, media, and social connection through our site. Most of the data we need is sourced from Instagram and YouTube, so we are only displaying them as iFrames. We aim for **high SEO** and organic search to drive traffic.  This site is highly inspired by similar sites like bboy.org and breakkonnect.com.  However, we aim to focus more on the collection of videos, images, and social media posts for events.
 
 ---
 
