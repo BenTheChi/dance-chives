@@ -1,6 +1,6 @@
 import { Image } from "./media";
 
-export interface CityInput {
+export interface City {
   name: string;
   country: string;
   timezone: string;
@@ -8,8 +8,8 @@ export interface CityInput {
 
 export interface NewEvent {
   title: string;
-  startDate: string;
-  endDate: string;
+  startDate: Date;
+  endDate: Date;
   description?: string;
   address?: string;
   time?: string;
@@ -20,9 +20,8 @@ export interface NewEvent {
     src: string;
     type: string;
   };
-  city: CityInput; 
+  city: City;
 }
-
 
 export interface Event extends NewEvent {
   id: string;
