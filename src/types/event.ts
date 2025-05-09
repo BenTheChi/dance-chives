@@ -1,16 +1,28 @@
 import { Image } from "./media";
 
-export interface NewEvent {
-  creatorId: string;
-  title: string;
-  description: string | null;
-  startDate: Date;
-  endDate: Date;
-  address: string | null;
-  time: string | null;
-  roles: Role[] | null;
-  poster: Image | null;
+export interface CityInput {
+  name: string;
+  country: string;
+  timezone: string;
 }
+
+export interface NewEvent {
+  title: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+  address?: string;
+  time?: string;
+  creatorId: string;
+  poster?: {
+    id: string;
+    title: string;
+    src: string;
+    type: string;
+  };
+  city: CityInput; 
+}
+
 
 export interface Event extends NewEvent {
   id: string;

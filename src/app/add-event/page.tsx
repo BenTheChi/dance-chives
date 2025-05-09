@@ -83,11 +83,18 @@ export default function AddEventPage() {
     const finalData = {
       ...data,
       roles: processedRoles,
+      city: {
+        name: data.city,
+        country: "USA", // or any appropriate default
+        timezone: "America/New_York", // update to match city
+      },
     };
+
+    console.log(finalData.city);
 
     const formData = new FormData();
     formData.append("eventTitle", finalData.eventTitle);
-    formData.append("city", finalData.city);
+    formData.append("city", JSON.stringify(finalData.city));
     formData.append("address", finalData.address || "");
     formData.append("time", finalData.time || "");
     formData.append("description", finalData.description || "");

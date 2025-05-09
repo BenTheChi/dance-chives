@@ -19,51 +19,59 @@ export const getEvent = async (id: string) => {
 export const insertEvent = async (event: NewEvent) => {
   const session = driver.session();
   const result = await session.run(
-    `
-      CREATE (e:Event {
-        id: $id,
-        title: $title,
-        startDate: $startDate,
-        endDate: $endDate
-      })
-      SET e.description = $description,
-          e.address = $address,
-          e.time = $time
-      WITH e
-      ${
-        event.poster
-          ? `
-          CREATE (i:Image {
-            id: $posterId,
-            title: $posterTitle,
-            src: $posterSrc,
-            type: $posterType
-          })
-          CREATE (e)<-[:POSTER_OF]-(i)
-          WITH e, i
-        `
-          : ""
-      }
-      MATCH (u:User {id: $creatorId})
-      CREATE (u)-[:CREATED]->(e)
-      RETURN e, u${event.poster ? ", i" : ""}
-      `,
-    {
-      id: slugify(event.title) + "-" + generateShortId(6),
-      title: event.title,
-      startDate: event.startDate,
-      endDate: event.endDate,
-      description: event.description ?? null,
-      address: event.address ?? null,
-      time: event.time ?? null,
-      creatorId: event.creatorId,
-      ...(event.poster && {
-        posterId: event.poster.id,
-        posterTitle: event.poster.title,
-        posterSrc: event.poster.src,
-        posterType: event.poster.type,
-      }),
+  `
+    CREATE (e:Event {
+      id: $id,
+      title: $title,
+      startDate: $startDate,
+      endDate: $endDate
+    })
+    SET e.description = $description,
+        e.address = $address,
+        e.time = $time
+    WITH e
+    MERGE (c:City {name: $cityName, country: $cityCountry, timezone: $cityTimezone})
+    MERGE (e)-[:IN]->(c)
+    WITH e, c
+    ${
+      event.poster
+        ? `
+        CREATE (i:Image {
+          id: $posterId,
+          title: $posterTitle,
+          src: $posterSrc,
+          type: $posterType
+        })
+        CREATE (e)<-[:POSTER_OF]-(i)
+        WITH e, i, c
+      `
+        : ""
     }
+    MATCH (u:User {id: $creatorId})
+    CREATE (u)-[:CREATED]->(e)
+    MERGE (u)-[:FROM]->(c)
+    RETURN e, u${event.poster ? ", i" : ""}
+  `,
+
+{
+  id: slugify(event.title) + "-" + generateShortId(6),
+  title: event.title,
+  startDate: event.startDate,
+  endDate: event.endDate,
+  description: event.description ?? null,
+  address: event.address ?? null,
+  time: event.time ?? null,
+  creatorId: event.creatorId,
+  cityName: event.city.name,
+  cityCountry: event.city.country,
+  cityTimezone: event.city.timezone,
+  ...(event.poster && {
+    posterId: event.poster.id,
+    posterTitle: event.poster.title,
+    posterSrc: event.poster.src,
+    posterType: event.poster.type,
+  }),
+}
   );
   await session.close();
   return result.records[0].get("e").properties;
