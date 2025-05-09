@@ -27,10 +27,13 @@ import { addEvent } from "@/lib/server_actions/event_actions";
 
 // Modified schema to make roles validation work better
 const formSchema = z.object({
-  eventTitle: z.string().nonempty(),
+  title: z.string().nonempty(),
   city: z.string().nonempty(),
   address: z.string().optional(),
-  date: z.any(),
+  date: z.object({
+    from: z.date(),
+    to: z.date(),
+  }),
   time: z.string().optional(),
   description: z.string().optional(),
   entryCost: z.string().optional(),
@@ -39,7 +42,10 @@ const formSchema = z.object({
   // Make roles validation optional or allow empty strings
   roles: z
     .record(
-      z.object({ member: z.string().optional(), role: z.string().optional() })
+      z.object({
+        member: z.string().nonempty(),
+        role: z.string().nonempty(),
+      })
     )
     .optional(),
 });
@@ -60,7 +66,7 @@ export default function AddEventPage() {
     resolver: zodResolver(formSchema),
     mode: "onSubmit",
     defaultValues: {
-      eventTitle: "",
+      title: "",
       city: "",
       address: "",
       date: {},
@@ -83,29 +89,14 @@ export default function AddEventPage() {
     const finalData = {
       ...data,
       roles: processedRoles,
+      city: {
+        name: data.city,
+        country: "USA", // or any appropriate default
+        timezone: "America/New_York", // update to match city
+      },
     };
 
-    const formData = new FormData();
-    formData.append("eventTitle", finalData.eventTitle);
-    formData.append("city", finalData.city);
-    formData.append("address", finalData.address || "");
-    formData.append("time", finalData.time || "");
-    formData.append("description", finalData.description || "");
-    formData.append("entryCost", finalData.entryCost || "");
-    formData.append("prize", finalData.prize || "");
-
-    if (finalData.poster) {
-      formData.append("poster", finalData.poster); // poster is a real File
-    }
-
-    // Convert roles object to JSON string
-    formData.append("roles", JSON.stringify(finalData.roles));
-
-    // Convert date range object to JSON string too
-    formData.append("date", JSON.stringify(finalData.date));
-
-    // Now send this FormData object to your server
-    addEvent(formData);
+    addEvent(finalData);
   };
 
   // Add a new role entry
@@ -141,7 +132,7 @@ export default function AddEventPage() {
           <div className="flex flex-col gap-4">
             <FormField
               control={form.control}
-              name="eventTitle"
+              name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Event Title</FormLabel>
