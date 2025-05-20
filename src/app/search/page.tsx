@@ -1,16 +1,9 @@
 export default function SearchPage() {
-  return (
-    <>
-      <header>
-        Search bar here
-        <nav>Nav Stuff here</nav>
-      </header>
-      <main>
-        <section>
-          <h1>Search</h1>
-          <p>Search results here</p>
-        </section>
-      </main>
-    </>
-  );
+    return (
+        <main className="p-12">
+            <section>
+                <h1 className="text-2xl font-bold">Search Page</h1>
+            </section>
+        </main>
+    );
 }
