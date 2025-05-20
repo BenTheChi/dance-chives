@@ -26,8 +26,8 @@ export function AppNavbar() {
 
     return (
         <nav className="border-b bg-sidebar px-4">
-            <div className="flex h-14 space-between items-center w-full">
-                <div className="relative mr-8">
+            <div className="flex h-14 items-center w-full justify-between">
+                <div className="relative">
                     <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
@@ -35,7 +35,7 @@ export function AppNavbar() {
                         className="w-full bg-background pl-8 md:w-[200px] lg:w-[300px]"
                     />
                 </div>
-                <div className="flex items-center space-x-8 text-sm font-medium mr-8">
+                <div className="flex items-center space-x-8 text-md font-medium">
                     {menuItems.map((item) => (
                         <Link
                             key={item.href}
@@ -46,10 +46,10 @@ export function AppNavbar() {
                         </Link>
                     ))}
                 </div>
-                <div className="flex items-center gap-x-2 ml-auto whitespace-nowrap">
+                <div className="flex items-center gap-x-2 whitespace-nowrap">
                     {isAuthenticated ? (
                         <Button
-                            size="md"
+                            size="sm"
                             className="w-full cursor-pointer"
                             onClick={signOutAccount}
                         >
@@ -57,7 +57,7 @@ export function AppNavbar() {
                         </Button>
                     ) : (
                         <Button
-                            size="md"
+                            size="sm"
                             className="w-full cursor-pointer"
                             onClick={signInWithGoogle}
                         >
