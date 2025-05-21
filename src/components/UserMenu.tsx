@@ -8,16 +8,33 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import Image from "next/image";
+import { Session } from "next-auth";
 
-export function UserMenu() {
+interface UserMenuProps {
+    session: Session;
+}
+
+export function UserMenu({ session }: UserMenuProps) {
     return (
         <Popover>
             <PopoverTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
+                    className="relative h-8 w-8 rounded-full overflow-hidden border border-border hover:border-primary"
                 >
-                    <UserIcon className="h-4 w-4" />
+                    {session.user?.image ? (
+                        <Image
+                            src={session.user.image}
+                            alt={session.user.name || "User avatar"}
+                            width={32}
+                            height={32}
+                            className="object-cover"
+                            unoptimized
+                        />
+                    ) : (
+                        <UserIcon className="h-4 w-4" />
+                    )}
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-56" align="end">
