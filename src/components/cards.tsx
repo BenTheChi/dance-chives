@@ -1,7 +1,7 @@
 // components/cards.tsx (or cards/index.tsx)
 import React from "react";
 
-interface HcardProps {
+interface EventcardProps {
   events: string;
   organisation: string;
   imageUrl: string;
@@ -10,7 +10,7 @@ interface HcardProps {
   statuss: string;
 }
 
-const Hcard = ({ events, organisation, imageUrl, date, city, statuss }: HcardProps) => {
+const Eventcard = ({ events, organisation, imageUrl, date, city, statuss }: EventcardProps) => {
   return (
     <div className="bg-white shadow-md rounded-md mt-4 mb-2 ml-0 mr-0 w-70 h-40 flex overflow-hidden">
       {/* Image */}
@@ -34,4 +34,4 @@ const Hcard = ({ events, organisation, imageUrl, date, city, statuss }: HcardPro
   );
 };
 
-export default Hcard;
+export default Eventcard;

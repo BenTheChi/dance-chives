@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/db/queries/user";
 import Link from "next/link";
 import SearchFilterBar from "../components/SearchFilterBar";
-import Hcard from "../components/cards";
+import Eventcard from "../components/cards";
 
 export default async function Home() {
   const session = await auth();
@@ -32,7 +32,7 @@ export default async function Home() {
         </Link>
         <section>Content here</section>
       </div>
-        <Hcard
+        <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -40,7 +40,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -48,7 +48,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -56,7 +56,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -64,7 +64,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -72,7 +72,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -80,7 +80,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
@@ -88,7 +88,7 @@ export default async function Home() {
           city = "Houston, TX"
           statuss = "breaking"
           />
-          <Hcard
+          <Eventcard
           events="B-GIRL-CITY-XIII"
           organisation ="Part of BGirlcity"
           imageUrl = "cardimage.jpeg.png"
