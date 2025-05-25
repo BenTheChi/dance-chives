@@ -16,3 +16,9 @@ export interface RegisteredUser extends User {
   website?: string;
   city?: string;
 }
+
+export interface UserSearchItem {
+  id: string;
+  username: string;
+  displayName: string;
+}
