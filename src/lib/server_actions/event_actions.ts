@@ -2,7 +2,8 @@
 import { auth } from "@/auth";
 import { uploadToGCloudStorage } from "../GCloud";
 import { insertEvent } from "@/db/queries/event";
-import { City } from "@/types/event";
+import { City } from "@/types/city";
+
 
 interface addEventProps {
   title: string;

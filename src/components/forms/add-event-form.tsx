@@ -26,6 +26,7 @@ import { z } from "zod";
 import { addEvent } from "@/lib/server_actions/event_actions";
 import { CitySearchItem } from "@/types/city";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
+import { UserSearchItem } from "@/types/user";
 
 // Modified schema to make roles validation work better
 const formSchema = z.object({
@@ -53,7 +54,13 @@ const formSchema = z.object({
   roles: z
     .record(
       z.object({
-        member: z.string().nonempty(),
+        user: z
+          .object({
+            id: z.string(),
+            username: z.string(),
+            displayName: z.string(),
+          })
+          .nullable(),
         role: z.string().nonempty(),
       })
     )
@@ -91,9 +98,9 @@ export default function AddEventForm() {
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     const processedRoles = roles.map((role) => {
-      const memberValue = form.getValues(`roles.${role.id}.member`);
+      const userValue = form.getValues(`roles.${role.id}.user`);
       const roleValue = form.getValues(`roles.${role.id}.role`);
-      return { member: memberValue, role: roleValue };
+      return { user: userValue, role: roleValue };
     });
 
     const finalData = {
@@ -136,6 +143,28 @@ export default function AddEventForm() {
       });
   }
 
+  async function getUserSearchItems(
+    keyword: string
+  ): Promise<UserSearchItem[]> {
+    return fetch(
+      `${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${keyword}`
+    )
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to fetch users", response.statusText);
+          return [];
+        }
+        return response.json();
+      })
+      .then((data) => {
+        return data.data;
+      })
+      .catch((error) => {
+        console.error(error);
+        return [];
+      });
+  }
+
   // Add a new role entry
   const addRole = () => {
     const newRoleId = Math.random().toString(36).substring(2, 9);
@@ -145,7 +174,7 @@ export default function AddEventForm() {
     setRoles([...roles, newRole]);
 
     // Initialize the form field values
-    form.setValue(`roles.${newRoleId}.member`, "");
+    form.setValue(`roles.${newRoleId}.user`, null);
     form.setValue(`roles.${newRoleId}.role`, "");
   };
 
@@ -357,21 +386,18 @@ export default function AddEventForm() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name={`roles.${role.id}.member`}
-                    render={({ field }) => (
-                      <FormItem className="w-full">
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            className="bg-white"
-                            placeholder="Name"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
+                  <DebouncedSearchSelect<UserSearchItem>
+                    onSearch={getUserSearchItems}
+                    placeholder="Search..."
+                    getDisplayValue={(item: UserSearchItem) => {
+                      return `${item.displayName} (${item.username})`;
+                    }}
+                    getItemId={(item) => item.id}
+                    onChange={(value) => {
+                      form.setValue(`roles.${role.id}.user`, value);
+                    }}
+                    value={form.getValues(`roles.${role.id}.user`)}
+                    name={"User"}
                   />
                 </div>
               </div>
