@@ -52,10 +52,7 @@ export default function RootLayout({
                     <div className="flex w-full">
                         <AppSidebar />
                         <SidebarTrigger />
-                        <main className="flex flex-col flex-1">
-                            <AppNavbar />
-                            <div className="flex-1">{children}</div>
-                        </main>
+                        <main className="flex flex-col flex-1">{children}</main>
                     </div>
                 </SidebarProvider>
             </body>
