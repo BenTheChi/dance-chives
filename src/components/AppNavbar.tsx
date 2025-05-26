@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { auth } from "@/auth";
 import { UserMenu } from "./UserMenu";
+import { Session } from "next-auth";
 
 const menuItems = [
     { label: "Events", href: "/events" },
@@ -11,9 +12,11 @@ const menuItems = [
     { label: "People", href: "/people" },
 ];
 
-export async function AppNavbar() {
-    const session = await auth();
+interface AppNavbarProps {
+    session: Session | null;
+}
 
+export async function AppNavbar({ session = null }: AppNavbarProps) {
     return (
         <nav className="border-b bg-sidebar px-4">
             <div className="flex h-14 items-center w-full justify-between">

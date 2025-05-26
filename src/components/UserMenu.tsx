@@ -12,7 +12,7 @@ import Image from "next/image";
 import { Session } from "next-auth";
 
 interface UserMenuProps {
-    session: Session;
+    session: Session | null;
 }
 
 export function UserMenu({ session }: UserMenuProps) {
@@ -23,7 +23,7 @@ export function UserMenu({ session }: UserMenuProps) {
                     variant="ghost"
                     className="relative h-8 w-8 rounded-full overflow-hidden border border-border hover:border-primary"
                 >
-                    {session.user?.image ? (
+                    {session?.user?.image ? (
                         <Image
                             src={session.user.image}
                             alt={session.user.name || "User avatar"}

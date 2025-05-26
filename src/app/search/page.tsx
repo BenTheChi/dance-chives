@@ -1,7 +1,6 @@
 import SearchFilterBar from "@/components/ui/SearchFilterBar";
 import Eventcard from "@/components/cards";
 
-export default function SearchPage() {
     return (
         <>
             <main>
