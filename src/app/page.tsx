@@ -1,13 +1,13 @@
-import { auth } from "@/auth";
+"use client";
+
 import { AppNavbar } from "@/components/AppNavbar";
 import { Button } from "@/components/ui/button";
 import { getUser } from "@/db/queries/user";
 import Link from "next/link";
+import { useAuth } from "@/components/providers/AuthProvider";
 
-export default async function Home() {
-    const session = await auth();
-    const result = session ? await getUser(session.user.id) : "Not Logged In";
-    console.log("Auth: ", result);
+export default function Home() {
+    const { session } = useAuth();
 
 <<<<<<< HEAD
   return (

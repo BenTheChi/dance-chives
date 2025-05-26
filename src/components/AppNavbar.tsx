@@ -1,10 +1,11 @@
+"use client";
+
 import { SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { auth } from "@/auth";
 import { UserMenu } from "./UserMenu";
-import { Session } from "next-auth";
+import { useAuth } from "./providers/AuthProvider";
 
 const menuItems = [
     { label: "Events", href: "/events" },
@@ -12,11 +13,9 @@ const menuItems = [
     { label: "People", href: "/people" },
 ];
 
-interface AppNavbarProps {
-    session: Session | null;
-}
+export function AppNavbar() {
+    const { session } = useAuth();
 
-export async function AppNavbar({ session = null }: AppNavbarProps) {
     return (
         <nav className="border-b bg-sidebar px-4">
             <div className="flex h-14 items-center w-full justify-between">
