@@ -47,7 +47,7 @@ export default function RootLayout({
         <SidebarProvider>
           <AppSidebar />
           <SidebarTrigger />
-          {children}
+          <main className="flex-1">{children}</main>
         </SidebarProvider>
       </body>
     </html>

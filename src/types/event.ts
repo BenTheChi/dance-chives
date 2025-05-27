@@ -1,10 +1,4 @@
-import { Image } from "./media";
-
-export interface City {
-  name: string;
-  country: string;
-  timezone: string;
-}
+import { City } from "./city";
 
 export interface NewEvent {
   title: string;

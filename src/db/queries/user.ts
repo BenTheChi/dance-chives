@@ -7,6 +7,35 @@ export const getUser = async (id: string) => {
   return result.records[0].get("u").properties;
 };
 
+export const getUsers = async (keyword: string | null) => {
+  const session = driver.session();
+  let result;
+  
+  if (keyword) {
+    result = await session.run(
+      `
+      MATCH (u:User)
+      WHERE toLower(u.username) CONTAINS toLower($keyword)
+         OR toLower(u.displayName) CONTAINS toLower($keyword)
+      RETURN u
+      `,
+      { keyword }
+    );
+  } else {
+    result = await session.run(
+      `
+      MATCH (u:User)
+      RETURN u
+      `
+    );
+  }
+
+  session.close();
+
+ // return all properties from each user node
+ return result.records.map(record => record.get("u").properties);
+};
+
 export const signupUser = async (
   id: string,
   user: { displayName: string; username: string; date: string; auth?: string }
