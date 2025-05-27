@@ -1,6 +1,6 @@
 "use client";
 
-import { BookIcon, LogInIcon, LogOutIcon, SearchIcon } from "lucide-react";
+import { BookIcon, SearchIcon } from "lucide-react";
 import {
     SidebarContent,
     SidebarGroup,
@@ -10,16 +10,10 @@ import {
     SidebarMenuButton,
     Sidebar,
     SidebarHeader,
-    SidebarFooter,
     useSidebar,
 } from "./ui/sidebar";
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "./ui/button";
-import {
-    signInWithGoogle,
-    signOutAccount,
-} from "@/lib/server_actions/auth_actions";
 
 import { usePathname } from "next/navigation";
 
@@ -70,39 +64,6 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
-            <SidebarFooter className="flex flex-col align-center pb-5">
-                <SidebarMenuButton asChild>
-                    {state === "collapsed" ? (
-                        <LogInIcon className="w-80 h-80" />
-                    ) : (
-                        <Button
-                            className="w-full cursor-pointer"
-                            onClick={signInWithGoogle}
-                        >
-                            <Image
-                                src="/GLogo.svg"
-                                alt="Google"
-                                width={20}
-                                height={20}
-                                className="mr-2"
-                            />
-                            Signup/Login with Google
-                        </Button>
-                    )}
-                </SidebarMenuButton>
-                <SidebarMenuButton asChild>
-                    {state === "collapsed" ? (
-                        <LogOutIcon className="w-80 h-80" />
-                    ) : (
-                        <Button
-                            className="w-full cursor-pointer"
-                            onClick={signOutAccount}
-                        >
-                            Logout
-                        </Button>
-                    )}
-                </SidebarMenuButton>
-            </SidebarFooter>
         </Sidebar>
     );
 }

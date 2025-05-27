@@ -15,6 +15,8 @@ const menuItems = [
 export async function AppNavbar() {
     const session = await auth();
 
+    console.log(session);
+
     return (
         <NavbarWrapper>
             <nav className="border-b bg-sidebar px-4">
@@ -40,7 +42,7 @@ export async function AppNavbar() {
                     </div>
                     <div className="flex items-center gap-x-2 whitespace-nowrap">
                         {session ? (
-                            <UserMenu />
+                            <UserMenu session={session} />
                         ) : (
                             <>
                                 <Link href="/login">
