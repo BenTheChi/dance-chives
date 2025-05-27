@@ -1,22 +1,25 @@
-
 "use client";
-import { Search, Filter } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Search, Filter } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 export default function SearchFilterBar() {
-  const [activeTab, setActiveTab] = useState('events');
-  const [underlineStyle, setUnderlineStyle] = useState({ width: '0px', left: '0px' });
+  const [activeTab, setActiveTab] = useState("events");
+  const [underlineStyle, setUnderlineStyle] = useState({
+    width: "0px",
+    left: "0px",
+  });
 
   const tabs = [
-    { id: 'events', label: 'Events' },
-    { id: 'series', label: 'Series' },
-    { id: 'people', label: 'People' },
+    { id: "events", label: "Events" },
+    { id: "series", label: "Series" },
+    { id: "people", label: "People" },
   ];
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    const currentTab = tabRefs.current[tabs.findIndex(tab => tab.id === activeTab)];
+    const currentTab =
+      tabRefs.current[tabs.findIndex((tab) => tab.id === activeTab)];
     if (currentTab) {
       setUnderlineStyle({
         width: `${currentTab.offsetWidth}px`,
@@ -48,10 +51,12 @@ export default function SearchFilterBar() {
               {tabs.map((tab, index) => (
                 <button
                   key={tab.id}
-                  ref={(el) => (tabRefs.current[index] = el)}
+                  ref={(el) => {
+                    tabRefs.current[index] = el;
+                  }}
                   onClick={() => setActiveTab(tab.id)}
                   className={`text-sm font-semibold pb-2 transition-colors ${
-                    activeTab === tab.id ? 'text-green-600' : 'text-gray-600'
+                    activeTab === tab.id ? "text-green-600" : "text-gray-600"
                   }`}
                 >
                   {tab.label}
@@ -71,7 +76,9 @@ export default function SearchFilterBar() {
             {/* Filter Button */}
             <button className="p-2 rounded-md hover:bg-gray-100 transition-colors flex items-center gap-1">
               <Filter className="h-5 w-5 text-gray-600" />
-              <span className="text-sm font-medium hidden sm:inline">Filters</span>
+              <span className="text-sm font-medium hidden sm:inline">
+                Filters
+              </span>
             </button>
           </div>
         </div>
