@@ -1,15 +1,81 @@
+import SearchFilterBar from "@/components/ui/SearchFilterBar";
+import Eventcard from "@/components/ui/cards";
+
+
 export default function SearchPage() {
   return (
     <>
-      <header>
-        Search bar here
-        <nav>Nav Stuff here</nav>
-      </header>
       <main>
-        <section>
-          <h1>Search</h1>
-          <p>Search results here</p>
-        </section>
+      <header>
+        <SearchFilterBar />
+      </header>
+      <div className="flex flex-wrap gap-3">
+      
+        <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+          <Eventcard
+          events="B-GIRL-CITY-XIII"
+          organisation ="Part of BGirlcity"
+          imageUrl = "cardimage.jpeg.png"
+          date = "12/1/2025 - 14/1/2025"
+          city = "Houston, TX"
+          statuss = "breaking"
+          />
+      </div>
       </main>
     </>
   );
