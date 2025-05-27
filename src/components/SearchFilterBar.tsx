@@ -1,4 +1,4 @@
-// src/components/SearchFilterBar.tsx
+
 "use client";
 import { Search, Filter } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
