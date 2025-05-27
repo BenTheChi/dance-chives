@@ -1,12 +1,12 @@
 import SearchFilterBar from "@/components/ui/SearchFilterBar";
 import Eventcard from "@/components/cards";
+import { AppNavbar } from "@/components/AppNavbar";
 
+export default function SearchPage() {
     return (
         <>
             <main>
-                <header>
-                    <SearchFilterBar />
-                </header>
+                <AppNavbar />
                 <div className="flex flex-wrap gap-3">
                     <Eventcard
                         title="B-GIRL-CITY-XIII"
