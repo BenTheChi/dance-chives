@@ -1,4 +1,5 @@
 import { City } from "./city";
+import { UserSearchItem } from "./user";
 
 export interface NewEvent {
   title: string;
@@ -15,6 +16,7 @@ export interface NewEvent {
     type: string;
   };
   city: City;
+  roles?: Role[];
 }
 
 export interface Event extends NewEvent {
@@ -23,10 +25,7 @@ export interface Event extends NewEvent {
   updatedAt: Date;
 }
 
-interface Role {
-  title: string;
-  user: {
-    id: string;
-    displayName: string;
-  };
+export interface Role {
+  role: string;
+  user: UserSearchItem;
 }

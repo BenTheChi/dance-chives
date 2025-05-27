@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { uploadToGCloudStorage } from "../GCloud";
 import { insertEvent } from "@/db/queries/event";
 import { City } from "@/types/city";
-
+import { UserSearchItem } from "@/types/user";
 
 interface addEventProps {
   title: string;
@@ -15,10 +15,12 @@ interface addEventProps {
   entryCost?: string;
   prize?: string;
   poster?: File;
-  roles?: {
-    member: string;
-    role: string;
-  }[];
+  roles?:
+    | {
+        role: string;
+        user: UserSearchItem;
+      }[]
+    | null;
 }
 
 export async function addEvent(props: addEventProps) {
@@ -77,8 +79,6 @@ export async function addEvent(props: addEventProps) {
     },
     city: props.city,
   };
-
-  console.log(newEvent);
 
   //At this point collect all the data and upload it to the database
   insertEvent(newEvent)

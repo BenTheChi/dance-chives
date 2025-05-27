@@ -17,4 +17,8 @@ export interface City {
   longitude: number;
   population: number;
   timezone: string;
+  wikiDataId?: string;
+  type?: string;
+  elevationMeters?: number;
+  deleted?: boolean;
 }

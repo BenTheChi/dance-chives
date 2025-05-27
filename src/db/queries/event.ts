@@ -30,7 +30,16 @@ export const insertEvent = async (event: NewEvent) => {
         e.address = $address,
         e.time = $time
     WITH e
-    MERGE (c:City {name: $cityName, country: $cityCountry, timezone: $cityTimezone})
+    MERGE (c:City {
+      name: $cityName,
+      country: $cityCountry,
+      timezone: $cityTimezone,
+      countryCode: $countryCode,
+      region: $cityRegion,
+      population: $cityPopulation,
+      latitude: $cityLatitude,
+      longitude: $cityLongitude,
+    })
     MERGE (e)-[:IN]->(c)
     WITH e, c
     ${
@@ -47,8 +56,20 @@ export const insertEvent = async (event: NewEvent) => {
       `
         : ""
     }
+    ${
+      event.roles
+        ? `
+        ${event.roles.map(
+          (role) => `
+        MATCH (u:User {id: $${role.user.id}})
+        CREATE (u)-[:${role.role.toUpperCase()}]->(e)
+        `
+        )}
+        `
+        : ""
+    }
     MATCH (u:User {id: $creatorId})
-    CREATE (u)-[:CREATED]->(e)
+    CREATE (u)-[:CREATOR]->(e)
     RETURN e, u${event.poster ? ", i" : ""}
   `,
 
@@ -62,7 +83,12 @@ export const insertEvent = async (event: NewEvent) => {
       time: event.time ?? null,
       creatorId: event.creatorId,
       cityName: event.city.name,
+      countryCode: event.city.countryCode,
       cityCountry: event.city.country,
+      cityRegion: event.city.region,
+      cityPopulation: event.city.population,
+      cityLatitude: event.city.latitude,
+      cityLongitude: event.city.longitude,
       cityTimezone: event.city.timezone,
       ...(event.poster && {
         posterId: event.poster.id,

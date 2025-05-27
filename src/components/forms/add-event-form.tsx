@@ -97,20 +97,31 @@ export default function AddEventForm() {
   });
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    const processedRoles = roles.map((role) => {
-      const userValue = form.getValues(`roles.${role.id}.user`);
-      const roleValue = form.getValues(`roles.${role.id}.role`);
-      return { user: userValue, role: roleValue };
-    });
+    const processedRoles = roles
+      .map((role) => {
+        const userValue = form.getValues(`roles.${role.id}.user`);
+        const roleValue = form.getValues(`roles.${role.id}.role`);
+        return { user: userValue, role: roleValue };
+      })
+      .filter(
+        (role): role is { user: UserSearchItem; role: string } =>
+          role.user !== null
+      );
 
-    const finalData = {
-      ...data,
-      roles: processedRoles,
-    };
+    //Get more details about the city and set it in the data
+    fetch(
+      `http://geodb-free-service.wirefreethought.com/v1/geo/places/${data.city?.id}`
+    )
+      .then((response) => response.json())
+      .then((detailsData) => {
+        const finalData = {
+          ...data,
+          city: detailsData.data,
+          roles: processedRoles,
+        };
 
-    console.log(finalData);
-
-    // addEvent(finalData);
+        addEvent(finalData);
+      });
   };
 
   async function getCitySearchItems(
