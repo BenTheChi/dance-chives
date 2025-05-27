@@ -1,8 +1,26 @@
+"use client";
+
 import { signInWithGoogle } from "@/lib/server_actions/auth_actions";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function LoginPage() {
+    const { session } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (session) {
+            router.push("/dashboard");
+        }
+    }, [session, router]);
+
+    if (session) {
+        return null;
+    }
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4">
             <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
