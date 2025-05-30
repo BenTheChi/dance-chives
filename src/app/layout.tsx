@@ -4,6 +4,8 @@ import "./globals.css";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthProvider } from "@/components/providers/AuthProvider";
+import { auth } from "@/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,11 +22,13 @@ export const metadata: Metadata = {
   description: "Freestyle Dance Culture, Media, and Community",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+
   return (
     <html lang="en">
       <head>
@@ -44,11 +48,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarTrigger />
-          <main className="flex-1">{children}</main>
-        </SidebarProvider>
+        <AuthProvider session={session}>
+          <SidebarProvider>
+            <div className="flex w-full">
+              <AppSidebar />
+              <main className="flex flex-col flex-1">{children}</main>
+            </div>
+          </SidebarProvider>
+        </AuthProvider>
       </body>
     </html>
   );

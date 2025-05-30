@@ -1,28 +1,29 @@
-import { auth } from "@/auth";
+"use client";
+
+import { AppNavbar } from "@/components/AppNavbar";
 import { Button } from "@/components/ui/button";
-import { getUser } from "@/db/queries/user";
 import Link from "next/link";
+import { useAuth } from "@/components/providers/AuthProvider";
 
-export default async function Home() {
-  const session = await auth();
+export default function Home() {
+    const { session } = useAuth();
 
-  if (!session) {
-    return <div>Not logged in</div>;
-  }
-
-  const result = await getUser(session?.user.id);
-
-  console.log(result);
-
-  return (
-    <main>
-      <header>
-        <h1>Home</h1>
-        <Link href="/add-event">
-          <Button>Add Event</Button>
-        </Link>
-      </header>
-      <section>Content here</section>
-    </main>
-  );
+    return (
+        <div>
+            <AppNavbar />
+            {session ? (
+                <div>
+                    <header>
+                        <h1>Home</h1>
+                        <Link href="/add-event">
+                            <Button>Add Event</Button>
+                        </Link>
+                    </header>
+                    <section>Content here</section>
+                </div>
+            ) : (
+                <div>Not logged in</div>
+            )}
+        </div>
+    );
 }
