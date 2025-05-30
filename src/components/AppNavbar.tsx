@@ -13,12 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const menuItems = [
-  { label: "Events", href: "/events" },
-  { label: "Series", href: "/series" },
-  { label: "People", href: "/people" },
-];
+import { SidebarTrigger } from "./ui/sidebar";
 
 export function AppNavbar() {
   const { session } = useAuth();
@@ -28,6 +23,8 @@ export function AppNavbar() {
       <div className="flex h-14 items-center w-full justify-between">
         {/* Search + Category Dropdown */}
         <div className="flex items-center gap-0">
+          <SidebarTrigger className="mr-4 border-1 border-grey cursor-pointer" />
+
           <div className="relative">
             <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -49,17 +46,7 @@ export function AppNavbar() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center space-x-8 text-md font-medium">
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
+
         <div className="flex items-center gap-x-2 whitespace-nowrap">
           {session ? (
             <UserMenu session={session} />

@@ -1,5 +1,9 @@
 import { SignupContent } from "@/components/forms/SignupContent";
 
 export default function SignupPage() {
-    return <SignupContent />;
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <SignupContent />
+    </div>
+  );
 }
