@@ -2,6 +2,7 @@
 
 import { AppNavbar } from "@/components/AppNavbar";
 import AddEventForm from "@/components/forms/add-event-form";
+import EventForm from "@/components/forms/event-form";
 
 export default function AddEventPage() {
   return (
@@ -11,7 +12,8 @@ export default function AddEventPage() {
         <h1 className="text-md sm:text-lg md:text-xl font-inter font-bold mt-3">
           Create Dance Event
         </h1>
-        <AddEventForm />
+        {/* <AddEventForm /> */}
+        <EventForm />
       </div>
     </>
   );
