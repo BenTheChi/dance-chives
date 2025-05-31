@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -121,6 +121,7 @@ export function SectionForm({
       </CardHeader>
       <CardContent className="space-y-4">
         <FormField
+          key={`title-${activeSectionId}`}
           control={control}
           name={`sections.${activeSectionIndex}.title`}
           render={({ field }) => (
@@ -135,6 +136,7 @@ export function SectionForm({
         />
 
         <FormField
+          key={`description-${activeSectionId}`}
           control={control}
           name={`sections.${activeSectionIndex}.description`}
           render={({ field }) => (
@@ -149,6 +151,7 @@ export function SectionForm({
         />
 
         <FormField
+          key={`hasBrackets-${activeSectionId}`}
           control={control}
           name={`sections.${activeSectionIndex}.hasBrackets`}
           render={({ field }) => (

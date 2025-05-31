@@ -16,6 +16,7 @@ import type { Control, UseFormSetValue } from "react-hook-form";
 import { type FormValues, type Section, type Video } from "./event-form";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
+import { useEffect } from "react";
 
 interface VideoFormProps {
   video: Video;
@@ -60,6 +61,8 @@ export function VideoForm({
   control,
   setValue,
 }: VideoFormProps) {
+  console.log(video);
+  console.log(sections);
   const updateTaggedUsers = (users: UserSearchItem[]) => {
     const updatedSections = sections.map((section) => {
       if (section.id !== activeSectionId) return section;
@@ -108,7 +111,7 @@ export function VideoForm({
       <CardContent className="space-y-3">
         <FormField
           control={control}
-          name={`sections.${sectionIndex}.videos.${videoIndex}.title` as const}
+          name={`sections.${sectionIndex}.videos.${videoIndex}.title`}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Title</FormLabel>
@@ -122,7 +125,7 @@ export function VideoForm({
 
         <FormField
           control={control}
-          name={`sections.${sectionIndex}.videos.${videoIndex}.src` as const}
+          name={`sections.${sectionIndex}.videos.${videoIndex}.src`}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Source</FormLabel>
@@ -135,7 +138,6 @@ export function VideoForm({
         />
 
         <div className="space-y-2">
-          <Label>Tagged Users</Label>
           <DebouncedSearchMultiSelect<UserSearchItem>
             onSearch={searchUsers}
             placeholder="Search users..."

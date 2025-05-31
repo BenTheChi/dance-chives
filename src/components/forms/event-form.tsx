@@ -220,7 +220,7 @@ export default function EventForm() {
 
   const addSection = () => {
     const newSection: Section = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: `New Section ${sections.length + 1}`,
       description: "",
       hasBrackets: false,
