@@ -140,8 +140,8 @@ export default function EventForm() {
               taggedUsers: [
                 {
                   id: "1",
-                  displayName: "Ben",
-                  username: "ben",
+                  displayName: "Bob",
+                  username: "bob",
                 },
               ],
             },

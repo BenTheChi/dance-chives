@@ -61,8 +61,10 @@ export function VideoForm({
   control,
   setValue,
 }: VideoFormProps) {
-  console.log(video);
-  console.log(sections);
+  const bracketIndex = sections[sectionIndex].brackets.findIndex(
+    (b) => b.id === activeBracketId
+  );
+
   const updateTaggedUsers = (users: UserSearchItem[]) => {
     const updatedSections = sections.map((section) => {
       if (section.id !== activeSectionId) return section;
@@ -111,7 +113,11 @@ export function VideoForm({
       <CardContent className="space-y-3">
         <FormField
           control={control}
-          name={`sections.${sectionIndex}.videos.${videoIndex}.title`}
+          name={
+            context === "bracket"
+              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.title`
+              : `sections.${sectionIndex}.videos.${videoIndex}.title`
+          }
           render={({ field }) => (
             <FormItem>
               <FormLabel>Title</FormLabel>
@@ -125,7 +131,11 @@ export function VideoForm({
 
         <FormField
           control={control}
-          name={`sections.${sectionIndex}.videos.${videoIndex}.src`}
+          name={
+            context === "bracket"
+              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.src`
+              : `sections.${sectionIndex}.videos.${videoIndex}.src`
+          }
           render={({ field }) => (
             <FormItem>
               <FormLabel>Source</FormLabel>
