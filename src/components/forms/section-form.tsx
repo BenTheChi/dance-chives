@@ -56,7 +56,8 @@ export function SectionForm({
         : section
     );
 
-    setValue("sections", updatedSections);
+    // Set active bracket first, then update form
+    setValue("sections", updatedSections, { shouldValidate: true });
     setActiveBracketId(newBracket.id);
   };
 
@@ -181,11 +182,16 @@ export function SectionForm({
                   <TabsList>
                     {activeSection.brackets.map((bracket) => (
                       <div key={bracket.id} className="relative group">
-                        <TabsTrigger value={bracket.id} className="pr-6">
+                        <TabsTrigger
+                          key={`bracket-${bracket.id}`}
+                          value={bracket.id}
+                          className="pr-6"
+                        >
                           {bracket.title}
                         </TabsTrigger>
                         {activeSection.brackets.length > 1 && (
                           <Button
+                            key={`remove-bracket-${bracket.id}`}
                             type="button"
                             variant="ghost"
                             size="sm"
@@ -211,20 +217,22 @@ export function SectionForm({
 
                 {activeSection.brackets.map((bracket, bracketIndex) => (
                   <TabsContent
-                    key={bracket.id}
+                    key={`tabs-content-${bracket.id}`}
                     value={bracket.id}
                     className="space-y-4"
                   >
-                    <BracketForm
-                      control={control}
-                      setValue={setValue}
-                      activeSectionIndex={activeSectionIndex}
-                      activeBracketIndex={bracketIndex}
-                      bracket={bracket}
-                      sections={sections}
-                      activeSectionId={activeSectionId}
-                      activeBracketId={activeBracketId}
-                    />
+                    {activeBracketId === bracket.id && (
+                      <BracketForm
+                        control={control}
+                        setValue={setValue}
+                        activeSectionIndex={activeSectionIndex}
+                        activeBracketIndex={bracketIndex}
+                        bracket={bracket}
+                        sections={sections}
+                        activeSectionId={activeSectionId}
+                        activeBracketId={activeBracketId}
+                      />
+                    )}
                   </TabsContent>
                 ))}
               </Tabs>

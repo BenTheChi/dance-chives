@@ -14,6 +14,7 @@ import { Plus } from "lucide-react";
 import type { Control, UseFormSetValue } from "react-hook-form";
 import type { FormValues, Section, Bracket, Video } from "./event-form";
 import { VideoForm } from "./video-form";
+import { useEffect } from "react";
 
 interface BracketFormProps {
   control: Control<FormValues>;
@@ -114,7 +115,7 @@ export function BracketForm({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {bracket.videos.map((video, videoIndex) => (
             <VideoForm
-              key={video.id}
+              key={`${activeBracketId}-${video.id}-${videoIndex}`}
               control={control}
               setValue={setValue}
               video={video}

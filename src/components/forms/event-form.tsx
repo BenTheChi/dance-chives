@@ -50,22 +50,8 @@ export type FormValues = {
     title: string;
     description?: string;
     hasBrackets?: boolean;
-    videos: {
-      id: string;
-      title: string;
-      src: string;
-      taggedUsers?: UserSearchItem[];
-    }[];
-    brackets: {
-      id: string;
-      title: string;
-      videos: {
-        id: string;
-        title: string;
-        src: string;
-        taggedUsers?: UserSearchItem[];
-      }[];
-    }[];
+    videos: Video[];
+    brackets: Bracket[];
   }[];
 };
 
@@ -74,33 +60,14 @@ export type Section = {
   title: string;
   description?: string;
   hasBrackets?: boolean;
-  videos: {
-    id: string;
-    title: string;
-    src: string;
-    taggedUsers?: UserSearchItem[];
-  }[];
-  brackets: {
-    id: string;
-    title: string;
-    videos: {
-      id: string;
-      title: string;
-      src: string;
-      taggedUsers?: UserSearchItem[];
-    }[];
-  }[];
+  videos: Video[];
+  brackets: Bracket[];
 };
 
 export type Bracket = {
   id: string;
   title: string;
-  videos: {
-    id: string;
-    title: string;
-    src: string;
-    taggedUsers?: UserSearchItem[];
-  }[];
+  videos: Video[];
 };
 
 export type Video = {
