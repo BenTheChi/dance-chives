@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/form";
 import { Plus } from "lucide-react";
 import type { Control, UseFormSetValue } from "react-hook-form";
-import type { FormValues, Section, Bracket, Video } from "./event-form";
 import { VideoForm } from "./video-form";
-import { useEffect } from "react";
+import { FormValues } from "./event-form";
+import { Section, Bracket, Video } from "@/types/event";
 
 interface BracketFormProps {
   control: Control<FormValues>;

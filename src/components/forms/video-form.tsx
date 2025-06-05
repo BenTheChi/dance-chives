@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/form";
 import { X } from "lucide-react";
 import type { Control, UseFormSetValue } from "react-hook-form";
-import { type FormValues, type Section, type Video } from "./event-form";
+import { FormValues } from "./event-form";
+import { Section, Video } from "@/types/event";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
-import { useEffect } from "react";
 import { VideoEmbed } from "../VideoEmbed";
 
 interface VideoFormProps {

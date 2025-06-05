@@ -4,12 +4,11 @@ import { uploadToGCloudStorage } from "../GCloud";
 import { insertEvent } from "@/db/queries/event";
 import { City } from "@/types/city";
 
-
 interface addEventProps {
   title: string;
   city: City;
   address?: string;
-  date: { from: Date; to: Date };
+  date: { from: string; to: string };
   time?: string;
   description?: string;
   entryCost?: string;

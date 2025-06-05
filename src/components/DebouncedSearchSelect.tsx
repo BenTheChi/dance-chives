@@ -15,17 +15,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { UserSearchItem } from "@/types/user";
 import { CitySearchItem } from "@/types/city";
+import { Control } from "react-hook-form";
+import { FormField } from "./ui/form";
+import { FormLabel } from "./ui/form";
+import { FormControl } from "./ui/form";
+import { FormItem } from "./ui/form";
 
 type SearchItem = CitySearchItem | UserSearchItem;
 
 interface DebouncedSearchSelectProps<T extends SearchItem> {
+  control: Control<any>;
+  label: string;
   value?: T | null;
   defaultValue?: T;
   onChange?: (value: T | null) => void;
   onSearch: (keyword: string) => Promise<T[]>;
   placeholder?: string;
   debounceDelay?: number;
-  name?: string;
+  name: string;
   disabled?: boolean;
   required?: boolean;
   className?: string;
@@ -40,13 +47,15 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
   ref: React.ForwardedRef<HTMLButtonElement>
 ) {
   const {
+    control,
     value,
     defaultValue,
+    label,
+    name,
     onChange,
     onSearch,
     placeholder = "Search...",
     debounceDelay = 300,
-    name,
     disabled = false,
     required = false,
     className,
@@ -55,7 +64,9 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
   } = props;
 
   const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(
+    value ? getDisplayValue(value) : ""
+  );
   const [selectedItem, setSelectedItem] = useState<T | null>(null);
   const [items, setItems] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,6 +77,7 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
   useEffect(() => {
     if (defaultValue && !value && !selectedItem) {
       setInputValue(getDisplayValue(defaultValue));
+      setSelectedItem(defaultValue);
     }
   }, [defaultValue, value, selectedItem, getDisplayValue]);
 
@@ -120,78 +132,91 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
 
   return (
     <div className={cn("relative w-full", className)}>
-      {name && (
-        <label className="text-sm font-medium mb-1.5 block">
-          {name.charAt(0).toUpperCase() + name.slice(1)}
-        </label>
-      )}
-      <div className="flex items-center border rounded-md bg-white">
-        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        <Input
-          placeholder={placeholder}
-          value={inputValue}
-          onChange={(e) => {
-            setInputValue(e.target.value);
-            setOpen(true);
-            if (
-              selectedItem &&
-              e.target.value !== getDisplayValue(selectedItem)
-            ) {
-              setSelectedItem(null);
-              if (onChange) onChange(null);
-            }
-          }}
-          className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
-          disabled={disabled}
-          name={name}
-        />
-        {isLoading ? (
-          <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
-        ) : (
-          <ChevronsUpDown
-            className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer"
-            onClick={() => setOpen(!open)}
-          />
-        )}
-      </div>
-      {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg">
-          <Command className="bg-white">
-            <CommandList>
-              <CommandGroup>
-                {items.length === 0 && !isLoading ? (
-                  <CommandEmpty>No results found.</CommandEmpty>
-                ) : (
-                  items.map((item) => (
-                    <CommandItem
-                      key={getItemId(item)}
-                      onSelect={() => handleSelect(item)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedItem &&
-                            getItemId(selectedItem) === getItemId(item)
-                            ? "opacity-100"
-                            : "opacity-0"
-                        )}
-                      />
-                      {getDisplayValue(item)}
-                    </CommandItem>
-                  ))
-                )}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </div>
-      )}
-      {/* Hidden input for form submission */}
-      <input
-        type="hidden"
+      <FormField
+        control={control}
         name={name}
-        value={selectedItem ? JSON.stringify(selectedItem) : ""}
-        required={required}
-        disabled={disabled}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{label}</FormLabel>
+            <FormControl>
+              <div className="flex items-center border rounded-md bg-white">
+                <div className="flex items-center w-full">
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <Input
+                    {...field}
+                    placeholder={placeholder}
+                    value={inputValue}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      field.onChange(newValue);
+                      setInputValue(newValue);
+                      setOpen(true);
+                      if (
+                        selectedItem &&
+                        newValue !== getDisplayValue(selectedItem)
+                      ) {
+                        setSelectedItem(null);
+                        if (onChange) onChange(null);
+                      }
+                    }}
+                    className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
+                    disabled={disabled}
+                  />
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
+                  ) : (
+                    <ChevronsUpDown
+                      className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer"
+                      onClick={() => setOpen(!open)}
+                    />
+                  )}
+                  {open && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg">
+                      <Command className="bg-white">
+                        <CommandList>
+                          <CommandGroup>
+                            {items.length === 0 && !isLoading ? (
+                              <CommandEmpty>No results found.</CommandEmpty>
+                            ) : (
+                              items.map((item) => (
+                                <CommandItem
+                                  key={getItemId(item)}
+                                  onSelect={() => {
+                                    handleSelect(item);
+                                    field.onChange(item);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedItem &&
+                                        getItemId(selectedItem) ===
+                                          getItemId(item)
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {getDisplayValue(item)}
+                                </CommandItem>
+                              ))
+                            )}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                  )}
+                  {/* Hidden input for form submission */}
+                  <input
+                    type="hidden"
+                    value={selectedItem ? JSON.stringify(selectedItem) : ""}
+                    required={required}
+                    disabled={disabled}
+                  />
+                </div>
+              </div>
+            </FormControl>
+          </FormItem>
+        )}
       />
     </div>
   );
