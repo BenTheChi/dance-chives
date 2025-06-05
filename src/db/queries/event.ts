@@ -1,5 +1,5 @@
 import driver from "../driver";
-import { NewEvent } from "../../types/event";
+import { EventDetails } from "../../types/event";
 import { generateShortId, slugify } from "@/lib/utils";
 
 export const getEvent = async (id: string) => {
@@ -16,15 +16,14 @@ export const getEvent = async (id: string) => {
   return result.records[0].get("e").properties;
 };
 
-export const insertEvent = async (event: NewEvent) => {
+export const insertEvent = async (event: EventDetails) => {
   const session = driver.session();
   const result = await session.run(
     `
     CREATE (e:Event {
       id: $id,
       title: $title,
-      startDate: datetime($startDate),
-      endDate: datetime($endDate)
+      startDate: datetime($startDate)
     })
     SET e.description = $description,
         e.address = $address,
@@ -55,8 +54,7 @@ export const insertEvent = async (event: NewEvent) => {
     {
       id: slugify(event.title) + "-" + generateShortId(6),
       title: event.title,
-      startDate: event.startDate.toISOString(),
-      endDate: event.endDate.toISOString(),
+      startDate: event.startDate,
       description: event.description ?? null,
       address: event.address ?? null,
       time: event.time ?? null,

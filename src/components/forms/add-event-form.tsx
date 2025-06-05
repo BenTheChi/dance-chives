@@ -67,15 +67,6 @@ const formSchema = z.object({
     .optional(),
 });
 
-const availableRoles = [
-  "Organizer",
-  "DJ",
-  "Photographer",
-  "Videographer",
-  "Designer",
-  "MC",
-];
-
 export default function AddEventForm() {
   const [roles, setRoles] = useState<{ id: string }[]>([]);
 
