@@ -17,6 +17,7 @@ import { type FormValues, type Section, type Video } from "./event-form";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { useEffect } from "react";
+import { VideoEmbed } from "../VideoEmbed";
 
 interface VideoFormProps {
   video: Video;
@@ -99,7 +100,6 @@ export function VideoForm({
   return (
     <Card className="group">
       <CardHeader className="relative">
-        <CardTitle className="text-sm pr-8">Video {videoIndex + 1}</CardTitle>
         <Button
           type="button"
           variant="ghost"
@@ -109,8 +109,6 @@ export function VideoForm({
         >
           <X className="h-3 w-3" />
         </Button>
-      </CardHeader>
-      <CardContent className="space-y-3">
         <FormField
           control={control}
           name={
@@ -128,6 +126,11 @@ export function VideoForm({
             </FormItem>
           )}
         />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <VideoEmbed title={video.title} src={video.src} />
+        </div>
 
         <FormField
           control={control}
