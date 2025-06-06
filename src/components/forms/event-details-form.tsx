@@ -73,21 +73,25 @@ export function EventDetailsForm({
       <div className="flex flex-col sm:flex-row gap-5">
         {/* City Field */}
 
-        <DebouncedSearchSelect<CitySearchItem>
-          control={control}
-          name="eventDetails.city"
-          onSearch={getCitySearchItems}
-          placeholder="Search..."
-          getDisplayValue={(item: CitySearchItem) => {
-            return item.name + ", " + item.region;
-          }}
-          getItemId={(item) => item.id}
-          onChange={(value) => {
-            setValue("eventDetails.city", value as City | null);
-          }}
-          value={eventDetails.city}
-          label="City"
-        />
+        <div className="w-1/2">
+          <DebouncedSearchSelect<CitySearchItem>
+            control={control}
+            name="eventDetails.city"
+            onSearch={getCitySearchItems}
+            placeholder="Search..."
+            getDisplayValue={(item: CitySearchItem) => {
+              if (!item.name || !item.region) return "";
+              return item.name + ", " + item.region;
+            }}
+            getItemId={(item) => item.id}
+            onChange={(value) => {
+              console.log(value);
+              setValue("eventDetails.city", value as City | null);
+            }}
+            value={eventDetails.city}
+            label="City"
+          />
+        </div>
 
         {/* Address Field */}
         <FormField
@@ -116,22 +120,39 @@ export function EventDetailsForm({
         />
 
         {/* Time Field */}
-        <div className="w-full">
+        <div className="w-1/2">
           <FormField
             control={control}
-            name="eventDetails.time"
+            name="eventDetails.startTime"
             render={({ field }) => (
-              <FormItem className="w-1/2">
-                <FormLabel>Time</FormLabel>
+              <FormItem>
+                <FormLabel>Start Time</FormLabel>
                 <FormControl>
-                  <div className="relative">
-                    <Input
-                      {...field}
-                      className="bg-white w-full pr-10" // make space for clock icon
-                      placeholder="2:00 PM"
-                    />
-                    <Clock className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  </div>
+                  <Input
+                    type="time"
+                    {...field}
+                    className="bg-white" // make space for clock icon
+                    placeholder="2:00 PM"
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="w-1/2">
+          <FormField
+            control={control}
+            name="eventDetails.endTime"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>End Time</FormLabel>
+                <FormControl>
+                  <Input
+                    type="time"
+                    {...field}
+                    className="bg-white" // make space for clock icon
+                    placeholder="2:00 PM"
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -144,6 +165,21 @@ export function EventDetailsForm({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Description</FormLabel>
+            <FormControl>
+              <textarea
+                {...field}
+                className="bg-white h-32 p-2 rounded-md border border-gray-300"
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
+        name="eventDetails.schedule"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Schedule</FormLabel>
             <FormControl>
               <textarea
                 {...field}

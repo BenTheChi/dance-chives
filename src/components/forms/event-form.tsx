@@ -58,19 +58,16 @@ const eventDetailsSchema = z.object({
       id: z.number(),
       name: z.string(),
       countryCode: z.string(),
-      country: z.string(),
       region: z.string(),
-      regionCode: z.string(),
-      latitude: z.number(),
-      longitude: z.number(),
-      timezone: z.string(),
       population: z.number(),
     })
     .nullable(),
   startDate: z.string(),
   description: z.string().optional(),
+  schedule: z.string().optional(),
   address: z.string().optional(),
-  time: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   prize: z.string().optional(),
   entryCost: z.string().optional(),
   poster: z
@@ -93,9 +90,11 @@ const subEventSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().optional(),
+  schedule: z.string().optional(),
   startDate: z.string(),
   address: z.string().optional(),
-  time: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   poster: z
     .object({
       id: z.string(),
@@ -148,8 +147,10 @@ export default function EventForm() {
           year: "numeric",
         }),
         description: "",
+        schedule: "",
         address: "",
-        time: "",
+        startTime: "",
+        endTime: "",
         entryCost: "",
         prize: "",
         poster: null,
@@ -175,13 +176,15 @@ export default function EventForm() {
           id: "1",
           title: "Battlezone BBQ",
           description: "Battlezone BBQ",
+          schedule: "",
           startDate: new Date().toLocaleDateString("en-US", {
             month: "2-digit",
             day: "2-digit",
             year: "numeric",
           }),
           address: "",
-          time: "",
+          startTime: "",
+          endTime: "",
           poster: null,
         },
       ],
@@ -274,8 +277,8 @@ export default function EventForm() {
   // Watch the sections array to get the current state
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
-  const roles = watch("roles") ?? [];
   const subEvents = watch("subEvents") ?? [];
+  const roles = watch("roles") ?? [];
   const activeSection = sections.find((s) => s.id === activeSectionId);
   const activeSubEvent = subEvents.find((s) => s.id === activeSubEventId);
 
@@ -322,7 +325,8 @@ export default function EventForm() {
         year: "numeric",
       }),
       address: "",
-      time: "",
+      startTime: "",
+      endTime: "",
       description: "",
       poster: null,
     };
@@ -414,17 +418,15 @@ export default function EventForm() {
                     >
                       {subEvent.title}
                     </Button>
-                    {subEvents.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSubEvent(subEvent.id)}
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSubEvent(subEvent.id)}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
                 ))}
                 <Button type="button" onClick={addSubEvent} variant="outline">
@@ -447,7 +449,7 @@ export default function EventForm() {
             </div>
           )}
 
-          {activeMainTab === "Sections" && activeSectionIndex >= 0 && (
+          {activeMainTab === "Sections" && (
             <div className="space-y-6">
               {/* Section Navigation with Remove Icons */}
               <div className="flex gap-2 items-center flex-wrap">
@@ -463,17 +465,15 @@ export default function EventForm() {
                     >
                       {section.title}
                     </Button>
-                    {sections.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSection(section.id)}
-                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeSection(section.id)}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
                 ))}
                 <Button type="button" onClick={addSection} variant="outline">

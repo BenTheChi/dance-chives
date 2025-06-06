@@ -150,17 +150,15 @@ export function VideoForm({
           )}
         />
 
-        <div className="space-y-2">
-          <DebouncedSearchMultiSelect<UserSearchItem>
-            onSearch={searchUsers}
-            placeholder="Search users..."
-            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
-            getItemId={(item) => item.id}
-            onChange={updateTaggedUsers}
-            value={video.taggedUsers ?? []}
-            name="Tagged Users"
-          />
-        </div>
+        <DebouncedSearchMultiSelect<UserSearchItem>
+          onSearch={searchUsers}
+          placeholder="Search users..."
+          getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+          getItemId={(item) => item.id}
+          onChange={updateTaggedUsers}
+          value={video.taggedUsers ?? []}
+          name="Tagged Users"
+        />
       </CardContent>
     </Card>
   );

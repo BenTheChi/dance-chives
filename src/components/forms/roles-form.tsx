@@ -129,6 +129,7 @@ export default function RolesForm({
               onSearch={getUserSearchItems}
               placeholder="Search..."
               getDisplayValue={(item: UserSearchItem) => {
+                if (!item.displayName || !item.username) return "";
                 return `${item.displayName} (${item.username})`;
               }}
               getItemId={(item) => item.id}
