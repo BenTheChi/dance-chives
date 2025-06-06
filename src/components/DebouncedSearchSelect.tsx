@@ -148,9 +148,10 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
                     value={inputValue}
                     onChange={(e) => {
                       const newValue = e.target.value;
-                      field.onChange(newValue);
                       setInputValue(newValue);
                       setOpen(true);
+                      field.onChange(newValue);
+
                       if (
                         selectedItem &&
                         newValue !== getDisplayValue(selectedItem)
@@ -171,7 +172,7 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
                     />
                   )}
                   {open && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-50">
                       <Command className="bg-white">
                         <CommandList>
                           <CommandGroup>

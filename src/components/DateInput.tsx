@@ -61,9 +61,6 @@ export default function DateInput({ control, name, label }: DateInputProps) {
               }}
             />
           </FormControl>
-          <p className="text-sm text-muted-foreground">
-            Enter date in MM/DD/YYYY format
-          </p>
           <FormMessage />
         </FormItem>
       )}

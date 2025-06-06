@@ -5,8 +5,10 @@ export interface EventDetails {
   title: string;
   startDate: string;
   description?: string;
+  schedule?: string;
   address?: string;
-  time?: string;
+  startTime?: string;
+  endTime?: string;
   creatorId: string;
   prize?: string;
   entryCost?: string;
@@ -33,9 +35,11 @@ export interface SubEvent {
   id: string;
   title: string;
   description?: string;
+  schedule?: string;
   startDate: string;
   address?: string;
-  time?: string;
+  startTime?: string;
+  endTime?: string;
   poster: {
     id: string;
     title: string;

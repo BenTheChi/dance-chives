@@ -76,24 +76,66 @@ export function SubEventForm({
             </FormItem>
           )}
         />
-
         <FormField
-          key={`startDate-${activeSubEventId}`}
+          key={`schedule-${activeSubEventId}`}
           control={control}
-          name={`subEvents.${activeSubEventIndex}.startDate`}
+          name={`subEvents.${activeSubEventIndex}.schedule`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Start Date</FormLabel>
+              <FormLabel>Schedule</FormLabel>
               <FormControl>
-                <DateInput
-                  control={control}
-                  name={`subEvents.${activeSubEventIndex}.startDate`}
+                <Textarea
+                  {...field}
+                  className="bg-white"
+                  placeholder="Schedule"
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+          <div className="w-1/2">
+            <DateInput
+              key={`startDate-${activeSubEventId}`}
+              control={control}
+              name={`subEvents.${activeSubEventIndex}.startDate`}
+              label="Date"
+            />
+          </div>
+          <div className="w-1/2">
+            <FormField
+              key={`startTime-${activeSubEventId}`}
+              control={control}
+              name={`subEvents.${activeSubEventIndex}.startTime`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Start Time</FormLabel>
+                  <FormControl>
+                    <Input type="time" {...field} className="bg-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div className="w-1/2">
+            <FormField
+              key={`endTime-${activeSubEventId}`}
+              control={control}
+              name={`subEvents.${activeSubEventIndex}.endTime`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Time</FormLabel>
+                  <FormControl>
+                    <Input type="time" {...field} className="bg-white" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
         <FormField
           key={`address-${activeSubEventId}`}
@@ -113,31 +155,11 @@ export function SubEventForm({
             </FormItem>
           )}
         />
-
-        <FormField
-          key={`time-${activeSubEventId}`}
-          control={control}
-          name={`subEvents.${activeSubEventIndex}.time`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Time</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  className="bg-white"
-                  placeholder="New SubEvent Time"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <FormField
           control={control}
           name="eventDetails.poster"
           render={({ field }) => (
-            <FormItem className="w-full">
+            <FormItem>
               <FormLabel>Poster Upload</FormLabel>
               <FormControl>
                 <UploadFile
