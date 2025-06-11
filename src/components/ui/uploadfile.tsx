@@ -8,28 +8,60 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { UseFormRegister, FieldValues, Path } from "react-hook-form";
+import Image from "next/image";
+import { Picture } from "@/types/event";
 
 interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
   name: Path<T>;
-  onFileChange?: (file: File | null) => void;
+  onFileChange: (files: Picture[] | Picture | null) => void;
   className?: string;
+  maxFiles: number;
+  files: Picture[] | Picture | null;
 }
 
 export default function UploadFile<T extends FieldValues>({
   register,
   name,
   onFileChange,
+  maxFiles = 1,
+  files,
 }: UploadFileProps<T>) {
-  const [file, setFile] = useState<File | null>(null);
+  console.log(files);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0] || null;
-    setFile(selectedFile);
-    if (onFileChange) {
-      onFileChange(selectedFile);
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+
+    console.log(selectedFiles);
+
+    //convert File to Picture
+    const newPictures = Array.from(selectedFiles || []).map((file) => ({
+      id: crypto.randomUUID(),
+      title: file.name,
+      url: "",
+      type: "poster",
+      file: file,
+    }));
+
+    if (maxFiles > 1) {
+      onFileChange(newPictures as Picture[]);
+    } else {
+      onFileChange(newPictures[0] as Picture);
+    }
+  };
+
+  const removeFile = (fileToRemove: Picture) => {
+    //Make an api call to delete the file here if the url exists
+    if (fileToRemove.url) {
+      //delete the file from the DB api call
+    }
+
+    if (files && Array.isArray(files)) {
+      const updatedFiles = files.filter((file) => file !== fileToRemove);
+      onFileChange(updatedFiles);
+    } else {
+      onFileChange(null);
     }
   };
 
@@ -42,6 +74,94 @@ export default function UploadFile<T extends FieldValues>({
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <hr />
+
+        <div className="flex flex-row gap-2 flex-wrap">
+          {files &&
+            Array.isArray(files) &&
+            files.map((file) => (
+              <div key={file.id} className="relative group m-4">
+                {file.file ? (
+                  <>
+                    <Image
+                      key={file.id}
+                      src={URL.createObjectURL(file.file as File)}
+                      alt={file.title}
+                      width={200}
+                      height={200}
+                      className="m-4"
+                    />
+                    <button
+                      onClick={() => removeFile(file)}
+                      className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove image"
+                    >
+                      ×
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Image
+                      key={file.id}
+                      src={file.url}
+                      alt={file.title}
+                      width={200}
+                      height={200}
+                      className="m-4"
+                    />
+                    <button
+                      onClick={() => removeFile(file)}
+                      className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove image"
+                    >
+                      ×
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          {files && !Array.isArray(files) && (
+            <div key={files.id} className="relative group m-4">
+              {files.file ? (
+                <>
+                  <Image
+                    key={files.id}
+                    src={URL.createObjectURL(files.file as File)}
+                    alt={files.title}
+                    width={200}
+                    height={200}
+                    className="m-4"
+                  />
+                  <button
+                    onClick={() => removeFile(files)}
+                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove image"
+                  >
+                    ×
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Image
+                    key={files.id}
+                    src={files.url}
+                    alt={files.title}
+                    width={200}
+                    height={200}
+                    className="m-4"
+                  />
+                  <button
+                    onClick={() => removeFile(files)}
+                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove image"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
         <div className="grid gap-4">
           <div className="flex items-center justify-center w-full">
             <label
@@ -55,7 +175,9 @@ export default function UploadFile<T extends FieldValues>({
                   and drop
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  SVG, PNG, JPG or GIF (MAX. 800x400px)
+                  {maxFiles > 1
+                    ? `SVG, PNG, JPG or GIF (MAX. 800x400px) (MAX. ${maxFiles} files)`
+                    : "SVG, PNG, JPG or GIF (MAX. 800x400px) (MAX. 1 file)"}
                 </p>
               </div>
               <input
@@ -63,20 +185,11 @@ export default function UploadFile<T extends FieldValues>({
                 type="file"
                 className="hidden"
                 {...register(name)}
-                onChange={handleFileChange}
+                onChange={handleFilesChange}
+                multiple={maxFiles > 1 ? true : false}
               />
             </label>
           </div>
-          {file && (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{file.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {(file.size / 1024).toFixed(2)} KB
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

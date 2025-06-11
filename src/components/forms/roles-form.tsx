@@ -62,7 +62,11 @@ export default function RolesForm({
     const newRole = {
       id: newRoleId,
       title: "",
-      user: null,
+      user: {
+        id: "",
+        displayName: "",
+        username: "",
+      },
     };
 
     // Add to our local state array
@@ -134,7 +138,7 @@ export default function RolesForm({
               }}
               getItemId={(item) => item.id}
               onChange={(value) => {
-                setValue(`roles.${index}.user`, value);
+                setValue(`roles.${index}.user`, value as UserSearchItem);
               }}
               value={roles[index].user}
               label="User"

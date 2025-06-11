@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,10 +22,12 @@ import {
   EventDetails,
   Role,
   SubEvent,
+  Picture,
 } from "@/types/event";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
 import { SubEventForm } from "./subevent-form";
+import UploadFile from "../ui/uploadfile";
 
 // Define the schema for the form
 const userSearchItemSchema = z.object({
@@ -50,18 +58,24 @@ const sectionSchema = z.object({
   brackets: z.array(bracketSchema),
 });
 
+const pictureSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  url: z.string(),
+  type: z.string(),
+  file: z.instanceof(File).nullable(),
+});
+
 const eventDetailsSchema = z.object({
   creatorId: z.string(),
   title: z.string(),
-  city: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      countryCode: z.string(),
-      region: z.string(),
-      population: z.number(),
-    })
-    .nullable(),
+  city: z.object({
+    id: z.number(),
+    name: z.string(),
+    countryCode: z.string(),
+    region: z.string(),
+    population: z.number(),
+  }),
   startDate: z.string(),
   description: z.string().optional(),
   schedule: z.string().optional(),
@@ -70,14 +84,7 @@ const eventDetailsSchema = z.object({
   endTime: z.string().optional(),
   prize: z.string().optional(),
   entryCost: z.string().optional(),
-  poster: z
-    .object({
-      id: z.string(),
-      title: z.string(),
-      src: z.string(),
-      type: z.string(),
-    })
-    .nullable(),
+  poster: pictureSchema.nullable().optional(),
 });
 
 const roleSchema = z.object({
@@ -95,14 +102,7 @@ const subEventSchema = z.object({
   address: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
-  poster: z
-    .object({
-      id: z.string(),
-      title: z.string(),
-      src: z.string(),
-      type: z.string(),
-    })
-    .nullable(),
+  poster: pictureSchema.nullable().optional(),
 });
 
 const formSchema = z.object({
@@ -110,21 +110,10 @@ const formSchema = z.object({
   sections: z.array(sectionSchema).optional(),
   roles: z.array(roleSchema).optional(),
   subEvents: z.array(subEventSchema).optional(),
+  gallery: z.array(pictureSchema).optional(),
 });
 
-export type FormValues = {
-  eventDetails: EventDetails;
-  sections?: {
-    id: string;
-    title: string;
-    description?: string;
-    hasBrackets?: boolean;
-    videos: Video[];
-    brackets: Bracket[];
-  }[];
-  roles?: Role[];
-  subEvents?: SubEvent[];
-};
+export type FormValues = z.infer<typeof formSchema>;
 
 export const mockUsers = ["Ben", "Jane", "Jerry", "Steve", "Bob"];
 
@@ -140,7 +129,13 @@ export default function EventForm() {
       eventDetails: {
         creatorId: "1",
         title: "",
-        city: null,
+        city: {
+          id: 1,
+          name: "Seattle",
+          countryCode: "US",
+          region: "WA",
+          population: 750000,
+        },
         startDate: new Date().toLocaleDateString("en-US", {
           month: "2-digit",
           day: "2-digit",
@@ -168,7 +163,11 @@ export default function EventForm() {
         {
           id: "2",
           title: "DJ",
-          user: null,
+          user: {
+            id: "2",
+            displayName: "Jane Doe",
+            username: "jane.doe",
+          },
         },
       ],
       subEvents: [
@@ -279,6 +278,7 @@ export default function EventForm() {
   const eventDetails = watch("eventDetails");
   const subEvents = watch("subEvents") ?? [];
   const roles = watch("roles") ?? [];
+  const gallery = watch("gallery") ?? [];
   const activeSection = sections.find((s) => s.id === activeSectionId);
   const activeSubEvent = subEvents.find((s) => s.id === activeSubEventId);
 
@@ -497,14 +497,31 @@ export default function EventForm() {
           )}
 
           {activeMainTab === "Photo Gallery" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Photo Gallery</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>Photo gallery content goes here</p>
-              </CardContent>
-            </Card>
+            <FormField
+              control={control}
+              name="gallery"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Photo Gallery</FormLabel>
+                  <FormControl>
+                    <UploadFile
+                      register={register}
+                      name="gallery"
+                      onFileChange={(files) => {
+                        if (files) {
+                          setValue("gallery", files as Picture[]);
+                        } else {
+                          setValue("gallery", []);
+                        }
+                      }}
+                      className="bg-[#E8E7E7]"
+                      maxFiles={3}
+                      files={gallery || null}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           )}
 
           {/* Bottom Navigation */}
