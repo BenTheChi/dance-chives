@@ -28,8 +28,9 @@ async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
       }
       return response.json();
     })
-    .then((data) =>
-      data.data
+    .then((data) => {
+      console.log(data);
+      return data.data
         .map((city: any) => ({
           id: city.id,
           name: city.name,
@@ -37,8 +38,8 @@ async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
           countryCode: city.countryCode,
           population: city.population,
         }))
-        .reverse()
-    )
+        .reverse();
+    })
     .catch((error) => {
       console.error(error);
       return [];

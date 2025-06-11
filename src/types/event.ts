@@ -24,6 +24,7 @@ export interface Event {
   roles: Role[];
   sections: Section[];
   subEvents: SubEvent[];
+  gallery: Picture[];
 }
 
 export interface SubEvent {

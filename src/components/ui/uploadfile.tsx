@@ -28,12 +28,8 @@ export default function UploadFile<T extends FieldValues>({
   maxFiles = 1,
   files,
 }: UploadFileProps<T>) {
-  console.log(files);
-
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
-
-    console.log(selectedFiles);
 
     //convert File to Picture
     const newPictures = Array.from(selectedFiles || []).map((file) => ({
@@ -80,7 +76,7 @@ export default function UploadFile<T extends FieldValues>({
           {files &&
             Array.isArray(files) &&
             files.map((file) => (
-              <div key={file.id} className="relative group m-4">
+              <div key={file.id} className="relative group">
                 {file.file ? (
                   <>
                     <Image
@@ -121,7 +117,7 @@ export default function UploadFile<T extends FieldValues>({
               </div>
             ))}
           {files && !Array.isArray(files) && (
-            <div key={files.id} className="relative group m-4">
+            <div key={files.id} className="relative group">
               {files.file ? (
                 <>
                   <Image

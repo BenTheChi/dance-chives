@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -15,19 +14,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SectionForm } from "@/components/forms/section-form";
-import {
-  Section,
-  Bracket,
-  Video,
-  EventDetails,
-  Role,
-  SubEvent,
-  Picture,
-} from "@/types/event";
+import { Section, EventDetails, Role, SubEvent, Picture } from "@/types/event";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
 import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
+import { addEvent } from "@/lib/server_actions/event_actions";
 
 // Define the schema for the form
 const userSearchItemSchema = z.object({
@@ -107,10 +99,10 @@ const subEventSchema = z.object({
 
 const formSchema = z.object({
   eventDetails: eventDetailsSchema,
-  sections: z.array(sectionSchema).optional(),
+  sections: z.array(sectionSchema),
   roles: z.array(roleSchema).optional(),
-  subEvents: z.array(subEventSchema).optional(),
-  gallery: z.array(pictureSchema).optional(),
+  subEvents: z.array(subEventSchema),
+  gallery: z.array(pictureSchema),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -268,6 +260,7 @@ export default function EventForm() {
           brackets: [],
         },
       ],
+      gallery: [],
     },
   });
 
@@ -344,9 +337,17 @@ export default function EventForm() {
     }
   };
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
+    //Would be nice to have a loading state here with a spinner
     console.log("Form submitted:", data);
+
     // Handle form submission
+    const response = await addEvent(data);
+    console.log(response);
+
+    //Pop up a toast here if there's an error
+
+    //If it's successful then redirect to the event page
   };
 
   const onError = (errors: any) => {

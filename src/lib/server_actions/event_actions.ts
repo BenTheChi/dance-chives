@@ -3,89 +3,219 @@ import { auth } from "@/auth";
 import { uploadToGCloudStorage } from "../GCloud";
 import { insertEvent } from "@/db/queries/event";
 import { City } from "@/types/city";
+import { NextResponse } from "next/server";
 
 interface addEventProps {
-  title: string;
-  city: City;
-  address?: string;
-  date: { from: string; to: string };
-  time?: string;
-  description?: string;
-  entryCost?: string;
-  prize?: string;
-  poster?: File;
+  eventDetails: {
+    creatorId: string;
+    title: string;
+    city: {
+      id: number;
+      name: string;
+      countryCode: string;
+      region: string;
+      population: number;
+    };
+    startDate: string;
+    description?: string;
+    schedule?: string;
+    address?: string;
+    startTime?: string;
+    endTime?: string;
+    prize?: string;
+    entryCost?: string;
+    poster?: {
+      id: string;
+      title: string;
+      url: string;
+      type: string;
+      file: File | null;
+    } | null;
+  };
+  sections: {
+    id: string;
+    title: string;
+    description?: string;
+    hasBrackets?: boolean;
+    videos: {
+      id: string;
+      title: string;
+      src: string;
+      taggedUsers?: {
+        id: string;
+        displayName: string;
+        username: string;
+      }[];
+    }[];
+    brackets: {
+      id: string;
+      title: string;
+      videos: {
+        id: string;
+        title: string;
+        src: string;
+        taggedUsers?: {
+          id: string;
+          displayName: string;
+          username: string;
+        }[];
+      }[];
+    }[];
+  }[];
   roles?: {
-    member: string;
-    role: string;
+    id: string;
+    title: string;
+    user: {
+      id: string;
+      displayName: string;
+      username: string;
+    } | null;
+  }[];
+  subEvents: {
+    id: string;
+    title: string;
+    description?: string;
+    schedule?: string;
+    startDate: string;
+    address?: string;
+    startTime?: string;
+    endTime?: string;
+    poster?: {
+      id: string;
+      title: string;
+      url: string;
+      type: string;
+      file: File | null;
+    } | null;
+  }[];
+  gallery: {
+    id: string;
+    title: string;
+    url: string;
+    type: string;
+    file: File | null;
   }[];
 }
 
-export async function addEvent(props: addEventProps) {
+interface response {
+  error?: string;
+  status: number;
+  event: object | null;
+}
+
+export async function addEvent(props: addEventProps): Promise<response> {
   const session = await auth();
 
+  // //Do a check for auth level here
   if (!session) {
     console.error("No user session found");
-    return;
+    return {
+      error: "No user session found",
+      status: 401,
+      event: null,
+    };
   }
 
-  if (!props.poster) {
-    console.error("No poster found");
-    return;
-  }
-
-  if (!props.title || !props.date) {
-    console.error("Missing required fields");
-    return;
-  }
-
-  const poster = props.poster;
-  let posterSrc = "";
-  let posterId = "";
-  const date = props.date;
-
-  if (poster instanceof File) {
-    const result = await uploadToGCloudStorage(poster);
-
-    if (result.success) {
-      posterSrc = result.url || "";
-      posterId = result.id || "";
-      console.log("Poster uploaded successfully:", posterSrc);
-    } else {
-      console.error("Failed to upload poster");
-      return;
+  // Upload eventDetails poster if exists
+  if (props.eventDetails.poster?.file) {
+    const posterResults = await uploadToGCloudStorage([
+      props.eventDetails.poster.file,
+    ]);
+    if (posterResults[0].success) {
+      props.eventDetails.poster = {
+        ...props.eventDetails.poster,
+        id: posterResults[0].id!,
+        url: posterResults[0].url!,
+        file: null,
+      };
     }
-  } else {
-    console.error("Poster is not a valid file");
   }
 
-  //TODO Change type to a constant
-  const newEvent = {
-    creatorId: session?.user.id,
-    title: props.title,
-    description: props.description || "",
-    startDate: date.from,
-    endDate: date.to,
-    address: props.address || "",
-    time: props.time || "",
-    roles: props.roles || [],
-    poster: {
-      id: posterId,
-      title: (poster as File).name,
-      src: posterSrc,
-      type: "poster" as "poster",
+  // Upload subEvent posters
+  for (const subEvent of props.subEvents) {
+    if (subEvent.poster?.file) {
+      const posterResults = await uploadToGCloudStorage([subEvent.poster.file]);
+      if (posterResults[0].success) {
+        subEvent.poster = {
+          ...subEvent.poster,
+          id: posterResults[0].id!,
+          url: posterResults[0].url!,
+          file: null,
+        };
+      }
+    }
+  }
+
+  // Upload gallery files
+  for (const item of props.gallery) {
+    if (item.file) {
+      const galleryResults = await uploadToGCloudStorage([item.file]);
+      if (galleryResults[0].success) {
+        item.id = galleryResults[0].id!;
+        item.url = galleryResults[0].url!;
+        item.file = null;
+      }
+    }
+  }
+
+  // Process sections to handle brackets/videos based on hasBrackets
+  const processedSections = props.sections.map((section) => {
+    const { hasBrackets, ...sectionWithoutBrackets } = section;
+
+    if (hasBrackets) {
+      return {
+        ...sectionWithoutBrackets,
+        brackets: section.brackets,
+        videos: [],
+      };
+    } else {
+      return {
+        ...sectionWithoutBrackets,
+        brackets: [],
+        videos: section.videos,
+      };
+    }
+  });
+
+  // Get timezone for city
+  const response = await fetch(
+    `http://geodb-free-service.wirefreethought.com/v1/geo/places/${props.eventDetails.city.id}`
+  );
+
+  if (!response.ok) {
+    console.error("Failed to fetch city", response.statusText);
+    return {
+      error: "Failed to fetch city",
+      status: 500,
+      event: null,
+    };
+  }
+
+  const timezoneData = await response.json();
+
+  console.log(timezoneData);
+
+  // Prepare the final event object
+  const eventToInsert = {
+    ...props.eventDetails,
+    creatorId: session.user.id,
+    city: {
+      ...props.eventDetails.city,
+      timezone: timezoneData.data.timezone,
     },
-    city: props.city,
+    sections: processedSections,
+    roles: props.roles || [],
+    subEvents: props.subEvents,
+    gallery: props.gallery,
   };
 
-  console.log(newEvent);
+  console.log(eventToInsert);
 
-  //At this point collect all the data and upload it to the database
-  insertEvent(newEvent)
-    .then((res) => {
-      console.log("Event added successfully:", res);
-    })
-    .catch((err) => {
-      // If adding the event fails then the poster should be deleted
-      console.error("Error adding event:", err);
-    });
+  // TODO: Call insertEvent with eventToInsert
+  // insertEvent(eventToInsert);
+
+  return {
+    status: 200,
+    event: eventToInsert,
+  };
 }
