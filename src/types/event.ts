@@ -12,13 +12,8 @@ export interface EventDetails {
   creatorId: string;
   prize?: string;
   entryCost?: string;
-  poster: {
-    id: string;
-    title: string;
-    src: string;
-    type: string;
-  } | null;
-  city: City | null;
+  poster?: Picture | null;
+  city: City;
 }
 
 export interface Event {
@@ -40,12 +35,7 @@ export interface SubEvent {
   address?: string;
   startTime?: string;
   endTime?: string;
-  poster: {
-    id: string;
-    title: string;
-    src: string;
-    type: string;
-  } | null;
+  poster?: Picture | null;
 }
 
 export interface Role {
@@ -74,4 +64,12 @@ export interface Video {
   title: string;
   src: string;
   taggedUsers?: UserSearchItem[];
+}
+
+export interface Picture {
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+  file: File | null;
 }

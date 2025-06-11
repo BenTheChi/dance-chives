@@ -1,4 +1,4 @@
-import { SubEvent } from "@/types/event";
+import { Picture, SubEvent } from "@/types/event";
 import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -166,19 +166,14 @@ export function SubEventForm({
                   register={register}
                   name={`subEvents.${activeSubEventIndex}.poster`}
                   onFileChange={(file) => {
-                    if (file) {
-                      setValue(
-                        `subEvents.${activeSubEventIndex}.poster`,
-                        file as unknown as {
-                          id: string;
-                          title: string;
-                          src: string;
-                          type: string;
-                        }
-                      );
-                    }
+                    setValue(
+                      `subEvents.${activeSubEventIndex}.poster`,
+                      file as Picture
+                    );
                   }}
                   className="bg-[#E8E7E7]"
+                  maxFiles={1}
+                  files={activeSubEvent.poster || null}
                 />
               </FormControl>
             </FormItem>

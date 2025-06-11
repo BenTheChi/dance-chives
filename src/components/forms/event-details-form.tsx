@@ -2,13 +2,12 @@
 
 import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
-import { EventDetails } from "@/types/event";
+import { EventDetails, Picture } from "@/types/event";
 import { City, CitySearchItem } from "@/types/city";
 import { FormControl, FormItem, FormLabel, FormField } from "../ui/form";
 import { Input } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
-import { Clock } from "lucide-react";
 import DateInput from "../DateInput";
 
 interface EventDetailsFormProps {
@@ -85,8 +84,7 @@ export function EventDetailsForm({
             }}
             getItemId={(item) => item.id}
             onChange={(value) => {
-              console.log(value);
-              setValue("eventDetails.city", value as City | null);
+              setValue("eventDetails.city", value as City);
             }}
             value={eventDetails.city}
             label="City"
@@ -226,19 +224,11 @@ export function EventDetailsForm({
                 register={register}
                 name="eventDetails.poster"
                 onFileChange={(file) => {
-                  if (file) {
-                    setValue(
-                      "eventDetails.poster",
-                      file as unknown as {
-                        id: string;
-                        title: string;
-                        src: string;
-                        type: string;
-                      }
-                    );
-                  }
+                  setValue("eventDetails.poster", file as Picture);
                 }}
                 className="bg-[#E8E7E7]"
+                maxFiles={1}
+                files={eventDetails.poster || null}
               />
             </FormControl>
           </FormItem>
