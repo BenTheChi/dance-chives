@@ -85,7 +85,7 @@ export default function UploadFile<T extends FieldValues>({
                       alt={file.title}
                       width={200}
                       height={200}
-                      className="m-4"
+                      className="m-4 w-full max-w-[200px] h-auto object-contain"
                     />
                     <button
                       onClick={() => removeFile(file)}
@@ -103,7 +103,7 @@ export default function UploadFile<T extends FieldValues>({
                       alt={file.title}
                       width={200}
                       height={200}
-                      className="m-4"
+                      className="m-4 w-full max-w-[200px] h-auto object-contain"
                     />
                     <button
                       onClick={() => removeFile(file)}
@@ -126,7 +126,7 @@ export default function UploadFile<T extends FieldValues>({
                     alt={files.title}
                     width={200}
                     height={200}
-                    className="m-4"
+                    className="m-4 w-full max-w-[200px] h-auto object-contain"
                   />
                   <button
                     onClick={() => removeFile(files)}
@@ -144,7 +144,7 @@ export default function UploadFile<T extends FieldValues>({
                     alt={files.title}
                     width={200}
                     height={200}
-                    className="m-4"
+                    className="m-4 w-full max-w-[200px] h-auto object-contain"
                   />
                   <button
                     onClick={() => removeFile(files)}

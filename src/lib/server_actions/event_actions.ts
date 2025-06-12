@@ -209,7 +209,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
     gallery: props.gallery,
   };
 
-  console.log(eventToInsert);
+  console.log(JSON.stringify(eventToInsert, null, 2));
 
   // TODO: Call insertEvent with eventToInsert
   // insertEvent(eventToInsert);
