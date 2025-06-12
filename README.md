@@ -1,4 +1,7 @@
 # Dance Chives - An event archive app for the street dance community
+![Screenshot 2025-06-12 at 10 45 45 AM](https://github.com/user-attachments/assets/7f373511-9834-4273-9794-5ef40750c79e)
+
+
 ## Problem
 The street and club dance community thrives as an event-driven subculture centered around high-energy competitions known as battles. Through the collective grassroots efforts of dancers and organizers, thousands of these battles take place across the globe each year, generating extensive footage. While most events are promoted, shared, and documented on social media, platforms like Facebook, Instagram, and YouTube lack the structure to systematically organize dance events and their metadata in an accessible way. As a result, the culture remains fragmented online, leaving many talented dancers, event hosts, and creators without proper recognition.  
 
