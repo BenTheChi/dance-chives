@@ -5,7 +5,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { getEvent } from "@/db/queries/event";
 import { Event } from "@/types/event";
 import {
   Building,
@@ -469,18 +468,61 @@ export default async function EventPage({ params }: PageProps) {
           )}
 
           {/* Sections */}
-          <section className="flex flex-col gap-2 bg-green-100 rounded-md p-4 w-full md:col-span-1 xl:col-span-2">
-            <h2 className="text-2xl font-bold mb-2 text-center">Sections</h2>
+          <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md hover:bg-green-200 hover:cursor-pointer hover:shadow-none">
+            <Link href={`/event/${event.id}/sections`} className="w-full">
+              <div className="w-full">
+                <h2 className="text-2xl font-bold mb-4 text-center">
+                  Sections
+                </h2>
 
-            <div className="flex flex-col gap-2">
-              {event.sections.map((section) => (
-                <Button asChild key={section.id}>
-                  <Link href={`/event/${event.id}/section/${section.id}`}>
-                    {section.title}
-                  </Link>
-                </Button>
-              ))}
-            </div>
+                <div className="flex flex-col gap-4">
+                  {event.sections.map((section) => (
+                    <div
+                      key={section.id}
+                      className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-xl font-semibold text-gray-800">
+                          {section.title}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          {section.videos.length}{" "}
+                          {section.videos.length === 1 ? "video" : "videos"}
+                        </span>
+                      </div>
+
+                      {section.brackets.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="text-sm text-gray-600 mb-2">
+                            Brackets:
+                          </div>
+                          {section.brackets.map((bracket) => (
+                            <div
+                              key={bracket.id}
+                              className="bg-gray-50 rounded p-2 flex justify-between items-center"
+                            >
+                              <span className="font-medium text-gray-700">
+                                {bracket.title}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {bracket.videos.length}{" "}
+                                {bracket.videos.length === 1
+                                  ? "video"
+                                  : "videos"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-600 italic">
+                          No brackets - direct video collection
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Link>
           </section>
 
           {/* Sub Events */}
