@@ -1,5 +1,5 @@
 import driver from "../driver";
-import { EventDetails } from "../../types/event";
+import { Event } from "../../types/event";
 import { generateShortId, slugify } from "@/lib/utils";
 
 export const getEvent = async (id: string) => {
@@ -16,59 +16,128 @@ export const getEvent = async (id: string) => {
   return result.records[0].get("e").properties;
 };
 
-export const insertEvent = async (event: EventDetails) => {
+export const insertEvent = async (event: Event) => {
   const session = driver.session();
+  
   const result = await session.run(
     `
-    CREATE (e:Event {
-      id: $id,
-      title: $title,
-      startDate: datetime($startDate)
-    })
-    SET e.description = $description,
-        e.address = $address,
-        e.time = $time
-    WITH e
-    MERGE (c:City {name: $cityName, country: $cityCountry, timezone: $cityTimezone})
-    MERGE (e)-[:IN]->(c)
-    WITH e, c
-    ${
-      event.poster
-        ? `
-        CREATE (i:Image {
-          id: $posterId,
-          title: $posterTitle,
-          src: $posterSrc,
-          type: $posterType
-        })
-        CREATE (e)<-[:POSTER_OF]-(i)
-        WITH e, i, c
-      `
-        : ""
-    }
-    MATCH (u:User {id: $creatorId})
-    CREATE (u)-[:CREATED]->(e)
-    RETURN e, u${event.poster ? ", i" : ""}
-  `,
+CREATE (e:Event {
+  id: $eventId,
+  creatorId: $creatorId,
+  title: $title,
+  description: $description,
+  address: $address,
+  prize: $prize,
+  entryCost: $entryCost,
+  startDate: date($startDate),
+  startTime: $startTime,
+  endTime: $endTime,
+  schedule: $schedule
+})
+WITH e
+MERGE (c:City {
+  name: $city.name,
+  countryCode: $city.countryCode,
+  region: $city.region
+})
+SET c.population = $city.population
+MERGE (e)-[:IN]->(c)
 
-    {
-      id: slugify(event.title) + "-" + generateShortId(6),
-      title: event.title,
-      startDate: event.startDate,
-      description: event.description ?? null,
-      address: event.address ?? null,
-      time: event.time ?? null,
-      creatorId: event.creatorId,
-      cityName: event.city.name,
-      cityCountry: event.city.country,
-      cityTimezone: event.city.timezone,
-      ...(event.poster && {
-        posterId: event.poster.id,
-        posterTitle: event.poster.title,
-        posterSrc: event.poster.src,
-        posterType: event.poster.type,
-      }),
-    }
+WITH e
+OPTIONAL MATCH (existingPoster:Picture)-[:POSTER_OF]->(e)
+DELETE existingPoster
+
+WITH e
+MERGE (newPoster:Picture { id: $poster.id })
+ON CREATE SET
+  newPoster.title = $poster.title,
+  newPoster.url = $poster.url,
+  newPoster.type = $poster.type
+MERGE (newPoster)-[:POSTER_OF]->(e)
+
+WITH e, $sections AS sections, $roles AS roles
+UNWIND sections AS sec
+MERGE (s:Section { id: sec.id })
+ON CREATE SET
+  s.title = sec.title,
+  s.description = sec.description,
+  s.hasBrackets = sec.hasBrackets
+MERGE (s)-[:IN]->(e)
+
+WITH e, s, sec.videos AS videos, sec.brackets AS brackets, roles
+UNWIND videos AS vid
+MERGE (v:Video { id: vid.id })
+ON CREATE SET
+  v.title = vid.title,
+  v.url = vid.src
+MERGE (v)-[:IN]->(s)
+
+WITH e, s, brackets, roles
+UNWIND brackets AS br
+MERGE (b:Bracket { id: br.id })
+ON CREATE SET
+  b.title = br.title
+MERGE (b)-[:IN]->(s)
+
+WITH e, roles
+UNWIND roles AS roleData
+MERGE (m:Member { id: roleData.user.id })
+WITH m, e, roleData
+CALL apoc.merge.relationship(m, toUpper(roleData.title), {}, {}, e)
+YIELD rel
+WITH e
+
+WITH e, $subEvents AS subEvents
+UNWIND subEvents AS sub
+MERGE (se:SubEvent { id: sub.id })
+ON CREATE SET 
+  se.title = sub.title,
+  se.description = sub.description,
+  se.schedule = sub.schedule,
+  se.startDate = sub.startDate,
+  se.address = sub.address,
+  se.startTime = sub.startTime,
+  se.endTime = sub.endTime
+MERGE (se)-[:PART_OF]->(e)
+
+WITH e, se, sub.poster AS poster
+MERGE (subPic:Picture { id: poster.id })
+ON CREATE SET
+  subPic.title = poster.title,
+  subPic.url = poster.url,
+  subPic.type = poster.type
+MERGE (subPic)-[:POSTER_OF]->(se)
+
+WITH e, $gallery AS gallery
+UNWIND gallery AS pic
+MERGE (g:Picture { id: pic.id })
+ON CREATE SET 
+  g.title = pic.title,
+  g.url = pic.url,
+  g.type = pic.type
+MERGE (g)-[:PHOTO_OF]->(e)
+
+RETURN e
+
+`,
+{
+  creatorId: event.eventDetails.creatorId,
+  title: event.eventDetails.title,
+  description: event.eventDetails.description,
+  address: event.eventDetails.address,
+  prize: event.eventDetails.prize,
+  entryCost: event.eventDetails.entryCost,
+  startDate: event.eventDetails.startDate,
+  startTime: event.eventDetails.startTime,
+  endTime: event.eventDetails.endTime,
+  schedule: event.eventDetails.schedule,
+  poster: event.eventDetails.poster,
+  city: event.eventDetails.city,
+  sections: event.sections,
+  roles: event.roles,
+  subEvents: event.subEvents,
+  gallery: event.gallery
+}
   );
   await session.close();
   return result.records[0].get("e").properties;
