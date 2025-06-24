@@ -1,4 +1,3 @@
-import SearchFilterBar from "@/components/ui/SearchFilterBar";
 import Eventcard from "@/components/cards";
 import { AppNavbar } from "@/components/AppNavbar";
 
