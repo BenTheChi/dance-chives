@@ -49,7 +49,7 @@ export interface Section {
   id: string;
   title: string;
   description?: string;
-  hasBrackets?: boolean;
+  hasBrackets: boolean;
   videos: Video[];
   brackets: Bracket[];
 }

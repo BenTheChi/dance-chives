@@ -1,13 +1,13 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import SectionBracketTabSelector from "@/components/SectionBracketTabSelector";
-import { getEvent } from "@/db/queries/event";
+// import { getEvent } from "@/db/queries/event";
 
 type PageProps = {
   params: Promise<{ event: string }>;
 };
 
 export default async function SectionsPage({ params }: PageProps) {
-  const paramResult = await params;
+  // const paramResult = await params;
   //   const { sections, title } = await getEventSections(paramResult.event);
 
   const title = "Summer Dance Championship 2024";

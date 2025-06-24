@@ -23,3 +23,9 @@ export function slugify(text: string) {
     .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumerics with hyphens
     .replace(/^-+|-+$/g, ""); // Trim hyphens from start/end
 }
+
+export function generateSlugId(title: string, randomLength = 6) {
+  const slug = slugify(title);
+  const randomId = generateShortId(randomLength);
+  return `${slug}-${randomId}`;
+}

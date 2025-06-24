@@ -2,8 +2,8 @@
 import { auth } from "@/auth";
 import { uploadToGCloudStorage } from "../GCloud";
 import { insertEvent } from "@/db/queries/event";
-import { City } from "@/types/city";
 import { NextResponse } from "next/server";
+import { generateSlugId } from "@/lib/utils";
 
 interface addEventProps {
   eventDetails: {
@@ -36,7 +36,7 @@ interface addEventProps {
     id: string;
     title: string;
     description?: string;
-    hasBrackets?: boolean;
+    hasBrackets: boolean;
     videos: {
       id: string;
       title: string;
@@ -157,26 +157,6 @@ export async function addEvent(props: addEventProps): Promise<response> {
       }
     }
   }
-
-  // Process sections to handle brackets/videos based on hasBrackets
-  const processedSections = props.sections.map((section) => {
-    const { hasBrackets, ...sectionWithoutBrackets } = section;
-
-    if (hasBrackets) {
-      return {
-        ...sectionWithoutBrackets,
-        brackets: section.brackets,
-        videos: [],
-      };
-    } else {
-      return {
-        ...sectionWithoutBrackets,
-        brackets: [],
-        videos: section.videos,
-      };
-    }
-  });
-
   // Get timezone for city
   const response = await fetch(
     `http://geodb-free-service.wirefreethought.com/v1/geo/places/${props.eventDetails.city.id}`
@@ -193,17 +173,29 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
   const timezoneData = await response.json();
 
-  console.log(timezoneData);
-
   // Prepare the final event object
   const eventToInsert = {
-    ...props.eventDetails,
-    creatorId: session.user.id,
-    city: {
-      ...props.eventDetails.city,
-      timezone: timezoneData.data.timezone,
+    id: generateSlugId(props.eventDetails.title),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    eventDetails: {
+      creatorId: session.user.id,
+      title: props.eventDetails.title,
+      description: props.eventDetails.description,
+      address: props.eventDetails.address,
+      prize: props.eventDetails.prize,
+      entryCost: props.eventDetails.entryCost,
+      startDate: props.eventDetails.startDate,
+      startTime: props.eventDetails.startTime,
+      endTime: props.eventDetails.endTime,
+      schedule: props.eventDetails.schedule,
+      poster: props.eventDetails.poster,
+      city: {
+        ...props.eventDetails.city,
+        timezone: timezoneData.data.timezone,
+      },
     },
-    sections: processedSections,
+    sections: props.sections,
     roles: props.roles || [],
     subEvents: props.subEvents,
     gallery: props.gallery,
@@ -212,10 +204,12 @@ export async function addEvent(props: addEventProps): Promise<response> {
   console.log(JSON.stringify(eventToInsert, null, 2));
 
   // TODO: Call insertEvent with eventToInsert
-  // insertEvent(eventToInsert);
+  const result = await insertEvent(eventToInsert);
+
+  console.log(result);
 
   return {
     status: 200,
-    event: eventToInsert,
+    event: result,
   };
 }
