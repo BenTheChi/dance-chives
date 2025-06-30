@@ -13,338 +13,38 @@ import {
   DollarSign,
   FileText,
   Gift,
-  Locate,
   MapPin,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
+import { getEvent } from "@/db/queries/event";
+import { notFound } from "next/navigation";
 
 type PageProps = {
   params: Promise<{ event: string }>;
 };
 
-export default async function EventPage({ params }: PageProps) {
-  const paramResult = params;
-  // const event = (await getEvent(paramResult.event)) as Event;
+// Helper function to validate event ID format
+function isValidEventId(id: string): boolean {
+  // Event IDs should not contain file extensions or be static asset names
+  const invalidPatterns = [
+    /\.(svg|png|jpg|jpeg|gif|ico|css|js|json|xml|txt|pdf|doc|docx)$/i,
+    /^(logo|favicon|robots|sitemap|manifest)/i,
+  ];
 
-  const event = {
-    id: "battlezone-2025",
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-03-20"),
-    eventDetails: {
-      creatorId: "07516846-276c-46fe-b452-d0d22bdb9d1d",
-      title: "Battlezone 2025",
-      city: {
-        id: 128526,
-        name: "Seattle",
-        countryCode: "US",
-        region: "Washington",
-        population: 737015,
-        timezone: "America__Los_Angeles",
-      },
-      startDate: "06/11/2025",
-      description:
-        "Battlezone is back for its fifteenth edition this year! We're bringing together the best breaking talent from across the Pacific Northwest for an unforgettable weekend of dance battles, workshops, and community building. This year's event features:\n\n• 1v1 Breaking Championship\n• 2v2 All-Styles Battle\n• Judge Showcases\n• Workshops with International Artists\n• Live DJ Battles\n• Community Cypher Sessions\n\nJoin us for three days of non-stop breaking action, where legends are made and new friendships are forged. Whether you're competing or spectating, Battlezone 2025 promises to be an experience you won't forget! \n Battlezone is back for its fifteenth edition this year! We're bringing together the best breaking talent from across the Pacific Northwest for an unforgettable weekend of dance battles, workshops, and community building. This year's event features:\n\n• 1v1 Breaking Championship\n• 2v2 All-Styles Battle\n• Judge Showcases\n• Workshops with International Artists\n• Live DJ Battles\n• Community Cypher Sessions\n\nJoin us for three days of non-stop breaking action, where legends are made and new friendships are forged. Whether you're competing or spectating, Battlezone 2025 promises to be an experience you won't forget!",
-      schedule:
-        "Day 1 (June 11):\n10:00 AM - Registration Opens\n11:00 AM - Workshop: Power Moves with B-Boy Storm\n1:00 PM - 1v1 Breaking Prelims\n4:00 PM - Judge Showcases\n6:00 PM - Opening Ceremony\n\nDay 2 (June 12):\n11:00 AM - Workshop: Top Rock Fundamentals\n1:00 PM - 2v2 All-Styles Prelims\n3:00 PM - 1v1 Breaking Top 16\n6:00 PM - DJ Battle\n\nDay 3 (June 13):\n12:00 PM - 1v1 Breaking Top 8\n2:00 PM - 2v2 All-Styles Finals\n4:00 PM - 1v1 Breaking Finals\n6:00 PM - Awards Ceremony",
-      address:
-        "Seattle Center Exhibition Hall\n305 Harrison St\nSeattle, WA 98109",
-      startTime: "10:00",
-      endTime: "22:00",
-      prize: "5000",
-      entryCost: "45",
-      poster: {
-        id: "5ef7e1b6-b290-47d3-895d-dc0942356b04",
-        title: "battlezone-2025.jpg",
-        url: "https://storage.googleapis.com/dance-chives-posters/5ef7e1b6-b290-47d3-895d-dc0942356b04-hades.jpg",
-        // url: "https://storage.googleapis.com/dance-chives-posters/1790114d-00fb-424f-8cae-b4257eb3fb50-dancePalette.jpg",
-        type: "poster",
-        file: null,
-      },
-    },
-    sections: [
-      {
-        id: "1",
-        title: "Judge Showcases",
-        description:
-          "Watch our international panel of judges demonstrate their skills and share their unique styles with the community.",
-        videos: [
-          {
-            id: "1",
-            title: "B-Boy Storm Showcase",
-            src: "https://example.com/video1",
-            taggedUsers: [
-              {
-                id: "storm123",
-                displayName: "B-Boy Storm",
-                username: "bboystorm",
-              },
-            ],
-          },
-          {
-            id: "2",
-            title: "B-Girl Asia Showcase",
-            src: "https://example.com/video2",
-            taggedUsers: [
-              {
-                id: "asia456",
-                displayName: "B-Girl Asia",
-                username: "bgirlasia",
-              },
-            ],
-          },
-          {
-            id: "3",
-            title: "B-Boy Thesis Showcase",
-            src: "https://example.com/video3",
-            taggedUsers: [
-              {
-                id: "thesis789",
-                displayName: "B-Boy Thesis",
-                username: "bboythesis",
-              },
-            ],
-          },
-        ],
-        brackets: [],
-      },
-      {
-        id: "2",
-        title: "1 vs 1 Breaking",
-        description:
-          "The main event of Battlezone 2025! 64 of the best breakers from across the Pacific Northwest will battle it out for the championship title and a $3000 prize pool. This is a Red Bull BC One qualifier event.",
-        videos: [],
-        brackets: [
-          {
-            id: "1",
-            title: "Prelims",
-            videos: [
-              {
-                id: "1",
-                title: "Battle 1: Storm vs Thesis",
-                src: "https://example.com/battle1",
-                taggedUsers: [
-                  {
-                    id: "storm123",
-                    displayName: "B-Boy Storm",
-                    username: "bboystorm",
-                  },
-                  {
-                    id: "thesis789",
-                    displayName: "B-Boy Thesis",
-                    username: "bboythesis",
-                  },
-                ],
-              },
-              {
-                id: "2",
-                title: "Battle 2: Asia vs Gravity",
-                src: "https://example.com/battle2",
-                taggedUsers: [
-                  {
-                    id: "asia456",
-                    displayName: "B-Girl Asia",
-                    username: "bgirlasia",
-                  },
-                  {
-                    id: "gravity101",
-                    displayName: "B-Boy Gravity",
-                    username: "bboygravity",
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            id: "2",
-            title: "Top 16",
-            videos: [
-              {
-                id: "4",
-                title: "Top 16: Storm vs Gravity",
-                src: "https://example.com/top16-1",
-                taggedUsers: [
-                  {
-                    id: "storm123",
-                    displayName: "B-Boy Storm",
-                    username: "bboystorm",
-                  },
-                  {
-                    id: "gravity101",
-                    displayName: "B-Boy Gravity",
-                    username: "bboygravity",
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            id: "3",
-            title: "Top 8",
-            videos: [],
-          },
-          {
-            id: "4",
-            title: "Top 4",
-            videos: [],
-          },
-          {
-            id: "5",
-            title: "Final",
-            videos: [],
-          },
-        ],
-      },
-      {
-        id: "3",
-        title: "2v2 All Style",
-        description:
-          "Teams of two dancers will battle it out in this open style competition. Any dance style is welcome - breaking, popping, locking, house, or any fusion of styles. $2000 prize pool.",
-        videos: [],
-        brackets: [
-          {
-            id: "1",
-            title: "Prelims",
-            videos: [
-              {
-                id: "5",
-                title: "Team Alpha vs Team Beta",
-                src: "https://example.com/2v2-1",
-                taggedUsers: [
-                  {
-                    id: "alpha1",
-                    displayName: "Alpha 1",
-                    username: "alpha1",
-                  },
-                  {
-                    id: "alpha2",
-                    displayName: "Alpha 2",
-                    username: "alpha2",
-                  },
-                  {
-                    id: "beta1",
-                    displayName: "Beta 1",
-                    username: "beta1",
-                  },
-                  {
-                    id: "beta2",
-                    displayName: "Beta 2",
-                    username: "beta2",
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            id: "2",
-            title: "Finals",
-            videos: [],
-          },
-        ],
-      },
-    ],
-    roles: [
-      {
-        id: "1",
-        title: "Organizer",
-        user: {
-          id: "4bde11d0-f124-46c1-ae84-3c17ccea5e1d",
-          displayName: "B-Boy Storm",
-          username: "bboystorm",
-        },
-      },
-      {
-        id: "2",
-        title: "Head Judge",
-        user: {
-          id: "684ba876-3363-4384-9e2e-b4161f48fa4a",
-          displayName: "B-Boy Thesis",
-          username: "bboythesis",
-        },
-      },
-      {
-        id: "3",
-        title: "DJ",
-        user: {
-          id: "dj123",
-          displayName: "DJ Kool Herc",
-          username: "djkoolherc",
-        },
-      },
-      {
-        id: "4",
-        title: "MC",
-        user: {
-          id: "mc456",
-          displayName: "MC Flow",
-          username: "mcflow",
-        },
-      },
-    ],
-    subEvents: [
-      {
-        id: "1",
-        title: "Battlezone Workshop Series",
-        description:
-          "Join our international panel of judges for exclusive workshops covering power moves, footwork, top rock, and musicality. All levels welcome!",
-        schedule:
-          "Day 1: Power Moves with B-Boy Storm\nDay 2: Top Rock with B-Girl Asia\nDay 3: Musicality with B-Boy Thesis",
-        startDate: "06/11/2025",
-        address: "Seattle Center Exhibition Hall - Workshop Room A",
-        startTime: "11:00",
-        endTime: "13:00",
-        poster: {
-          id: "f1aa6f5d-97ba-4bd3-a3c0-e3ab490b9a5c",
-          title: "hansolo.jpg",
-          url: "https://storage.googleapis.com/dance-chives-posters/f1aa6f5d-97ba-4bd3-a3c0-e3ab490b9a5c-hansolo.jpg",
-          type: "poster",
-          file: null,
-        },
-      },
-      {
-        id: "2",
-        title: "Battlezone DJ Battle",
-        description:
-          "Witness the best DJs in the breaking scene battle it out for the title of Battlezone DJ Champion. $1000 prize pool.",
-        schedule: "Prelims: 6:00 PM\nFinals: 8:00 PM",
-        startDate: "06/12/2025",
-        address: "Seattle Center Exhibition Hall - Main Stage",
-        startTime: "18:00",
-        endTime: "22:00",
-        poster: {
-          id: "f1aa6f5d-97ba-4bd3-a3c0-e3ab490b9a5c",
-          title: "hansolo.jpg",
-          url: "https://storage.googleapis.com/dance-chives-posters/f1aa6f5d-97ba-4bd3-a3c0-e3ab490b9a5c-hansolo.jpg",
-          type: "poster",
-          file: null,
-        },
-      },
-    ],
-    gallery: [
-      {
-        id: "1790114d-00fb-424f-8cae-b4257eb3fb50",
-        title: "dancePalette.jpg",
-        url: "https://storage.googleapis.com/dance-chives-posters/1790114d-00fb-424f-8cae-b4257eb3fb50-dancePalette.jpg",
-        type: "gallery",
-        file: null,
-      },
-      {
-        id: "9345a8af-6301-4274-accd-772785dbb009",
-        title: "gym_selfie.jpg",
-        url: "https://storage.googleapis.com/dance-chives-posters/9345a8af-6301-4274-accd-772785dbb009-gym_selfie.jpg",
-        type: "gallery",
-        file: null,
-      },
-      {
-        id: "99b5ff2a-e69a-40f0-8c19-f3e4dda645ef",
-        title: "learnathon.png",
-        url: "https://storage.googleapis.com/dance-chives-posters/99b5ff2a-e69a-40f0-8c19-f3e4dda645ef-learnathon.png",
-        type: "gallery",
-        file: null,
-      },
-    ],
-  } as Event;
+  return !invalidPatterns.some((pattern) => pattern.test(id));
+}
+
+export default async function EventPage({ params }: PageProps) {
+  const paramResult = await params;
+
+  // Validate the event ID before trying to fetch it
+  if (!isValidEventId(paramResult.event)) {
+    notFound();
+  }
+
+  const event = (await getEvent(paramResult.event)) as Event;
 
   return (
     <>
