@@ -8,6 +8,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage, // add form message to display errors / validation
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,9 +29,20 @@ import { CitySearchItem } from "@/types/city";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import { UserSearchItem } from "@/types/user";
 
+// Define available roles for DC events - tentative
+const availableRoles = [
+  "Organizer",
+  "DJ",
+  "Photographer",
+  "Videographer",
+  "Designer",
+  "MC",
+];
+
 // Modified schema to make roles validation work better
 const formSchema = z.object({
-  title: z.string().nonempty(),
+  //title: z.string().nonempty(), // nonempty deprecated? 
+  title: z.string().min(1, "Event title is required"),
   city: z
     .object({
       id: z.number(),
@@ -49,8 +61,8 @@ const formSchema = z.object({
   description: z.string().optional(),
   entryCost: z.string().optional(),
   prize: z.string().optional(),
-  poster: z.any(),
-  // Make roles validation optional or allow empty strings
+  //poster: z.any(),
+  poster: z.any().optional(),
   roles: z
     .record(
       z.object({
@@ -61,7 +73,8 @@ const formSchema = z.object({
             displayName: z.string(),
           })
           .nullable(),
-        role: z.string().nonempty(),
+        //role: z.string().nonempty(),
+        role: z.string().min(1, "Role is required"),
       })
     )
     .optional(),
@@ -69,6 +82,7 @@ const formSchema = z.object({
 
 export default function AddEventForm() {
   const [roles, setRoles] = useState<{ id: string }[]>([]);
+  const [posterFiles, setPosterFiles] = useState<any>(null); // add state for poster files
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -77,7 +91,11 @@ export default function AddEventForm() {
       title: "",
       city: null,
       address: "",
-      date: {},
+      //date: {}, // insufficient default val for date range
+      date: {
+        from: new Date(),
+        to: new Date(),
+      },
       time: "",
       description: "",
       entryCost: "",
@@ -87,7 +105,10 @@ export default function AddEventForm() {
     },
   });
 
+  // add before and after data logging
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    console.log("Form data before processing:", data);
+    
     const processedRoles = roles.map((role) => {
       const userValue = form.getValues(`roles.${role.id}.user`);
       const roleValue = form.getValues(`roles.${role.id}.role`);
@@ -99,9 +120,13 @@ export default function AddEventForm() {
       roles: processedRoles,
     };
 
-    console.log(finalData);
+    console.log("Final processed data:", finalData);
 
     // addEvent(finalData);
+  };
+
+  const onError = (errors: any) => {
+    console.error("Form validation errors:", errors);
   };
 
   async function getCitySearchItems(
@@ -181,7 +206,7 @@ export default function AddEventForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, onError)}> // add onError to handle errors
         <div className="flex flex-col gap-4">
           <FormField
             control={form.control}
@@ -196,12 +221,16 @@ export default function AddEventForm() {
                     placeholder="Enter Event Title"
                   />
                 </FormControl>
+                {/* add form message to display errors / validation */}
+                <FormMessage />
               </FormItem>
             )}
           />
           <div className="flex flex-col sm:flex-row gap-5">
             {/* City Field */}
             <DebouncedSearchSelect<CitySearchItem>
+              control={form.control} // add control to form
+              label="City"
               onSearch={getCitySearchItems}
               placeholder="Search..."
               getDisplayValue={(item: CitySearchItem) => {
@@ -244,6 +273,8 @@ export default function AddEventForm() {
                   <FormControl>
                     <DateRangePicker {...field} className="bg-white w-full" />
                   </FormControl>
+                  {/* // add form message to display errors / validation */}
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -325,9 +356,12 @@ export default function AddEventForm() {
                     onFileChange={(file) => {
                       if (file) {
                         form.setValue("poster", file || undefined);
+                        setPosterFiles(file); // add file to state
                       }
                     }}
                     className="bg-[#E8E7E7]"
+                    maxFiles={1} // add max files to limit to 1
+                    files={posterFiles} // add files to state
                   />
                 </FormControl>
               </FormItem>
@@ -373,11 +407,15 @@ export default function AddEventForm() {
                             </SelectContent>
                           </Select>
                         </FormControl>
+                        {/* add form message to display errors / validation */}
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
 
                   <DebouncedSearchSelect<UserSearchItem>
+                    control={form.control} // add control to form
+                    label="User" // add label to form
                     onSearch={getUserSearchItems}
                     placeholder="Search..."
                     getDisplayValue={(item: UserSearchItem) => {
@@ -388,7 +426,7 @@ export default function AddEventForm() {
                       form.setValue(`roles.${role.id}.user`, value);
                     }}
                     value={form.getValues(`roles.${role.id}.user`)}
-                    name={"User"}
+                    name={`roles.${role.id}.user`} // add name to form
                   />
                 </div>
               </div>

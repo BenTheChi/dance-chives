@@ -4,7 +4,7 @@ import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { EventDetails, Picture } from "@/types/event";
 import { City, CitySearchItem } from "@/types/city";
-import { FormControl, FormItem, FormLabel, FormField } from "../ui/form";
+import { FormControl, FormItem, FormLabel, FormField, FormMessage } from "../ui/form"; // form components
 import { Input } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
@@ -67,6 +67,8 @@ export function EventDetailsForm({
                 placeholder="Enter Event Title"
               />
             </FormControl>
+            {/* // add form message to display errors / validation */}
+            <FormMessage /> 
           </FormItem>
         )}
       />
@@ -106,6 +108,7 @@ export function EventDetailsForm({
                   placeholder="Enter Address"
                 />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -134,6 +137,8 @@ export function EventDetailsForm({
                     placeholder="2:00 PM"
                   />
                 </FormControl>
+                {/* add form message to display errors / validation */}
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -153,6 +158,8 @@ export function EventDetailsForm({
                     placeholder="2:00 PM"
                   />
                 </FormControl>
+                {/* add form message to display errors / validation */}
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -170,6 +177,8 @@ export function EventDetailsForm({
                 className="bg-white h-32 p-2 rounded-md border border-gray-300"
               />
             </FormControl>
+            {/* add form message to display errors / validation */}
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -185,6 +194,8 @@ export function EventDetailsForm({
                 className="bg-white h-32 p-2 rounded-md border border-gray-300"
               />
             </FormControl>
+            {/* add form message to display errors / validation */}
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -198,6 +209,8 @@ export function EventDetailsForm({
               <FormControl>
                 <Input {...field} className="bg-white" />
               </FormControl>
+              {/* add form message to display errors / validation */}
+              <FormMessage />
             </FormItem>
           )}
         />
@@ -210,6 +223,8 @@ export function EventDetailsForm({
               <FormControl>
                 <Input {...field} className="bg-white" />
               </FormControl>
+              {/* add form message to display errors / validation */}
+              <FormMessage />
             </FormItem>
           )}
         />

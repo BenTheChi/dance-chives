@@ -8,11 +8,13 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage, // add form message to display errors / validation - tentative
 } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { toast } from "sonner"; // toaster notifications
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role, SubEvent, Picture } from "@/types/event";
 import { EventDetailsForm } from "./event-details-form";
@@ -21,7 +23,7 @@ import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
 import { addEvent } from "@/lib/server_actions/event_actions";
 
-// Define the schema for the form
+// Define the schema for the form with proper validation
 const userSearchItemSchema = z.object({
   id: z.string(),
   displayName: z.string(),
@@ -30,20 +32,20 @@ const userSearchItemSchema = z.object({
 
 const videoSchema = z.object({
   id: z.string(),
-  title: z.string(),
-  src: z.string(),
+  title: z.string().min(1, "Video title is required"), // switch to min for all non-optional
+  src: z.string().min(1, "Video source is required"),
   taggedUsers: z.array(userSearchItemSchema).optional(),
 });
 
 const bracketSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string().min(1, "Bracket title is required"), // switch to min for all non-optional
   videos: z.array(videoSchema),
 });
 
 const sectionSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
   description: z.string().optional(),
   hasBrackets: z.boolean().optional(),
   videos: z.array(videoSchema),
@@ -60,15 +62,15 @@ const pictureSchema = z.object({
 
 const eventDetailsSchema = z.object({
   creatorId: z.string(),
-  title: z.string(),
+  title: z.string().min(1, "Event title is required"), // switch to min for all non-optional
   city: z.object({
     id: z.number(),
-    name: z.string(),
-    countryCode: z.string(),
-    region: z.string(),
+    name: z.string().min(1, "City name is required"),
+    countryCode: z.string().min(1, "Country code is required"),
+    region: z.string().min(1, "Region is required"),
     population: z.number(),
   }),
-  startDate: z.string(),
+  startDate: z.string().min(1, "Start date is required"), // switch to min for all non-optional
   description: z.string().optional(),
   schedule: z.string().optional(),
   address: z.string().optional(),
@@ -81,16 +83,16 @@ const eventDetailsSchema = z.object({
 
 const roleSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string().min(1, "Role title is required"), // switch to min for all non-optional
   user: userSearchItemSchema.nullable(),
 });
 
 const subEventSchema = z.object({
   id: z.string(),
-  title: z.string(),
+  title: z.string().min(1, "Sub-event title is required"), // switch to min for all non-optional
   description: z.string().optional(),
   schedule: z.string().optional(),
-  startDate: z.string(),
+  startDate: z.string().min(1, "Sub-event start date is required"), // switch to min for all non-optional
   address: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -113,10 +115,12 @@ export default function EventForm() {
   const [activeMainTab, setActiveMainTab] = useState("Sections");
   const [activeSectionId, setActiveSectionId] = useState("2");
   const [activeSubEventId, setActiveSubEventId] = useState("1");
+  const [isSubmitting, setIsSubmitting] = useState(false); // add state for submitting
 
   // Initialize form with default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onSubmit", // submit mode - onSubmit
     defaultValues: {
       eventDetails: {
         creatorId: "1",
@@ -199,8 +203,8 @@ export default function EventForm() {
               taggedUsers: [
                 {
                   id: "1",
-                  displayName: "Bob",
-                  username: "bob",
+                  displayName: "John Doe",
+                  username: "john.doe",
                 },
               ],
             },
@@ -264,7 +268,7 @@ export default function EventForm() {
     },
   });
 
-  const { control, register, setValue, watch } = form;
+  const { control, handleSubmit, setValue, register, watch, formState: { errors } } = form; // add form state to errors
 
   // Watch the sections array to get the current state
   const sections = watch("sections") ?? [];
@@ -337,21 +341,93 @@ export default function EventForm() {
     }
   };
 
+  // extract field names from validation errors
+  const getFieldNamesFromErrors = (errors: any): string[] => {
+    const fieldNames: string[] = [];
+    
+    const extractFieldNames = (obj: any, prefix = '') => {
+      for (const key in obj) {
+        if (obj[key] && typeof obj[key] === 'object') {
+          if (obj[key].message) {
+            // This is a field with an error
+            const fieldName = prefix ? `${prefix}.${key}` : key;
+            fieldNames.push(fieldName);
+          } else {
+            // This is a nested object, recurse
+            const newPrefix = prefix ? `${prefix}.${key}` : key;
+            extractFieldNames(obj[key], newPrefix);
+          }
+        }
+      }
+    };
+    
+    extractFieldNames(errors);
+    return fieldNames;
+  };
+
   const onSubmit = async (data: FormValues) => {
-    //Would be nice to have a loading state here with a spinner
+    setIsSubmitting(true); // added loadstate - isSubmitting
     console.log("Form submitted:", data);
 
-    // Handle form submission
-    const response = await addEvent(data);
-    console.log(response);
+    // pulled await into try block
+    try {
+      // Handle form submission
+      const response = await addEvent(data);
+      console.log(response);
 
-    //Pop up a toast here if there's an error
-
-    //If it's successful then redirect to the event page
+      // if response.error, show sonner toast error
+      if (response.error) {
+        toast.error("Failed to create event", {
+          description: response.error,
+        });
+      } else {
+        toast.success("Event created successfully!", {
+          description: "Your event has been created and is now live.",
+        });
+        // TODO: Redirect to the event page
+        // router.push(`/events/${response.event.id}`);
+      }
+      // if non res error, log it
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error("An unexpected error occurred", {
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false); // reset loadstate - isSubmitting
+    }
   };
 
   const onError = (errors: any) => {
     console.error("Form validation errors:", errors);
+    
+    // Extract field names that have validation errors
+    const invalidFields = getFieldNamesFromErrors(errors);
+    
+    // Create a user-friendly message - fields given readability - mapped to better names
+    const fieldDisplayNames: { [key: string]: string } = {
+      'eventDetails.title': 'Event Title',
+      'eventDetails.city.name': 'City Name',
+      'eventDetails.city.countryCode': 'Country Code',
+      'eventDetails.city.region': 'Region',
+      'eventDetails.startDate': 'Start Date',
+      'sections': 'Sections',
+      'subEvents': 'Sub-events',
+      'roles': 'Roles',
+    };
+
+    const invalidFieldNames = invalidFields
+      .map(field => fieldDisplayNames[field] || field)
+      .filter(Boolean);
+
+    if (invalidFieldNames.length > 0) {
+      toast.error("Please fix the following fields:", {
+        description: invalidFieldNames.join(', '),
+        duration: 5000,
+      });
+    } else {
+      toast.error("Please check your form for errors");
+    }
   };
 
   const activeSectionIndex = sections.findIndex(
@@ -367,7 +443,7 @@ export default function EventForm() {
       <h1 className="text-3xl font-bold text-center mb-8">New Event</h1>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit, onError)}>
+        <form onSubmit={handleSubmit(onSubmit, onError)}>
           {/* Main Navigation - Text Style Tabs */}
           <div className="flex justify-center gap-8 mb-8">
             {mainTabs.map((tab) => (
@@ -536,7 +612,10 @@ export default function EventForm() {
             <Button type="button" variant="outline">
               Next
             </Button>
-            <Button type="submit">Finish</Button>
+            {/* button state - isSubmitting */}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating Event..." : "Finish"}
+            </Button>
           </div>
         </form>
       </Form>
