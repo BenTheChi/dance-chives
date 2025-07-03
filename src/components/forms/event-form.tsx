@@ -373,39 +373,96 @@ export default function EventForm() {
 
   const onError = (errors: any) => {
     console.error("Form validation errors:", errors);
-    
-    // Extract field names that have validation errors
+
     const invalidFields = getFieldNamesFromErrors(errors);
-    
-    // Create a user-friendly message
+
+    const tabMap: { [key: string]: string } = {
+      eventDetails: "Event Details",
+      sections: "Sections",
+      subEvents: "SubEvents",
+      roles: "Roles",
+      gallery: "Photo Gallery",
+    };
+
+    // Map required fields to user-friendly names, including dynamic array fields
     const fieldDisplayNames: { [key: string]: string } = {
+      // Event Details
       'eventDetails.title': 'Event Title',
+      'eventDetails.startDate': 'Event Date',
       'eventDetails.city.name': 'City Name',
       'eventDetails.city.countryCode': 'Country Code',
       'eventDetails.city.region': 'Region',
-      'eventDetails.startDate': 'Start Date',
-      'sections': 'Sections',
-      'subEvents': 'Sub-events',
-      'roles': 'Roles',
-      // Add video field mappings
-      'sections.0.videos.0.title': 'Video Title',
-      'sections.0.videos.0.src': 'Video Source',
-      'sections.0.brackets.0.videos.0.title': 'Bracket Video Title',
-      'sections.0.brackets.0.videos.0.src': 'Bracket Video Source',
+      // Sections
+      'sections.title': 'Section Title',
+      'sections.videos.title': 'Video Title',
+      'sections.videos.src': 'Video Source',
+      'sections.brackets.title': 'Bracket Title',
+      'sections.brackets.videos.title': 'Bracket Video Title',
+      'sections.brackets.videos.src': 'Bracket Video Source',
+      // SubEvents
+      'subEvents.title': 'Title',
+      'subEvents.startDate': 'Date',
+      // Roles
+      'roles.title': 'Role',
+      'roles.user': 'User',
     };
 
-    const invalidFieldNames = invalidFields
-      .map(field => fieldDisplayNames[field] || field)
-      .filter(Boolean);
+    const tabErrors: { [tab: string]: Set<string> } = {};
 
-    if (invalidFieldNames.length > 0) {
-      toast.error("Please fix the following fields:", {
-        description: invalidFieldNames.join(', '),
-        duration: 5000,
-      });
-    } else {
-      toast.error("Please check your form for errors");
+    for (const field of invalidFields) {
+      // Find which tab this field belongs to
+      const tabKey = Object.keys(tabMap).find(tab => field.startsWith(tab));
+      if (tabKey) {
+        if (!tabErrors[tabKey]) tabErrors[tabKey] = new Set();
+        // Try to get a display name for the field
+        // Try to match the field exactly, or by prefix (for arrays)
+        let displayName = fieldDisplayNames[field];
+        if (!displayName) {
+          // regex to remove indices (e.g., sections.0.videos.0.title -> sections.videos.title)
+          const genericField = field.replace(/\.(\d+)/g, '');
+          // Try for bracketed videos
+          if (genericField.includes('brackets') && genericField.includes('videos')) {
+            if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.brackets.videos.title'];
+            else if (genericField.endsWith('.src')) displayName = fieldDisplayNames['sections.brackets.videos.src'];
+            else if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.brackets.title'];
+          } else if (genericField.includes('videos')) {
+            if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.videos.title'];
+            else if (genericField.endsWith('.src')) displayName = fieldDisplayNames['sections.videos.src'];
+          } else if (genericField.includes('brackets')) {
+            if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.brackets.title'];
+          } else if (genericField.includes('title')) {
+            displayName = fieldDisplayNames[`${tabKey}.title`];
+          } else if (genericField.includes('startDate')) {
+            displayName = fieldDisplayNames[`${tabKey}.startDate`];
+          } else if (genericField.includes('user')) {
+            displayName = fieldDisplayNames[`${tabKey}.user`];
+          }
+          // Fallback: use last part of field path
+          if (!displayName) displayName = genericField.split('.').pop() || 'Unknown Field';
+        }
+        tabErrors[tabKey].add(displayName);
+      }
     }
+
+    // toast message as component - this allows for line breaks
+    const toastContent = (
+      <div>
+        <div>Please fix the following issues:</div>
+        {Object.keys(tabErrors).map(tabKey => {
+          const tabName = tabMap[tabKey];
+          const fields = Array.from(tabErrors[tabKey]).filter(Boolean).join(', ');
+          return (
+            <div key={tabKey}>
+              <strong>{tabName}:</strong> {fields}
+            </div>
+          );
+        })}
+      </div>
+    );
+
+    toast.error(toastContent, {
+      duration: 7000,
+    });
   };
 
   const activeSectionIndex = sections.findIndex(
