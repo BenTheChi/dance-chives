@@ -33,7 +33,12 @@ const userSearchItemSchema = z.object({
 const videoSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Video title is required"), // switch to min for all non-optional
-  src: z.string().min(1, "Video source is required"),
+  src: z.string()
+    .min(1, "Video source is required")
+    .regex(
+      /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}(&.*)?$/,
+      "Video source must be a valid YouTube URL"
+    ),
   taggedUsers: z.array(userSearchItemSchema).optional(),
 });
 
@@ -126,11 +131,11 @@ export default function EventForm() {
         creatorId: "123abc",
         title: "Massive Monkees 2",
         city: {
-          id: 128526,
+          id: 1,
           name: "Seattle",
           countryCode: "US",
-          region: "Washington",
-          population: 737015,
+          region: "WA",
+          population: 750000,
         },
         startDate: "06/23/2025",
         description: "something something",
@@ -372,7 +377,7 @@ export default function EventForm() {
     // Extract field names that have validation errors
     const invalidFields = getFieldNamesFromErrors(errors);
     
-    // Create a user-friendly message - fields given readability - mapped to better names
+    // Create a user-friendly message
     const fieldDisplayNames: { [key: string]: string } = {
       'eventDetails.title': 'Event Title',
       'eventDetails.city.name': 'City Name',
@@ -382,6 +387,11 @@ export default function EventForm() {
       'sections': 'Sections',
       'subEvents': 'Sub-events',
       'roles': 'Roles',
+      // Add video field mappings
+      'sections.0.videos.0.title': 'Video Title',
+      'sections.0.videos.0.src': 'Video Source',
+      'sections.0.brackets.0.videos.0.title': 'Bracket Video Title',
+      'sections.0.brackets.0.videos.0.src': 'Bracket Video Source',
     };
 
     const invalidFieldNames = invalidFields

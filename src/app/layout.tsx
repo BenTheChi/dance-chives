@@ -57,7 +57,7 @@ export default async function RootLayout({
             </div>
           </SidebarProvider>
         </AuthProvider>
-        <Toaster /> // add toaster in layout
+        <Toaster />
       </body>
     </html>
   );
