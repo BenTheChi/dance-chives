@@ -104,6 +104,11 @@ interface response {
 }
 
 export async function addEvent(props: addEventProps): Promise<response> {
+  // test skip below - for form // testing exclusively!
+  return {
+    status: 200,
+    event: null,
+  };
   const session = await auth();
 
   // //Do a check for auth level here
@@ -157,21 +162,43 @@ export async function addEvent(props: addEventProps): Promise<response> {
       }
     }
   }
-  // Get timezone for city
-  const response = await fetch(
-    `http://geodb-free-service.wirefreethought.com/v1/geo/places/${props.eventDetails.city.id}`
-  );
 
-  if (!response.ok) {
-    console.error("Failed to fetch city", response.statusText);
-    return {
-      error: "Failed to fetch city",
-      status: 500,
-      event: null,
-    };
-  }
+  // Process sections to handle brackets/videos based on hasBrackets
+  const processedSections = props.sections.map((section) => {
+    const { hasBrackets, ...sectionWithoutBrackets } = section;
 
-  const timezoneData = await response.json();
+    if (hasBrackets) {
+      return {
+        ...sectionWithoutBrackets,
+        brackets: section.brackets,
+        videos: [],
+      };
+    } else {
+      return {
+        ...sectionWithoutBrackets,
+        brackets: [],
+        videos: section.videos,
+      };
+    }
+  });
+
+  // TEMPORARILY COMMENTED OUT FOR TESTING - Get timezone for city
+  // const response = await fetch(
+  //   `http://geodb-free-service.wirefreethought.com/v1/geo/places/${props.eventDetails.city.id}`
+  // );
+
+  // if (!response.ok) {
+  //   console.error("Failed to fetch city", response.statusText);
+  //   return {
+  //     error: "Failed to fetch city",
+  //     status: 500,
+  //     event: null,
+  //   };
+  // }
+
+  // const timezoneData = await response.json();
+
+  // console.log(timezoneData);
 
   // Prepare the final event object
   const eventToInsert = {
@@ -192,7 +219,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
       poster: props.eventDetails.poster,
       city: {
         ...props.eventDetails.city,
-        timezone: timezoneData.data.timezone,
+        // timezone: timezoneData.data.timezone, // TEMPORARILY COMMENTED OUT
+        timezone: "America/Los_Angeles", // TEMPORARY DEFAULT
       },
     },
     sections: props.sections,

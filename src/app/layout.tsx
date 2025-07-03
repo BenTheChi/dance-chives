@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { auth } from "@/auth";
+import { Toaster } from "sonner"; // sonner - toaster for notifications
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,6 +57,7 @@ export default async function RootLayout({
             </div>
           </SidebarProvider>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );
