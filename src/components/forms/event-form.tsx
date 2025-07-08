@@ -109,15 +109,25 @@ export type FormValues = z.infer<typeof formSchema>;
 
 export const mockUsers = ["Ben", "Jane", "Jerry", "Steve", "Bob"];
 
-export default function EventForm() {
+interface EventFormProps {
+  initialData?: FormValues;
+  onSubmit?: (data: FormValues) => Promise<void>;
+  isEditing?: boolean;
+}
+
+export default function EventForm({
+  initialData,
+  onSubmit: customOnSubmit,
+  isEditing = false,
+}: EventFormProps = {}) {
   const [activeMainTab, setActiveMainTab] = useState("Sections");
   const [activeSectionId, setActiveSectionId] = useState("2");
   const [activeSubEventId, setActiveSubEventId] = useState("1");
 
-  // Initialize form with default values
+  // Initialize form with default values or initial data
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       eventDetails: {
         creatorId: "1",
         title: "",
@@ -340,14 +350,37 @@ export default function EventForm() {
   const onSubmit = async (data: FormValues) => {
     //Would be nice to have a loading state here with a spinner
     console.log("Form submitted:", data);
+    console.log("Form data structure validation:");
+    console.log("- eventDetails:", data.eventDetails);
+    console.log("- sections count:", data.sections.length);
+    console.log("- roles count:", data.roles?.length || 0);
+    console.log("- subEvents count:", data.subEvents.length);
+    console.log("- gallery count:", data.gallery.length);
 
-    // Handle form submission
-    const response = await addEvent(data);
-    console.log(response);
+    if (customOnSubmit) {
+      // Use custom onSubmit for editing
+      await customOnSubmit(data);
+    } else {
+      // Use default addEvent for creating
+      try {
+        // Handle form submission
+        const response = await addEvent(data);
+        console.log("AddEvent response:", response);
 
-    //Pop up a toast here if there's an error
-
-    //If it's successful then redirect to the event page
+        if (response.error) {
+          console.error("Error creating event:", response.error);
+          alert(`Error creating event: ${response.error}`);
+        } else {
+          console.log("Event created successfully:", response.event);
+          alert("Event created successfully! Check the console for details.");
+          // TODO: Redirect to the event page
+          // router.push(`/event/${response.event.id}`);
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+        alert("An unexpected error occurred. Check the console for details.");
+      }
+    }
   };
 
   const onError = (errors: any) => {
@@ -364,7 +397,9 @@ export default function EventForm() {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-center mb-8">New Event</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">
+        {isEditing ? "Edit Event" : "New Event"}
+      </h1>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit, onError)}>
@@ -536,7 +571,21 @@ export default function EventForm() {
             <Button type="button" variant="outline">
               Next
             </Button>
-            <Button type="submit">Finish</Button>
+            <Button type="submit">
+              {isEditing ? "Update Event" : "Create Event"}
+            </Button>
+          </div>
+
+          {/* Debug Info */}
+          <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+            <h3 className="font-semibold mb-2">Debug Information:</h3>
+            <p className="text-sm">Form sections: {sections.length}</p>
+            <p className="text-sm">Sub-events: {subEvents.length}</p>
+            <p className="text-sm">Roles: {roles.length}</p>
+            <p className="text-sm">Gallery items: {gallery.length}</p>
+            <p className="text-sm">
+              Event title: {eventDetails?.title || "Not set"}
+            </p>
           </div>
         </form>
       </Form>
