@@ -4,7 +4,7 @@ import { Control, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Role } from "@/types/event";
 import { Button } from "../ui/button";
-import { FormControl, FormItem, FormLabel, FormField } from "../ui/form";
+import { FormControl, FormItem, FormLabel, FormField, FormMessage } from "../ui/form"; // form components
 import { MinusIcon } from "lucide-react";
 import {
   Select,
@@ -123,6 +123,8 @@ export default function RolesForm({
                       </SelectContent>
                     </Select>
                   </FormControl>
+                  {/* // add form message to display errors / validation */}
+                  <FormMessage />
                 </FormItem>
               )}
             />

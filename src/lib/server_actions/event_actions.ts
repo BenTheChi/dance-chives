@@ -5,6 +5,7 @@ import { insertEvent, EditEvent as editEventQuery, getEvent as getEventQuery } f
 import { Event, EventDetails, Section, Role, SubEvent, Picture } from "@/types/event";
 import { generateShortId } from "@/lib/utils";
 import { NextResponse } from "next/server";
+import { generateSlugId } from "@/lib/utils";
 
 interface addEventProps {
   eventDetails: {
@@ -37,7 +38,7 @@ interface addEventProps {
     id: string;
     title: string;
     description?: string;
-    hasBrackets?: boolean;
+    hasBrackets: boolean;
     videos: {
       id: string;
       title: string;
@@ -105,7 +106,8 @@ interface response {
 }
 
 export async function addEvent(props: addEventProps): Promise<response> {
-  const session = await auth();
+ 
+  const session = await auth(); 
 
   // Check for auth level here
   if (!session) {
@@ -167,12 +169,14 @@ export async function addEvent(props: addEventProps): Promise<response> {
       if (hasBrackets) {
         return {
           ...sectionWithoutBrackets,
+          hasBrackets: true,
           brackets: section.brackets,
           videos: [],
         };
       } else {
         return {
           ...sectionWithoutBrackets,
+          hasBrackets: false,
           brackets: [],
           videos: section.videos,
         };
@@ -216,7 +220,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     // Create the Event object that matches the insertEvent query structure
     const event: Event = {
-      id: generateShortId(),
+      id: generateSlugId(props.eventDetails.title),
       createdAt: new Date(),
       updatedAt: new Date(),
       eventDetails: eventDetails,
@@ -308,12 +312,14 @@ export async function editEvent(eventId: string, props: addEventProps): Promise<
       if (hasBrackets) {
         return {
           ...sectionWithoutBrackets,
+          hasBrackets: true,
           brackets: section.brackets,
           videos: [],
         };
       } else {
         return {
           ...sectionWithoutBrackets,
+          hasBrackets: false,
           brackets: [],
           videos: section.videos,
         };
