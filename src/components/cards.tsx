@@ -1,4 +1,5 @@
 // components/cards.tsx (or cards/index.tsx)
+import Image from "next/image";
 import React from "react";
 
 interface EventcardProps {
@@ -21,7 +22,7 @@ const Eventcard = ({
   return (
     <div className="bg-white shadow-md rounded-md mt-4 mb-2 ml-0 mr-0 w-70 h-40 flex overflow-hidden">
       {/* Image */}
-      <img src={imageUrl} alt="event" className="w-1/2 h-full object-cover" />
+      <Image src={imageUrl} alt="event" className="w-1/2 h-full object-cover" />
 
       {/* Text section with 3px border on top, right, bottom (no left) */}
       <div className="flex flex-col justify-center items-start p-3 w-1/2 border-t-[3px] border-r-[3px] border-b-[3px] border-gray-300">

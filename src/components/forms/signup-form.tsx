@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -23,18 +22,6 @@ import {
 import DateInput from "../ui/dateinput";
 import { z } from "zod";
 import { signup } from "@/lib/server_actions/auth_actions";
-// import { signup } from "@/lib/auth-actions";
-
-// username: string! @unique
-// displayName: string!
-// email: String! @unique
-// fname: string!
-// lname: string!
-// dob: string!
-// registeredAt: BigInt!
-// auth: String!
-// aboutme: String
-// ig: String
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -48,7 +35,7 @@ const signupSchema = z.object({
 //The fields on this form may need to be conditional based on the user's OAuth provider
 //For example, if the user signs up with Instagram, we will not have an email address
 //UserInfo has any because I'm not sure what fields will be passed in depending on the OAuth provider
-export default function SignUpForm(userInfo: any) {
+export default function SignUpForm() {
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {

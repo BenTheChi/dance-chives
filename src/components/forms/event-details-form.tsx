@@ -4,7 +4,13 @@ import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { EventDetails, Picture } from "@/types/event";
 import { City, CitySearchItem } from "@/types/city";
-import { FormControl, FormItem, FormLabel, FormField, FormMessage } from "../ui/form"; // form components
+import {
+  FormControl,
+  FormItem,
+  FormLabel,
+  FormField,
+  FormMessage,
+} from "../ui/form"; // form components
 import { Input } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
@@ -29,9 +35,8 @@ async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
       return response.json();
     })
     .then((data) => {
-      console.log(data);
       return data.data
-        .map((city: any) => ({
+        .map((city: CitySearchItem) => ({
           id: city.id,
           name: city.name,
           region: city.region,
@@ -68,7 +73,7 @@ export function EventDetailsForm({
               />
             </FormControl>
             {/* // add form message to display errors / validation */}
-            <FormMessage /> 
+            <FormMessage />
           </FormItem>
         )}
       />
@@ -232,7 +237,7 @@ export function EventDetailsForm({
       <FormField
         control={control}
         name="eventDetails.poster"
-        render={({ field }) => (
+        render={() => (
           <FormItem className="w-full">
             <FormLabel>Poster Upload</FormLabel>
             <FormControl>

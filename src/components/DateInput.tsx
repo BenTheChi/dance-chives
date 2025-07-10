@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Control, useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Control, FieldPath } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import {
   FormField,
@@ -12,10 +9,11 @@ import {
   FormMessage,
   FormControl,
 } from "@/components/ui/form";
+import { FormValues } from "./forms/event-form";
 
 interface DateInputProps {
-  control: Control<any>;
-  name: string;
+  control: Control<FormValues>;
+  name: FieldPath<FormValues>;
   label?: string;
 }
 
@@ -38,9 +36,6 @@ export default function DateInput({ control, name, label }: DateInputProps) {
     }
   };
 
-  // Store the current formatted value for display
-  const [currentValue, setCurrentValue] = useState("");
-
   return (
     <FormField
       control={control}
@@ -53,11 +48,10 @@ export default function DateInput({ control, name, label }: DateInputProps) {
               placeholder="MM/DD/YYYY"
               maxLength={10}
               className="font-mono"
-              {...field}
+              value={field.value as string}
               onChange={(e) => {
                 const formattedValue = formatDateInput(e.target.value);
                 field.onChange(formattedValue);
-                setCurrentValue(formattedValue);
               }}
             />
           </FormControl>

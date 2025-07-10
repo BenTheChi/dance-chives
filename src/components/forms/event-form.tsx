@@ -8,22 +8,21 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage, // add form message to display errors / validation - tentative
 } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner"; // toaster notifications
+import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role, SubEvent, Picture } from "@/types/event";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
 import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
-import { addEvent } from "@/lib/server_actions/event_actions";
+import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
+import { usePathname } from "next/navigation";
 
-// Define the schema for the form with proper validation
 const userSearchItemSchema = z.object({
   id: z.string(),
   displayName: z.string(),
@@ -115,153 +114,28 @@ const formSchema = z.object({
 
 export type FormValues = z.infer<typeof formSchema>;
 
-export const mockUsers = ["Ben", "Jane", "Jerry", "Steve", "Bob"];
-
 interface EventFormProps {
   initialData?: FormValues;
-  onSubmit?: (data: FormValues) => Promise<void>;
-  isEditing?: boolean;
 }
 
-export default function EventForm({
-  initialData,
-  onSubmit: customOnSubmit,
-  isEditing = false,
-}: EventFormProps = {}) {
+export default function EventForm({ initialData }: EventFormProps = {}) {
+  const pathname = usePathname().split("/");
+  const isEditing = pathname[pathname.length - 1] === "edit";
+
   const [activeMainTab, setActiveMainTab] = useState("Sections");
   const [activeSectionId, setActiveSectionId] = useState("2");
   const [activeSubEventId, setActiveSubEventId] = useState("1");
-  const [isSubmitting, setIsSubmitting] = useState(false); // add state for submitting
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize form with default values or initial data
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: "onSubmit",
-    defaultValues: initialData || {
-      eventDetails: {
-        creatorId: "123abc",
-        title: "Massive Monkees 2",
-        city: {
-          id: 1,
-          name: "Seattle",
-          countryCode: "US",
-          region: "WA",
-          population: 750000,
-        },
-        startDate: "06/23/2025",
-        description: "something something",
-        schedule: "1:00 - start",
-        address: "2345 street",
-        startTime: "08:00",
-        endTime: "15:43",
-        entryCost: "08",
-        prize: "nothing",
-        poster: {
-          id: "b2e21079-9374-48e0-8227-2030c6ad6ce6",
-          title: "addEvent.jpg",
-          url: "https://storage.googleapis.com/dance-chives-posters/b2e21079-9374-48e0-8227-2030c6ad6ce6-addEvent.jpg",
-          type: "poster",
-          file: null,
-        },
-      },
-      roles: [],
-      subEvents: [
-        {
-          id: "1",
-          title: "Battlezone BBQ",
-          description: "Battlezone BBQ",
-          schedule: "",
-          startDate: "06/23/2025",
-          address: "333 ave",
-          startTime: "07:00",
-          endTime: "",
-          poster: {
-            id: "451e8fa8-5096-443a-bb4f-3fcf65843526",
-            title: "DSC00020.jpg",
-            url: "https://storage.googleapis.com/dance-chives-posters/451e8fa8-5096-443a-bb4f-3fcf65843526-DSC00020.jpg",
-            type: "poster",
-            file: null,
-          },
-        },
-      ],
-      sections: [
-        {
-          id: "1",
-          title: "Judge Showcases",
-          description: "",
-          hasBrackets: false,
-          videos: [
-            {
-              id: "1",
-              title: "Judge Showcase 1",
-              src: "https://www.youtube.com/watch?v=lNbMSdohIYM",
-              taggedUsers: [],
-            },
-          ],
-          brackets: [
-            {
-              id: "1750720486424",
-              title: "Shouldn't be seen",
-              videos: [
-                {
-                  id: "1750720493754",
-                  title: "Nope",
-                  src: "https://www.youtube.com/watch?v=RNiZy6t-XnA",
-                  taggedUsers: [],
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "2",
-          title: "1 vs 1 Breaking",
-          description:
-            "Battlezone is back for its fifteenth edition this year. We're bringing back some local legends, the previous winner, and good vibrations. This year, we will have a 1v1 Breaking category and a 2v2 All-styles category. We hope to see you guys come get down on our floor.",
-          hasBrackets: true,
-          videos: [],
-          brackets: [
-            {
-              id: "1",
-              title: "Prelims",
-              videos: [
-                {
-                  id: "1",
-                  title: "Battle 1",
-                  src: "https://www.youtube.com/watch?v=lNbMSdohIYM",
-                  taggedUsers: [],
-                },
-              ],
-            },
-            {
-              id: "5",
-              title: "Final",
-              videos: [
-                {
-                  id: "1750721038083",
-                  title: "Final Battle",
-                  src: "https://www.youtube.com/watch?v=zurzKXaG2Kk",
-                  taggedUsers: [],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      gallery: [],
-    },
+    defaultValues: initialData || {},
   });
 
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    register,
-    watch,
-    formState: { errors },
-  } = form; // add form state to errors
+  const { control, handleSubmit, setValue, register, watch } = form;
 
-  // Watch the sections array to get the current state
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
   const subEvents = watch("subEvents") ?? [];
@@ -316,6 +190,7 @@ export default function EventForm({
       startTime: "",
       endTime: "",
       description: "",
+      schedule: "",
       poster: null,
     };
     setValue("subEvents", [...subEvents, newSubEvent]);
@@ -333,20 +208,20 @@ export default function EventForm({
   };
 
   // extract field names from validation errors
-  const getFieldNamesFromErrors = (errors: any): string[] => {
+  const getFieldNamesFromErrors = (errors: FieldErrors): string[] => {
     const fieldNames: string[] = [];
 
-    const extractFieldNames = (obj: any, prefix = "") => {
+    const extractFieldNames = (obj: FieldErrors, prefix = "") => {
       for (const key in obj) {
         if (obj[key] && typeof obj[key] === "object") {
           if (obj[key].message) {
             // This is a field with an error
             const fieldName = prefix ? `${prefix}.${key}` : key;
             fieldNames.push(fieldName);
-          } else {
-            // This is a nested object, recurse
+          } else if (!obj[key].type) {
+            // This is a nested object (not a FieldError), recurse
             const newPrefix = prefix ? `${prefix}.${key}` : key;
-            extractFieldNames(obj[key], newPrefix);
+            extractFieldNames(obj[key] as FieldErrors, newPrefix);
           }
         }
       }
@@ -357,30 +232,36 @@ export default function EventForm({
   };
 
   const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true); // added loadstate - isSubmitting
-    console.log("Form submitted:", data);
-    console.log("Form data structure validation:");
-    console.log("- eventDetails:", data.eventDetails);
-    console.log("- sections count:", data.sections.length);
-    console.log("- roles count:", data.roles?.length || 0);
-    console.log("- subEvents count:", data.subEvents.length);
-    console.log("- gallery count:", data.gallery.length);
+    setIsSubmitting(true);
 
-    // pulled await into try block
     try {
-      // Handle form submission
-      const response = await addEvent(data);
-      console.log(response);
-
-      // if response.error, show sonner toast error
-      if (response.error) {
-        toast.error("Failed to create event", {
-          description: response.error,
-        });
+      let response;
+      if (isEditing) {
+        response = await editEvent(pathname[pathname.length - 2], data);
       } else {
-        toast.success("Event created successfully!", {
-          description: "Your event has been created and is now live.",
-        });
+        response = await addEvent(data);
+      }
+
+      if (response.error) {
+        if (isEditing) {
+          toast.error("Failed to update event", {
+            description: response.error,
+          });
+        } else {
+          toast.error("Failed to create event", {
+            description: response.error,
+          });
+        }
+      } else {
+        if (isEditing) {
+          toast.success("Event updated successfully!", {
+            description: "Your event has been updated and is now live.",
+          });
+        } else {
+          toast.success("Event created successfully!", {
+            description: "Your event has been created and is now live.",
+          });
+        }
         // TODO: Redirect to the event page
         // router.push(`/events/${response.event.id}`);
       }
@@ -391,11 +272,11 @@ export default function EventForm({
         description: "Please try again later.",
       });
     } finally {
-      setIsSubmitting(false); // reset loadstate - isSubmitting
+      setIsSubmitting(false);
     }
   };
 
-  const onError = (errors: any) => {
+  const onError = (errors: FieldErrors) => {
     console.error("Form validation errors:", errors);
 
     const invalidFields = getFieldNamesFromErrors(errors);
@@ -410,23 +291,19 @@ export default function EventForm({
 
     // Map required fields to user-friendly names, including dynamic array fields
     const fieldDisplayNames: { [key: string]: string } = {
-      // Event Details
       "eventDetails.title": "Event Title",
       "eventDetails.startDate": "Event Date",
       "eventDetails.city.name": "City Name",
       "eventDetails.city.countryCode": "Country Code",
       "eventDetails.city.region": "Region",
-      // Sections
       "sections.title": "Section Title",
       "sections.videos.title": "Video Title",
       "sections.videos.src": "Video Source",
       "sections.brackets.title": "Bracket Title",
       "sections.brackets.videos.title": "Bracket Video Title",
       "sections.brackets.videos.src": "Bracket Video Source",
-      // SubEvents
       "subEvents.title": "Title",
       "subEvents.startDate": "Date",
-      // Roles
       "roles.title": "Role",
       "roles.user": "User",
     };
@@ -591,7 +468,6 @@ export default function EventForm({
                   setValue={setValue}
                   activeSubEventIndex={activeSubEventIndex}
                   activeSubEvent={activeSubEvent}
-                  subEvents={subEvents}
                   activeSubEventId={activeSubEventId}
                   register={register}
                 />
@@ -650,7 +526,7 @@ export default function EventForm({
             <FormField
               control={control}
               name="gallery"
-              render={({ field }) => (
+              render={() => (
                 <FormItem className="w-full">
                   <FormLabel>Photo Gallery</FormLabel>
                   <FormControl>
@@ -685,9 +561,8 @@ export default function EventForm({
             <Button type="button" variant="outline">
               Next
             </Button>
-            {/* button state - isSubmitting */}
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating Event..." : "Finish"}
+              {isSubmitting ? "Submitting Event..." : "Finish"}
             </Button>
           </div>
         </form>

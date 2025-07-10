@@ -4,7 +4,13 @@ import { Control, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Role } from "@/types/event";
 import { Button } from "../ui/button";
-import { FormControl, FormItem, FormLabel, FormField, FormMessage } from "../ui/form"; // form components
+import {
+  FormControl,
+  FormItem,
+  FormLabel,
+  FormField,
+  FormMessage,
+} from "../ui/form"; // form components
 import { MinusIcon } from "lucide-react";
 import {
   Select,
@@ -101,7 +107,7 @@ export default function RolesForm({
             <FormField
               control={control}
               name={`roles.${index}.title`}
-              render={({ field }) => (
+              render={() => (
                 <FormItem className="w-full">
                   <FormLabel>Role</FormLabel>
                   <FormControl>

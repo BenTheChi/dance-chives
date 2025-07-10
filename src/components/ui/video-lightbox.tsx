@@ -1,20 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Maximize,
-  Users,
-  Trophy,
-  Calendar,
-  ExternalLink,
-} from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
 import { Video } from "@/types/event";
 import Link from "next/link";
 
@@ -49,27 +40,13 @@ export function VideoLightbox({
   sectionTitle,
   bracketTitle,
 }: VideoLightboxProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
     } else {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () =>
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
