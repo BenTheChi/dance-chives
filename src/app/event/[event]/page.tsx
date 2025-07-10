@@ -52,8 +52,8 @@ export default async function EventPage({ params }: PageProps) {
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full">
           <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 xl:col-span-4 auto-rows-min">
-            <Link href="/" className="hover:underline">
-              {`< Search Events`}
+            <Link href="/events" className="hover:underline">
+              {`Back to Events`}
             </Link>
             <Button asChild>
               <Link href={`/event/${event.id}/edit`}>Edit</Link>

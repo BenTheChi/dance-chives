@@ -21,7 +21,7 @@ import RolesForm from "./roles-form";
 import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const userSearchItemSchema = z.object({
   id: z.string(),
@@ -121,17 +121,43 @@ interface EventFormProps {
 export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
+  const router = useRouter();
 
-  const [activeMainTab, setActiveMainTab] = useState("Sections");
-  const [activeSectionId, setActiveSectionId] = useState("2");
-  const [activeSubEventId, setActiveSubEventId] = useState("1");
+  const [activeMainTab, setActiveMainTab] = useState("Event Details");
+  const [activeSectionId, setActiveSectionId] = useState("0");
+  const [activeSubEventId, setActiveSubEventId] = useState("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize form with default values or initial data
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: "onSubmit",
-    defaultValues: initialData || {},
+    defaultValues: initialData || {
+      eventDetails: {
+        creatorId: "",
+        title: "",
+        city: {
+          id: 0,
+          name: "",
+          countryCode: "",
+          region: "",
+          population: 0,
+        },
+        startDate: "",
+        description: "",
+        schedule: "",
+        address: "",
+        startTime: "",
+        endTime: "",
+        prize: "",
+        entryCost: "",
+        poster: null,
+      },
+      sections: [],
+      roles: [],
+      subEvents: [],
+      gallery: [],
+    },
   });
 
   const { control, handleSubmit, setValue, register, watch } = form;
@@ -257,19 +283,33 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           toast.success("Event updated successfully!", {
             description: "Your event has been updated and is now live.",
           });
+
+          if (response.status === 200) {
+            router.push(`/event/${pathname[pathname.length - 2]}`);
+          } else {
+            toast.error("Failed to update event", {
+              description: "Please try again.",
+            });
+          }
         } else {
           toast.success("Event created successfully!", {
             description: "Your event has been created and is now live.",
           });
+
+          if (response.event) {
+            router.push(`/event/${response.event.id}`);
+          } else {
+            toast.error("Failed to submit event", {
+              description: "Please try again.",
+            });
+          }
         }
-        // TODO: Redirect to the event page
-        // router.push(`/events/${response.event.id}`);
       }
       // if non res error, log it
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("An unexpected error occurred", {
-        description: "Please try again later.",
+        description: "Please try again.",
       });
     } finally {
       setIsSubmitting(false);

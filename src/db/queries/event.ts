@@ -1,5 +1,12 @@
 import driver from "../driver";
-import { Event, Section, Bracket, Video, SubEvent } from "../../types/event";
+import {
+  Event,
+  Section,
+  Bracket,
+  Video,
+  SubEvent,
+  EventCard,
+} from "../../types/event";
 import { UserSearchItem } from "../../types/user";
 
 // Neo4j record interfaces
@@ -946,4 +953,21 @@ export const deleteEvent = async (event: Event) => {
   );
   await session.close();
   return result.records[0].get("e").properties;
+};
+
+export const getEvents = async (): Promise<EventCard[]> => {
+  const session = driver.session();
+  const result = await session.run(
+    `MATCH (e:Event)-[:IN]->(c:City)
+    OPTIONAL MATCH (e)<-[:POSTER]-(p:Picture)
+    RETURN e {
+      id: e.id,
+      title: e.title,
+      imageUrl: p.url,
+      city: c.name,
+      styles: []
+    }`
+  );
+  await session.close();
+  return result.records.map((record) => record.get("e"));
 };

@@ -104,7 +104,7 @@ interface addEventProps {
 interface response {
   error?: string;
   status: number;
-  event: object | null;
+  event: Event | null;
 }
 
 export async function addEvent(props: addEventProps): Promise<response> {

@@ -74,3 +74,13 @@ export interface Picture {
   type: string;
   file: File | null;
 }
+
+export interface EventCard {
+  id: string;
+  title: string;
+  series?: string;
+  imageUrl?: string;
+  date: string;
+  city: string;
+  styles: string[];
+}
