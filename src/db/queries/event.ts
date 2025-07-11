@@ -927,32 +927,31 @@ export const EditEvent = async (event: Event) => {
   }
 };
 
-export const deleteEvent = async (event: Event) => {
-  const { id, eventDetails } = event;
+export const deleteEvent = async (eventId: string) => {
   const session = driver.session();
-  const result = await session.run(
-    `
-    // First remove all user relationships from videos to preserve user nodes
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[:IN]-(u:User)
-    DELETE (u)-[r:IN]->(v)
+  try {
+    const result = await session.run(
+      `MATCH (e:Event {id: $id})
+    OPTIONAL MATCH (e)<-[:POSTER|PHOTO]-(pic:Picture)
+    OPTIONAL MATCH (e)<-[:PART_OF]-(se:SubEvent)<-[:POSTER]-(sePic:Picture)
+    OPTIONAL MATCH (e)<-[:IN]-(s:Section)
+    OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+    OPTIONAL MATCH (s)<-[:IN]-(v1:Video)
+    OPTIONAL MATCH (b)<-[:IN]-(v2:Video)
     
-    // Also handle videos in brackets
-    WITH e
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(u:User)
-    DELETE (u)-[r:IN]->(v)
+    DETACH DELETE pic, se, sePic, s, b, v1, v2, e
     
-    // Now delete the event (this will cascade to sections, brackets, and videos)
-    WITH e
-    MATCH (e:Event {id: $id})
-    DETACH DELETE e
-    `,
-    {
-      id,
-      title: eventDetails.title,
-    }
-  );
-  await session.close();
-  return result.records[0].get("e").properties;
+    RETURN count(*) as deletedNodes`,
+      {
+        id: eventId,
+      }
+    );
+    await session.close();
+    return true;
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    return false;
+  }
 };
 
 export const getEvents = async (): Promise<EventCard[]> => {
@@ -970,4 +969,38 @@ export const getEvents = async (): Promise<EventCard[]> => {
   );
   await session.close();
   return result.records.map((record) => record.get("e"));
+};
+
+//Gets all pictures including poster, gallery, and subevent posters
+export const getEventPictures = async (eventId: string) => {
+  const session = driver.session();
+  const result = await session.run(
+    `MATCH (e:Event {id: $eventId})
+    OPTIONAL MATCH (e)<-[:POSTER]-(poster:Picture)
+    OPTIONAL MATCH (e)<-[:PHOTO]-(gallery:Picture)
+    OPTIONAL MATCH (e)<-[:PART_OF]-(se:SubEvent)<-[:POSTER]-(subEventPoster:Picture)
+
+    RETURN poster, gallery, subEventPoster
+    `,
+    {
+      eventId,
+    }
+  );
+  await session.close();
+
+  const pictures: string[] = [];
+
+  result.records.forEach((record) => {
+    if (record.get("poster")?.properties["url"]) {
+      pictures.push(record.get("poster").properties["url"]);
+    }
+    if (record.get("gallery")?.properties["url"]) {
+      pictures.push(record.get("gallery").properties["url"]);
+    }
+    if (record.get("subEventPoster")?.properties["url"]) {
+      pictures.push(record.get("subEventPoster").properties["url"]);
+    }
+  });
+
+  return pictures;
 };

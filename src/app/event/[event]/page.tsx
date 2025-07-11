@@ -20,6 +20,7 @@ import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
+import { DeleteEventButton } from "@/components/DeleteEventButton";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -58,7 +59,7 @@ export default async function EventPage({ params }: PageProps) {
             <Button asChild>
               <Link href={`/event/${event.id}/edit`}>Edit</Link>
             </Button>
-            {/* <Button onClick={() => console.log("delete")}>Delete</Button> */}
+            <DeleteEventButton eventId={event.id} />
           </div>
 
           {event.eventDetails.poster ? (

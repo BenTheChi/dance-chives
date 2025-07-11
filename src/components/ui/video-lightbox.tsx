@@ -144,7 +144,7 @@ export function VideoLightbox({
             <div className="flex-1 relative min-h-[200px] sm:min-h-[300px]">
               <iframe
                 src={`https://www.youtube.com/embed/${
-                  video.src.split("v=")[1]
+                  video.src.split("v=")[1].split("&")[0]
                 }?autoplay=1&rel=0`}
                 title={video.title}
                 className="w-full h-full"

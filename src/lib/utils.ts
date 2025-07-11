@@ -24,6 +24,29 @@ export function slugify(text: string) {
     .replace(/^-+|-+$/g, ""); // Trim hyphens from start/end
 }
 
+export function extractYouTubeVideoId(url: string): string | null {
+  // Regular expressions to match different YouTube URL formats
+  const patterns = [
+    // Standard watch URL
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/,
+    // Shortened youtu.be URL
+    /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?&]+)/,
+    // Embed URL
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^?&]+)/,
+    // YouTube Short
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([^?&]+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
 export function generateSlugId(title: string, randomLength = 6) {
   const slug = slugify(title);
   const randomId = generateShortId(randomLength);

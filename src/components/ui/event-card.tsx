@@ -20,7 +20,7 @@ export function EventCard({
   onClick,
 }: EventCardProps) {
   //Parse youtube id from src
-  const youtubeId = video.src.split("v=")[1];
+  const youtubeId = video.src.split("v=")[1]?.split("&")[0];
   const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
 
   return (
