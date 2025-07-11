@@ -930,7 +930,7 @@ export const EditEvent = async (event: Event) => {
 export const deleteEvent = async (eventId: string) => {
   const session = driver.session();
   try {
-    const result = await session.run(
+    await session.run(
       `MATCH (e:Event {id: $id})
     OPTIONAL MATCH (e)<-[:POSTER|PHOTO]-(pic:Picture)
     OPTIONAL MATCH (e)<-[:PART_OF]-(se:SubEvent)<-[:POSTER]-(sePic:Picture)
