@@ -30,7 +30,6 @@ export default function DateRangePicker({
   className,
   name,
   label,
-  ...props
 }: DateRangePickerProps) {
   const form = useFormContext();
 

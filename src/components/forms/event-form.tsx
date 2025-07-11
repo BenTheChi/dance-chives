@@ -8,22 +8,21 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage, // add form message to display errors / validation - tentative
 } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner"; // toaster notifications
+import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role, SubEvent, Picture } from "@/types/event";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
 import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
-import { addEvent } from "@/lib/server_actions/event_actions";
+import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
+import { usePathname, useRouter } from "next/navigation";
 
-// Define the schema for the form with proper validation
 const userSearchItemSchema = z.object({
   id: z.string(),
   displayName: z.string(),
@@ -33,7 +32,8 @@ const userSearchItemSchema = z.object({
 const videoSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Video title is required"), // switch to min for all non-optional
-  src: z.string()
+  src: z
+    .string()
     .min(1, "Video source is required")
     .regex(
       /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}(&.*)?$/,
@@ -114,136 +114,54 @@ const formSchema = z.object({
 
 export type FormValues = z.infer<typeof formSchema>;
 
-export const mockUsers = ["Ben", "Jane", "Jerry", "Steve", "Bob"];
+interface EventFormProps {
+  initialData?: FormValues;
+}
 
-export default function EventForm() {
-  const [activeMainTab, setActiveMainTab] = useState("Sections");
-  const [activeSectionId, setActiveSectionId] = useState("2");
-  const [activeSubEventId, setActiveSubEventId] = useState("1");
-  const [isSubmitting, setIsSubmitting] = useState(false); // add state for submitting
+export default function EventForm({ initialData }: EventFormProps = {}) {
+  const pathname = usePathname().split("/");
+  const isEditing = pathname[pathname.length - 1] === "edit";
+  const router = useRouter();
 
-  // Initialize form with default values
+  const [activeMainTab, setActiveMainTab] = useState("Event Details");
+  const [activeSectionId, setActiveSectionId] = useState("0");
+  const [activeSubEventId, setActiveSubEventId] = useState("0");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize form with default values or initial data
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    mode: "onSubmit", // submit mode - onSubmit
-    defaultValues: {
+    mode: "onSubmit",
+    defaultValues: initialData || {
       eventDetails: {
-        creatorId: "123abc",
-        title: "Massive Monkees 2",
+        creatorId: "",
+        title: "",
         city: {
-          id: 1,
-          name: "Seattle",
-          countryCode: "US",
-          region: "WA",
-          population: 750000,
+          id: 0,
+          name: "",
+          countryCode: "",
+          region: "",
+          population: 0,
         },
-        startDate: "06/23/2025",
-        description: "something something",
-        schedule: "1:00 - start",
-        address: "2345 street",
-        startTime: "08:00",
-        endTime: "15:43",
-        entryCost: "08",
-        prize: "nothing",
-        poster: {
-          id: "b2e21079-9374-48e0-8227-2030c6ad6ce6",
-          title: "addEvent.jpg",
-          url: "https://storage.googleapis.com/dance-chives-posters/b2e21079-9374-48e0-8227-2030c6ad6ce6-addEvent.jpg",
-          type: "poster",
-          file: null,
-        },
+        startDate: "",
+        description: "",
+        schedule: "",
+        address: "",
+        startTime: "",
+        endTime: "",
+        prize: "",
+        entryCost: "",
+        poster: null,
       },
+      sections: [],
       roles: [],
-      subEvents: [
-        {
-          id: "1",
-          title: "Battlezone BBQ",
-          description: "Battlezone BBQ",
-          schedule: "",
-          startDate: "06/23/2025",
-          address: "333 ave",
-          startTime: "07:00",
-          endTime: "",
-          poster: {
-            id: "451e8fa8-5096-443a-bb4f-3fcf65843526",
-            title: "DSC00020.jpg",
-            url: "https://storage.googleapis.com/dance-chives-posters/451e8fa8-5096-443a-bb4f-3fcf65843526-DSC00020.jpg",
-            type: "poster",
-            file: null,
-          },
-        },
-      ],
-      sections: [
-        {
-          id: "1",
-          title: "Judge Showcases",
-          description: "",
-          hasBrackets: false,
-          videos: [
-            {
-              id: "1",
-              title: "Judge Showcase 1",
-              src: "https://www.youtube.com/watch?v=lNbMSdohIYM",
-              taggedUsers: [],
-            },
-          ],
-          brackets: [
-            {
-              id: "1750720486424",
-              title: "Shouldn't be seen",
-              videos: [
-                {
-                  id: "1750720493754",
-                  title: "Nope",
-                  src: "https://www.youtube.com/watch?v=RNiZy6t-XnA",
-                  taggedUsers: [],
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "2",
-          title: "1 vs 1 Breaking",
-          description:
-            "Battlezone is back for its fifteenth edition this year. We're bringing back some local legends, the previous winner, and good vibrations. This year, we will have a 1v1 Breaking category and a 2v2 All-styles category. We hope to see you guys come get down on our floor.",
-          hasBrackets: true,
-          videos: [],
-          brackets: [
-            {
-              id: "1",
-              title: "Prelims",
-              videos: [
-                {
-                  id: "1",
-                  title: "Battle 1",
-                  src: "https://www.youtube.com/watch?v=lNbMSdohIYM",
-                  taggedUsers: [],
-                },
-              ],
-            },
-            {
-              id: "5",
-              title: "Final",
-              videos: [
-                {
-                  id: "1750721038083",
-                  title: "Final Battle",
-                  src: "https://www.youtube.com/watch?v=zurzKXaG2Kk",
-                  taggedUsers: [],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+      subEvents: [],
       gallery: [],
     },
   });
 
-  const { control, handleSubmit, setValue, register, watch, formState: { errors } } = form; // add form state to errors
+  const { control, handleSubmit, setValue, register, watch } = form;
 
-  // Watch the sections array to get the current state
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
   const subEvents = watch("subEvents") ?? [];
@@ -298,6 +216,7 @@ export default function EventForm() {
       startTime: "",
       endTime: "",
       description: "",
+      schedule: "",
       poster: null,
     };
     setValue("subEvents", [...subEvents, newSubEvent]);
@@ -315,63 +234,89 @@ export default function EventForm() {
   };
 
   // extract field names from validation errors
-  const getFieldNamesFromErrors = (errors: any): string[] => {
+  const getFieldNamesFromErrors = (errors: FieldErrors): string[] => {
     const fieldNames: string[] = [];
-    
-    const extractFieldNames = (obj: any, prefix = '') => {
+
+    const extractFieldNames = (obj: FieldErrors, prefix = "") => {
       for (const key in obj) {
-        if (obj[key] && typeof obj[key] === 'object') {
+        if (obj[key] && typeof obj[key] === "object") {
           if (obj[key].message) {
             // This is a field with an error
             const fieldName = prefix ? `${prefix}.${key}` : key;
             fieldNames.push(fieldName);
-          } else {
-            // This is a nested object, recurse
+          } else if (!obj[key].type) {
+            // This is a nested object (not a FieldError), recurse
             const newPrefix = prefix ? `${prefix}.${key}` : key;
-            extractFieldNames(obj[key], newPrefix);
+            extractFieldNames(obj[key] as FieldErrors, newPrefix);
           }
         }
       }
     };
-    
+
     extractFieldNames(errors);
     return fieldNames;
   };
 
   const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true); // added loadstate - isSubmitting
-    console.log("Form submitted:", data);
+    setIsSubmitting(true);
 
-    // pulled await into try block
     try {
-      // Handle form submission
-      const response = await addEvent(data);
-      console.log(response);
-
-      // if response.error, show sonner toast error
-      if (response.error) {
-        toast.error("Failed to create event", {
-          description: response.error,
-        });
+      let response;
+      if (isEditing) {
+        response = await editEvent(pathname[pathname.length - 2], data);
       } else {
-        toast.success("Event created successfully!", {
-          description: "Your event has been created and is now live.",
-        });
-        // TODO: Redirect to the event page
-        // router.push(`/events/${response.event.id}`);
+        response = await addEvent(data);
+      }
+
+      if (response.error) {
+        if (isEditing) {
+          toast.error("Failed to update event", {
+            description: response.error,
+          });
+        } else {
+          toast.error("Failed to create event", {
+            description: response.error,
+          });
+        }
+      } else {
+        if (isEditing) {
+          toast.success("Event updated successfully!", {
+            description: "Your event has been updated and is now live.",
+          });
+
+          if (response.status === 200) {
+            router.push(`/event/${pathname[pathname.length - 2]}`);
+          } else {
+            toast.error("Failed to update event", {
+              description: "Please try again.",
+            });
+          }
+        } else {
+          toast.success("Event created successfully!", {
+            description: "Your event has been created and is now live.",
+          });
+
+          if (response.event) {
+            router.push(`/event/${response.event.id}`);
+          } else {
+            toast.error("Failed to submit event", {
+              description: "Please try again.",
+            });
+          }
+        }
       }
       // if non res error, log it
     } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("An unexpected error occurred", {
-        description: "Please try again later.",
+        description: "Please try again.",
       });
     } finally {
-      setIsSubmitting(false); // reset loadstate - isSubmitting
+      setIsSubmitting(false);
     }
   };
 
-  const onError = (errors: any) => {
+  const onError = (errors: FieldErrors) => {
     console.error("Form validation errors:", errors);
 
     const invalidFields = getFieldNamesFromErrors(errors);
@@ -386,32 +331,28 @@ export default function EventForm() {
 
     // Map required fields to user-friendly names, including dynamic array fields
     const fieldDisplayNames: { [key: string]: string } = {
-      // Event Details
-      'eventDetails.title': 'Event Title',
-      'eventDetails.startDate': 'Event Date',
-      'eventDetails.city.name': 'City Name',
-      'eventDetails.city.countryCode': 'Country Code',
-      'eventDetails.city.region': 'Region',
-      // Sections
-      'sections.title': 'Section Title',
-      'sections.videos.title': 'Video Title',
-      'sections.videos.src': 'Video Source',
-      'sections.brackets.title': 'Bracket Title',
-      'sections.brackets.videos.title': 'Bracket Video Title',
-      'sections.brackets.videos.src': 'Bracket Video Source',
-      // SubEvents
-      'subEvents.title': 'Title',
-      'subEvents.startDate': 'Date',
-      // Roles
-      'roles.title': 'Role',
-      'roles.user': 'User',
+      "eventDetails.title": "Event Title",
+      "eventDetails.startDate": "Event Date",
+      "eventDetails.city.name": "City Name",
+      "eventDetails.city.countryCode": "Country Code",
+      "eventDetails.city.region": "Region",
+      "sections.title": "Section Title",
+      "sections.videos.title": "Video Title",
+      "sections.videos.src": "Video Source",
+      "sections.brackets.title": "Bracket Title",
+      "sections.brackets.videos.title": "Bracket Video Title",
+      "sections.brackets.videos.src": "Bracket Video Source",
+      "subEvents.title": "Title",
+      "subEvents.startDate": "Date",
+      "roles.title": "Role",
+      "roles.user": "User",
     };
 
     const tabErrors: { [tab: string]: Set<string> } = {};
 
     for (const field of invalidFields) {
       // Find which tab this field belongs to
-      const tabKey = Object.keys(tabMap).find(tab => field.startsWith(tab));
+      const tabKey = Object.keys(tabMap).find((tab) => field.startsWith(tab));
       if (tabKey) {
         if (!tabErrors[tabKey]) tabErrors[tabKey] = new Set();
         // Try to get a display name for the field
@@ -419,26 +360,36 @@ export default function EventForm() {
         let displayName = fieldDisplayNames[field];
         if (!displayName) {
           // regex to remove indices (e.g., sections.0.videos.0.title -> sections.videos.title)
-          const genericField = field.replace(/\.(\d+)/g, '');
+          const genericField = field.replace(/\.(\d+)/g, "");
           // Try for bracketed videos
-          if (genericField.includes('brackets') && genericField.includes('videos')) {
-            if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.brackets.videos.title'];
-            else if (genericField.endsWith('.src')) displayName = fieldDisplayNames['sections.brackets.videos.src'];
-            else if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.brackets.title'];
-          } else if (genericField.includes('videos')) {
-            if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.videos.title'];
-            else if (genericField.endsWith('.src')) displayName = fieldDisplayNames['sections.videos.src'];
-          } else if (genericField.includes('brackets')) {
-            if (genericField.endsWith('.title')) displayName = fieldDisplayNames['sections.brackets.title'];
-          } else if (genericField.includes('title')) {
+          if (
+            genericField.includes("brackets") &&
+            genericField.includes("videos")
+          ) {
+            if (genericField.endsWith(".title"))
+              displayName = fieldDisplayNames["sections.brackets.videos.title"];
+            else if (genericField.endsWith(".src"))
+              displayName = fieldDisplayNames["sections.brackets.videos.src"];
+            else if (genericField.endsWith(".title"))
+              displayName = fieldDisplayNames["sections.brackets.title"];
+          } else if (genericField.includes("videos")) {
+            if (genericField.endsWith(".title"))
+              displayName = fieldDisplayNames["sections.videos.title"];
+            else if (genericField.endsWith(".src"))
+              displayName = fieldDisplayNames["sections.videos.src"];
+          } else if (genericField.includes("brackets")) {
+            if (genericField.endsWith(".title"))
+              displayName = fieldDisplayNames["sections.brackets.title"];
+          } else if (genericField.includes("title")) {
             displayName = fieldDisplayNames[`${tabKey}.title`];
-          } else if (genericField.includes('startDate')) {
+          } else if (genericField.includes("startDate")) {
             displayName = fieldDisplayNames[`${tabKey}.startDate`];
-          } else if (genericField.includes('user')) {
+          } else if (genericField.includes("user")) {
             displayName = fieldDisplayNames[`${tabKey}.user`];
           }
           // Fallback: use last part of field path
-          if (!displayName) displayName = genericField.split('.').pop() || 'Unknown Field';
+          if (!displayName)
+            displayName = genericField.split(".").pop() || "Unknown Field";
         }
         tabErrors[tabKey].add(displayName);
       }
@@ -448,9 +399,11 @@ export default function EventForm() {
     const toastContent = (
       <div>
         <div>Please fix the following issues:</div>
-        {Object.keys(tabErrors).map(tabKey => {
+        {Object.keys(tabErrors).map((tabKey) => {
           const tabName = tabMap[tabKey];
-          const fields = Array.from(tabErrors[tabKey]).filter(Boolean).join(', ');
+          const fields = Array.from(tabErrors[tabKey])
+            .filter(Boolean)
+            .join(", ");
           return (
             <div key={tabKey}>
               <strong>{tabName}:</strong> {fields}
@@ -475,7 +428,9 @@ export default function EventForm() {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-center mb-8">New Event</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">
+        {isEditing ? "Edit Event" : "New Event"}
+      </h1>
 
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit, onError)}>
@@ -553,7 +508,6 @@ export default function EventForm() {
                   setValue={setValue}
                   activeSubEventIndex={activeSubEventIndex}
                   activeSubEvent={activeSubEvent}
-                  subEvents={subEvents}
                   activeSubEventId={activeSubEventId}
                   register={register}
                 />
@@ -612,7 +566,7 @@ export default function EventForm() {
             <FormField
               control={control}
               name="gallery"
-              render={({ field }) => (
+              render={() => (
                 <FormItem className="w-full">
                   <FormLabel>Photo Gallery</FormLabel>
                   <FormControl>
@@ -647,9 +601,8 @@ export default function EventForm() {
             <Button type="button" variant="outline">
               Next
             </Button>
-            {/* button state - isSubmitting */}
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating Event..." : "Finish"}
+              {isSubmitting ? "Submitting Event..." : "Finish"}
             </Button>
           </div>
         </form>

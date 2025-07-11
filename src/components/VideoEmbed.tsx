@@ -14,6 +14,8 @@ function convertYouTubeUrlToEmbed(url: string): string | null {
 
     //Youtube Short
     /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([^?&]+)/,
+
+    //Playlist
   ];
 
   // Try each pattern
@@ -23,6 +25,8 @@ function convertYouTubeUrlToEmbed(url: string): string | null {
     if (match) {
       // Extract video ID (first capturing group)
       const videoId = match[1];
+
+      console.log(videoId);
 
       // Return embed URL
       return `https://www.youtube.com/embed/${videoId}`;

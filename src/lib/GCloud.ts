@@ -35,3 +35,22 @@ export async function uploadToGCloudStorage(
 
   return Promise.all(uploadPromises);
 }
+
+export async function deleteFromGCloudStorage(url: string): Promise<boolean> {
+  const storage = new Storage();
+  const bucket = storage.bucket("dance-chives-posters");
+  const file = bucket.file(url.split("/").pop()!);
+
+  try {
+    await file.delete();
+    return true;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error deleting file from GCloud Storage:", error.message);
+    } else {
+      console.error("Error deleting file from GCloud Storage:", error);
+    }
+
+    return false;
+  }
+}

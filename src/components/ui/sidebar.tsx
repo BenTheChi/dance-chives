@@ -259,11 +259,11 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
+  const { toggleSidebar } = useSidebar();
+
   if (usePathname() === "/signup") {
     return <></>;
   }
-
-  const { toggleSidebar } = useSidebar();
 
   return (
     <Button

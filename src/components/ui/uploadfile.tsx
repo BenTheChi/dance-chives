@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Card,
   CardHeader,
@@ -192,7 +191,7 @@ export default function UploadFile<T extends FieldValues>({
   );
 }
 
-function UploadIcon(props: any) {
+function UploadIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

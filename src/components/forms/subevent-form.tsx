@@ -19,7 +19,6 @@ interface SubEventFormProps {
   setValue: UseFormSetValue<FormValues>;
   activeSubEventIndex: number;
   activeSubEvent: SubEvent;
-  subEvents: SubEvent[];
   activeSubEventId: string;
   register: UseFormRegister<FormValues>;
 }
@@ -29,7 +28,6 @@ export function SubEventForm({
   setValue,
   activeSubEventIndex,
   activeSubEvent,
-  subEvents,
   activeSubEventId,
   register,
 }: SubEventFormProps) {
@@ -158,7 +156,7 @@ export function SubEventForm({
         <FormField
           control={control}
           name="eventDetails.poster"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>Poster Upload</FormLabel>
               <FormControl>
