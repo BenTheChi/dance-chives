@@ -31,7 +31,7 @@ export async function uploadToGCloudStorage(
 
   const uploadPromises = files.map(async (file) => {
     const id = crypto.randomUUID();
-    const uniqueFileName = `${id}-${file.name}`;
+    const uniqueFileName = `profile-pictures/${id}-${file.name}`;
 
     try {
       // Convert File to Buffer
