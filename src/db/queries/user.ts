@@ -51,6 +51,25 @@ export const signupUser = async (
   return result.records[0].get("u");
 };
 
+// revised updateUser
+// understandings: each CRUD method has the general routine: a. open a session w neo4j, b. 
+export const updateUser = async (id: string, updates: Record<string, any>) => {
+  const session = driver.session();
+
+  // build a dynamic list of updates - 1 or several can be extracted to list
+  const setClause = Object.keys(updates)
+    .map(key => `u.${key} = $${key}`)
+    .join(', ');
+
+  const result = await session.run(
+    `MATCH (u:User {id: $id}) SET ${setClause} RETURN u`,
+    {id, ...updates}
+  );
+
+  session.close();
+  return result.records[0].get("u").properties;
+};
+
 // export const updateUser = async (id: string, user: Record<string, any>) => {
 //   const session = driver.session();
 //   const result = await session.run(

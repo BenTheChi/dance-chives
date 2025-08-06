@@ -54,6 +54,14 @@ export function UserMenu({ session }: UserMenuProps) {
                         <HomeIcon className="mr-2 h-4 w-4" />
                         Dashboard
                     </Button>
+                    <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => router.push("/profile")}
+                    >
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    Profile
+                </Button>
                 </div>
                 <div className="flex flex-col gap-2">
                     <Button
