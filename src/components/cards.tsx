@@ -1,32 +1,34 @@
-// components/cards.tsx (or cards/index.tsx)
+import Image from "next/image";
 import React from "react";
-
-interface EventcardProps {
-  title: string;
-  series: string;
-  imageUrl: string;
-  date: string;
-  city: string;
-  styles: string[];
-}
+import Link from "next/link";
+import { EventCard } from "@/types/event";
 
 const Eventcard = ({
+  id,
   title,
   series,
   imageUrl,
   date,
   city,
   styles,
-}: EventcardProps) => {
+}: EventCard) => {
   return (
     <div className="bg-white shadow-md rounded-md mt-4 mb-2 ml-0 mr-0 w-70 h-40 flex overflow-hidden">
       {/* Image */}
-      <img src={imageUrl} alt="event" className="w-1/2 h-full object-cover" />
+      <Image
+        src={imageUrl || "/exploreEvents.jpg"}
+        alt="event"
+        className="w-1/2 h-full object-cover"
+        width={100}
+        height={100}
+      />
 
       {/* Text section with 3px border on top, right, bottom (no left) */}
       <div className="flex flex-col justify-center items-start p-3 w-1/2 border-t-[3px] border-r-[3px] border-b-[3px] border-gray-300">
-        <p className="text-base font-semibold text-gray-800">{title}</p>
-        <p className="text-xs text-gray-600">{series}</p>
+        <Link href={`/event/${id}`}>
+          <p className="text-base font-semibold text-gray-800">{title}</p>
+        </Link>
+        {series && <p className="text-xs text-gray-600">{series}</p>}
         <p className="text-xs text-gray-600">{date}</p>
         <p className="text-xs text-gray-600">{city}</p>
 

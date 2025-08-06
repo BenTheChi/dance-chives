@@ -2,11 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
-import { signupUser, updateUser } from "@/db/queries/user";
+import { signupUser } from "@/db/queries/user";
 import { auth } from "@/auth";
 
 export async function signInWithGoogle() {
-  const { data, error } = await signIn("google");
+  const { error } = await signIn("google");
 
   if (error) {
     console.error(error);

@@ -1,9 +1,33 @@
 import { Storage } from "@google-cloud/storage";
 
+// Initialize Google Cloud Storage with base64-encoded service account
+function initializeStorage() {
+  const serviceAccountB64 = process.env.GCP_SERVICE_ACCOUNT_B64;
+
+  if (!serviceAccountB64) {
+    throw new Error("GCP_SERVICE_ACCOUNT_B64 environment variable is not set");
+  }
+
+  try {
+    // Decode the base64 service account key
+    const serviceAccountKey = JSON.parse(
+      Buffer.from(serviceAccountB64, "base64").toString("utf-8")
+    );
+
+    // Initialize Storage with explicit credentials
+    return new Storage({
+      credentials: serviceAccountKey,
+      projectId: serviceAccountKey.project_id,
+    });
+  } catch (error) {
+    throw new Error(`Failed to initialize Google Cloud Storage: ${error}`);
+  }
+}
+
 export async function uploadToGCloudStorage(
   files: File[]
 ): Promise<Array<{ success: boolean; url?: string; id?: string }>> {
-  const storage = new Storage();
+  const storage = initializeStorage();
 
   const uploadPromises = files.map(async (file) => {
     const id = crypto.randomUUID();
@@ -34,4 +58,23 @@ export async function uploadToGCloudStorage(
   });
 
   return Promise.all(uploadPromises);
+}
+
+export async function deleteFromGCloudStorage(url: string): Promise<boolean> {
+  const storage = initializeStorage();
+  const bucket = storage.bucket("dance-chives-posters");
+  const file = bucket.file(url.split("/").pop()!);
+
+  try {
+    await file.delete();
+    return true;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error deleting file from GCloud Storage:", error.message);
+    } else {
+      console.error("Error deleting file from GCloud Storage:", error);
+    }
+
+    return false;
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
@@ -15,16 +15,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { UserSearchItem } from "@/types/user";
 import { CitySearchItem } from "@/types/city";
-import { Control } from "react-hook-form";
+import { Control, FieldPath } from "react-hook-form";
 import { FormField } from "./ui/form";
 import { FormLabel } from "./ui/form";
 import { FormControl } from "./ui/form";
 import { FormItem } from "./ui/form";
+import { FormValues } from "./forms/event-form";
 
 type SearchItem = CitySearchItem | UserSearchItem;
 
 interface DebouncedSearchSelectProps<T extends SearchItem> {
-  control: Control<any>;
+  control: Control<FormValues>;
   label: string;
   value?: T | null;
   defaultValue?: T;
@@ -32,7 +33,7 @@ interface DebouncedSearchSelectProps<T extends SearchItem> {
   onSearch: (keyword: string) => Promise<T[]>;
   placeholder?: string;
   debounceDelay?: number;
-  name: string;
+  name: FieldPath<FormValues>;
   disabled?: boolean;
   required?: boolean;
   className?: string;
@@ -40,11 +41,8 @@ interface DebouncedSearchSelectProps<T extends SearchItem> {
   getItemId: (item: T) => string | number;
 }
 
-const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
-  T extends SearchItem
->(
-  props: DebouncedSearchSelectProps<T>,
-  ref: React.ForwardedRef<HTMLButtonElement>
+function DebouncedSearchSelect<T extends SearchItem>(
+  props: DebouncedSearchSelectProps<T>
 ) {
   const {
     control,
@@ -221,8 +219,6 @@ const DebouncedSearchSelect = forwardRef(function DebouncedSearchSelect<
       />
     </div>
   );
-}) as <T extends SearchItem>(
-  props: DebouncedSearchSelectProps<T> & { ref?: React.Ref<HTMLButtonElement> }
-) => React.ReactElement;
+}
 
 export { DebouncedSearchSelect };
