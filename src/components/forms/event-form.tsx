@@ -75,7 +75,14 @@ const eventDetailsSchema = z.object({
     region: z.string().min(1, "Region is required"),
     population: z.number(),
   }),
-  startDate: z.string().min(1, "Start date is required"), // switch to min for all non-optional
+  // The year of this date should be between 1900 and 2300
+  startDate: z
+    .string()
+    .min(1, "Start date is required")
+    .regex(
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
+      "Event date must be in a valid format"
+    ), // switch to min for all non-optional
   description: z.string().optional(),
   schedule: z.string().optional(),
   address: z.string().optional(),
@@ -97,7 +104,13 @@ const subEventSchema = z.object({
   title: z.string().min(1, "Sub-event title is required"), // switch to min for all non-optional
   description: z.string().optional(),
   schedule: z.string().optional(),
-  startDate: z.string().min(1, "Sub-event start date is required"), // switch to min for all non-optional
+  startDate: z
+    .string()
+    .min(1, "Start date is required")
+    .regex(
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
+      "Sub event date must be in a valid format"
+    ), // switch to min for all non-optional
   address: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
