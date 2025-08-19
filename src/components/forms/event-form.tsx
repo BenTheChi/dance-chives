@@ -140,6 +140,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const [activeSectionId, setActiveSectionId] = useState("0");
   const [activeSubEventId, setActiveSubEventId] = useState("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  //TODO: set up logic for next buttons to use the active tab index
 
   // Initialize form with default values or initial data
   const form = useForm<FormValues>({
@@ -439,6 +440,22 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     (s) => s.id === activeSubEventId
   );
 
+  // Find the index of the active tab
+  const activeTabIndex = mainTabs.findIndex((tab) => tab === activeMainTab);
+
+  // Handlers for Previous and Next buttons
+  const handlePreviousTab = () => {
+    if (activeTabIndex > 0) {
+      setActiveMainTab(mainTabs[activeTabIndex - 1]);
+    }
+  };
+
+  const handleNextTab = () => {
+    if (activeTabIndex < mainTabs.length - 1) {
+      setActiveMainTab(mainTabs[activeTabIndex + 1]);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold text-center mb-8">
@@ -608,10 +625,20 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             <Button type="button" variant="destructive">
               Cancel
             </Button>
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePreviousTab}
+              disabled={activeTabIndex === 0}
+            >
               Previous
             </Button>
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleNextTab}
+              disabled={activeTabIndex === mainTabs.length - 1}
+            >
               Next
             </Button>
             <Button type="submit" disabled={isSubmitting}>
