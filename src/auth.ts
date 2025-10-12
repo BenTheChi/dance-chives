@@ -15,6 +15,7 @@ declare module "next-auth" {
       displayName?: string;
       username?: string;
       aboutme?: string;
+      auth?: number; // Add auth level to session
     } & DefaultSession["user"];
   }
 }
@@ -29,4 +30,30 @@ declare module "next-auth" {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [Google],
+  callbacks: {
+    session: async ({ session, token }) => {
+      if (session?.user && token.sub) {
+        // Fetch user's auth level from PostgreSQL
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: {
+            id: true,
+            auth: true,
+            // Add other custom fields you want in session
+          },
+        });
+
+        session.user.id = token.sub;
+        session.user.auth = dbUser?.auth ?? undefined;
+      }
+      return session;
+    },
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.sub = user.id;
+      }
+      return token;
+    },
+  },
+  session: { strategy: "jwt" },
 });
