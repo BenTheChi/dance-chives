@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: dance-chives-postgres
+    environment:
+      POSTGRES_DB: dance_chives_dev
+      POSTGRES_USER: dev_user
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev_user -d dance_chives_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5.15
+    container_name: dance-chives-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/dev_password
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_apoc_export_file_enabled: true
+      NEO4J_apoc_import_file_enabled: true
+      NEO4J_apoc_import_file_use__neo4j__config: true
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+      - ./docker/neo4j/scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test:
+        ["CMD", "cypher-shell", "-u", "neo4j", "-p", "dev_password", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:

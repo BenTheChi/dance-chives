@@ -6,7 +6,17 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:reset": "docker-compose down -v && docker-compose up -d",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:seed": "npm run db:migrate && npm run neo4j:seed",
+    "neo4j:seed": "docker exec dance-chives-neo4j cypher-shell -u neo4j -p dev_password -f /docker-entrypoint-initdb.d/01-test-data.cypher",
+    "dev:setup": "npm run docker:up && sleep 10 && npm run db:seed && npm run dev"
   },
   "dependencies": {
     "@auth/neo4j-adapter": "^2.8.0",
