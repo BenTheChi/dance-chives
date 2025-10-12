@@ -46,11 +46,12 @@ echo "✅ Neo4j is ready!"
 echo "🗄️  Running database migrations..."
 npx prisma migrate dev --name init
 
-echo "🌱 Seeding databases with test data..."
-npx prisma db seed 2>/dev/null || echo "   No Prisma seed script found, skipping..."
+echo "🌱 Seeding databases with test data using existing query functions..."
+echo "   🐘 Seeding PostgreSQL..."
+npx prisma db seed
 
-echo "🔗 Seeding Neo4j..."
-docker exec dance-chives-neo4j cypher-shell -u neo4j -p dev_password -f /docker-entrypoint-initdb.d/01-test-data.cypher
+echo "   🔗 Seeding Neo4j..."
+npm run neo4j:seed
 
 echo "🎉 Setup complete!"
 echo ""

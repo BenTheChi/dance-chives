@@ -2,9 +2,9 @@
 
 import { useSession } from "next-auth/react";
 import {
-  AuthCodeForm,
-  AdminAuthCodeGenerator,
-} from "@/components/forms/auth-code-form";
+  InvitationStatusCard,
+  AdminInvitationGenerator,
+} from "@/components/forms/invitation-form";
 
 import {
   Card,
@@ -44,7 +44,7 @@ export default function AuthDemoPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Authentication Demo</h1>
         <p className="text-muted-foreground">
-          Manage your authorization level and test auth code functionality.
+          Manage your authorization level and test invitation functionality.
         </p>
       </div>
 
@@ -62,6 +62,25 @@ export default function AuthDemoPage() {
               <p className="text-sm text-muted-foreground">
                 {session.user?.email}
               </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge
+                  variant={
+                    session.user?.accountVerified ? "default" : "destructive"
+                  }
+                  className="text-xs"
+                >
+                  {session.user?.accountVerified
+                    ? "✓ Verified"
+                    : "⚠ Unverified"}
+                </Badge>
+                {session.user?.accountVerified && (
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(
+                      session.user.accountVerified
+                    ).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
             </div>
             <Badge
               variant={
@@ -93,11 +112,11 @@ export default function AuthDemoPage() {
       </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Auth Code Usage */}
-        <AuthCodeForm />
+        {/* Invitation Status */}
+        <InvitationStatusCard />
 
-        {/* Admin Auth Code Generator */}
-        {isAdmin && <AdminAuthCodeGenerator />}
+        {/* Admin Invitation Generator */}
+        {isAdmin && <AdminInvitationGenerator />}
 
         {!isAdmin && (
           <Card>
@@ -111,8 +130,8 @@ export default function AuthDemoPage() {
             <CardContent>
               <div className="space-y-3">
                 <p className="text-muted-foreground">
-                  Contact an administrator to get an auth code to upgrade your
-                  access level.
+                  Contact an administrator to receive an invitation to upgrade
+                  your access level.
                 </p>
 
                 {/* Show what user can do at their current level */}
@@ -181,10 +200,18 @@ export default function AuthDemoPage() {
               <h4 className="font-medium mb-2">Server Actions:</h4>
               <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
                 {`import { requireAuthLevel, AUTH_LEVELS, canUpdateEvent } from "@/lib/utils/auth-utils";
+import { createInvitation, acceptInvitation } from "@/lib/server_actions/auth_actions";
 
 export async function adminOnlyAction() {
   await requireAuthLevel(AUTH_LEVELS.ADMIN);
   // Your admin code here
+}
+
+export async function inviteUser(email: string, authLevel: number) {
+  const result = await createInvitation(email, authLevel);
+  if (result.success) {
+    console.log("Invitation sent to", email);
+  }
 }
 
 export async function updateEventAction(eventId: string) {
@@ -211,10 +238,12 @@ function MyComponent() {
   const authLevel = session?.user?.auth || 0;
   const canModerate = hasAuthLevel(session, AUTH_LEVELS.REGIONAL_MODERATOR);
   const canCreateEventsAnywhere = canCreateEventsInAnyCity(authLevel);
+  const canInviteUsers = hasAuthLevel(session, AUTH_LEVELS.ADMIN);
   
   return (
     <div>
       {canCreateEventsAnywhere && <CreateEventButton />}
+      {canInviteUsers && <InviteUserButton />}
       {canModerate ? <ModeratorPanel /> : <UserPanel />}
     </div>
   );

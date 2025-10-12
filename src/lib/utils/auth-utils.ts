@@ -54,6 +54,44 @@ export async function getCurrentAuthLevel(): Promise<number> {
 }
 
 /**
+ * Check if user has completed account verification (registration)
+ */
+export function isAccountVerified(session: Session | null): boolean {
+  return !!session?.user?.accountVerified;
+}
+
+/**
+ * Check if current user has completed account verification
+ */
+export async function checkAccountVerified(): Promise<boolean> {
+  try {
+    const session = await auth();
+    return isAccountVerified(session);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Require account verification to proceed
+ */
+export async function requireAccountVerification() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  if (!isAccountVerified(session)) {
+    throw new Error(
+      "Account verification required. Please complete your registration."
+    );
+  }
+
+  return session;
+}
+
+/**
  * Auth level constants for easier management
  */
 export const AUTH_LEVELS = {

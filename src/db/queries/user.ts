@@ -40,11 +40,11 @@ export const getUsers = async (keyword: string | null) => {
 
 export const signupUser = async (
   id: string,
-  user: { displayName: string; username: string; date: string; auth?: string }
+  user: { displayName: string; username: string; date: string; city: string }
 ) => {
   const session = driver.session();
   const result = await session.run(
-    "MERGE (u:User {id: $id}) ON CREATE SET u.displayName = $user.displayName, u.username = $user.username, u.date = $user.date, u.auth = $user.auth RETURN u",
+    "MERGE (u:User {id: $id}) ON CREATE SET u.displayName = $user.displayName, u.username = $user.username, u.date = $user.date, u.city = $user.city RETURN u",
     { id, user }
   );
   session.close();

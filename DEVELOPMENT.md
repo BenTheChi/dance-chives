@@ -119,7 +119,7 @@ The setup includes comprehensive test data:
 - 5 test users with different auth levels (0-3)
 - User-event relationships
 - User-city relationships
-- Auth codes for testing authorization
+- Test invitations (pending, used, and expired)
 - OAuth account records
 
 ### Neo4j Test Data

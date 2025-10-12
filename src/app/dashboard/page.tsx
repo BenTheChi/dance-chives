@@ -1,25 +1,21 @@
 "use client";
 import { AppNavbar } from "@/components/AppNavbar";
-import { useAuth } from "@/components/providers/AuthProvider";
-import { redirect } from "next/navigation";
+import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 
 export default function DashboardPage() {
-    const { session } = useAuth();
-
-    if (!session) {
-        redirect("/login");
-    }
-
-    return (
-        <>
-            <AppNavbar />
-            <header>Dashboard Page</header>
-            <main>
-                <section>
-                    <h1>Dashboard</h1>
-                    <p>Dashboard info here</p>
-                </section>
-            </main>
-        </>
-    );
+  return (
+    <AccountVerificationGuard requireVerification={true}>
+      <AppNavbar />
+      <header>Dashboard Page</header>
+      <main>
+        <section>
+          <h1>Dashboard</h1>
+          <p>
+            Welcome to your dashboard! Your account is verified and you have
+            full access.
+          </p>
+        </section>
+      </main>
+    </AccountVerificationGuard>
+  );
 }

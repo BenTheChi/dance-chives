@@ -16,6 +16,7 @@ declare module "next-auth" {
       username?: string;
       aboutme?: string;
       auth?: number; // Add auth level to session
+      accountVerified?: Date; // Add account verification status to session
     } & DefaultSession["user"];
   }
 }
@@ -33,18 +34,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     session: async ({ session, token }) => {
       if (session?.user && token.sub) {
-        // Fetch user's auth level from PostgreSQL
+        // Fetch user's auth level and account verification status from PostgreSQL
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
           select: {
             id: true,
             auth: true,
+            accountVerified: true,
             // Add other custom fields you want in session
           },
         });
 
         session.user.id = token.sub;
         session.user.auth = dbUser?.auth ?? undefined;
+        session.user.accountVerified = dbUser?.accountVerified ?? undefined;
       }
       return session;
     },

@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { getAuthLevelName } from "@/lib/utils/auth-utils";
+import { Badge } from "@/components/ui/badge";
 
 export function InvitationStatusCard() {
   const { data: session } = useSession();
@@ -21,16 +22,35 @@ export function InvitationStatusCard() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>Authorization Status</CardTitle>
+        <CardTitle>Account & Authorization Status</CardTitle>
         <CardDescription>
-          Your current authorization level and upgrade information.
+          Your account verification and authorization level information.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-center space-y-2">
-          <p className="font-medium">
-            Current Level: {session?.user?.auth || 0}
-          </p>
+          <div className="flex items-center justify-center gap-2">
+            <Badge
+              variant={
+                session?.user?.accountVerified ? "default" : "destructive"
+              }
+              className="text-xs"
+            >
+              {session?.user?.accountVerified
+                ? "✓ Account Verified"
+                : "⚠ Account Unverified"}
+            </Badge>
+          </div>
+          {session?.user?.accountVerified && (
+            <p className="text-xs text-muted-foreground">
+              Verified on{" "}
+              {new Date(session.user.accountVerified).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+
+        <div className="border-t pt-4 text-center space-y-2">
+          <p className="font-medium">Auth Level: {session?.user?.auth || 0}</p>
           <p className="text-sm text-muted-foreground">
             {getAuthLevelName(session?.user?.auth || 0)}
           </p>
@@ -42,6 +62,7 @@ export function InvitationStatusCard() {
             <li>• Contact an administrator for an invitation</li>
             <li>• Check your email for invitation links</li>
             <li>• Invitations are sent directly to your registered email</li>
+            <li>• Complete your registration first if account is unverified</li>
           </ul>
         </div>
 
