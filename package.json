@@ -16,7 +16,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed && npm run neo4j:seed",
     "neo4j:seed": "tsx scripts/seed-neo4j.ts",
-    "dev:setup": "npm run docker:up && sleep 10 && npm run db:seed && npm run dev"
+    "dev:setup": "npm run docker:up && sleep 10 && npm run dev",
+    "db:setup": "docker-compose up prisma-setup"
   },
   "dependencies": {
     "@auth/neo4j-adapter": "^2.8.0",

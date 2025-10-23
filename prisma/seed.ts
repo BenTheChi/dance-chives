@@ -170,8 +170,6 @@ async function main() {
       token: "used-token-1",
       expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       used: true,
-      usedAt: new Date(),
-      usedBy: "test-user-3",
     },
   ];
 
