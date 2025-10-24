@@ -29,7 +29,7 @@ sleep 15
 
 # Wait for PostgreSQL
 echo "🐘 Waiting for PostgreSQL..."
-until docker exec dance-chives-postgres pg_isready -U dev_user -d dance_chives_dev > /dev/null 2>&1; do
+until docker exec dance-chives-postgres pg_isready -U postgres -d dance_chives_dev > /dev/null 2>&1; do
     echo "   PostgreSQL is not ready yet..."
     sleep 2
 done

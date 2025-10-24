@@ -21,7 +21,7 @@ This guide will help you set up the local development environment with Docker co
 
    ```env
    # Database URLs for local Docker containers
-   DATABASE_URL="postgresql://dev_user:dev_password@localhost:5432/dance_chives_dev"
+   DATABASE_URL="postgresql://postgres:dev_password@localhost:5432/dance_chives_dev"
    NEO4J_URI="bolt://localhost:7687"
    NEO4J_USERNAME="neo4j"
    NEO4J_PASSWORD="dev_password"
