@@ -94,42 +94,122 @@ If you prefer to run commands individually:
 
 ## Database Access
 
-### PostgreSQL
+### PostgreSQL (Relational Database)
 
 - **Host:** localhost:5432
 - **Database:** dance_chives_dev
-- **Username:** dev_user
+- **Username:** postgres
 - **Password:** dev_password
-- **GUI:** Run `npm run db:studio` to open Prisma Studio
+- **GUI:** Run `npm run db:studio` to open **Prisma Studio**
+- **Purpose:** Stores user authentication, OAuth accounts, and invitations
 
-### Neo4j
+**How to Access:**
+
+```bash
+npm run db:studio
+```
+
+Then open your browser to the URL shown (usually http://localhost:5555)
+
+### Neo4j (Graph Database)
 
 - **Bolt URL:** bolt://localhost:7687
 - **HTTP URL:** http://localhost:7474
 - **Username:** neo4j
 - **Password:** dev_password
-- **Browser:** Visit http://localhost:7474 for Neo4j Browser
+- **Browser:** Visit **http://localhost:7474** for **Neo4j Browser** (Graph UI)
+- **Purpose:** Stores events, cities, users profiles, sections, videos, and all relationships
+
+**How to Access:**
+
+1. Open your browser to **http://localhost:7474**
+2. Connect using:
+   - **Connect URL:** `bolt://localhost:7687`
+   - **Username:** `neo4j`
+   - **Password:** `dev_password`
+3. Run Cypher queries to explore data:
+
+   ```cypher
+   // View all events
+   MATCH (e:Event) RETURN e LIMIT 25
+
+   // View event relationships
+   MATCH (e:Event)-[r]->(n) RETURN e, r, n LIMIT 100
+
+   // View all cities with their events
+   MATCH (c:City)<-[:IN]-(e:Event) RETURN c, e
+   ```
+
+> **Note:** Prisma Studio only works with SQL databases (PostgreSQL). For Neo4j, you must use Neo4j Browser at http://localhost:7474
 
 ## Test Data
 
-The setup includes comprehensive test data:
+The setup includes comprehensive test data automatically seeded when you run `npm run db:setup`:
 
 ### PostgreSQL Test Data
 
-- 5 test users with different auth levels (0-3)
-- User-event relationships
-- User-city relationships
-- Test invitations (pending, used, and expired)
-- OAuth account records
+- **5 test users** with different auth levels:
+  - Alice Johnson (test-user-1) - REGIONAL_MODERATOR (auth: 3)
+  - Bob Smith (test-user-2) - GLOBAL_CREATOR (auth: 2)
+  - Carol Davis (test-user-3) - REGIONAL_CREATOR (auth: 1)
+  - David Wilson (test-user-4) - REGIONAL_CREATOR (auth: 1, unverified)
+  - Eva Martinez (test-user-5) - BASE_USER (auth: 0, unverified)
+- **OAuth account records** for all test users (Google provider)
+- **3 test invitations** (2 pending, 1 used)
+- User emails: alice@example.com, bob@example.com, carol@example.com, david@example.com, eva@example.com
 
 ### Neo4j Test Data
 
-- Cities (New York, Los Angeles, Chicago, Miami)
-- Users (matching PostgreSQL users)
-- Events (Summer Battle 2024, Winter Cypher 2024, Spring Jam 2024)
-- Event relationships (creators, participants, judges)
-- Sections, brackets, and videos
-- Gallery photos and posters
+- **10 Cities** across 5 countries:
+
+  - US: New York, Los Angeles, Chicago, Miami, Seattle
+  - UK: London
+  - France: Paris
+  - Japan: Tokyo
+  - South Korea: Seoul
+  - Canada: Toronto
+
+- **5 User Profiles** (matching PostgreSQL users with usernames and display names)
+
+- **10 Comprehensive Events** with full details:
+
+  - Summer Battle Championship 2024 (New York)
+  - West Coast Cypher Sessions (Los Angeles)
+  - Chicago All Styles Jam 2024
+  - Miami Heat Breaking Championship
+  - Seattle Underground Hip-Hop Jam
+  - UK Breaking Showdown 2024 (London)
+  - Parisian Breaking Festival 2024
+  - Tokyo Breaking Olympics Prep Jam
+  - Seoul Street Battle Series 2025
+  - Toronto Unity Breaking Jam 2025
+
+- **Each event includes:**
+
+  - Complete event details (description, address, prize, entry cost, dates, times, schedule)
+  - Event poster (using real Google Cloud Storage images)
+  - Multiple roles (organizers, judges, DJs, MCs) assigned to test users
+  - Sections with brackets and videos
+  - SubEvents (workshops, panels, after parties, youth events)
+  - Gallery photos (2-7 per event using real GCS images)
+  - Tagged users in videos (all test users appear across events)
+
+- **Media Statistics:**
+
+  - 54 total videos across all events
+  - 60 total images (45 gallery photos + 15 posters)
+  - 3 unique real images from Google Cloud Storage distributed across events
+  - All videos have tagged users from the test pool
+
+- **Relationship Types:**
+  - Users → Events (CREATED, ORGANIZER, HEAD_JUDGE, JUDGE, DJ, MC, etc.)
+  - Events → Cities (IN)
+  - Events → Sections (IN)
+  - Sections → Brackets (IN)
+  - Sections/Brackets → Videos (IN)
+  - Users → Videos (IN - tagged dancers)
+  - Pictures → Events (POSTER, PHOTO)
+  - SubEvents → Events (PART_OF)
 
 ## Environment Configuration
 
