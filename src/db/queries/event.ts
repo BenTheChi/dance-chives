@@ -304,6 +304,214 @@ export const getEvent = async (id: string): Promise<Event> => {
   };
 };
 
+// Helper function to create subevents
+const createSubEvents = async (eventId: string, subEvents: any[]) => {
+  if (subEvents.length === 0) return;
+  const session = driver.session();
+  try {
+    for (const sub of subEvents) {
+      await session.run(
+        `MATCH (e:Event {id: $eventId})
+         CREATE (se:SubEvent {
+           id: $subEventId,
+           title: $title,
+           description: $description,
+           schedule: $schedule,
+           startDate: $startDate,
+           address: $address,
+           startTime: $startTime,
+           endTime: $endTime
+         })-[:PART_OF]->(e)`,
+        {
+          eventId,
+          subEventId: sub.id,
+          title: sub.title,
+          description: sub.description,
+          schedule: sub.schedule,
+          startDate: sub.startDate,
+          address: sub.address,
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create subevent posters
+const createSubEventPosters = async (subEvents: any[]) => {
+  const subEventsWithPosters = subEvents.filter((sub) => sub.poster?.id);
+  if (subEventsWithPosters.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sub of subEventsWithPosters) {
+      await session.run(
+        `MATCH (se:SubEvent {id: $subEventId})
+         CREATE (p:Picture {
+           id: $posterId,
+           title: $title,
+           url: $url,
+           type: 'poster'
+         })-[:POSTER]->(se)`,
+        {
+          subEventId: sub.id,
+          posterId: sub.poster.id,
+          title: sub.poster.title,
+          url: sub.poster.url,
+        }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create gallery photos
+const createGalleryPhotos = async (eventId: string, gallery: any[]) => {
+  if (gallery.length === 0) return;
+  const session = driver.session();
+  try {
+    for (const pic of gallery) {
+      await session.run(
+        `MATCH (e:Event {id: $eventId})
+         CREATE (p:Picture {
+           id: $picId,
+           title: $title,
+           url: $url,
+           type: 'photo'
+         })-[:PHOTO]->(e)`,
+        {
+          eventId,
+          picId: pic.id,
+          title: pic.title,
+          url: pic.url,
+        }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create sections
+const createSections = async (eventId: string, sections: any[]) => {
+  if (sections.length === 0) return;
+  const session = driver.session();
+  try {
+    await session.run(
+      `MATCH (e:Event {id: $eventId})
+       UNWIND $sections AS sec
+       CREATE (s:Section {
+         id: sec.id,
+         title: sec.title,
+         description: sec.description
+       })-[:IN]->(e)`,
+      { eventId, sections }
+    );
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create brackets
+const createBrackets = async (sections: any[]) => {
+  const sectionsWithBrackets = sections.filter(
+    (s) => s.hasBrackets && s.brackets?.length > 0
+  );
+  if (sectionsWithBrackets.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sec of sectionsWithBrackets) {
+      for (const br of sec.brackets) {
+        await session.run(
+          `MATCH (s:Section {id: $sectionId})
+           CREATE (b:Bracket {id: $bracketId, title: $title})-[:IN]->(s)`,
+          { sectionId: sec.id, bracketId: br.id, title: br.title }
+        );
+      }
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create videos in brackets
+const createBracketVideos = async (sections: any[]) => {
+  const sectionsWithBrackets = sections.filter(
+    (s) => s.hasBrackets && s.brackets?.length > 0
+  );
+  if (sectionsWithBrackets.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sec of sectionsWithBrackets) {
+      for (const br of sec.brackets) {
+        for (const vid of br.videos || []) {
+          await session.run(
+            `MATCH (b:Bracket {id: $bracketId})
+             CREATE (v:Video {id: $videoId, title: $title, src: $src})-[:IN]->(b)`,
+            {
+              bracketId: br.id,
+              videoId: vid.id,
+              title: vid.title,
+              src: vid.src,
+            }
+          );
+
+          // Link tagged users
+          for (const user of vid.taggedUsers || []) {
+            await session.run(
+              `MATCH (v:Video {id: $videoId})
+               MERGE (u:User {id: $userId})
+               MERGE (u)-[:IN]->(v)`,
+              { videoId: vid.id, userId: user.id }
+            );
+          }
+        }
+      }
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create videos directly in sections
+const createSectionVideos = async (sections: any[]) => {
+  const sectionsWithVideos = sections.filter(
+    (s) => !s.hasBrackets && s.videos?.length > 0
+  );
+  if (sectionsWithVideos.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sec of sectionsWithVideos) {
+      for (const vid of sec.videos) {
+        await session.run(
+          `MATCH (s:Section {id: $sectionId})
+           CREATE (v:Video {id: $videoId, title: $title, src: $src})-[:IN]->(s)`,
+          { sectionId: sec.id, videoId: vid.id, title: vid.title, src: vid.src }
+        );
+
+        // Link tagged users
+        for (const user of vid.taggedUsers || []) {
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:IN]->(v)`,
+            { videoId: vid.id, userId: user.id }
+          );
+        }
+      }
+    }
+  } finally {
+    await session.close();
+  }
+};
+
 export const insertEvent = async (event: Event) => {
   const session = driver.session();
 
@@ -353,83 +561,6 @@ MATCH (u:User {id: $creatorId})
 MERGE (u)-[:CREATED]->(e)
 
 WITH e
-FOREACH (sub IN $subEvents |
-  CREATE (se:SubEvent { 
-    id: sub.id,
-    title: sub.title,
-    description: sub.description,
-    schedule: sub.schedule,
-    startDate: sub.startDate,
-    address: sub.address,
-    startTime: sub.startTime,
-    endTime: sub.endTime
-  })-[:PART_OF]->(e)
-  CREATE (subPic:Picture { 
-    id: sub.poster.id,
-    title: sub.poster.title,
-    url: sub.poster.url,
-    type: 'poster'
-  })-[:POSTER]->(se)
-)
-
-WITH e
-FOREACH (pic IN $gallery |
-  CREATE (g:Picture { 
-    id: pic.id,
-    title: pic.title,
-    url: pic.url,
-    type: 'photo'
-  })-[:PHOTO]->(e)
-)
-
-WITH e
-FOREACH (sec IN $sections |
-  CREATE (s:Section {
-      id: sec.id,
-      title: sec.title,
-      description: sec.description
-  })-[:IN]->(e)
-)
-
-WITH e
-FOREACH (sec IN [s IN $sections WHERE s.hasBrackets = true] |
-  MERGE (s:Section {id: sec.id})-[:IN]->(e)
-  FOREACH (br IN sec.brackets |
-    CREATE (b:Bracket {
-        id: br.id,
-        title: br.title
-    })-[:IN]->(s)
-    FOREACH (vid IN br.videos |
-      CREATE (v:Video { 
-        id: vid.id,
-        title: vid.title,
-        src: vid.src
-      })-[:IN]->(b)
-      FOREACH (user IN vid.taggedUsers |
-        MERGE (u:User { id: user.id })
-        MERGE (u)-[:IN]->(v)
-      )
-    )
-  )
-)
-
-WITH e
-FOREACH (sec IN [s IN $sections WHERE s.hasBrackets = false] |
-  MERGE (s:Section {id: sec.id})-[:IN]->(e)
-  FOREACH (vid IN sec.videos |
-    CREATE (v:Video { 
-      id: vid.id,
-      title: vid.title,
-      src: vid.src
-    })-[:IN]->(s)
-    FOREACH (user IN vid.taggedUsers |
-      MERGE (u:User { id: user.id })
-      MERGE (u)-[:IN]->(v)
-    )
-  )
-)
-
-WITH e
 MATCH (event:Event {id: $eventId})
 RETURN event
 `,
@@ -447,13 +578,20 @@ RETURN event
       schedule: event.eventDetails.schedule,
       poster: event.eventDetails.poster,
       city: event.eventDetails.city,
-      sections: event.sections,
       roles: event.roles,
-      subEvents: event.subEvents,
-      gallery: event.gallery,
     }
   );
   await session.close();
+
+  // Create subevents, gallery, sections, brackets, and videos in separate queries
+  await createSubEvents(event.id, event.subEvents);
+  await createSubEventPosters(event.subEvents);
+  await createGalleryPhotos(event.id, event.gallery);
+  await createSections(event.id, event.sections);
+  await createBrackets(event.sections);
+  await createBracketVideos(event.sections);
+  await createSectionVideos(event.sections);
+
   return result.records[0].get("event").properties;
 };
 
@@ -959,10 +1097,13 @@ export const getEvents = async (): Promise<EventCard[]> => {
   const result = await session.run(
     `MATCH (e:Event)-[:IN]->(c:City)
     OPTIONAL MATCH (e)<-[:POSTER]-(p:Picture)
+    WITH DISTINCT e, c, p
     RETURN e {
       id: e.id,
       title: e.title,
+      series: null,
       imageUrl: p.url,
+      date: e.startDate,
       city: c.name,
       styles: []
     }`
