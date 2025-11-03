@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { deleteEvent, getEventPictures } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { deleteFromGCloudStorage } from "@/lib/GCloud";
+import { prisma } from "@/lib/primsa";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -34,6 +35,16 @@ export async function DELETE(request: NextRequest) {
         { message: "Failed to delete event" },
         { status: 500 }
       );
+    }
+
+    // Delete corresponding PostgreSQL Event record
+    try {
+      await prisma.event.deleteMany({
+        where: { eventId: id },
+      });
+    } catch (dbError) {
+      // Log error but don't fail the request - event is already deleted from Neo4j
+      console.error("Failed to delete PostgreSQL Event record:", dbError);
     }
 
     return NextResponse.json({ message: "Event deleted" }, { status: 200 });

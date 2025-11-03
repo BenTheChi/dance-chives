@@ -3,10 +3,10 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useAuth } from "@/components/providers/AuthProvider";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
-  const { session } = useAuth();
+  const { data: session } = useSession();
 
   return (
     <div>

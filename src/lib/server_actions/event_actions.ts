@@ -8,6 +8,7 @@ import {
 } from "@/db/queries/event";
 import { Event, EventDetails, Section, SubEvent, Picture } from "@/types/event";
 import { generateSlugId } from "@/lib/utils";
+import { prisma } from "@/lib/primsa";
 
 interface addEventProps {
   eventDetails: {
@@ -235,6 +236,22 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     // Call insertEvent with the properly structured Event object
     const result = await insertEvent(event);
+
+    // Create corresponding PostgreSQL Event record to link Neo4j event to user
+    try {
+      await prisma.event.create({
+        data: {
+          eventId: event.id, // Neo4j event ID
+          userId: session.user.id,
+          creator: true,
+        },
+      });
+    } catch (dbError) {
+      // If PostgreSQL creation fails, log but don't fail the entire operation
+      // The event exists in Neo4j, PostgreSQL record can be added later if needed
+      console.error("Failed to create PostgreSQL Event record:", dbError);
+      // Optionally, you could delete the Neo4j event here to maintain consistency
+    }
 
     return {
       status: 200,

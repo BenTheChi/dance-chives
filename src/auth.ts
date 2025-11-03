@@ -1,6 +1,7 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import { Neo4jAdapter } from "@auth/neo4j-adapter";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import driver from "./db/driver";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./lib/primsa";
@@ -30,7 +31,54 @@ declare module "next-auth" {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  providers: [Google],
+  providers: [
+    Google,
+    // Test login provider - only for development
+    ...(process.env.NODE_ENV === "development"
+      ? [
+          Credentials({
+            id: "test-login",
+            name: "Test Login",
+            credentials: {
+              userId: { label: "User ID", type: "text" },
+            },
+            async authorize(credentials) {
+              if (!credentials?.userId) {
+                return null;
+              }
+
+              // Fetch user from database
+              const user = await prisma.user.findUnique({
+                where: { id: credentials.userId as string },
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true,
+                  auth: true,
+                  accountVerified: true,
+                },
+              });
+
+              if (!user) {
+                return null;
+              }
+
+              console.log(
+                `🧪 Test login: ${user.email} (Auth Level: ${user.auth ?? 0})`
+              );
+
+              return {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                image: user.image,
+              };
+            },
+          }),
+        ]
+      : []),
+  ],
   callbacks: {
     session: async ({ session, token }) => {
       if (session?.user && token.sub) {
@@ -59,4 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   session: { strategy: "jwt" },
+  pages: {
+    signIn: "/login",
+  },
 });

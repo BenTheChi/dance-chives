@@ -2,10 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
-import { signupUser } from "@/db/queries/user";
+import { signupUser, getUser } from "@/db/queries/user";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import crypto from "crypto";
+import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -19,7 +20,7 @@ export async function signInWithGoogle() {
 }
 
 export async function signOutAccount() {
-  await signOut();
+  await signOut({ redirectTo: "/" });
 }
 
 export async function signup(formData: FormData) {
@@ -45,7 +46,7 @@ export async function signup(formData: FormData) {
     const ADMIN_USERS = [
       {
         email: "benthechi@gmail.com",
-        authLevel: 6, // SUPER_ADMIN
+        authLevel: AUTH_LEVELS.SUPER_ADMIN, // SUPER_ADMIN
         defaultData: {
           displayName: "heartbreaker",
           username: "heartbreakdancer",
@@ -78,7 +79,7 @@ export async function signup(formData: FormData) {
     const userResult = await signupUser(session.user.id, profileData);
 
     // Determine auth level
-    const authLevel = adminUser ? adminUser.authLevel : 0; // Base user level
+    const authLevel = adminUser ? adminUser.authLevel : AUTH_LEVELS.BASE_USER; // Base user level
 
     // Mark account as verified in PostgreSQL (user completed registration)
     await prisma.user.update({
@@ -89,6 +90,32 @@ export async function signup(formData: FormData) {
         auth: authLevel,
       },
     });
+
+    // If user is creator or moderator, add their profile city to their cities
+    if (
+      authLevel >= AUTH_LEVELS.CREATOR &&
+      authLevel < AUTH_LEVELS.ADMIN &&
+      profileData.city
+    ) {
+      // Check if city already exists for this user
+      const existingCity = await prisma.city.findFirst({
+        where: {
+          userId: session.user.id,
+          cityId: profileData.city,
+        },
+      });
+
+      // If not, add it
+      if (!existingCity) {
+        await prisma.city.create({
+          data: {
+            userId: session.user.id,
+            cityId: profileData.city,
+          },
+        });
+        console.log(`✅ Added profile city ${profileData.city} to user's cities`);
+      }
+    }
 
     if (adminUser) {
       console.log(
@@ -190,6 +217,44 @@ export async function acceptInvitation(token: string) {
         },
       }),
     ]);
+
+    // If user is now a creator or moderator, add their profile city to their cities
+    if (
+      invitation.authLevel >= AUTH_LEVELS.CREATOR &&
+      invitation.authLevel < AUTH_LEVELS.ADMIN
+    ) {
+      try {
+        // Get user's profile city from Neo4j
+        const userProfile = await getUser(session.user.id);
+        const profileCity = userProfile?.city as string | undefined;
+
+        if (profileCity) {
+          // Check if city already exists for this user
+          const existingCity = await prisma.city.findFirst({
+            where: {
+              userId: session.user.id,
+              cityId: profileCity,
+            },
+          });
+
+          // If not, add it
+          if (!existingCity) {
+            await prisma.city.create({
+              data: {
+                userId: session.user.id,
+                cityId: profileCity,
+              },
+            });
+            console.log(
+              `✅ Added profile city ${profileCity} to user's cities after invitation acceptance`
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to add profile city:", error);
+        // Don't fail the invitation acceptance if city addition fails
+      }
+    }
 
     console.log(
       `✅ User ${session.user.email} accepted invitation from ${invitation.inviter.email} for auth level ${invitation.authLevel}`

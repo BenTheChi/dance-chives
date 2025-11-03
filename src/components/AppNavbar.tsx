@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { UserMenu } from "./UserMenu";
-import { useAuth } from "./providers/AuthProvider";
+import { useSession } from "next-auth/react";
 import {
   Select,
   SelectContent,
@@ -14,9 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SidebarTrigger } from "./ui/sidebar";
+import { TestLoginDropdown } from "./TestLoginDropdown";
 
 export function AppNavbar() {
-  const { session } = useAuth();
+  const { data: session } = useSession();
 
   return (
     <nav className="border-b bg-sidebar px-4">
@@ -52,6 +53,7 @@ export function AppNavbar() {
             <UserMenu session={session} />
           ) : (
             <>
+              {process.env.NODE_ENV === "development" && <TestLoginDropdown />}
               <Link href="/login">
                 <Button size="sm">Login</Button>
               </Link>

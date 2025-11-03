@@ -96,12 +96,10 @@ export async function requireAccountVerification() {
  */
 export const AUTH_LEVELS = {
   BASE_USER: 0,
-  REGIONAL_CREATOR: 1,
-  GLOBAL_CREATOR: 2,
-  REGIONAL_MODERATOR: 3,
-  GLOBAL_MODERATOR: 4,
-  ADMIN: 5,
-  SUPER_ADMIN: 6,
+  CREATOR: 1,
+  MODERATOR: 2,
+  ADMIN: 3,
+  SUPER_ADMIN: 4,
 } as const;
 
 /**
@@ -134,40 +132,24 @@ export async function protectRoute(minLevel: number = AUTH_LEVELS.BASE_USER) {
  */
 
 // Event Permissions
-export function canCreateEventsInAnyCity(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.GLOBAL_CREATOR;
-}
-
-export function canCreateEventsInRestrictedCities(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.REGIONAL_CREATOR;
+export function canCreateEvents(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.CREATOR;
 }
 
 export function canUpdateAnyEvents(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
 
-export function canUpdateAnyEventsInAnyCity(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.GLOBAL_MODERATOR;
-}
-
-export function canUpdateAnyEventsInRestrictedCities(
-  authLevel: number
-): boolean {
-  return authLevel >= AUTH_LEVELS.REGIONAL_MODERATOR;
+export function canUpdateAnyEventsInCity(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.MODERATOR;
 }
 
 export function canDeleteAnyEvents(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
 
-export function canDeleteAnyEventsInAnyCity(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.GLOBAL_MODERATOR;
-}
-
-export function canDeleteAnyEventsInRestrictedCities(
-  authLevel: number
-): boolean {
-  return authLevel >= AUTH_LEVELS.REGIONAL_MODERATOR;
+export function canDeleteAnyEventsInCity(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.MODERATOR;
 }
 
 // User Management Permissions
@@ -175,16 +157,16 @@ export function canUpdateUserPermissions(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
 
+export function canUpdateUserCities(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.ADMIN;
+}
+
 export function canBanAnyUsers(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
 
-export function canBanUsersInAnyCity(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.GLOBAL_MODERATOR;
-}
-
-export function canBanUsersInRestrictedCities(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.REGIONAL_MODERATOR;
+export function canBanUsersInCity(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.MODERATOR;
 }
 
 export function canDeleteAnyUsers(authLevel: number): boolean {
@@ -195,12 +177,12 @@ export function canTagUntagAnyUserAnywhere(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
 
-export function canTagUntagUsersInAnyCity(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.GLOBAL_MODERATOR;
+export function canTagUntagUsersInCity(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.MODERATOR;
 }
 
-export function canTagUntagUsersInRestrictedCities(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.REGIONAL_MODERATOR;
+export function canRequestTagging(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.BASE_USER;
 }
 
 export function canReadReports(authLevel: number): boolean {
@@ -223,37 +205,32 @@ export interface EventPermissionContext {
 export function canUpdateEvent(
   authLevel: number,
   context: EventPermissionContext,
-  userId: string
+  userId: string,
+  allCityAccess: boolean = false
 ): boolean {
   // Admins can update any events
   if (canUpdateAnyEvents(authLevel)) {
     return true;
   }
 
-  // Global moderators can update any events in any city
-  if (canUpdateAnyEventsInAnyCity(authLevel)) {
-    return true;
-  }
-
-  // Regional moderators can update any events in their restricted cities
-  if (
-    canUpdateAnyEventsInRestrictedCities(authLevel) &&
-    context.eventCityId &&
-    context.userCities?.includes(context.eventCityId)
-  ) {
-    return true;
-  }
-
-  // Creators can update their own events
-  if (
-    authLevel >= AUTH_LEVELS.REGIONAL_CREATOR &&
-    context.eventCreatorId === userId
-  ) {
-    // Global creators can update own events in any city
-    if (authLevel >= AUTH_LEVELS.GLOBAL_CREATOR) {
+  // Moderators can update any events in their assigned cities (or all cities if flag is set)
+  if (canUpdateAnyEventsInCity(authLevel)) {
+    if (allCityAccess) {
       return true;
     }
-    // Regional creators can update own events in restricted cities
+    if (
+      context.eventCityId &&
+      context.userCities?.includes(context.eventCityId)
+    ) {
+      return true;
+    }
+  }
+
+  // Creators can update their own events in their assigned cities (or all cities if flag is set)
+  if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
+    if (allCityAccess) {
+      return true;
+    }
     if (
       context.eventCityId &&
       context.userCities?.includes(context.eventCityId)
@@ -268,37 +245,32 @@ export function canUpdateEvent(
 export function canDeleteEvent(
   authLevel: number,
   context: EventPermissionContext,
-  userId: string
+  userId: string,
+  allCityAccess: boolean = false
 ): boolean {
   // Admins can delete any events
   if (canDeleteAnyEvents(authLevel)) {
     return true;
   }
 
-  // Global moderators can delete any events in any city
-  if (canDeleteAnyEventsInAnyCity(authLevel)) {
-    return true;
-  }
-
-  // Regional moderators can delete any events in their restricted cities
-  if (
-    canDeleteAnyEventsInRestrictedCities(authLevel) &&
-    context.eventCityId &&
-    context.userCities?.includes(context.eventCityId)
-  ) {
-    return true;
-  }
-
-  // Creators can delete their own events
-  if (
-    authLevel >= AUTH_LEVELS.REGIONAL_CREATOR &&
-    context.eventCreatorId === userId
-  ) {
-    // Global creators can delete own events in any city
-    if (authLevel >= AUTH_LEVELS.GLOBAL_CREATOR) {
+  // Moderators can delete any events in their assigned cities (or all cities if flag is set)
+  if (canDeleteAnyEventsInCity(authLevel)) {
+    if (allCityAccess) {
       return true;
     }
-    // Regional creators can delete own events in restricted cities
+    if (
+      context.eventCityId &&
+      context.userCities?.includes(context.eventCityId)
+    ) {
+      return true;
+    }
+  }
+
+  // Creators can delete their own events in their assigned cities (or all cities if flag is set)
+  if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
+    if (allCityAccess) {
+      return true;
+    }
     if (
       context.eventCityId &&
       context.userCities?.includes(context.eventCityId)
