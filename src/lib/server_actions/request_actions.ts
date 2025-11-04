@@ -23,6 +23,7 @@ import {
   videoExistsInEvent,
   getEventTitle,
   getVideoTitle,
+  getCityName,
 } from "@/db/queries/team-member";
 import { isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
 
@@ -594,13 +595,17 @@ export async function denyTeamMemberRequest(
 // Global Access Requests
 // ============================================================================
 
-export async function createGlobalAccessRequest() {
+export async function createGlobalAccessRequest(message: string) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error("Not authenticated");
   }
 
   const senderId = session.user.id;
+
+  if (!message || message.trim().length === 0) {
+    throw new Error("Message is required for global access requests");
+  }
 
   // Check if user is creator or moderator
   const user = await prisma.user.findUnique({
@@ -641,6 +646,7 @@ export async function createGlobalAccessRequest() {
   const request = await prisma.globalAccessRequest.create({
     data: {
       senderId,
+      message: message.trim(),
       status: "PENDING",
     },
     include: {
@@ -980,10 +986,16 @@ export async function approveAuthLevelChangeRequest(
     data: { status: "APPROVED", updatedAt: new Date() },
   });
 
+  // Admins and SuperAdmins always have allCityAccess
+  const shouldHaveAllCityAccess = request.requestedLevel >= AUTH_LEVELS.ADMIN;
+
   // Update user's authorization level
   await prisma.user.update({
     where: { id: request.targetUserId },
-    data: { auth: request.requestedLevel },
+    data: {
+      auth: request.requestedLevel,
+      allCityAccess: shouldHaveAllCityAccess,
+    },
   });
 
   // Notify sender and target user
@@ -1081,6 +1093,142 @@ export async function denyAuthLevelChangeRequest(
     REQUEST_TYPES.AUTH_LEVEL_CHANGE,
     requestId
   );
+
+  return { success: true };
+}
+
+// ============================================================================
+// Cancel Requests
+// ============================================================================
+
+export async function cancelTaggingRequest(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const userId = session.user.id;
+
+  const request = await prisma.taggingRequest.findUnique({
+    where: { id: requestId },
+  });
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  // Only the sender can cancel their own request
+  if (request.senderId !== userId) {
+    throw new Error("You can only cancel your own requests");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Only pending requests can be cancelled");
+  }
+
+  await prisma.taggingRequest.update({
+    where: { id: requestId },
+    data: { status: "CANCELLED", updatedAt: new Date() },
+  });
+
+  return { success: true };
+}
+
+export async function cancelTeamMemberRequest(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const userId = session.user.id;
+
+  const request = await prisma.teamMemberRequest.findUnique({
+    where: { id: requestId },
+  });
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  // Only the sender can cancel their own request
+  if (request.senderId !== userId) {
+    throw new Error("You can only cancel your own requests");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Only pending requests can be cancelled");
+  }
+
+  await prisma.teamMemberRequest.update({
+    where: { id: requestId },
+    data: { status: "CANCELLED", updatedAt: new Date() },
+  });
+
+  return { success: true };
+}
+
+export async function cancelGlobalAccessRequest(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const userId = session.user.id;
+
+  const request = await prisma.globalAccessRequest.findUnique({
+    where: { id: requestId },
+  });
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  // Only the sender can cancel their own request
+  if (request.senderId !== userId) {
+    throw new Error("You can only cancel your own requests");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Only pending requests can be cancelled");
+  }
+
+  await prisma.globalAccessRequest.update({
+    where: { id: requestId },
+    data: { status: "CANCELLED", updatedAt: new Date() },
+  });
+
+  return { success: true };
+}
+
+export async function cancelAuthLevelChangeRequest(requestId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+
+  const userId = session.user.id;
+
+  const request = await prisma.authLevelChangeRequest.findUnique({
+    where: { id: requestId },
+  });
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  // Only the sender can cancel their own request
+  if (request.senderId !== userId) {
+    throw new Error("You can only cancel your own requests");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Only pending requests can be cancelled");
+  }
+
+  await prisma.authLevelChangeRequest.update({
+    where: { id: requestId },
+    data: { status: "CANCELLED", updatedAt: new Date() },
+  });
 
   return { success: true };
 }
@@ -1426,12 +1574,35 @@ export async function getDashboardData() {
         email: true,
         auth: true,
         allCityAccess: true,
+        city: {
+          select: { id: true, cityId: true },
+        },
       },
     }),
   ]);
 
+  // Fetch city name from Neo4j if city exists
+  // Note: City is required at application level (enforced by seed data and user creation)
+  let cityName: string | null = null;
+  if (user?.city) {
+    cityName = await getCityName(user.city.cityId);
+  } else {
+    // Log warning if user doesn't have a city (should not happen in production)
+    console.warn(
+      `User ${userId} does not have a city assigned. This should be handled during user creation.`
+    );
+  }
+
   return {
-    user,
+    user: {
+      ...user,
+      city: user?.city
+        ? {
+            ...user.city,
+            name: cityName || user.city.cityId, // Fallback to cityId if name not found
+          }
+        : null,
+    },
     incomingRequests,
     outgoingRequests,
     notifications,

@@ -30,7 +30,7 @@ export async function PUT(
   try {
     const resolvedParams = params instanceof Promise ? await params : params;
     const { userId } = resolvedParams;
-    const { cityIds, allCityAccess } = await request.json();
+    const { cityId, allCityAccess } = await request.json();
 
     // Validate userId
     if (!userId) {
@@ -70,44 +70,44 @@ export async function PUT(
         },
       });
 
-      // Update cities if cityIds array is provided
-      if (Array.isArray(cityIds)) {
-        // Delete existing cities
+      // Update city if cityId is provided
+      if (cityId !== undefined) {
+        // Delete existing city if any
         await tx.city.deleteMany({
           where: { userId },
         });
 
-        // Create new cities
-        if (cityIds.length > 0) {
-          await tx.city.createMany({
-            data: cityIds.map((cityId: string) => ({
+        // Create new city if cityId is provided
+        if (cityId && cityId.trim() !== "") {
+          await tx.city.create({
+            data: {
               userId,
-              cityId,
-            })),
+              cityId: cityId.trim(),
+            },
           });
         }
 
-        // Fetch updated cities
-        const cities = await tx.city.findMany({
+        // Fetch updated city
+        const city = await tx.city.findUnique({
           where: { userId },
           select: { id: true, cityId: true },
         });
 
         return {
           user: updatedUser,
-          cities: cities.map((c) => c.cityId),
+          city: city?.cityId || null,
         };
       }
 
-      // If cityIds not provided, just return user with existing cities
-      const cities = await tx.city.findMany({
+      // If cityId not provided, just return user with existing city
+      const city = await tx.city.findUnique({
         where: { userId },
         select: { id: true, cityId: true },
       });
 
       return {
         user: updatedUser,
-        cities: cities.map((c) => c.cityId),
+        city: city?.cityId || null,
       };
     });
 
@@ -161,7 +161,7 @@ export async function GET(
         name: true,
         auth: true,
         allCityAccess: true,
-        cities: {
+        city: {
           select: { id: true, cityId: true },
         },
       },
@@ -180,7 +180,7 @@ export async function GET(
         auth: user.auth,
         allCityAccess: user.allCityAccess,
       },
-      cities: user.cities.map((c) => c.cityId),
+      city: user.city?.cityId || null,
     });
   } catch (error) {
     console.error("Failed to get user cities:", error);

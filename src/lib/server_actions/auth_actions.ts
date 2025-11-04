@@ -81,6 +81,9 @@ export async function signup(formData: FormData) {
     // Determine auth level
     const authLevel = adminUser ? adminUser.authLevel : AUTH_LEVELS.BASE_USER; // Base user level
 
+    // Admins and SuperAdmins always have allCityAccess
+    const shouldHaveAllCityAccess = authLevel >= AUTH_LEVELS.ADMIN;
+
     // Mark account as verified in PostgreSQL (user completed registration)
     await prisma.user.update({
       where: { id: session.user.id },
@@ -88,6 +91,7 @@ export async function signup(formData: FormData) {
         accountVerified: new Date(),
         name: profileData.displayName || session.user.name,
         auth: authLevel,
+        allCityAccess: shouldHaveAllCityAccess,
       },
     });
 
@@ -113,7 +117,9 @@ export async function signup(formData: FormData) {
             cityId: profileData.city,
           },
         });
-        console.log(`✅ Added profile city ${profileData.city} to user's cities`);
+        console.log(
+          `✅ Added profile city ${profileData.city} to user's cities`
+        );
       }
     }
 
@@ -136,17 +142,25 @@ export async function signup(formData: FormData) {
 
 /**
  * Update user's auth level in PostgreSQL
+ * Automatically sets allCityAccess to true for Admins and SuperAdmins
  */
 export async function updateUserAuthLevel(userId: string, authLevel: number) {
   try {
+    // Admins and SuperAdmins always have allCityAccess
+    const shouldHaveAllCityAccess = authLevel >= AUTH_LEVELS.ADMIN;
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { auth: authLevel },
+      data: {
+        auth: authLevel,
+        allCityAccess: shouldHaveAllCityAccess,
+      },
       select: {
         id: true,
         email: true,
         name: true,
         auth: true,
+        allCityAccess: true,
       },
     });
 
@@ -203,11 +217,17 @@ export async function acceptInvitation(token: string) {
       };
     }
 
+    // Admins and SuperAdmins always have allCityAccess
+    const shouldHaveAllCityAccess = invitation.authLevel >= AUTH_LEVELS.ADMIN;
+
     // Update user's auth level and mark invitation as used
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: session.user.id },
-        data: { auth: invitation.authLevel },
+        data: {
+          auth: invitation.authLevel,
+          allCityAccess: shouldHaveAllCityAccess,
+        },
       }),
       prisma.invitation.update({
         where: { id: invitation.id },

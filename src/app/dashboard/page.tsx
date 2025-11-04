@@ -18,28 +18,32 @@ import {
   IncomingRequestCard,
   OutgoingRequestCard,
 } from "@/components/requests/RequestCard";
-import { getAuthLevelName } from "@/lib/utils/auth-utils";
-import { Bell, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { getAuthLevelName, AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
+import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
+import { GlobalAccessRequestForm } from "@/components/admin/GlobalAccessRequestForm";
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const data = await getDashboardData();
-        setDashboardData(data);
-        const count = await getUnreadNotificationCount();
-        setUnreadCount(count);
-      } catch (error) {
-        console.error("Failed to load dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
+  const loadDashboard = async () => {
+    try {
+      const data = await getDashboardData();
+      setDashboardData(data);
+      const count = await getUnreadNotificationCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("Failed to load dashboard:", error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadDashboard();
   }, []);
 
@@ -75,6 +79,14 @@ export default function DashboardPage() {
     ...(outgoingRequests.authLevelChange || []),
   ];
 
+  // Separate pending and non-pending outgoing requests
+  const pendingOutgoing = allOutgoing.filter(
+    (request: any) => request.status === "PENDING"
+  );
+  const requestHistory = allOutgoing.filter(
+    (request: any) => request.status !== "PENDING"
+  );
+
   return (
     <AccountVerificationGuard requireVerification={true}>
       <AppNavbar />
@@ -87,9 +99,17 @@ export default function DashboardPage() {
                 <CardTitle className="text-2xl">
                   Welcome, {user?.name || user?.email || "User"}!
                 </CardTitle>
-                <CardDescription>
-                  Authorization Level: {getAuthLevelName(user?.auth ?? 0)} (
-                  {user?.auth ?? 0}){user?.allCityAccess && " • Global Access"}
+                <CardDescription className="space-y-1">
+                  <div>
+                    Authorization Level: {getAuthLevelName(user?.auth ?? 0)} (
+                    {user?.auth ?? 0})
+                  </div>
+                  {user?.city && user.city.name && (
+                    <div>City: {user.city.name}</div>
+                  )}
+                  {user?.allCityAccess && (
+                    <div className="font-medium">Global Access</div>
+                  )}
                 </CardDescription>
               </div>
               {unreadCount > 0 && (
@@ -103,6 +123,26 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
         </Card>
+
+        {/* Authorization Level Manager - Admin/SuperAdmin Only */}
+        {user?.auth >= AUTH_LEVELS.ADMIN && <AuthorizationChanger />}
+
+        {/* Authorization Request Form - Base Users, Creators, and Moderators Only */}
+        {user?.auth !== undefined && user.auth < AUTH_LEVELS.ADMIN && (
+          <AuthorizationRequestForm
+            currentUserId={user.id}
+            currentUserAuthLevel={user.auth ?? 0}
+            onRequestSubmitted={loadDashboard}
+          />
+        )}
+
+        {/* Global Access Request Form - Creators and Moderators Only */}
+        {user?.auth !== undefined &&
+          user.auth >= AUTH_LEVELS.CREATOR &&
+          user.auth < AUTH_LEVELS.ADMIN &&
+          !user.allCityAccess && (
+            <GlobalAccessRequestForm onRequestSubmitted={loadDashboard} />
+          )}
 
         {/* Notifications Section */}
         {notifications.length > 0 && (
@@ -162,18 +202,40 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Outgoing Requests Section */}
-        {allOutgoing.length > 0 && (
+        {/* Outgoing Requests Section - Pending Only */}
+        {pendingOutgoing.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Your Requests</CardTitle>
               <CardDescription>
-                Requests you have submitted ({allOutgoing.length})
+                Pending requests you have submitted ({pendingOutgoing.length})
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {allOutgoing.map((request: any) => (
+                {pendingOutgoing.map((request: any) => (
+                  <OutgoingRequestCard
+                    key={`${request.type}-${request.id}`}
+                    request={request}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Request History Section */}
+        {requestHistory.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Request History</CardTitle>
+              <CardDescription>
+                Completed and cancelled requests ({requestHistory.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {requestHistory.map((request: any) => (
                   <OutgoingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
@@ -254,7 +316,8 @@ export default function DashboardPage() {
 
         {/* Empty State */}
         {allIncoming.length === 0 &&
-          allOutgoing.length === 0 &&
+          pendingOutgoing.length === 0 &&
+          requestHistory.length === 0 &&
           userEvents.length === 0 &&
           teamMemberships.length === 0 && (
             <Card>

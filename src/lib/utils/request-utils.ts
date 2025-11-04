@@ -44,10 +44,8 @@ export async function getTaggingRequestApprovers(
   if (eventCityId) {
     const cityModerators = await prisma.user.findMany({
       where: {
-        cities: {
-          some: {
-            cityId: eventCityId,
-          },
+        city: {
+          cityId: eventCityId,
         },
         auth: {
           gte: AUTH_LEVELS.MODERATOR,
@@ -136,13 +134,12 @@ export async function canUserApproveRequest(
       if (authLevel >= AUTH_LEVELS.ADMIN) return true;
       if (authLevel >= AUTH_LEVELS.MODERATOR && context?.eventCityId) {
         // Check if user is a moderator for this city
-        const cityAssignment = await prisma.city.findFirst({
+        const cityAssignment = await prisma.city.findUnique({
           where: {
             userId,
-            cityId: context.eventCityId,
           },
         });
-        if (cityAssignment) return true;
+        if (cityAssignment && cityAssignment.cityId === context.eventCityId) return true;
       }
       // Check if user is event creator or team member (from Neo4j)
       if (context?.eventId) {

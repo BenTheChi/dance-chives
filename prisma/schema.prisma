@@ -21,10 +21,10 @@ model User {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   auth             Int?
-  allCityAccess Boolean @default(false) // Override assigned cities for creators/moderators
+  allCityAccess Boolean @default(false) // Override assigned cities for creators/moderators. Admins and SuperAdmins always have this set to true.
 
   events          Event[]
-  cities          City[]
+  city            City?
   sentInvitations Invitation[]
 
   // Request relationships
@@ -109,9 +109,11 @@ model Event {
 model City {
   id     String @id @default(cuid())
   cityId String
-  userId String
+  userId String @unique
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cityId])
 }
 
 model Invitation {
@@ -180,6 +182,7 @@ model TeamMemberRequest {
 model GlobalAccessRequest {
   id        String        @id @default(cuid())
   senderId  String // Creator or Moderator requesting global access
+  message   String // Mandatory explanation message
   status    RequestStatus @default(PENDING)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt

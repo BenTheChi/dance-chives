@@ -199,7 +199,7 @@ export interface EventPermissionContext {
   eventId: string;
   eventCityId?: string;
   eventCreatorId: string;
-  userCities?: string[];
+  userCity?: string;
 }
 
 export function canUpdateEvent(
@@ -213,27 +213,29 @@ export function canUpdateEvent(
     return true;
   }
 
-  // Moderators can update any events in their assigned cities (or all cities if flag is set)
+  // Moderators can update any events in their assigned city (or all cities if flag is set)
   if (canUpdateAnyEventsInCity(authLevel)) {
     if (allCityAccess) {
       return true;
     }
     if (
       context.eventCityId &&
-      context.userCities?.includes(context.eventCityId)
+      context.userCity &&
+      context.userCity === context.eventCityId
     ) {
       return true;
     }
   }
 
-  // Creators can update their own events in their assigned cities (or all cities if flag is set)
+  // Creators can update their own events in their assigned city (or all cities if flag is set)
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
     if (allCityAccess) {
       return true;
     }
     if (
       context.eventCityId &&
-      context.userCities?.includes(context.eventCityId)
+      context.userCity &&
+      context.userCity === context.eventCityId
     ) {
       return true;
     }
@@ -253,27 +255,29 @@ export function canDeleteEvent(
     return true;
   }
 
-  // Moderators can delete any events in their assigned cities (or all cities if flag is set)
+  // Moderators can delete any events in their assigned city (or all cities if flag is set)
   if (canDeleteAnyEventsInCity(authLevel)) {
     if (allCityAccess) {
       return true;
     }
     if (
       context.eventCityId &&
-      context.userCities?.includes(context.eventCityId)
+      context.userCity &&
+      context.userCity === context.eventCityId
     ) {
       return true;
     }
   }
 
-  // Creators can delete their own events in their assigned cities (or all cities if flag is set)
+  // Creators can delete their own events in their assigned city (or all cities if flag is set)
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
     if (allCityAccess) {
       return true;
     }
     if (
       context.eventCityId &&
-      context.userCities?.includes(context.eventCityId)
+      context.userCity &&
+      context.userCity === context.eventCityId
     ) {
       return true;
     }

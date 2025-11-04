@@ -14,12 +14,41 @@ async function main() {
 
   // Clear all existing data
   console.log("🗑️  Clearing existing data...");
-  await prisma.requestApproval.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.authLevelChangeRequest.deleteMany();
-  await prisma.globalAccessRequest.deleteMany();
-  await prisma.teamMemberRequest.deleteMany();
-  await prisma.taggingRequest.deleteMany();
+
+  // Helper function to safely delete from tables that might not exist
+  const safeDelete = async (
+    operation: () => Promise<any>,
+    tableName: string
+  ) => {
+    try {
+      await operation();
+    } catch (error: any) {
+      if (error.code === "P2021" || error.message?.includes("does not exist")) {
+        console.log(`⚠️  Table ${tableName} does not exist, skipping...`);
+      } else {
+        throw error;
+      }
+    }
+  };
+
+  await safeDelete(
+    () => prisma.requestApproval.deleteMany(),
+    "RequestApproval"
+  );
+  await safeDelete(() => prisma.notification.deleteMany(), "Notification");
+  await safeDelete(
+    () => prisma.authLevelChangeRequest.deleteMany(),
+    "AuthLevelChangeRequest"
+  );
+  await safeDelete(
+    () => prisma.globalAccessRequest.deleteMany(),
+    "GlobalAccessRequest"
+  );
+  await safeDelete(
+    () => prisma.teamMemberRequest.deleteMany(),
+    "TeamMemberRequest"
+  );
+  await safeDelete(() => prisma.taggingRequest.deleteMany(), "TaggingRequest");
   await prisma.event.deleteMany();
   await prisma.city.deleteMany();
   await prisma.invitation.deleteMany();
@@ -67,7 +96,7 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/admin.jpg",
       auth: 3, // ADMIN
-      allCityAccess: false,
+      allCityAccess: true, // Admins always have allCityAccess
     },
     {
       id: "test-user-4",
@@ -77,7 +106,7 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/super-admin.jpg",
       auth: 4, // SUPER_ADMIN
-      allCityAccess: false,
+      allCityAccess: true, // SuperAdmins always have allCityAccess
     },
   ];
 
@@ -216,16 +245,6 @@ async function main() {
     }
   }
 
-  // Assign test-user-2 (Moderator) as a city moderator for New York (city ID 1)
-  console.log("🌱 Assigning city moderator role...");
-  await prisma.city.create({
-    data: {
-      userId: "test-user-2",
-      cityId: "1", // New York city ID
-    },
-  });
-  console.log("✅ Assigned test-user-2 as city moderator for New York");
-
   // City definitions
   const newYorkCity: City = {
     id: 1,
@@ -244,6 +263,28 @@ async function main() {
     population: 753675,
     timezone: "America/Los_Angeles",
   };
+
+  // Assign cities to all users (mandatory)
+  console.log("🌱 Assigning cities to users...");
+  const userCityAssignments = [
+    { userId: "test-user-0", cityId: "5" }, // Base User -> Seattle
+    { userId: "test-user-1", cityId: "1" }, // Creator -> New York
+    { userId: "test-user-2", cityId: "1" }, // Moderator -> New York
+    { userId: "test-user-3", cityId: "5" }, // Admin -> Seattle
+    { userId: "test-user-4", cityId: "1" }, // Super Admin -> New York
+  ];
+
+  for (const assignment of userCityAssignments) {
+    await prisma.city.create({
+      data: {
+        userId: assignment.userId,
+        cityId: assignment.cityId,
+      },
+    });
+    console.log(
+      `✅ Assigned city ${assignment.cityId} to user ${assignment.userId}`
+    );
+  }
 
   // Helper function to create sections with brackets and videos
   const createSectionWithVideos = (
