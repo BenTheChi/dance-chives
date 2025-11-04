@@ -12,7 +12,6 @@ import {
   REQUEST_TYPES,
   RequestType,
 } from "@/lib/utils/request-utils";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
 import {
   isTeamMember,
   addTeamMember,
@@ -26,6 +25,155 @@ import {
   getCityName,
 } from "@/db/queries/team-member";
 import { isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
+import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Validates user authentication and returns session user ID
+ * Throws error if not authenticated
+ */
+async function requireAuth(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Not authenticated");
+  }
+  return session.user.id;
+}
+
+/**
+ * Generic helper to check if user has already responded to a request
+ */
+async function hasUserResponded(
+  requestType: RequestType,
+  requestId: string,
+  approverId: string
+): Promise<boolean> {
+  const existingApproval = await prisma.requestApproval.findFirst({
+    where: {
+      requestType,
+      requestId,
+      approverId,
+    },
+  });
+  return !!existingApproval;
+}
+
+/**
+ * Generic helper to create a request approval record
+ */
+async function createApprovalRecord(
+  requestType: RequestType,
+  requestId: string,
+  approverId: string,
+  approved: boolean,
+  message?: string
+): Promise<void> {
+  await prisma.requestApproval.create({
+    data: {
+      requestType,
+      requestId,
+      approverId,
+      approved,
+      message,
+    },
+  });
+}
+
+/**
+ * Generic helper to update request status
+ */
+async function updateRequestStatus(
+  requestType: RequestType,
+  requestId: string,
+  status: "APPROVED" | "DENIED" | "CANCELLED"
+): Promise<void> {
+  const updateData = { status, updatedAt: new Date() };
+
+  switch (requestType) {
+    case REQUEST_TYPES.TAGGING:
+      await prisma.taggingRequest.update({
+        where: { id: requestId },
+        data: updateData,
+      });
+      break;
+    case REQUEST_TYPES.TEAM_MEMBER:
+      await prisma.teamMemberRequest.update({
+        where: { id: requestId },
+        data: updateData,
+      });
+      break;
+    case REQUEST_TYPES.GLOBAL_ACCESS:
+      await prisma.globalAccessRequest.update({
+        where: { id: requestId },
+        data: updateData,
+      });
+      break;
+    case REQUEST_TYPES.AUTH_LEVEL_CHANGE:
+      await prisma.authLevelChangeRequest.update({
+        where: { id: requestId },
+        data: updateData,
+      });
+      break;
+  }
+}
+
+/**
+ * Generic helper to cancel a request
+ * Validates ownership and status before canceling
+ */
+async function cancelRequest(
+  requestType: RequestType,
+  requestId: string,
+  userId: string
+): Promise<void> {
+  let request: { senderId: string; status: string } | null = null;
+
+  // Fetch request based on type
+  switch (requestType) {
+    case REQUEST_TYPES.TAGGING:
+      request = await prisma.taggingRequest.findUnique({
+        where: { id: requestId },
+        select: { senderId: true, status: true },
+      });
+      break;
+    case REQUEST_TYPES.TEAM_MEMBER:
+      request = await prisma.teamMemberRequest.findUnique({
+        where: { id: requestId },
+        select: { senderId: true, status: true },
+      });
+      break;
+    case REQUEST_TYPES.GLOBAL_ACCESS:
+      request = await prisma.globalAccessRequest.findUnique({
+        where: { id: requestId },
+        select: { senderId: true, status: true },
+      });
+      break;
+    case REQUEST_TYPES.AUTH_LEVEL_CHANGE:
+      request = await prisma.authLevelChangeRequest.findUnique({
+        where: { id: requestId },
+        select: { senderId: true, status: true },
+      });
+      break;
+  }
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  // Only the sender can cancel their own request
+  if (request.senderId !== userId) {
+    throw new Error("You can only cancel your own requests");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Only pending requests can be cancelled");
+  }
+
+  await updateRequestStatus(requestType, requestId, "CANCELLED");
+}
 
 // ============================================================================
 // Tagging Requests
@@ -36,10 +184,7 @@ export async function createTaggingRequest(
   videoId?: string,
   role?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
+  const senderId = await requireAuth();
 
   // Require either videoId or role, but not both
   if (!videoId && !role) {
@@ -57,7 +202,6 @@ export async function createTaggingRequest(
     );
   }
 
-  const senderId = session.user.id;
   // Users can only tag themselves
   const targetUserId = senderId;
 
@@ -150,12 +294,7 @@ export async function approveTaggingRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   // Get the request
   const request = await prisma.taggingRequest.findUnique({
@@ -211,35 +350,22 @@ export async function approveTaggingRequest(
     throw new Error("You do not have permission to approve this request");
   }
 
-  // Check if already approved
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.TAGGING,
-      requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+  // Check if user has already responded
+  if (await hasUserResponded(REQUEST_TYPES.TAGGING, requestId, approverId)) {
     throw new Error("You have already responded to this request");
   }
 
   // Create approval record
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.TAGGING,
-      requestId,
-      approverId,
-      approved: true,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.TAGGING,
+    requestId,
+    approverId,
+    true,
+    message
+  );
 
   // Update request status to APPROVED
-  await prisma.taggingRequest.update({
-    where: { id: requestId },
-    data: { status: "APPROVED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(REQUEST_TYPES.TAGGING, requestId, "APPROVED");
 
   // Create notification for sender
   const eventTitle = await getEventTitle(request.eventId);
@@ -269,12 +395,7 @@ export async function approveTaggingRequest(
 }
 
 export async function denyTaggingRequest(requestId: string, message?: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.taggingRequest.findUnique({
     where: { id: requestId },
@@ -311,32 +432,19 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
     throw new Error("You do not have permission to deny this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.TAGGING,
-      requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+  if (await hasUserResponded(REQUEST_TYPES.TAGGING, requestId, approverId)) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.TAGGING,
-      requestId,
-      approverId,
-      approved: false,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.TAGGING,
+    requestId,
+    approverId,
+    false,
+    message
+  );
 
-  await prisma.taggingRequest.update({
-    where: { id: requestId },
-    data: { status: "DENIED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(REQUEST_TYPES.TAGGING, requestId, "DENIED");
 
   const eventTitle = await getEventTitle(request.eventId);
   const eventDisplayName = eventTitle || request.eventId;
@@ -361,12 +469,7 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
 // ============================================================================
 
 export async function createTeamMemberRequest(eventId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const senderId = session.user.id;
+  const senderId = await requireAuth();
 
   // Validate event exists in Neo4j
   const eventExistsInNeo4j = await eventExists(eventId);
@@ -432,12 +535,7 @@ export async function approveTeamMemberRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.teamMemberRequest.findUnique({
     where: { id: requestId },
@@ -472,32 +570,21 @@ export async function approveTeamMemberRequest(
     throw new Error("You do not have permission to approve this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.TEAM_MEMBER,
-      requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+  if (
+    await hasUserResponded(REQUEST_TYPES.TEAM_MEMBER, requestId, approverId)
+  ) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.TEAM_MEMBER,
-      requestId,
-      approverId,
-      approved: true,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.TEAM_MEMBER,
+    requestId,
+    approverId,
+    true,
+    message
+  );
 
-  await prisma.teamMemberRequest.update({
-    where: { id: requestId },
-    data: { status: "APPROVED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(REQUEST_TYPES.TEAM_MEMBER, requestId, "APPROVED");
 
   // Add user as team member in Neo4j (grants edit access)
   await addTeamMember(request.eventId, request.senderId);
@@ -518,12 +605,7 @@ export async function denyTeamMemberRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.teamMemberRequest.findUnique({
     where: { id: requestId },
@@ -552,32 +634,21 @@ export async function denyTeamMemberRequest(
     throw new Error("You do not have permission to deny this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.TEAM_MEMBER,
-      requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+  if (
+    await hasUserResponded(REQUEST_TYPES.TEAM_MEMBER, requestId, approverId)
+  ) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.TEAM_MEMBER,
-      requestId,
-      approverId,
-      approved: false,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.TEAM_MEMBER,
+    requestId,
+    approverId,
+    false,
+    message
+  );
 
-  await prisma.teamMemberRequest.update({
-    where: { id: requestId },
-    data: { status: "DENIED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(REQUEST_TYPES.TEAM_MEMBER, requestId, "DENIED");
 
   await createNotification(
     request.senderId,
@@ -596,12 +667,7 @@ export async function denyTeamMemberRequest(
 // ============================================================================
 
 export async function createGlobalAccessRequest(message: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const senderId = session.user.id;
+  const senderId = await requireAuth();
 
   if (!message || message.trim().length === 0) {
     throw new Error("Message is required for global access requests");
@@ -678,12 +744,7 @@ export async function approveGlobalAccessRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.globalAccessRequest.findUnique({
     where: { id: requestId },
@@ -709,32 +770,21 @@ export async function approveGlobalAccessRequest(
     throw new Error("You do not have permission to approve this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.GLOBAL_ACCESS,
-      requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+  if (
+    await hasUserResponded(REQUEST_TYPES.GLOBAL_ACCESS, requestId, approverId)
+  ) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.GLOBAL_ACCESS,
-      requestId,
-      approverId,
-      approved: true,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.GLOBAL_ACCESS,
+    requestId,
+    approverId,
+    true,
+    message
+  );
 
-  await prisma.globalAccessRequest.update({
-    where: { id: requestId },
-    data: { status: "APPROVED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(REQUEST_TYPES.GLOBAL_ACCESS, requestId, "APPROVED");
 
   // Grant global access
   await prisma.user.update({
@@ -758,12 +808,7 @@ export async function denyGlobalAccessRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.globalAccessRequest.findUnique({
     where: { id: requestId },
@@ -789,32 +834,21 @@ export async function denyGlobalAccessRequest(
     throw new Error("You do not have permission to deny this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.GLOBAL_ACCESS,
-      requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+  if (
+    await hasUserResponded(REQUEST_TYPES.GLOBAL_ACCESS, requestId, approverId)
+  ) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.GLOBAL_ACCESS,
-      requestId,
-      approverId,
-      approved: false,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.GLOBAL_ACCESS,
+    requestId,
+    approverId,
+    false,
+    message
+  );
 
-  await prisma.globalAccessRequest.update({
-    where: { id: requestId },
-    data: { status: "DENIED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(REQUEST_TYPES.GLOBAL_ACCESS, requestId, "DENIED");
 
   await createNotification(
     request.senderId,
@@ -837,12 +871,7 @@ export async function createAuthLevelChangeRequest(
   requestedLevel: number,
   message: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const senderId = session.user.id;
+  const senderId = await requireAuth();
 
   if (!message || message.trim().length === 0) {
     throw new Error(
@@ -927,12 +956,7 @@ export async function approveAuthLevelChangeRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.authLevelChangeRequest.findUnique({
     where: { id: requestId },
@@ -959,32 +983,29 @@ export async function approveAuthLevelChangeRequest(
     throw new Error("You do not have permission to approve this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.AUTH_LEVEL_CHANGE,
+  if (
+    await hasUserResponded(
+      REQUEST_TYPES.AUTH_LEVEL_CHANGE,
       requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+      approverId
+    )
+  ) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.AUTH_LEVEL_CHANGE,
-      requestId,
-      approverId,
-      approved: true,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.AUTH_LEVEL_CHANGE,
+    requestId,
+    approverId,
+    true,
+    message
+  );
 
-  await prisma.authLevelChangeRequest.update({
-    where: { id: requestId },
-    data: { status: "APPROVED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(
+    REQUEST_TYPES.AUTH_LEVEL_CHANGE,
+    requestId,
+    "APPROVED"
+  );
 
   // Admins and SuperAdmins always have allCityAccess
   const shouldHaveAllCityAccess = request.requestedLevel >= AUTH_LEVELS.ADMIN;
@@ -1026,12 +1047,7 @@ export async function denyAuthLevelChangeRequest(
   requestId: string,
   message?: string
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const approverId = session.user.id;
+  const approverId = await requireAuth();
 
   const request = await prisma.authLevelChangeRequest.findUnique({
     where: { id: requestId },
@@ -1058,32 +1074,29 @@ export async function denyAuthLevelChangeRequest(
     throw new Error("You do not have permission to deny this request");
   }
 
-  const existingApproval = await prisma.requestApproval.findFirst({
-    where: {
-      requestType: REQUEST_TYPES.AUTH_LEVEL_CHANGE,
+  if (
+    await hasUserResponded(
+      REQUEST_TYPES.AUTH_LEVEL_CHANGE,
       requestId,
-      approverId,
-    },
-  });
-
-  if (existingApproval) {
+      approverId
+    )
+  ) {
     throw new Error("You have already responded to this request");
   }
 
-  await prisma.requestApproval.create({
-    data: {
-      requestType: REQUEST_TYPES.AUTH_LEVEL_CHANGE,
-      requestId,
-      approverId,
-      approved: false,
-      message,
-    },
-  });
+  await createApprovalRecord(
+    REQUEST_TYPES.AUTH_LEVEL_CHANGE,
+    requestId,
+    approverId,
+    false,
+    message
+  );
 
-  await prisma.authLevelChangeRequest.update({
-    where: { id: requestId },
-    data: { status: "DENIED", updatedAt: new Date() },
-  });
+  await updateRequestStatus(
+    REQUEST_TYPES.AUTH_LEVEL_CHANGE,
+    requestId,
+    "DENIED"
+  );
 
   await createNotification(
     request.senderId,
@@ -1102,134 +1115,26 @@ export async function denyAuthLevelChangeRequest(
 // ============================================================================
 
 export async function cancelTaggingRequest(requestId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
-
-  const request = await prisma.taggingRequest.findUnique({
-    where: { id: requestId },
-  });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  // Only the sender can cancel their own request
-  if (request.senderId !== userId) {
-    throw new Error("You can only cancel your own requests");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Only pending requests can be cancelled");
-  }
-
-  await prisma.taggingRequest.update({
-    where: { id: requestId },
-    data: { status: "CANCELLED", updatedAt: new Date() },
-  });
-
+  const userId = await requireAuth();
+  await cancelRequest(REQUEST_TYPES.TAGGING, requestId, userId);
   return { success: true };
 }
 
 export async function cancelTeamMemberRequest(requestId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
-
-  const request = await prisma.teamMemberRequest.findUnique({
-    where: { id: requestId },
-  });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  // Only the sender can cancel their own request
-  if (request.senderId !== userId) {
-    throw new Error("You can only cancel your own requests");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Only pending requests can be cancelled");
-  }
-
-  await prisma.teamMemberRequest.update({
-    where: { id: requestId },
-    data: { status: "CANCELLED", updatedAt: new Date() },
-  });
-
+  const userId = await requireAuth();
+  await cancelRequest(REQUEST_TYPES.TEAM_MEMBER, requestId, userId);
   return { success: true };
 }
 
 export async function cancelGlobalAccessRequest(requestId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
-
-  const request = await prisma.globalAccessRequest.findUnique({
-    where: { id: requestId },
-  });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  // Only the sender can cancel their own request
-  if (request.senderId !== userId) {
-    throw new Error("You can only cancel your own requests");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Only pending requests can be cancelled");
-  }
-
-  await prisma.globalAccessRequest.update({
-    where: { id: requestId },
-    data: { status: "CANCELLED", updatedAt: new Date() },
-  });
-
+  const userId = await requireAuth();
+  await cancelRequest(REQUEST_TYPES.GLOBAL_ACCESS, requestId, userId);
   return { success: true };
 }
 
 export async function cancelAuthLevelChangeRequest(requestId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
-
-  const request = await prisma.authLevelChangeRequest.findUnique({
-    where: { id: requestId },
-  });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  // Only the sender can cancel their own request
-  if (request.senderId !== userId) {
-    throw new Error("You can only cancel your own requests");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Only pending requests can be cancelled");
-  }
-
-  await prisma.authLevelChangeRequest.update({
-    where: { id: requestId },
-    data: { status: "CANCELLED", updatedAt: new Date() },
-  });
-
+  const userId = await requireAuth();
+  await cancelRequest(REQUEST_TYPES.AUTH_LEVEL_CHANGE, requestId, userId);
   return { success: true };
 }
 
@@ -1238,12 +1143,7 @@ export async function cancelAuthLevelChangeRequest(requestId: string) {
 // ============================================================================
 
 export async function getIncomingRequests() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
+  const userId = await requireAuth();
 
   // Get all requests where user can approve
   const taggingRequests = await prisma.taggingRequest.findMany({
@@ -1383,12 +1283,7 @@ export async function getIncomingRequests() {
 }
 
 export async function getOutgoingRequests() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
+  const userId = await requireAuth();
 
   const [
     taggingRequests,
@@ -1484,15 +1379,12 @@ export async function getNotifications(limit: number = 50) {
 }
 
 export async function markNotificationAsRead(notificationId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
+  const userId = await requireAuth();
 
   await prisma.notification.update({
     where: {
       id: notificationId,
-      userId: session.user.id, // Ensure user owns the notification
+      userId, // Ensure user owns the notification
     },
     data: { read: true },
   });
@@ -1501,14 +1393,11 @@ export async function markNotificationAsRead(notificationId: string) {
 }
 
 export async function markAllNotificationsAsRead() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
+  const userId = await requireAuth();
 
   await prisma.notification.updateMany({
     where: {
-      userId: session.user.id,
+      userId,
       read: false,
     },
     data: { read: true },
@@ -1538,12 +1427,7 @@ export async function getUnreadNotificationCount() {
 // ============================================================================
 
 export async function getDashboardData() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  const userId = session.user.id;
+  const userId = await requireAuth();
 
   const [
     incomingRequests,

@@ -96,7 +96,7 @@ export default function DashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl">
+                <CardTitle className="text-2xl font-semibold">
                   Welcome, {user?.name || user?.email || "User"}!
                 </CardTitle>
                 <CardDescription className="space-y-1">
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                 {notifications.slice(0, 5).map((notification: any) => (
                   <div
                     key={notification.id}
-                    className={`p-3 rounded-lg border ${
+                    className={`rounded-lg border p-3 ${
                       !notification.read ? "bg-blue-50 dark:bg-blue-950" : ""
                     }`}
                   >
@@ -165,12 +165,12 @@ export default function DashboardPage() {
                         <p className="text-sm text-muted-foreground">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {new Date(notification.createdAt).toLocaleString()}
                         </p>
                       </div>
                       {!notification.read && (
-                        <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                        <div className="h-2 w-2 rounded-full bg-blue-500" />
                       )}
                     </div>
                   </div>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                 {userEvents.map((event: any) => (
                   <div
                     key={event.id}
-                    className="p-3 rounded-lg border flex items-center justify-between"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
                       <p className="font-medium">Event ID: {event.eventId}</p>
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                 {teamMemberships.map((membership: any, index: number) => (
                   <div
                     key={`team-membership-${membership.eventId}-${index}`}
-                    className="p-3 rounded-lg border flex items-center justify-between"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
                       <p className="font-medium">
