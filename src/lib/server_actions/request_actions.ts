@@ -21,7 +21,10 @@ import {
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
+  getEventTitle,
+  getVideoTitle,
 } from "@/db/queries/team-member";
+import { isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
 
 // ============================================================================
 // Tagging Requests
@@ -29,7 +32,6 @@ import {
 
 export async function createTaggingRequest(
   eventId: string,
-  targetUserId: string,
   videoId?: string,
   role?: string
 ) {
@@ -38,16 +40,25 @@ export async function createTaggingRequest(
     throw new Error("Not authenticated");
   }
 
-  const senderId = session.user.id;
-
-  // Validate that target user exists
-  const targetUser = await prisma.user.findUnique({
-    where: { id: targetUserId },
-  });
-
-  if (!targetUser) {
-    throw new Error("Target user not found");
+  // Require either videoId or role, but not both
+  if (!videoId && !role) {
+    throw new Error("Either videoId or role must be provided");
   }
+
+  if (videoId && role) {
+    throw new Error("Cannot specify both videoId and role");
+  }
+
+  // Validate role if provided
+  if (role && !isValidRole(role)) {
+    throw new Error(
+      `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+    );
+  }
+
+  const senderId = session.user.id;
+  // Users can only tag themselves
+  const targetUserId = senderId;
 
   // Validate event exists in Neo4j
   const eventExistsInNeo4j = await eventExists(eventId);
@@ -106,14 +117,26 @@ export async function createTaggingRequest(
   );
 
   // Create notifications for approvers
+  const eventTitle = await getEventTitle(eventId);
+  const eventDisplayName = eventTitle || eventId;
+  const username = request.sender.name || request.sender.email;
+
+  let notificationMessage: string;
+  if (videoId) {
+    const videoTitle = await getVideoTitle(videoId);
+    const videoDisplayName = videoTitle || videoId;
+    notificationMessage = `${username} requesting tag for video ${videoDisplayName} in event ${eventDisplayName}`;
+  } else {
+    // role is guaranteed to exist here due to validation above
+    notificationMessage = `${username} requesting tag for role ${role} in event ${eventDisplayName}`;
+  }
+
   for (const approverId of approvers) {
     await createNotification(
       approverId,
       "INCOMING_REQUEST",
       "New Tagging Request",
-      `${request.sender.name || request.sender.email} wants to tag ${
-        request.targetUser.name || request.targetUser.email
-      } in event`,
+      notificationMessage,
       REQUEST_TYPES.TAGGING,
       request.id
     );
@@ -144,6 +167,13 @@ export async function approveTaggingRequest(
 
   if (!request) {
     throw new Error("Request not found");
+  }
+
+  // Ensure request has either videoId or role (general tagging requests are not allowed)
+  if (!request.videoId && !request.role) {
+    throw new Error(
+      "Invalid tagging request: must have either videoId or role"
+    );
   }
 
   if (request.status !== "PENDING") {
@@ -211,13 +241,17 @@ export async function approveTaggingRequest(
   });
 
   // Create notification for sender
+  const eventTitle = await getEventTitle(request.eventId);
+  const eventDisplayName = eventTitle || request.eventId;
+  const notificationMessage = request.videoId
+    ? `Your request to tag yourself in a video in event "${eventDisplayName}" has been approved`
+    : `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been approved`;
+
   await createNotification(
     request.senderId,
     "REQUEST_APPROVED",
     "Tagging Request Approved",
-    `Your request to tag ${
-      request.targetUser.name || request.targetUser.email
-    } has been approved`,
+    notificationMessage,
     REQUEST_TYPES.TAGGING,
     requestId
   );
@@ -251,6 +285,13 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
 
   if (!request) {
     throw new Error("Request not found");
+  }
+
+  // Ensure request has either videoId or role (general tagging requests are not allowed)
+  if (!request.videoId && !request.role) {
+    throw new Error(
+      "Invalid tagging request: must have either videoId or role"
+    );
   }
 
   if (request.status !== "PENDING") {
@@ -296,13 +337,17 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
     data: { status: "DENIED", updatedAt: new Date() },
   });
 
+  const eventTitle = await getEventTitle(request.eventId);
+  const eventDisplayName = eventTitle || request.eventId;
+  const notificationMessage = request.videoId
+    ? `Your request to tag yourself in a video in event "${eventDisplayName}" has been denied`
+    : `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been denied`;
+
   await createNotification(
     request.senderId,
     "REQUEST_DENIED",
     "Tagging Request Denied",
-    `Your request to tag ${
-      request.targetUser.name || request.targetUser.email
-    } has been denied`,
+    notificationMessage,
     REQUEST_TYPES.TAGGING,
     requestId
   );
@@ -1103,25 +1148,54 @@ export async function getIncomingRequests() {
     },
   });
 
-  // Filter requests user can approve
+  // Filter requests user can approve and enrich with event/video info
   const canApproveTagging = await Promise.all(
-    taggingRequests.map(async (req) => ({
-      request: req,
-      canApprove: await canUserApproveRequest(userId, REQUEST_TYPES.TAGGING, {
-        eventId: req.eventId,
-      }),
-    }))
+    taggingRequests.map(async (req) => {
+      const eventCityId = await getEventCityId(req.eventId);
+      // Convert to string if needed (Neo4j may return number)
+      const cityIdString = eventCityId ? String(eventCityId) : undefined;
+      const canApprove = await canUserApproveRequest(
+        userId,
+        REQUEST_TYPES.TAGGING,
+        {
+          eventId: req.eventId,
+          eventCityId: cityIdString,
+        }
+      );
+
+      // Fetch event and video titles
+      const eventTitle = await getEventTitle(req.eventId);
+      const videoTitle = req.videoId ? await getVideoTitle(req.videoId) : null;
+
+      return {
+        request: {
+          ...req,
+          eventTitle: eventTitle || req.eventId,
+          videoTitle: videoTitle || null,
+        },
+        canApprove,
+      };
+    })
   );
 
   const canApproveTeamMember = await Promise.all(
-    teamMemberRequests.map(async (req) => ({
-      request: req,
-      canApprove: await canUserApproveRequest(
-        userId,
-        REQUEST_TYPES.TEAM_MEMBER,
-        { eventId: req.eventId }
-      ),
-    }))
+    teamMemberRequests.map(async (req) => {
+      const eventCityId = await getEventCityId(req.eventId);
+      // Convert to string if needed (Neo4j may return number)
+      const cityIdString = eventCityId ? String(eventCityId) : undefined;
+      const eventTitle = await getEventTitle(req.eventId);
+      return {
+        request: {
+          ...req,
+          eventTitle: eventTitle || req.eventId,
+        },
+        canApprove: await canUserApproveRequest(
+          userId,
+          REQUEST_TYPES.TEAM_MEMBER,
+          { eventId: req.eventId, eventCityId: cityIdString }
+        ),
+      };
+    })
   );
 
   const canApproveGlobalAccess = await Promise.all(
@@ -1202,12 +1276,35 @@ export async function getOutgoingRequests() {
     }),
   ]);
 
+  // Enrich tagging requests with event and video titles
+  const enrichedTaggingRequests = await Promise.all(
+    taggingRequests.map(async (req) => {
+      const eventTitle = await getEventTitle(req.eventId);
+      const videoTitle = req.videoId ? await getVideoTitle(req.videoId) : null;
+      return {
+        ...req,
+        type: "TAGGING",
+        eventTitle: eventTitle || req.eventId,
+        videoTitle: videoTitle || null,
+      };
+    })
+  );
+
+  // Enrich team member requests with event titles
+  const enrichedTeamMemberRequests = await Promise.all(
+    teamMemberRequests.map(async (req) => {
+      const eventTitle = await getEventTitle(req.eventId);
+      return {
+        ...req,
+        type: "TEAM_MEMBER",
+        eventTitle: eventTitle || req.eventId,
+      };
+    })
+  );
+
   return {
-    tagging: taggingRequests.map((req) => ({ ...req, type: "TAGGING" })),
-    teamMember: teamMemberRequests.map((req) => ({
-      ...req,
-      type: "TEAM_MEMBER",
-    })),
+    tagging: enrichedTaggingRequests,
+    teamMember: enrichedTeamMemberRequests,
     globalAccess: globalAccessRequests.map((req) => ({
       ...req,
       type: "GLOBAL_ACCESS",

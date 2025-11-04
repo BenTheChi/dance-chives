@@ -8,6 +8,7 @@ import {
   EventCard,
 } from "../../types/event";
 import { UserSearchItem } from "../../types/user";
+import { getNeo4jRoleFormats, toNeo4jRoleFormat, isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
 
 // Neo4j record interfaces
 interface BracketVideoRecord {
@@ -74,10 +75,11 @@ export const getEvent = async (id: string): Promise<Event> => {
   );
 
   // Get roles
+  const validRoleFormats = getNeo4jRoleFormats();
   const rolesResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[roleRel]-(user:User)
-    WHERE type(roleRel) IN ['ORGANIZER', 'HEAD_JUDGE', 'DJ', 'MC', 'JUDGE', 'COORDINATOR']
+    WHERE type(roleRel) IN $validRoles
     RETURN collect({
       id: type(roleRel),
       title: type(roleRel),
@@ -88,7 +90,7 @@ export const getEvent = async (id: string): Promise<Event> => {
       }
     }) as roles
   `,
-    { id }
+    { id, validRoles: validRoleFormats }
   );
 
   // Get sections with video and bracket counts
@@ -513,6 +515,15 @@ const createSectionVideos = async (sections: any[]) => {
 };
 
 export const insertEvent = async (event: Event) => {
+  // Validate all roles before inserting
+  if (event.roles && event.roles.length > 0) {
+    for (const role of event.roles) {
+      if (!isValidRole(role.title)) {
+        throw new Error(`Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`);
+      }
+    }
+  }
+
   const session = driver.session();
 
   const result = await session.run(
@@ -757,6 +768,16 @@ export const getEventSections = async (id: string) => {
 
 export const EditEvent = async (event: Event) => {
   const { id, eventDetails } = event;
+  
+  // Validate all roles before editing
+  if (event.roles && event.roles.length > 0) {
+    for (const role of event.roles) {
+      if (!isValidRole(role.title)) {
+        throw new Error(`Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`);
+      }
+    }
+  }
+  
   const session = driver.session();
 
   try {

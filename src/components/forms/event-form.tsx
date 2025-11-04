@@ -18,6 +18,7 @@ import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role, SubEvent, Picture } from "@/types/event";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
+import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
@@ -95,7 +96,13 @@ const eventDetailsSchema = z.object({
 
 const roleSchema = z.object({
   id: z.string(),
-  title: z.string().min(1, "Role title is required"), // switch to min for all non-optional
+  title: z
+    .string()
+    .min(1, "Role title is required")
+    .refine(
+      (val) => AVAILABLE_ROLES.includes(val as any),
+      `Role must be one of: ${AVAILABLE_ROLES.join(", ")}`
+    ),
   user: userSearchItemSchema.nullable(),
 });
 

@@ -38,14 +38,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete corresponding PostgreSQL Event record
-    try {
-      await prisma.event.deleteMany({
-        where: { eventId: id },
-      });
-    } catch (dbError) {
-      // Log error but don't fail the request - event is already deleted from Neo4j
-      console.error("Failed to delete PostgreSQL Event record:", dbError);
-    }
+    // Using deleteMany to handle cases where record might not exist
+    await prisma.event.deleteMany({
+      where: { eventId: id },
+    });
 
     return NextResponse.json({ message: "Event deleted" }, { status: 200 });
   } catch (error) {

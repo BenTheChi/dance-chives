@@ -21,16 +21,7 @@ import {
 } from "../ui/select";
 import { UserSearchItem } from "@/types/user";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
-
-// Define the available roles for the event
-const availableRoles = [
-  "Organizer",
-  "DJ",
-  "Photographer",
-  "Videographer",
-  "Designer",
-  "MC",
-];
+import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 
 interface RolesFormProps {
   control: Control<FormValues>;
@@ -121,7 +112,7 @@ export default function RolesForm({
                         <SelectValue placeholder="Select Role" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableRoles.map((role) => (
+                        {AVAILABLE_ROLES.map((role) => (
                           <SelectItem key={role} value={role}>
                             {role}
                           </SelectItem>

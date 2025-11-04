@@ -28,7 +28,9 @@ interface RequestCardProps {
     sender?: { name?: string; email: string };
     targetUser?: { name?: string; email: string };
     eventId?: string;
+    eventTitle?: string;
     videoId?: string;
+    videoTitle?: string | null;
     role?: string;
     status: string;
     createdAt: Date;
@@ -103,51 +105,74 @@ export function IncomingRequestCard({ request }: RequestCardProps) {
     }
   };
 
-  const getRequestDescription = () => {
-    switch (request.type) {
-      case "TAGGING":
-        return `${request.sender?.name || request.sender?.email} wants to tag ${
-          request.targetUser?.name || request.targetUser?.email
-        }${request.role ? ` as ${request.role}` : ""}${
-          request.videoId ? " in a video" : ""
-        }`;
-      case "TEAM_MEMBER":
-        return `${
-          request.sender?.name || request.sender?.email
-        } wants to join as a team member`;
-      case "GLOBAL_ACCESS":
-        return `${
-          request.sender?.name || request.sender?.email
-        } is requesting global access`;
-      case "AUTH_LEVEL_CHANGE":
-        return `${
-          request.sender?.name || request.sender?.email
-        } wants to change ${
-          request.targetUser?.name || request.targetUser?.email
-        }'s authorization level from ${request.currentLevel ?? 0} to ${
-          request.requestedLevel ?? 0
-        }${request.message ? ` - ${request.message}` : ""}`;
-      default:
-        return "New request";
+  const getTaggingTypeTitle = () => {
+    if (request.type === "TAGGING") {
+      if (request.videoTitle || request.videoId) {
+        return "Video Tag";
+      } else if (request.role) {
+        return "Role Tag";
+      }
     }
+    return null;
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">
-          {request.type === "TAGGING" && "Tagging Request"}
-          {request.type === "TEAM_MEMBER" && "Team Member Request"}
-          {request.type === "GLOBAL_ACCESS" && "Global Access Request"}
-          {request.type === "AUTH_LEVEL_CHANGE" &&
-            "Authorization Level Change Request"}
+          {request.type === "TAGGING" && getTaggingTypeTitle()
+            ? getTaggingTypeTitle()
+            : request.type === "TEAM_MEMBER"
+            ? "Team Member Request"
+            : request.type === "GLOBAL_ACCESS"
+            ? "Global Access Request"
+            : request.type === "AUTH_LEVEL_CHANGE"
+            ? "Authorization Level Change Request"
+            : "Request"}
         </CardTitle>
-        <CardDescription>{getRequestDescription()}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="text-sm text-muted-foreground">
-          <p>Status: {request.status}</p>
-          <p>Created: {new Date(request.createdAt).toLocaleDateString()}</p>
+        <div className="text-sm text-muted-foreground space-y-1">
+          {request.type === "TAGGING" && (
+            <>
+              {request.sender && (
+                <p>
+                  <span className="font-medium">Requestor:</span>{" "}
+                  {request.sender.name}
+                </p>
+              )}
+              {request.eventTitle && (
+                <p>
+                  <span className="font-medium">Event:</span>{" "}
+                  {request.eventTitle}
+                </p>
+              )}
+              {request.videoTitle && (
+                <p>
+                  <span className="font-medium">Video:</span>{" "}
+                  {request.videoTitle}
+                </p>
+              )}
+              {request.role && (
+                <p>
+                  <span className="font-medium">Role:</span> {request.role}
+                </p>
+              )}
+            </>
+          )}
+          {request.type === "TEAM_MEMBER" && request.eventTitle && (
+            <p>
+              <span className="font-medium">Event:</span> {request.eventTitle}
+            </p>
+          )}
+          <p>
+            <span className="font-medium">Status:</span> {request.status}
+          </p>
+          <p>
+            <span className="font-medium">Created:</span>{" "}
+            {new Date(request.createdAt).toLocaleDateString()}{" "}
+            {new Date(request.createdAt).toLocaleTimeString()}
+          </p>
         </div>
         {request.status === "PENDING" && (
           <div className="flex gap-2">
@@ -175,25 +200,6 @@ export function IncomingRequestCard({ request }: RequestCardProps) {
 }
 
 export function OutgoingRequestCard({ request }: RequestCardProps) {
-  const getRequestDescription = () => {
-    switch (request.type) {
-      case "TAGGING":
-        return `Tagging request for ${
-          request.targetUser?.name || request.targetUser?.email
-        }${request.role ? ` as ${request.role}` : ""}`;
-      case "TEAM_MEMBER":
-        return `Team member request for event`;
-      case "GLOBAL_ACCESS":
-        return `Global access request`;
-      case "AUTH_LEVEL_CHANGE":
-        return `Authorization level change request for ${
-          request.targetUser?.name || request.targetUser?.email
-        } (${request.currentLevel ?? 0} → ${request.requestedLevel ?? 0})`;
-      default:
-        return "Request";
-    }
-  };
-
   const getStatusColor = () => {
     switch (request.status) {
       case "APPROVED":
@@ -207,23 +213,73 @@ export function OutgoingRequestCard({ request }: RequestCardProps) {
     }
   };
 
+  const getTaggingTypeTitle = () => {
+    if (request.type === "TAGGING") {
+      if (request.videoTitle || request.videoId) {
+        return "Video Tag";
+      } else if (request.role) {
+        return "Role Tag";
+      }
+    }
+    return null;
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">
-          {request.type === "TAGGING" && "Tagging Request"}
-          {request.type === "TEAM_MEMBER" && "Team Member Request"}
-          {request.type === "GLOBAL_ACCESS" && "Global Access Request"}
-          {request.type === "AUTH_LEVEL_CHANGE" &&
-            "Authorization Level Change Request"}
+          {request.type === "TAGGING" && getTaggingTypeTitle()
+            ? getTaggingTypeTitle()
+            : request.type === "TEAM_MEMBER"
+            ? "Team Member Request"
+            : request.type === "GLOBAL_ACCESS"
+            ? "Global Access Request"
+            : request.type === "AUTH_LEVEL_CHANGE"
+            ? "Authorization Level Change Request"
+            : "Request"}
         </CardTitle>
-        <CardDescription>{getRequestDescription()}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="text-sm">
-          <p className={getStatusColor()}>Status: {request.status}</p>
+        <div className="text-sm space-y-1">
+          {request.type === "TAGGING" && (
+            <>
+              {request.sender && (
+                <p>
+                  <span className="font-medium">Requestor:</span>{" "}
+                  {request.sender.name}
+                </p>
+              )}
+              {request.eventTitle && (
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Event:</span>{" "}
+                  {request.eventTitle}
+                </p>
+              )}
+              {request.videoTitle && (
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Video:</span>{" "}
+                  {request.videoTitle}
+                </p>
+              )}
+              {request.role && (
+                <p className="text-muted-foreground">
+                  <span className="font-medium">Role:</span> {request.role}
+                </p>
+              )}
+            </>
+          )}
+          {request.type === "TEAM_MEMBER" && request.eventTitle && (
+            <p className="text-muted-foreground">
+              <span className="font-medium">Event:</span> {request.eventTitle}
+            </p>
+          )}
+          <p className={getStatusColor()}>
+            <span className="font-medium">Status:</span> {request.status}
+          </p>
           <p className="text-muted-foreground">
-            Created: {new Date(request.createdAt).toLocaleDateString()}
+            <span className="font-medium">Created:</span>{" "}
+            {new Date(request.createdAt).toLocaleDateString()}{" "}
+            {new Date(request.createdAt).toLocaleTimeString()}
           </p>
         </div>
       </CardContent>

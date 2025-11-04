@@ -1,4 +1,9 @@
 import driver from "../driver";
+import {
+  toNeo4jRoleFormat,
+  isValidRole,
+  AVAILABLE_ROLES,
+} from "@/lib/utils/roles";
 
 /**
  * Get team members (users with edit access) for an event from Neo4j
@@ -273,14 +278,22 @@ export async function applyTag(
         { eventId, videoId, userId }
       );
     } else if (role) {
-      // Tag user in event with specific role (e.g., ORGANIZER, JUDGE, etc.)
+      // Validate role
+      if (!isValidRole(role)) {
+        throw new Error(
+          `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+        );
+      }
+
+      // Tag user in event with specific role (converted to Neo4j format)
+      const neo4jRole = toNeo4jRoleFormat(role);
       await session.run(
         `
         MATCH (u:User {id: $userId})
         MATCH (e:Event {id: $eventId})
-        MERGE (u)-[r:${role.toUpperCase()}]->(e)
+        MERGE (u)-[r:${neo4jRole}]->(e)
         `,
-        { eventId, userId, role: role.toUpperCase() }
+        { eventId, userId, role: neo4jRole }
       );
     } else {
       // Default tagging relationship
@@ -298,3 +311,52 @@ export async function applyTag(
   }
 }
 
+/**
+ * Get event title from Neo4j
+ */
+export async function getEventTitle(eventId: string): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (e:Event {id: $eventId})
+      RETURN e.title as title
+      LIMIT 1
+      `,
+      { eventId }
+    );
+
+    if (result.records.length === 0) {
+      return null;
+    }
+
+    return result.records[0].get("title");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get video title from Neo4j
+ */
+export async function getVideoTitle(videoId: string): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (v:Video {id: $videoId})
+      RETURN v.title as title
+      LIMIT 1
+      `,
+      { videoId }
+    );
+
+    if (result.records.length === 0) {
+      return null;
+    }
+
+    return result.records[0].get("title");
+  } finally {
+    await session.close();
+  }
+}

@@ -36,10 +36,10 @@ A comprehensive authorization-based request/approval system has been implemented
 
 #### 1. Tagging Requests
 
-- **Who can request**: Any user (including self-tagging)
+- **Who can request**: Any user (can only tag themselves)
 - **Who can approve**: Event creator, team members, city moderators, admins
 - **Location**: Event or video pages
-- **Special**: Untagging is immediate and unrestricted
+- **Special**: Users can only request to tag themselves in events/videos or with roles. Untagging is immediate and unrestricted.
 
 #### 2. Team Member Requests
 
@@ -74,7 +74,7 @@ A comprehensive authorization-based request/approval system has been implemented
 
 ### Authorization Levels
 
-- **Base Users (0)**: Can request self-tagging
+- **Base Users (0)**: Can request to tag themselves in events/videos
 - **Creators (1)**: Can create events, invite team members via requests
 - **Moderators (2)**: Can create/edit/manage events in their city, invite team members
 - **Admins (3)**: Global user management, grant/remove global access, change auth levels
@@ -121,11 +121,12 @@ import { createTaggingRequest } from "@/lib/server_actions/request_actions";
 
 await createTaggingRequest(
   eventId, // Event ID from Neo4j
-  targetUserId, // User to tag
   videoId, // Optional video ID
   role // Optional role/tag type
 );
 ```
+
+**Note**: Users can only tag themselves. The `targetUserId` parameter has been removed - the authenticated user is automatically set as the target.
 
 ### Creating a Team Member Request
 

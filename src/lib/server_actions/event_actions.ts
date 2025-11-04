@@ -238,20 +238,19 @@ export async function addEvent(props: addEventProps): Promise<response> {
     const result = await insertEvent(event);
 
     // Create corresponding PostgreSQL Event record to link Neo4j event to user
-    try {
-      await prisma.event.create({
-        data: {
-          eventId: event.id, // Neo4j event ID
-          userId: session.user.id,
-          creator: true,
-        },
-      });
-    } catch (dbError) {
-      // If PostgreSQL creation fails, log but don't fail the entire operation
-      // The event exists in Neo4j, PostgreSQL record can be added later if needed
-      console.error("Failed to create PostgreSQL Event record:", dbError);
-      // Optionally, you could delete the Neo4j event here to maintain consistency
-    }
+    // Using upsert to handle cases where record might already exist
+    await prisma.event.upsert({
+      where: { eventId: event.id },
+      update: {
+        userId: session.user.id,
+        creator: true,
+      },
+      create: {
+        eventId: event.id, // Neo4j event ID
+        userId: session.user.id,
+        creator: true,
+      },
+    });
 
     return {
       status: 200,

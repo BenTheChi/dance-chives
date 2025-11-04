@@ -2,6 +2,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import EventFormWrapper from "@/components/EventFormWrapper";
 import { getEvent } from "@/db/queries/event";
 import { generateShortId } from "@/lib/utils";
+import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 
 export default async function EditEventPage({
   params,
@@ -11,16 +12,11 @@ export default async function EditEventPage({
   const { event } = await params;
   const currEvent = await getEvent(event);
 
-  //Convert roles from uppercase to capitalized first letter
+  //Convert roles from Neo4j format (uppercase) to display format
   const formattedRoles = currEvent.roles.map((role) => {
-    const ModifiedTitle =
-      role.title != "DJ" && role.title != "MC"
-        ? role.title.charAt(0).toUpperCase() + role.title.slice(1).toLowerCase()
-        : role.title;
-
     return {
       ...role,
-      title: ModifiedTitle,
+      title: fromNeo4jRoleFormat(role.title),
       id: role.id + "-" + generateShortId(),
     };
   });

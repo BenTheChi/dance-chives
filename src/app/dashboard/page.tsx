@@ -152,7 +152,10 @@ export default function DashboardPage() {
             <CardContent>
               <div className="space-y-4">
                 {allIncoming.map((request: any) => (
-                  <IncomingRequestCard key={request.id} request={request} />
+                  <IncomingRequestCard
+                    key={`${request.type}-${request.id}`}
+                    request={request}
+                  />
                 ))}
               </div>
             </CardContent>
@@ -171,7 +174,10 @@ export default function DashboardPage() {
             <CardContent>
               <div className="space-y-4">
                 {allOutgoing.map((request: any) => (
-                  <OutgoingRequestCard key={request.id} request={request} />
+                  <OutgoingRequestCard
+                    key={`${request.type}-${request.id}`}
+                    request={request}
+                  />
                 ))}
               </div>
             </CardContent>
@@ -222,9 +228,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {teamMemberships.map((membership: any) => (
+                {teamMemberships.map((membership: any, index: number) => (
                   <div
-                    key={membership.id}
+                    key={`team-membership-${membership.eventId}-${index}`}
                     className="p-3 rounded-lg border flex items-center justify-between"
                   >
                     <div>
