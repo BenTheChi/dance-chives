@@ -23,6 +23,8 @@ import {
   getEventTitle,
   getVideoTitle,
   getCityName,
+  getEventCreator,
+  isEventCreator,
 } from "@/db/queries/team-member";
 import { isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
@@ -475,6 +477,14 @@ export async function createTeamMemberRequest(eventId: string) {
   const eventExistsInNeo4j = await eventExists(eventId);
   if (!eventExistsInNeo4j) {
     throw new Error("Event not found");
+  }
+
+  // Check if user is already the creator (creators cannot request team membership)
+  const creatorId = await getEventCreator(eventId);
+  if (creatorId === senderId) {
+    throw new Error(
+      "You are the event creator and cannot request team membership"
+    );
   }
 
   // Check if already a team member (from Neo4j)
@@ -1433,7 +1443,7 @@ export async function getDashboardData() {
     incomingRequests,
     outgoingRequests,
     notifications,
-    userEvents,
+    userEventsRaw,
     teamMemberships,
     user,
   ] = await Promise.all([
@@ -1447,6 +1457,7 @@ export async function getDashboardData() {
     getUserTeamMemberships(userId).then((memberships) =>
       memberships.slice(0, 10).map((m) => ({
         eventId: m.eventId,
+        eventTitle: m.eventTitle,
         createdAt: new Date(), // Neo4j doesn't track creation time, using current date
       }))
     ),
@@ -1464,6 +1475,18 @@ export async function getDashboardData() {
       },
     }),
   ]);
+
+  // Fetch event titles and creation dates from Neo4j for user events
+  const userEvents = await Promise.all(
+    userEventsRaw.map(async (event) => {
+      const eventData = await getEventTitle(event.eventId, true);
+      return {
+        ...event,
+        eventTitle: eventData.title || "Untitled Event",
+        createdAt: eventData.createdAt,
+      };
+    })
+  );
 
   // Fetch city name from Neo4j if city exists
   // Note: City is required at application level (enforced by seed data and user creation)

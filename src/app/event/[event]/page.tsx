@@ -21,6 +21,8 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { DeleteEventButton } from "@/components/DeleteEventButton";
+import { auth } from "@/auth";
+import { isEventCreator } from "@/db/queries/team-member";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -46,6 +48,12 @@ export default async function EventPage({ params }: PageProps) {
   }
 
   const event = (await getEvent(paramResult.event)) as Event;
+  
+  // Check if current user is the creator
+  const session = await auth();
+  const isCreator = session?.user?.id 
+    ? await isEventCreator(event.id, session.user.id)
+    : false;
 
   return (
     <>
@@ -59,7 +67,7 @@ export default async function EventPage({ params }: PageProps) {
             <Button asChild>
               <Link href={`/event/${event.id}/edit`}>Edit</Link>
             </Button>
-            <DeleteEventButton eventId={event.id} />
+            {isCreator && <DeleteEventButton eventId={event.id} />}
           </div>
 
           {event.eventDetails.poster ? (

@@ -3,10 +3,11 @@ import { deleteEvent, getEventPictures } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { deleteFromGCloudStorage } from "@/lib/GCloud";
 import { prisma } from "@/lib/primsa";
+import { getEventCreator } from "@/db/queries/team-member";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -19,6 +20,15 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
+    // Check if user is the event creator - only creators can delete events
+    const creatorId = await getEventCreator(id);
+    if (creatorId !== session.user.id) {
+      return NextResponse.json(
+        { message: "Only the event creator can delete this event" },
+        { status: 403 }
+      );
+    }
+
     // First delete all the pictures associated with the event
     const pictures = await getEventPictures(id);
 

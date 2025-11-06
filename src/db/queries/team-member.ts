@@ -8,6 +8,7 @@ import {
 /**
  * Get team members (users with edit access) for an event from Neo4j
  * Team members are separate from roles - they grant edit access
+ * NOTE: Creators are NOT included as team members - they have separate permissions
  * Returns array of user IDs
  */
 export async function getEventTeamMembers(eventId: string): Promise<string[]> {
@@ -22,13 +23,6 @@ export async function getEventTeamMembers(eventId: string): Promise<string[]> {
     );
 
     const teamMemberIds = result.records.map((record) => record.get("userId"));
-
-    // Also include the event creator as a team member
-    const creatorId = await getEventCreator(eventId);
-    if (creatorId && !teamMemberIds.includes(creatorId)) {
-      teamMemberIds.push(creatorId);
-    }
-
     return teamMemberIds;
   } finally {
     await session.close();
@@ -112,6 +106,7 @@ export async function getEventCreator(eventId: string): Promise<string | null> {
 /**
  * Check if a user is a team member of an event
  * Team members have edit access, separate from roles
+ * NOTE: Creators are NOT team members - use isEventCreator() to check for creators
  */
 export async function isTeamMember(
   eventId: string,
@@ -119,13 +114,7 @@ export async function isTeamMember(
 ): Promise<boolean> {
   const session = driver.session();
   try {
-    // Check if user is creator (creators automatically have team member access)
-    const creatorId = await getEventCreator(eventId);
-    if (creatorId === userId) {
-      return true;
-    }
-
-    // Check if user has TEAM_MEMBER relationship
+    // Check if user has TEAM_MEMBER relationship (creators are excluded)
     const result = await session.run(
       `
       MATCH (e:Event {id: $eventId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
@@ -139,6 +128,17 @@ export async function isTeamMember(
   } finally {
     await session.close();
   }
+}
+
+/**
+ * Check if a user is the creator of an event
+ */
+export async function isEventCreator(
+  eventId: string,
+  userId: string
+): Promise<boolean> {
+  const creatorId = await getEventCreator(eventId);
+  return creatorId === userId;
 }
 
 /**
@@ -174,45 +174,29 @@ export async function addTeamMember(
 /**
  * Get all events where a user is a team member (from Neo4j)
  * Team members have edit access, separate from roles
+ * NOTE: Creators are NOT included - they should appear in "Your Events" instead
+ * Returns array with eventId and eventTitle
  */
 export async function getUserTeamMemberships(
   userId: string
-): Promise<Array<{ eventId: string }>> {
+): Promise<Array<{ eventId: string; eventTitle: string }>> {
   const session = driver.session();
   try {
-    // Get events where user is a team member
+    // Get events where user is a team member (exclude creators)
     const teamMemberResult = await session.run(
       `
       MATCH (u:User {id: $userId})-[rel:TEAM_MEMBER]->(e:Event)
-      RETURN e.id as eventId
+      RETURN e.id as eventId, e.title as eventTitle
       `,
       { userId }
     );
 
     const teamMemberEvents = teamMemberResult.records.map((record) => ({
       eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle") || "Untitled Event",
     }));
 
-    // Also include events where user is creator
-    const creatorResult = await session.run(
-      `
-      MATCH (u:User {id: $userId})-[rel:CREATED]->(e:Event)
-      RETURN e.id as eventId
-      `,
-      { userId }
-    );
-
-    const creatorEvents = creatorResult.records.map((record) => ({
-      eventId: record.get("eventId"),
-    }));
-
-    // Combine and deduplicate
-    const allEvents = [...teamMemberEvents, ...creatorEvents];
-    const uniqueEvents = Array.from(
-      new Map(allEvents.map((e) => [e.eventId, e])).values()
-    );
-
-    return uniqueEvents;
+    return teamMemberEvents;
   } finally {
     await session.close();
   }
@@ -346,13 +330,21 @@ export async function applyTag(
 }
 
 /**
- * Get event title from Neo4j
+ * Get event title and createdAt from Neo4j
  */
-export async function getEventTitle(eventId: string): Promise<string | null> {
+export async function getEventTitle(eventId: string): Promise<string | null>;
+export async function getEventTitle(eventId: string, includeCreatedAt: true): Promise<{ title: string | null; createdAt: string | null }>;
+export async function getEventTitle(eventId: string, includeCreatedAt?: boolean): Promise<string | null | { title: string | null; createdAt: string | null }> {
   const session = driver.session();
   try {
     const result = await session.run(
+      includeCreatedAt
+        ? `
+      MATCH (e:Event {id: $eventId})
+      RETURN e.title as title, e.createdAt as createdAt
+      LIMIT 1
       `
+        : `
       MATCH (e:Event {id: $eventId})
       RETURN e.title as title
       LIMIT 1
@@ -361,7 +353,14 @@ export async function getEventTitle(eventId: string): Promise<string | null> {
     );
 
     if (result.records.length === 0) {
-      return null;
+      return includeCreatedAt ? { title: null, createdAt: null } : null;
+    }
+
+    if (includeCreatedAt) {
+      return {
+        title: result.records[0].get("title"),
+        createdAt: result.records[0].get("createdAt"),
+      };
     }
 
     return result.records[0].get("title");

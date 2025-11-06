@@ -12,8 +12,21 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding PostgreSQL database...");
 
+  // Clear Neo4j data FIRST before creating anything
+  // This prevents duplicates when seed scripts run multiple times
+  console.log("🧹 Clearing existing Neo4j data...");
+  const clearSession = driver.session();
+  try {
+    await clearSession.run("MATCH (n) DETACH DELETE n");
+    console.log("✅ Neo4j database cleared");
+  } catch (error) {
+    console.error("⚠️  Error clearing Neo4j database:", error);
+  } finally {
+    await clearSession.close();
+  }
+
   // Clear all existing data
-  console.log("🗑️  Clearing existing data...");
+  console.log("🗑️  Clearing existing PostgreSQL data...");
 
   // Helper function to safely delete from tables that might not exist
   const safeDelete = async (
@@ -651,16 +664,23 @@ async function main() {
       console.log(`✅ Created Neo4j event: ${event.id}`);
 
       // Create PostgreSQL Event record so it shows up in the dashboard
-      await prisma.event.create({
-        data: {
+      await prisma.event.upsert({
+        where: { eventId: event.id },
+        update: {
+          userId: event.eventDetails.creatorId,
+          creator: true,
+        },
+        create: {
           eventId: event.id,
           userId: event.eventDetails.creatorId,
           creator: true,
         },
       });
-      console.log(`✅ Created PostgreSQL Event record: ${event.id}`);
+      console.log(`✅ Created/Updated PostgreSQL Event record: ${event.id}`);
     } catch (error) {
-      console.log(`ℹ️  Event ${event.id} may already exist, skipping...`);
+      console.error(`❌ Failed to create event ${event.id}:`, error);
+      // Don't silently continue - log the actual error
+      throw error;
     }
   }
 

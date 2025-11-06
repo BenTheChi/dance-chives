@@ -314,16 +314,24 @@ const createSubEvents = async (eventId: string, subEvents: any[]) => {
     for (const sub of subEvents) {
       await session.run(
         `MATCH (e:Event {id: $eventId})
-         CREATE (se:SubEvent {
-           id: $subEventId,
-           title: $title,
-           description: $description,
-           schedule: $schedule,
-           startDate: $startDate,
-           address: $address,
-           startTime: $startTime,
-           endTime: $endTime
-         })-[:PART_OF]->(e)`,
+         MERGE (se:SubEvent {id: $subEventId})
+         ON CREATE SET
+           se.title = $title,
+           se.description = $description,
+           se.schedule = $schedule,
+           se.startDate = $startDate,
+           se.address = $address,
+           se.startTime = $startTime,
+           se.endTime = $endTime
+         ON MATCH SET
+           se.title = $title,
+           se.description = $description,
+           se.schedule = $schedule,
+           se.startDate = $startDate,
+           se.address = $address,
+           se.startTime = $startTime,
+           se.endTime = $endTime
+         MERGE (se)-[:PART_OF]->(e)`,
         {
           eventId,
           subEventId: sub.id,
@@ -352,12 +360,18 @@ const createSubEventPosters = async (subEvents: any[]) => {
     for (const sub of subEventsWithPosters) {
       await session.run(
         `MATCH (se:SubEvent {id: $subEventId})
-         CREATE (p:Picture {
-           id: $posterId,
-           title: $title,
-           url: $url,
-           type: 'poster'
-         })-[:POSTER]->(se)`,
+         OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(se)
+         DELETE r
+         WITH se
+         MERGE (p:Picture {id: $posterId})
+         ON CREATE SET
+           p.title = $title,
+           p.url = $url,
+           p.type = 'poster'
+         ON MATCH SET
+           p.title = $title,
+           p.url = $url
+         MERGE (p)-[:POSTER]->(se)`,
         {
           subEventId: sub.id,
           posterId: sub.poster.id,
@@ -379,12 +393,15 @@ const createGalleryPhotos = async (eventId: string, gallery: any[]) => {
     for (const pic of gallery) {
       await session.run(
         `MATCH (e:Event {id: $eventId})
-         CREATE (p:Picture {
-           id: $picId,
-           title: $title,
-           url: $url,
-           type: 'photo'
-         })-[:PHOTO]->(e)`,
+         MERGE (p:Picture {id: $picId})
+         ON CREATE SET
+           p.title = $title,
+           p.url = $url,
+           p.type = 'photo'
+         ON MATCH SET
+           p.title = $title,
+           p.url = $url
+         MERGE (p)-[:PHOTO]->(e)`,
         {
           eventId,
           picId: pic.id,
@@ -406,11 +423,14 @@ const createSections = async (eventId: string, sections: any[]) => {
     await session.run(
       `MATCH (e:Event {id: $eventId})
        UNWIND $sections AS sec
-       CREATE (s:Section {
-         id: sec.id,
-         title: sec.title,
-         description: sec.description
-       })-[:IN]->(e)`,
+       MERGE (s:Section {id: sec.id})
+       ON CREATE SET
+         s.title = sec.title,
+         s.description = sec.description
+       ON MATCH SET
+         s.title = sec.title,
+         s.description = sec.description
+       MERGE (s)-[:IN]->(e)`,
       { eventId, sections }
     );
   } finally {
@@ -431,7 +451,12 @@ const createBrackets = async (sections: any[]) => {
       for (const br of sec.brackets) {
         await session.run(
           `MATCH (s:Section {id: $sectionId})
-           CREATE (b:Bracket {id: $bracketId, title: $title})-[:IN]->(s)`,
+           MERGE (b:Bracket {id: $bracketId})
+           ON CREATE SET
+             b.title = $title
+           ON MATCH SET
+             b.title = $title
+           MERGE (b)-[:IN]->(s)`,
           { sectionId: sec.id, bracketId: br.id, title: br.title }
         );
       }
@@ -455,7 +480,14 @@ const createBracketVideos = async (sections: any[]) => {
         for (const vid of br.videos || []) {
           await session.run(
             `MATCH (b:Bracket {id: $bracketId})
-             CREATE (v:Video {id: $videoId, title: $title, src: $src})-[:IN]->(b)`,
+             MERGE (v:Video {id: $videoId})
+             ON CREATE SET
+               v.title = $title,
+               v.src = $src
+             ON MATCH SET
+               v.title = $title,
+               v.src = $src
+             MERGE (v)-[:IN]->(b)`,
             {
               bracketId: br.id,
               videoId: vid.id,
@@ -494,7 +526,14 @@ const createSectionVideos = async (sections: any[]) => {
       for (const vid of sec.videos) {
         await session.run(
           `MATCH (s:Section {id: $sectionId})
-           CREATE (v:Video {id: $videoId, title: $title, src: $src})-[:IN]->(s)`,
+           MERGE (v:Video {id: $videoId})
+           ON CREATE SET
+             v.title = $title,
+             v.src = $src
+           ON MATCH SET
+             v.title = $title,
+             v.src = $src
+           MERGE (v)-[:IN]->(s)`,
           { sectionId: sec.id, videoId: vid.id, title: vid.title, src: vid.src }
         );
 
@@ -528,18 +567,30 @@ export const insertEvent = async (event: Event) => {
 
   const result = await session.run(
     `
-CREATE (e:Event {
-  id: $eventId,
-  title: $title,
-  description: $description,
-  address: $address,
-  prize: $prize,
-  entryCost: $entryCost,
-  startDate: $startDate,
-  startTime: $startTime,
-  endTime: $endTime,
-  schedule: $schedule
-})
+MERGE (e:Event {id: $eventId})
+  ON CREATE SET 
+    e.title = $title,
+    e.description = $description,
+    e.address = $address,
+    e.prize = $prize,
+    e.entryCost = $entryCost,
+    e.startDate = $startDate,
+    e.startTime = $startTime,
+    e.endTime = $endTime,
+    e.schedule = $schedule,
+    e.createdAt = $createdAt,
+    e.updatedAt = $updatedAt
+  ON MATCH SET
+    e.title = $title,
+    e.description = $description,
+    e.address = $address,
+    e.prize = $prize,
+    e.entryCost = $entryCost,
+    e.startDate = $startDate,
+    e.startTime = $startTime,
+    e.endTime = $endTime,
+    e.schedule = $schedule,
+    e.updatedAt = $updatedAt
 
 WITH e
 MERGE (c:City {id: $city.id})
@@ -554,26 +605,39 @@ MERGE (c:City {id: $city.id})
 MERGE (e)-[:IN]->(c)
 
 WITH e
-CREATE (newPoster:Picture {
-    id: $poster.id,
-    title: $poster.title,
-    url: $poster.url,
-    type: 'poster'
-})-[:POSTER]->(e)
+// Remove old poster relationship if it exists
+OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(e)
+DELETE r
+WITH e
+// Create or merge poster only if poster exists
+FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
+  MERGE (newPoster:Picture {id: poster.id})
+  ON CREATE SET
+    newPoster.title = poster.title,
+    newPoster.url = poster.url,
+    newPoster.type = 'poster'
+  ON MATCH SET
+    newPoster.title = poster.title,
+    newPoster.url = poster.url
+  MERGE (newPoster)-[:POSTER]->(e)
+)
 
 WITH e
-UNWIND $roles AS roleData
-MATCH (u:User { id: roleData.user.id })
-CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e)
-YIELD rel
+MATCH (creator:User {id: $creatorId})
+MERGE (creator)-[:CREATED]->(e)
 
 WITH e
-MATCH (u:User {id: $creatorId})
-MERGE (u)-[:CREATED]->(e)
+CALL {
+  WITH e
+  WITH e, $roles AS roles
+  UNWIND roles AS roleData
+  MATCH (u:User { id: roleData.user.id })
+  CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e) YIELD rel
+  RETURN count(rel) AS roleCount
+}
 
 WITH e
-MATCH (event:Event {id: $eventId})
-RETURN event
+RETURN e as event
 `,
     {
       eventId: event.id,
@@ -587,11 +651,26 @@ RETURN event
       startTime: event.eventDetails.startTime,
       endTime: event.eventDetails.endTime,
       schedule: event.eventDetails.schedule,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
       poster: event.eventDetails.poster,
       city: event.eventDetails.city,
       roles: event.roles,
     }
   );
+  
+  // Check if query returned results
+  if (!result.records || result.records.length === 0) {
+    await session.close();
+    throw new Error(`Failed to create event ${event.id}: No records returned from query`);
+  }
+
+  const eventNode = result.records[0].get("event");
+  if (!eventNode) {
+    await session.close();
+    throw new Error(`Failed to create event ${event.id}: Event node not found in result`);
+  }
+
   await session.close();
 
   // Create subevents, gallery, sections, brackets, and videos in separate queries
@@ -603,7 +682,7 @@ RETURN event
   await createBracketVideos(event.sections);
   await createSectionVideos(event.sections);
 
-  return result.records[0].get("event").properties;
+  return eventNode.properties;
 };
 
 export const getEventSections = async (id: string) => {

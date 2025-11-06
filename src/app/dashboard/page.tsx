@@ -263,11 +263,15 @@ export default function DashboardPage() {
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="font-medium">Event ID: {event.eventId}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Created:{" "}
-                        {new Date(event.createdAt).toLocaleDateString()}
+                      <p className="font-medium">
+                        {event.eventTitle || `Event ID: ${event.eventId}`}
                       </p>
+                      {event.createdAt && (
+                        <p className="text-sm text-muted-foreground">
+                          Created:{" "}
+                          {new Date(event.createdAt).toLocaleDateString()}
+                        </p>
+                      )}
                     </div>
                     <Button variant="outline" size="sm" asChild>
                       <a href={`/event/${event.eventId}`}>View</a>
@@ -297,7 +301,7 @@ export default function DashboardPage() {
                   >
                     <div>
                       <p className="font-medium">
-                        Event ID: {membership.eventId}
+                        Event: {membership.eventTitle}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Added:{" "}
