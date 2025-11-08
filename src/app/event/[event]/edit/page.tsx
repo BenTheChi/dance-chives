@@ -3,6 +3,7 @@ import EventFormWrapper from "@/components/EventFormWrapper";
 import { getEvent } from "@/db/queries/event";
 import { generateShortId } from "@/lib/utils";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
+import { FormValues } from "@/components/forms/event-form";
 
 export default async function EditEventPage({
   params,
@@ -56,13 +57,14 @@ export default async function EditEventPage({
   };
 
   //Convert event to FormValues
+  // Note: Zod's preprocess will convert undefined/null to "" for description/schedule fields
   const eventFormValues = {
     eventDetails: formattedEventDetails,
     sections: currEvent.sections,
     roles: formattedRoles,
     subEvents: formattedSubEvents,
     gallery: formattedPictures,
-  };
+  } as FormValues;
 
   return (
     <>
