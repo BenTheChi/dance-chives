@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,8 @@ interface VideoLightboxProps {
   eventId: string;
   sectionTitle: string;
   bracketTitle?: string;
+  sectionStyles?: string[];
+  applyStylesToVideos?: boolean;
   currentUserId?: string;
 }
 
@@ -44,6 +46,8 @@ export function VideoLightbox({
   eventId,
   sectionTitle,
   bracketTitle,
+  sectionStyles,
+  applyStylesToVideos,
   currentUserId,
 }: VideoLightboxProps) {
   const handleFullscreen = () => {
@@ -95,6 +99,14 @@ export function VideoLightbox({
   const isUserTagged = currentUserId
     ? allParticipants.some((user) => user.id === currentUserId)
     : false;
+
+  // Determine which styles to display: section styles if applyStylesToVideos is true, otherwise video styles
+  const displayStyles = useMemo(() => {
+    if (applyStylesToVideos && sectionStyles && sectionStyles.length > 0) {
+      return sectionStyles;
+    }
+    return video.styles || [];
+  }, [applyStylesToVideos, sectionStyles, video.styles]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -221,6 +233,24 @@ export function VideoLightbox({
               </div> */}
 
               <Separator />
+
+              {/* Style Tags */}
+              {displayStyles.length > 0 && (
+                <div className="space-y-2 sm:space-y-3">
+                  <h3 className="font-semibold text-sm sm:text-base">
+                    Dance Styles
+                  </h3>
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
+                    {displayStyles.map((style) => (
+                      <Badge key={style} variant="outline" className="text-xs">
+                        {style}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {displayStyles.length > 0 && <Separator />}
 
               {/* Tag Self Button */}
               {currentUserId && (

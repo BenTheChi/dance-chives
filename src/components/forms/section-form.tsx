@@ -119,9 +119,7 @@ export function SectionForm({
 
   const handleStylesChange = (styles: string[]) => {
     const updatedSections = sections.map((section) =>
-      section.id === activeSectionId
-        ? { ...section, styles }
-        : section
+      section.id === activeSectionId ? { ...section, styles } : section
     );
     setValue("sections", updatedSections);
 
@@ -169,10 +167,10 @@ export function SectionForm({
       }
     });
 
-    setValue("sections", updatedSections, { 
+    setValue("sections", updatedSections, {
       shouldValidate: false,
       shouldDirty: false,
-      shouldTouch: false 
+      shouldTouch: false,
     });
 
     // Propagate styles if turning ON
@@ -251,48 +249,6 @@ export function SectionForm({
         />
 
         <FormField
-          key={`hasBrackets-${activeSectionId}`}
-          control={control}
-          name={`sections.${activeSectionIndex}.hasBrackets`}
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center space-x-2">
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Has Brackets</FormLabel>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          key={`styles-${activeSectionId}`}
-          control={control}
-          name={`sections.${activeSectionIndex}.styles`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Dance Styles</FormLabel>
-              <FormControl>
-                <StyleMultiSelect
-                  value={field.value || []}
-                  onChange={(styles) => {
-                    field.onChange(styles);
-                    handleStylesChange(styles);
-                  }}
-                  name="Section Styles"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
           key={`applyStylesToVideos-${activeSectionId}`}
           control={control}
           name={`sections.${activeSectionIndex}.applyStylesToVideos`}
@@ -308,7 +264,50 @@ export function SectionForm({
                     }}
                   />
                 </FormControl>
-                <FormLabel>Apply styles to all videos</FormLabel>
+                <FormLabel>Apply same style tags to all videos</FormLabel>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {activeSection.applyStylesToVideos && (
+          <FormField
+            key={`styles-${activeSectionId}`}
+            control={control}
+            name={`sections.${activeSectionIndex}.styles`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Section Dance Styles</FormLabel>
+                <FormControl>
+                  <StyleMultiSelect
+                    value={field.value || []}
+                    onChange={(styles) => {
+                      field.onChange(styles);
+                      handleStylesChange(styles);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        <FormField
+          key={`hasBrackets-${activeSectionId}`}
+          control={control}
+          name={`sections.${activeSectionIndex}.hasBrackets`}
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center space-x-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Has Brackets</FormLabel>
               </div>
               <FormMessage />
             </FormItem>

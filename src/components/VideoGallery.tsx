@@ -12,6 +12,8 @@ interface VideoGalleryProps {
   eventId: string;
   sectionTitle: string;
   bracketTitle?: string;
+  sectionStyles?: string[];
+  applyStylesToVideos?: boolean;
   currentUserId?: string;
 }
 
@@ -22,6 +24,8 @@ export default function VideoGallery({
   eventId,
   sectionTitle,
   bracketTitle,
+  sectionStyles,
+  applyStylesToVideos,
   currentUserId,
 }: VideoGalleryProps) {
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
@@ -72,6 +76,8 @@ export default function VideoGallery({
           eventId={eventId}
           sectionTitle={sectionTitle}
           bracketTitle={bracketTitle}
+          sectionStyles={sectionStyles}
+          applyStylesToVideos={applyStylesToVideos}
           currentUserId={currentUserId}
         />
       )}

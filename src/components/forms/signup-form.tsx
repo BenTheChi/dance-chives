@@ -169,7 +169,6 @@ export default function SignUpForm() {
                     <StyleMultiSelect
                       value={field.value || []}
                       onChange={field.onChange}
-                      name="Dance Styles"
                     />
                   </FormControl>
                   <FormMessage />

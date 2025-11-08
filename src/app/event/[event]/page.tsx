@@ -14,6 +14,7 @@ import {
   FileText,
   Gift,
   MapPin,
+  Tag,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -120,18 +121,6 @@ export default async function EventPage({ params }: PageProps) {
             {/* Event Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
-              {eventStyles.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {eventStyles.map((style) => (
-                    <span
-                      key={style}
-                      className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
-                    >
-                      {style}
-                    </span>
-                  ))}
-                </div>
-              )}
               <div className="flex flex-row gap-2">
                 <Calendar />
                 <b>Date:</b>
@@ -171,6 +160,22 @@ export default async function EventPage({ params }: PageProps) {
                 <div className="flex flex-row gap-2">
                   <DollarSign />
                   <b>Entry Cost:</b> {event.eventDetails.entryCost}
+                </div>
+              )}
+              {eventStyles.length > 0 && (
+                <div className="flex flex-row gap-2 items-center">
+                  <Tag />
+                  <b>Styles:</b>
+                  <div className="flex flex-wrap gap-1">
+                    {eventStyles.map((style) => (
+                      <span
+                        key={style}
+                        className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
+                      >
+                        {style}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>

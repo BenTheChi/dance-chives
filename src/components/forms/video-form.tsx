@@ -218,7 +218,6 @@ export function VideoForm({
                     updateVideoStyles(styles);
                   }}
                   disabled={isStylesDisabled}
-                  name="Video Styles"
                 />
               </FormControl>
               <FormMessage />

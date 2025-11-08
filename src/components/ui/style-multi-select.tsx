@@ -25,7 +25,6 @@ interface StyleMultiSelectProps {
   onChange: (styles: string[]) => void;
   disabled?: boolean;
   placeholder?: string;
-  name?: string;
 }
 
 export function StyleMultiSelect({
@@ -33,7 +32,6 @@ export function StyleMultiSelect({
   onChange,
   disabled = false,
   placeholder = "Select styles...",
-  name,
 }: StyleMultiSelectProps) {
   const [open, setOpen] = useState(false);
 
@@ -52,9 +50,6 @@ export function StyleMultiSelect({
 
   return (
     <div className="space-y-2">
-      {name && (
-        <label className="text-sm font-medium block">{name}</label>
-      )}
       <div className="flex flex-wrap gap-1 mb-2">
         {value.map((style) => (
           <Badge
@@ -117,12 +112,7 @@ export function StyleMultiSelect({
         </PopoverContent>
       </Popover>
       {/* Hidden input for form submission */}
-      <input
-        type="hidden"
-        name={name || "styles"}
-        value={JSON.stringify(value)}
-      />
+      <input type="hidden" name="styles" value={JSON.stringify(value)} />
     </div>
   );
 }
-

@@ -1,9 +1,10 @@
 "use client";
 
 import { Section } from "@/types/event";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import { useRouter } from "next/navigation";
 import VideoGallery from "./VideoGallery";
 
@@ -30,6 +31,34 @@ export default function SectionBracketTabSelector({
     }
   }, [activeSection, sections]);
 
+  // Aggregate styles from videos if section doesn't have direct styles
+  const displayStyles = useMemo(() => {
+    const activeSectionData = sections[activeSection];
+    if (!activeSectionData) return [];
+
+    // First check if section has direct styles
+    if (activeSectionData.styles && activeSectionData.styles.length > 0) {
+      return activeSectionData.styles;
+    }
+
+    // Otherwise, aggregate styles from all videos in the section
+    const videoStyles = new Set<string>();
+
+    // Get styles from direct section videos
+    activeSectionData.videos?.forEach((video) => {
+      video.styles?.forEach((style) => videoStyles.add(style));
+    });
+
+    // Get styles from all bracket videos
+    activeSectionData.brackets?.forEach((bracket) => {
+      bracket.videos?.forEach((video) => {
+        video.styles?.forEach((style) => videoStyles.add(style));
+      });
+    });
+
+    return Array.from(videoStyles);
+  }, [sections, activeSection]);
+
   return (
     <div className="p-5">
       <Button
@@ -55,6 +84,15 @@ export default function SectionBracketTabSelector({
       </nav>
       <div className="flex flex-col gap-1 items-center p-5">
         <h1 className="text-xl font-bold">{sections[activeSection]?.title}</h1>
+        {displayStyles.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-center mt-1">
+            {displayStyles.map((style) => (
+              <Badge key={style} variant="outline" className="text-xs">
+                {style}
+              </Badge>
+            ))}
+          </div>
+        )}
         <p className="text-sm text-gray-500">
           {sections[activeSection]?.description}
         </p>
@@ -89,6 +127,10 @@ export default function SectionBracketTabSelector({
                     (bracket) => bracket.id === activeBracket
                   )?.title
                 }
+                sectionStyles={sections[activeSection]?.styles}
+                applyStylesToVideos={
+                  sections[activeSection]?.applyStylesToVideos
+                }
                 currentUserId={currentUserId}
               />
             </TabsContent>
@@ -102,6 +144,8 @@ export default function SectionBracketTabSelector({
             eventTitle={eventTitle}
             eventId={eventId}
             sectionTitle={sections[activeSection]?.title}
+            sectionStyles={sections[activeSection]?.styles}
+            applyStylesToVideos={sections[activeSection]?.applyStylesToVideos}
             currentUserId={currentUserId}
           />
         </div>
