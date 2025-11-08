@@ -15,6 +15,7 @@ export interface RegisteredUser extends User {
   ig?: string;
   website?: string;
   city?: string;
+  styles?: string[];
 }
 
 export interface UserSearchItem {

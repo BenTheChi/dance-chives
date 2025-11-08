@@ -60,6 +60,17 @@ export async function signup(formData: FormData) {
       (admin) => admin.email === session.user.email
     );
 
+    // Extract styles from formData
+    const stylesJson = formData.get("Dance Styles") as string | null;
+    let styles: string[] = [];
+    if (stylesJson) {
+      try {
+        styles = JSON.parse(stylesJson);
+      } catch (e) {
+        console.error("Failed to parse styles:", e);
+      }
+    }
+
     // Use admin defaults if this is an admin user, otherwise use form data
     const profileData = adminUser
       ? {
@@ -67,12 +78,14 @@ export async function signup(formData: FormData) {
           username: adminUser.defaultData.username,
           city: adminUser.defaultData.city,
           date: adminUser.defaultData.date,
+          styles: [],
         }
       : {
           displayName: formData.get("displayName") as string,
           username: formData.get("username") as string,
           city: formData.get("city") as string,
           date: formData.get("date") as string,
+          styles,
         };
 
     // Update user in Neo4j with profile information

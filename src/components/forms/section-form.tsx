@@ -20,6 +20,7 @@ import { Section, Bracket, Video } from "@/types/event";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
 import { FormValues } from "./event-form";
+import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 
 interface SectionFormProps {
   control: Control<FormValues>;
@@ -116,6 +117,103 @@ export function SectionForm({
     setValue("sections", updatedSections);
   };
 
+  const handleStylesChange = (styles: string[]) => {
+    const updatedSections = sections.map((section) =>
+      section.id === activeSectionId
+        ? { ...section, styles }
+        : section
+    );
+    setValue("sections", updatedSections);
+
+    // If applyStylesToVideos is true, propagate styles to all videos
+    if (activeSection.applyStylesToVideos) {
+      propagateStylesToVideos(styles, updatedSections);
+    }
+  };
+
+  const handleApplyStylesToVideosChange = (apply: boolean) => {
+    const updatedSections = sections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (apply) {
+        // When turning ON: propagate section styles to all videos
+        const sectionStyles = section.styles || [];
+        return {
+          ...section,
+          applyStylesToVideos: true,
+          styles: sectionStyles,
+        };
+      } else {
+        // When turning OFF: remove section styles, clear video styles, enable video-level styles
+        // Clear styles from all videos (direct and bracket videos)
+        const updatedVideos = section.videos.map((video) => ({
+          ...video,
+          styles: [], // Empty array is valid for optional array field
+        }));
+
+        const updatedBrackets = section.brackets.map((bracket) => ({
+          ...bracket,
+          videos: bracket.videos.map((video) => ({
+            ...video,
+            styles: [], // Empty array is valid for optional array field
+          })),
+        }));
+
+        return {
+          ...section,
+          applyStylesToVideos: false,
+          styles: [], // Empty array is valid for optional array field
+          videos: updatedVideos,
+          brackets: updatedBrackets,
+        };
+      }
+    });
+
+    setValue("sections", updatedSections, { 
+      shouldValidate: false,
+      shouldDirty: false,
+      shouldTouch: false 
+    });
+
+    // Propagate styles if turning ON
+    if (apply) {
+      const sectionStyles = activeSection.styles || [];
+      propagateStylesToVideos(sectionStyles, updatedSections);
+    }
+  };
+
+  const propagateStylesToVideos = (
+    styles: string[],
+    currentSections: Section[]
+  ) => {
+    const updatedSections = currentSections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      // Update direct videos
+      const updatedVideos = section.videos.map((video) => ({
+        ...video,
+        styles: [...styles],
+      }));
+
+      // Update bracket videos
+      const updatedBrackets = section.brackets.map((bracket) => ({
+        ...bracket,
+        videos: bracket.videos.map((video) => ({
+          ...video,
+          styles: [...styles],
+        })),
+      }));
+
+      return {
+        ...section,
+        videos: updatedVideos,
+        brackets: updatedBrackets,
+      };
+    });
+
+    setValue("sections", updatedSections);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -166,6 +264,51 @@ export function SectionForm({
                   />
                 </FormControl>
                 <FormLabel>Has Brackets</FormLabel>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          key={`styles-${activeSectionId}`}
+          control={control}
+          name={`sections.${activeSectionIndex}.styles`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dance Styles</FormLabel>
+              <FormControl>
+                <StyleMultiSelect
+                  value={field.value || []}
+                  onChange={(styles) => {
+                    field.onChange(styles);
+                    handleStylesChange(styles);
+                  }}
+                  name="Section Styles"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          key={`applyStylesToVideos-${activeSectionId}`}
+          control={control}
+          name={`sections.${activeSectionIndex}.applyStylesToVideos`}
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center space-x-2">
+                <FormControl>
+                  <Switch
+                    checked={field.value || false}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      handleApplyStylesToVideosChange(checked);
+                    }}
+                  />
+                </FormControl>
+                <FormLabel>Apply styles to all videos</FormLabel>
               </div>
               <FormMessage />
             </FormItem>

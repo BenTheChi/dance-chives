@@ -42,10 +42,13 @@ interface addEventProps {
     title: string;
     description?: string;
     hasBrackets: boolean;
+    styles?: string[];
+    applyStylesToVideos?: boolean;
     videos: {
       id: string;
       title: string;
       src: string;
+      styles?: string[];
       taggedUsers?: {
         id: string;
         displayName: string;
@@ -59,6 +62,7 @@ interface addEventProps {
         id: string;
         title: string;
         src: string;
+        styles?: string[];
         taggedUsers?: {
           id: string;
           displayName: string;

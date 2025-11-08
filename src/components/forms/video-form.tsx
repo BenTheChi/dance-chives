@@ -17,6 +17,7 @@ import { Section, Video } from "@/types/event";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { VideoEmbed } from "../VideoEmbed";
+import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 
 interface VideoFormProps {
   video: Video;
@@ -96,6 +97,41 @@ export function VideoForm({
     setValue("sections", updatedSections);
   };
 
+  const updateVideoStyles = (styles: string[]) => {
+    const updatedSections = sections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (context === "section") {
+        return {
+          ...section,
+          videos: section.videos.map((v) =>
+            v.id === video.id ? { ...v, styles } : v
+          ),
+        };
+      } else {
+        return {
+          ...section,
+          brackets: section.brackets.map((bracket) =>
+            bracket.id === activeBracketId
+              ? {
+                  ...bracket,
+                  videos: bracket.videos.map((v) =>
+                    v.id === video.id ? { ...v, styles } : v
+                  ),
+                }
+              : bracket
+          ),
+        };
+      }
+    });
+
+    setValue("sections", updatedSections);
+  };
+
+  // Check if styles should be disabled (when section has applyStylesToVideos enabled)
+  const activeSection = sections.find((s) => s.id === activeSectionId);
+  const isStylesDisabled = activeSection?.applyStylesToVideos || false;
+
   return (
     <Card className="group">
       <CardHeader className="relative">
@@ -157,6 +193,37 @@ export function VideoForm({
           onChange={updateTaggedUsers}
           value={video.taggedUsers ?? []}
           name="Tagged Users"
+        />
+
+        <FormField
+          control={control}
+          name={
+            context === "bracket"
+              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.styles`
+              : `sections.${sectionIndex}.videos.${videoIndex}.styles`
+          }
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dance Styles</FormLabel>
+              {isStylesDisabled && (
+                <p className="text-sm text-muted-foreground mb-2">
+                  Styles inherited from section
+                </p>
+              )}
+              <FormControl>
+                <StyleMultiSelect
+                  value={field.value || []}
+                  onChange={(styles) => {
+                    field.onChange(styles);
+                    updateVideoStyles(styles);
+                  }}
+                  disabled={isStylesDisabled}
+                  name="Video Styles"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
       </CardContent>
     </Card>

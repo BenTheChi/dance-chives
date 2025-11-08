@@ -52,6 +52,8 @@ export interface Section {
   hasBrackets: boolean;
   videos: Video[];
   brackets: Bracket[];
+  styles?: string[];
+  applyStylesToVideos?: boolean;
 }
 
 export interface Bracket {
@@ -65,6 +67,7 @@ export interface Video {
   title: string;
   src: string;
   taggedUsers?: UserSearchItem[];
+  styles?: string[];
 }
 
 export interface Picture {

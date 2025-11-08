@@ -63,6 +63,30 @@ export default async function EventPage({ params }: PageProps) {
     .map((role) => fromNeo4jRoleFormat(role.title))
     .filter((role): role is string => role !== null);
 
+  // Aggregate all unique styles from sections and videos
+  const allStyles = new Set<string>();
+  event.sections.forEach((section) => {
+    // If applyStylesToVideos is true, use section styles
+    if (section.applyStylesToVideos && section.styles) {
+      section.styles.forEach((style) => allStyles.add(style));
+    } else {
+      // Otherwise, aggregate from videos
+      section.videos.forEach((video) => {
+        if (video.styles) {
+          video.styles.forEach((style) => allStyles.add(style));
+        }
+      });
+      section.brackets.forEach((bracket) => {
+        bracket.videos.forEach((video) => {
+          if (video.styles) {
+            video.styles.forEach((style) => allStyles.add(style));
+          }
+        });
+      });
+    }
+  });
+  const eventStyles = Array.from(allStyles);
+
   return (
     <>
       <AppNavbar />
@@ -96,6 +120,18 @@ export default async function EventPage({ params }: PageProps) {
             {/* Event Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
+              {eventStyles.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {eventStyles.map((style) => (
+                    <span
+                      key={style}
+                      className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
+                    >
+                      {style}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-row gap-2">
                 <Calendar />
                 <b>Date:</b>
@@ -214,6 +250,55 @@ export default async function EventPage({ params }: PageProps) {
                           {section.videos.length === 1 ? "video" : "videos"}
                         </span>
                       </div>
+                      {/* Display section styles */}
+                      {section.applyStylesToVideos &&
+                        section.styles &&
+                        section.styles.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {section.styles.map((style) => (
+                              <span
+                                key={style}
+                                className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
+                              >
+                                {style}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      {/* Display aggregated video styles if applyStylesToVideos is false */}
+                      {!section.applyStylesToVideos &&
+                        (() => {
+                          const videoStyles = new Set<string>();
+                          section.videos.forEach((video) => {
+                            if (video.styles) {
+                              video.styles.forEach((style) =>
+                                videoStyles.add(style)
+                              );
+                            }
+                          });
+                          section.brackets.forEach((bracket) => {
+                            bracket.videos.forEach((video) => {
+                              if (video.styles) {
+                                video.styles.forEach((style) =>
+                                  videoStyles.add(style)
+                                );
+                              }
+                            });
+                          });
+                          const stylesArray = Array.from(videoStyles);
+                          return stylesArray.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {stylesArray.map((style) => (
+                                <span
+                                  key={style}
+                                  className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
+                                >
+                                  {style}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
 
                       {section.brackets.length > 0 ? (
                         <div className="space-y-2">

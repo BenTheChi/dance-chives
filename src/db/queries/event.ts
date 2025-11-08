@@ -169,6 +169,42 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
+  // Get section styles
+  const sectionStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)-[:STYLE]->(style:Style)
+    RETURN s.id as sectionId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get video styles (direct section videos)
+  const sectionVideoStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    RETURN s.id as sectionId, v.id as videoId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get video styles (bracket videos)
+  const bracketVideoStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get section applyStylesToVideos property
+  const sectionApplyStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)
+    RETURN s.id as sectionId, s.applyStylesToVideos as applyStylesToVideos
+  `,
+    { id }
+  );
+
   // Merge bracket videos into sections
   const sections = sectionsResult.records[0]?.get("sections") || [];
   const bracketVideos = bracketVideosResult.records.map(
@@ -188,9 +224,42 @@ export const getEvent = async (id: string): Promise<Event> => {
     })
   );
 
+  // Create maps for styles
+  const sectionStylesMap = new Map<string, string[]>();
+  sectionStylesResult.records.forEach((record) => {
+    sectionStylesMap.set(record.get("sectionId"), record.get("styles") || []);
+  });
+
+  const sectionVideoStylesMap = new Map<string, string[]>();
+  sectionVideoStylesResult.records.forEach((record) => {
+    const key = `${record.get("sectionId")}:${record.get("videoId")}`;
+    sectionVideoStylesMap.set(key, record.get("styles") || []);
+  });
+
+  const bracketVideoStylesMap = new Map<string, string[]>();
+  bracketVideoStylesResult.records.forEach((record) => {
+    const key = `${record.get("sectionId")}:${record.get(
+      "bracketId"
+    )}:${record.get("videoId")}`;
+    bracketVideoStylesMap.set(key, record.get("styles") || []);
+  });
+
+  const sectionApplyStylesMap = new Map<string, boolean>();
+  sectionApplyStylesResult.records.forEach((record) => {
+    sectionApplyStylesMap.set(
+      record.get("sectionId"),
+      record.get("applyStylesToVideos") || false
+    );
+  });
+
   // Update sections with bracket videos and tagged users
   sections.forEach((section: Section) => {
-    // Add tagged users to direct section videos
+    // Add section styles and applyStylesToVideos
+    section.styles = sectionStylesMap.get(section.id) || [];
+    section.applyStylesToVideos =
+      sectionApplyStylesMap.get(section.id) || false;
+
+    // Add tagged users and styles to direct section videos
     section.videos.forEach((video: Video) => {
       const userData = sectionVideoUsersResult.records.find(
         (record) =>
@@ -202,6 +271,10 @@ export const getEvent = async (id: string): Promise<Event> => {
       } else {
         video.taggedUsers = [];
       }
+
+      // Add video styles
+      const styleKey = `${section.id}:${video.id}`;
+      video.styles = sectionVideoStylesMap.get(styleKey) || [];
     });
 
     // Add videos and tagged users to brackets
@@ -212,7 +285,7 @@ export const getEvent = async (id: string): Promise<Event> => {
       if (bracketVideoData) {
         bracket.videos = bracketVideoData.videos;
 
-        // Add tagged users to bracket videos
+        // Add tagged users and styles to bracket videos
         bracket.videos.forEach((video: Video) => {
           const userData = bracketVideoUsers.find(
             (bvu: BracketVideoUserRecord) =>
@@ -225,6 +298,10 @@ export const getEvent = async (id: string): Promise<Event> => {
           } else {
             video.taggedUsers = [];
           }
+
+          // Add video styles
+          const styleKey = `${section.id}:${bracket.id}:${video.id}`;
+          video.styles = bracketVideoStylesMap.get(styleKey) || [];
         });
       } else {
         bracket.videos = [];
@@ -427,19 +504,43 @@ const createSections = async (eventId: string, sections: any[]) => {
   if (sections.length === 0) return;
   const session = driver.session();
   try {
-    await session.run(
-      `MATCH (e:Event {id: $eventId})
-       UNWIND $sections AS sec
-       MERGE (s:Section {id: sec.id})
-       ON CREATE SET
-         s.title = sec.title,
-         s.description = sec.description
-       ON MATCH SET
-         s.title = sec.title,
-         s.description = sec.description
-       MERGE (s)-[:IN]->(e)`,
-      { eventId, sections }
-    );
+    for (const sec of sections) {
+      // Create section
+      await session.run(
+        `MATCH (e:Event {id: $eventId})
+         MERGE (s:Section {id: $sectionId})
+         ON CREATE SET
+           s.title = $title,
+           s.description = $description,
+           s.applyStylesToVideos = $applyStylesToVideos
+         ON MATCH SET
+           s.title = $title,
+           s.description = $description,
+           s.applyStylesToVideos = $applyStylesToVideos
+         MERGE (s)-[:IN]->(e)`,
+        {
+          eventId,
+          sectionId: sec.id,
+          title: sec.title,
+          description: sec.description || null,
+          applyStylesToVideos: sec.applyStylesToVideos || false,
+        }
+      );
+
+      // Create section style relationships if applyStylesToVideos is true
+      if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {
+        await session.run(
+          `
+          MATCH (s:Section {id: $sectionId})
+          WITH s, $styles AS styles
+          UNWIND styles AS styleName
+          MERGE (style:Style {name: styleName})
+          MERGE (s)-[:STYLE]->(style)
+          `,
+          { sectionId: sec.id, styles: sec.styles }
+        );
+      }
+    }
   } finally {
     await session.close();
   }
@@ -512,6 +613,21 @@ const createBracketVideos = async (sections: any[]) => {
               { videoId: vid.id, userId: user.id }
             );
           }
+
+          // Create video style relationships
+          const videoStyles = vid.styles || [];
+          if (videoStyles.length > 0) {
+            await session.run(
+              `
+              MATCH (v:Video {id: $videoId})
+              WITH v, $styles AS styles
+              UNWIND styles AS styleName
+              MERGE (style:Style {name: styleName})
+              MERGE (v)-[:STYLE]->(style)
+              `,
+              { videoId: vid.id, styles: videoStyles }
+            );
+          }
         }
       }
     }
@@ -551,6 +667,21 @@ const createSectionVideos = async (sections: any[]) => {
              MERGE (u:User {id: $userId})
              MERGE (u)-[:IN]->(v)`,
             { videoId: vid.id, userId: user.id }
+          );
+        }
+
+        // Create video style relationships
+        const videoStyles = vid.styles || [];
+        if (videoStyles.length > 0) {
+          await session.run(
+            `
+            MATCH (v:Video {id: $videoId})
+            WITH v, $styles AS styles
+            UNWIND styles AS styleName
+            MERGE (style:Style {name: styleName})
+            MERGE (v)-[:STYLE]->(style)
+            `,
+            { videoId: vid.id, styles: videoStyles }
           );
         }
       }
@@ -786,6 +917,42 @@ export const getEventSections = async (id: string) => {
     { id }
   );
 
+  // Get section styles
+  const sectionStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)-[:STYLE]->(style:Style)
+    RETURN s.id as sectionId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get video styles (direct section videos)
+  const sectionVideoStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    RETURN s.id as sectionId, v.id as videoId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get video styles (bracket videos)
+  const bracketVideoStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get section applyStylesToVideos property
+  const sectionApplyStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)
+    RETURN s.id as sectionId, s.applyStylesToVideos as applyStylesToVideos
+  `,
+    { id }
+  );
+
   session.close();
 
   const title = eventResult.records[0]?.get("title");
@@ -828,6 +995,34 @@ export const getEventSections = async (id: string) => {
     })
   );
 
+  // Create maps for styles
+  const sectionStylesMap = new Map<string, string[]>();
+  sectionStylesResult.records.forEach((record) => {
+    sectionStylesMap.set(record.get("sectionId"), record.get("styles") || []);
+  });
+
+  const sectionVideoStylesMap = new Map<string, string[]>();
+  sectionVideoStylesResult.records.forEach((record) => {
+    const key = `${record.get("sectionId")}:${record.get("videoId")}`;
+    sectionVideoStylesMap.set(key, record.get("styles") || []);
+  });
+
+  const bracketVideoStylesMap = new Map<string, string[]>();
+  bracketVideoStylesResult.records.forEach((record) => {
+    const key = `${record.get("sectionId")}:${record.get(
+      "bracketId"
+    )}:${record.get("videoId")}`;
+    bracketVideoStylesMap.set(key, record.get("styles") || []);
+  });
+
+  const sectionApplyStylesMap = new Map<string, boolean>();
+  sectionApplyStylesResult.records.forEach((record) => {
+    sectionApplyStylesMap.set(
+      record.get("sectionId"),
+      record.get("applyStylesToVideos") || false
+    );
+  });
+
   // Check if event exists
   if (!title) {
     throw new Error(`Event with id ${id} not found`);
@@ -835,11 +1030,17 @@ export const getEventSections = async (id: string) => {
 
   // Update sections with bracket videos
   sections.forEach((section: Section) => {
-    // Add tagged users to direct section videos - create new objects to avoid mutating Neo4j objects
+    // Add section styles and applyStylesToVideos
+    section.styles = sectionStylesMap.get(section.id) || [];
+    section.applyStylesToVideos =
+      sectionApplyStylesMap.get(section.id) || false;
+
+    // Add tagged users and styles to direct section videos - create new objects to avoid mutating Neo4j objects
     section.videos = section.videos.map((video: Video) => {
       const userData = sectionVideoUsers.find(
         (svu) => svu.sectionId === section.id && svu.videoId === video.id
       );
+      const styleKey = `${section.id}:${video.id}`;
       return {
         ...video,
         taggedUsers:
@@ -848,6 +1049,7 @@ export const getEventSections = async (id: string) => {
           Array.isArray(userData.taggedUsers)
             ? userData.taggedUsers
             : [],
+        styles: sectionVideoStylesMap.get(styleKey) || [],
       };
     });
 
@@ -857,7 +1059,7 @@ export const getEventSections = async (id: string) => {
         (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id
       );
       if (bracketVideoData) {
-        // Create new video objects with taggedUsers to avoid mutating Neo4j objects
+        // Create new video objects with taggedUsers and styles to avoid mutating Neo4j objects
         bracket.videos = bracketVideoData.videos.map((video: Video) => {
           const userData = bracketVideoUsers.find(
             (bvu) =>
@@ -865,6 +1067,7 @@ export const getEventSections = async (id: string) => {
               bvu.bracketId === bracket.id &&
               bvu.videoId === video.id
           );
+          const styleKey = `${section.id}:${bracket.id}:${video.id}`;
           return {
             ...video,
             taggedUsers:
@@ -873,6 +1076,7 @@ export const getEventSections = async (id: string) => {
               Array.isArray(userData.taggedUsers)
                 ? userData.taggedUsers
                 : [],
+            styles: bracketVideoStylesMap.get(styleKey) || [],
           };
         });
       } else {
@@ -1053,6 +1257,28 @@ export const EditEvent = async (event: Event) => {
       { id }
     );
 
+    // Delete all existing style relationships for sections and videos
+    await tx.run(
+      `MATCH (e:Event {id: $id})
+       OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[rs:STYLE]->(:Style)
+       DELETE rs`,
+      { id }
+    );
+
+    await tx.run(
+      `MATCH (e:Event {id: $id})
+       OPTIONAL MATCH (e)<-[:IN]-(s:Section)<-[:IN]-(v:Video)-[rv:STYLE]->(:Style)
+       DELETE rv`,
+      { id }
+    );
+
+    await tx.run(
+      `MATCH (e:Event {id: $id})
+       OPTIONAL MATCH (e)<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[rv:STYLE]->(:Style)
+       DELETE rv`,
+      { id }
+    );
+
     // Update sections
     await tx.run(
       `MATCH (e:Event {id: $id})
@@ -1060,11 +1286,30 @@ export const EditEvent = async (event: Event) => {
          MERGE (s:Section { id: sec.id })
          ON MATCH SET
            s.title = sec.title,
-           s.description = sec.description
+           s.description = sec.description,
+           s.applyStylesToVideos = COALESCE(sec.applyStylesToVideos, false)
+         ON CREATE SET
+           s.applyStylesToVideos = COALESCE(sec.applyStylesToVideos, false)
          MERGE (s)-[:IN]->(e)
        )`,
       { id, sections: event.sections }
     );
+
+    // Create section style relationships (only if applyStylesToVideos is true)
+    for (const sec of event.sections) {
+      if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {
+        await tx.run(
+          `
+          MATCH (s:Section {id: $sectionId})
+          WITH s, $styles AS styles
+          UNWIND styles AS styleName
+          MERGE (style:Style {name: styleName})
+          MERGE (s)-[:STYLE]->(style)
+          `,
+          { sectionId: sec.id, styles: sec.styles }
+        );
+      }
+    }
 
     // Cascade delete brackets if section hasBrackets is false
     await tx.run(
@@ -1085,59 +1330,181 @@ export const EditEvent = async (event: Event) => {
     );
 
     // Handle sections with brackets (hasBrackets = true)
+    // First create sections
     await tx.run(
       `MATCH (e:Event {id: $id})
-       FOREACH (sec IN [s IN $sections WHERE s.hasBrackets = true] |
-         MERGE (s:Section {id: sec.id})-[:IN]->(e)
-         FOREACH (br IN sec.brackets |
-           MERGE (b:Bracket { id: br.id })
-           ON CREATE SET
-             b.title = br.title
-           ON MATCH SET
-             b.title = br.title
-           MERGE (b)-[:IN]->(s)
-           
-           FOREACH (bvid IN br.videos |
-             MERGE (bv:Video { id: bvid.id })
-             ON CREATE SET
-               bv.title = bvid.title,
-               bv.src = bvid.src
-             ON MATCH SET
-               bv.title = bvid.title,
-               bv.src = bvid.src
-             FOREACH (user IN bvid.taggedUsers |
-               MERGE (u:User { id: user.id })
-               MERGE (u)-[:IN]->(bv)
-             )
-             MERGE (bv)-[:IN]->(b)
-           )
-         )
-       )`,
+       UNWIND [s IN $sections WHERE s.hasBrackets = true] AS sec
+       MERGE (s:Section {id: sec.id})
+       MERGE (s)-[:IN]->(e)`,
       { id, sections: event.sections }
     );
 
+    // Then create brackets
+    for (const sec of event.sections) {
+      if (sec.hasBrackets && sec.brackets) {
+        for (const br of sec.brackets) {
+          await tx.run(
+            `MATCH (e:Event {id: $id})<-[:IN]-(s:Section {id: $sectionId})
+             MERGE (b:Bracket { id: $bracketId })
+             ON CREATE SET
+               b.title = $title
+             ON MATCH SET
+               b.title = $title
+             MERGE (b)-[:IN]->(s)`,
+            { id, sectionId: sec.id, bracketId: br.id, title: br.title }
+          );
+        }
+      }
+    }
+
+    // Then create bracket videos
+    for (const sec of event.sections) {
+      if (sec.hasBrackets && sec.brackets) {
+        for (const br of sec.brackets) {
+          if (br.videos) {
+            for (const bvid of br.videos) {
+              await tx.run(
+                `MATCH (b:Bracket {id: $bracketId})
+                 MERGE (bv:Video { id: $videoId })
+                 ON CREATE SET
+                   bv.title = $title,
+                   bv.src = $src
+                 ON MATCH SET
+                   bv.title = $title,
+                   bv.src = $src
+                 MERGE (bv)-[:IN]->(b)`,
+                {
+                  bracketId: br.id,
+                  videoId: bvid.id,
+                  title: bvid.title,
+                  src: bvid.src,
+                }
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Then create user-video relationships for bracket videos
+    for (const sec of event.sections) {
+      if (sec.hasBrackets && sec.brackets) {
+        for (const br of sec.brackets) {
+          if (br.videos) {
+            for (const bvid of br.videos) {
+              if (bvid.taggedUsers && bvid.taggedUsers.length > 0) {
+                for (const user of bvid.taggedUsers) {
+                  await tx.run(
+                    `MATCH (bv:Video {id: $videoId})
+                     MERGE (u:User { id: $userId })
+                     MERGE (u)-[:IN]->(bv)`,
+                    { videoId: bvid.id, userId: user.id }
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Create video style relationships for bracket videos
+    for (const sec of event.sections) {
+      if (sec.hasBrackets && sec.brackets) {
+        for (const br of sec.brackets) {
+          if (br.videos) {
+            for (const bvid of br.videos) {
+              if (bvid.styles && bvid.styles.length > 0) {
+                await tx.run(
+                  `
+                  MATCH (bv:Video {id: $videoId})
+                  WITH bv, $styles AS styles
+                  UNWIND styles AS styleName
+                  MERGE (style:Style {name: styleName})
+                  MERGE (bv)-[:STYLE]->(style)
+                  `,
+                  { videoId: bvid.id, styles: bvid.styles }
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Handle sections without brackets (hasBrackets = false)
+    // First create sections
     await tx.run(
       `MATCH (e:Event {id: $id})
-       FOREACH (sec IN [s IN $sections WHERE s.hasBrackets = false] |
-         MERGE (s:Section {id: sec.id})-[:IN]->(e)
-         FOREACH (vid IN sec.videos |
-           MERGE (v:Video { id: vid.id })
-           ON CREATE SET
-             v.title = vid.title,
-             v.src = vid.src
-           ON MATCH SET
-             v.title = vid.title,
-             v.src = vid.src
-           MERGE (v)-[:IN]->(s)
-           FOREACH (user IN vid.taggedUsers |
-             MERGE (u:User {id: user.id})
-             MERGE (u)-[:IN]->(v)
-           )
-         )
-       )`,
+       UNWIND [s IN $sections WHERE s.hasBrackets = false] AS sec
+       MERGE (s:Section {id: sec.id})
+       MERGE (s)-[:IN]->(e)`,
       { id, sections: event.sections }
     );
+
+    // Then create videos
+    for (const sec of event.sections) {
+      if (!sec.hasBrackets && sec.videos) {
+        for (const vid of sec.videos) {
+          await tx.run(
+            `MATCH (e:Event {id: $id})<-[:IN]-(s:Section {id: $sectionId})
+             MERGE (v:Video { id: $videoId })
+             ON CREATE SET
+               v.title = $title,
+               v.src = $src
+             ON MATCH SET
+               v.title = $title,
+               v.src = $src
+             MERGE (v)-[:IN]->(s)`,
+            {
+              id,
+              sectionId: sec.id,
+              videoId: vid.id,
+              title: vid.title,
+              src: vid.src,
+            }
+          );
+        }
+      }
+    }
+
+    // Then create user-video relationships for direct section videos
+    for (const sec of event.sections) {
+      if (!sec.hasBrackets && sec.videos) {
+        for (const vid of sec.videos) {
+          if (vid.taggedUsers && vid.taggedUsers.length > 0) {
+            for (const user of vid.taggedUsers) {
+              await tx.run(
+                `MATCH (v:Video {id: $videoId})
+                 MERGE (u:User { id: $userId })
+                 MERGE (u)-[:IN]->(v)`,
+                { videoId: vid.id, userId: user.id }
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Create video style relationships for direct section videos
+    for (const sec of event.sections) {
+      if (!sec.hasBrackets && sec.videos) {
+        for (const vid of sec.videos) {
+          if (vid.styles && vid.styles.length > 0) {
+            await tx.run(
+              `
+              MATCH (v:Video {id: $videoId})
+              WITH v, $styles AS styles
+              UNWIND styles AS styleName
+              MERGE (style:Style {name: styleName})
+              MERGE (v)-[:STYLE]->(style)
+              `,
+              { videoId: vid.id, styles: vid.styles }
+            );
+          }
+        }
+      }
+    }
 
     // Delete sections not in the new list
     await tx.run(

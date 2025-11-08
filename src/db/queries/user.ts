@@ -40,15 +40,40 @@ export const getUsers = async (keyword: string | null) => {
 
 export const signupUser = async (
   id: string,
-  user: { displayName: string; username: string; date: string; city: string }
+  user: {
+    displayName: string;
+    username: string;
+    date: string;
+    city: string;
+    styles?: string[];
+  }
 ) => {
   const session = driver.session();
-  const result = await session.run(
-    "MERGE (u:User {id: $id}) ON CREATE SET u.displayName = $user.displayName, u.username = $user.username, u.date = $user.date, u.city = $user.city RETURN u",
-    { id, user }
-  );
-  session.close();
-  return result.records[0].get("u");
+  try {
+    // Create/update user
+    const result = await session.run(
+      "MERGE (u:User {id: $id}) ON CREATE SET u.displayName = $user.displayName, u.username = $user.username, u.date = $user.date, u.city = $user.city RETURN u",
+      { id, user }
+    );
+
+    // Create Style nodes and relationships if styles are provided
+    if (user.styles && user.styles.length > 0) {
+      await session.run(
+        `
+        MATCH (u:User {id: $id})
+        WITH u, $styles AS styles
+        UNWIND styles AS styleName
+        MERGE (s:Style {name: styleName})
+        MERGE (u)-[:STYLE]->(s)
+        `,
+        { id, styles: user.styles }
+      );
+    }
+
+    return result.records[0].get("u");
+  } finally {
+    session.close();
+  }
 };
 
 export const updateUser = async (id: string, user: { [key: string]: any }) => {

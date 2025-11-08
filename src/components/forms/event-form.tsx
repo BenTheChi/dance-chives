@@ -41,6 +41,7 @@ const videoSchema = z.object({
       "Video source must be a valid YouTube URL"
     ),
   taggedUsers: z.array(userSearchItemSchema).optional(),
+  styles: z.array(z.string()).optional(),
 });
 
 const bracketSchema = z.object({
@@ -56,6 +57,8 @@ const sectionSchema = z.object({
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
+  styles: z.array(z.string()).optional(),
+  applyStylesToVideos: z.boolean().optional(),
 });
 
 const pictureSchema = z.object({
@@ -67,7 +70,7 @@ const pictureSchema = z.object({
 });
 
 const eventDetailsSchema = z.object({
-  creatorId: z.string(),
+  creatorId: z.string().nullable().optional(), // Set server-side from session, can be null
   title: z.string().min(1, "Event title is required"), // switch to min for all non-optional
   city: z.object({
     id: z.number(),

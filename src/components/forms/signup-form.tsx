@@ -24,6 +24,7 @@ import { z } from "zod";
 import { signup } from "@/lib/server_actions/auth_actions";
 import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
+import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -32,6 +33,7 @@ const signupSchema = z.object({
   username: z.string().min(1, "Username is required"),
   date: z.string().min(1, "Date of birth is required"),
   city: z.string().min(1, "City is required"),
+  styles: z.array(z.string()).optional(),
 });
 
 //The fields on this form may need to be conditional based on the user's OAuth provider
@@ -46,6 +48,7 @@ export default function SignUpForm() {
       username: "",
       date: "",
       city: "",
+      styles: [],
     },
   });
 
@@ -86,6 +89,11 @@ export default function SignUpForm() {
                   message: "Please enter a valid date in MM/DD/YYYY format",
                 });
                 return;
+              }
+              // Get styles from form state and add to formData
+              const styles = form.getValues("styles") || [];
+              if (styles.length > 0) {
+                formData.set("Dance Styles", JSON.stringify(styles));
               }
               await signup(formData);
             }}
@@ -146,6 +154,23 @@ export default function SignUpForm() {
                   <FormLabel>Date of Birth</FormLabel>
                   <FormControl>
                     <DateInput {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="styles"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dance Styles (Optional)</FormLabel>
+                  <FormControl>
+                    <StyleMultiSelect
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      name="Dance Styles"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
