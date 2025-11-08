@@ -8,6 +8,12 @@ import {
   EventCard,
 } from "../../types/event";
 import { UserSearchItem } from "../../types/user";
+import {
+  getNeo4jRoleFormats,
+  toNeo4jRoleFormat,
+  isValidRole,
+  AVAILABLE_ROLES,
+} from "@/lib/utils/roles";
 
 // Neo4j record interfaces
 interface BracketVideoRecord {
@@ -74,10 +80,11 @@ export const getEvent = async (id: string): Promise<Event> => {
   );
 
   // Get roles
+  const validRoleFormats = getNeo4jRoleFormats();
   const rolesResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[roleRel]-(user:User)
-    WHERE type(roleRel) IN ['ORGANIZER', 'HEAD_JUDGE', 'DJ', 'MC', 'JUDGE', 'COORDINATOR']
+    WHERE type(roleRel) IN $validRoles
     RETURN collect({
       id: type(roleRel),
       title: type(roleRel),
@@ -88,7 +95,7 @@ export const getEvent = async (id: string): Promise<Event> => {
       }
     }) as roles
   `,
-    { id }
+    { id, validRoles: validRoleFormats }
   );
 
   // Get sections with video and bracket counts
@@ -134,27 +141,29 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-  // Get tagged users for bracket videos
+  // Get tagged users for bracket videos with role property
   const bracketVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(u:User)
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
     RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect({
       id: u.id,
       displayName: u.displayName,
-      username: u.username
+      username: u.username,
+      role: r.role
     }) as taggedUsers
   `,
     { id }
   );
 
-  // Get tagged users for direct section videos
+  // Get tagged users for direct section videos with role property
   const sectionVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[:IN]-(u:User)
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
     RETURN s.id as sectionId, v.id as videoId, collect({
       id: u.id,
       displayName: u.displayName,
-      username: u.username
+      username: u.username,
+      role: r.role
     }) as taggedUsers
   `,
     { id }
@@ -304,23 +313,295 @@ export const getEvent = async (id: string): Promise<Event> => {
   };
 };
 
+// Helper function to create subevents
+const createSubEvents = async (eventId: string, subEvents: any[]) => {
+  if (subEvents.length === 0) return;
+  const session = driver.session();
+  try {
+    for (const sub of subEvents) {
+      await session.run(
+        `MATCH (e:Event {id: $eventId})
+         MERGE (se:SubEvent {id: $subEventId})
+         ON CREATE SET
+           se.title = $title,
+           se.description = $description,
+           se.schedule = $schedule,
+           se.startDate = $startDate,
+           se.address = $address,
+           se.startTime = $startTime,
+           se.endTime = $endTime
+         ON MATCH SET
+           se.title = $title,
+           se.description = $description,
+           se.schedule = $schedule,
+           se.startDate = $startDate,
+           se.address = $address,
+           se.startTime = $startTime,
+           se.endTime = $endTime
+         MERGE (se)-[:PART_OF]->(e)`,
+        {
+          eventId,
+          subEventId: sub.id,
+          title: sub.title,
+          description: sub.description,
+          schedule: sub.schedule,
+          startDate: sub.startDate,
+          address: sub.address,
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create subevent posters
+const createSubEventPosters = async (subEvents: any[]) => {
+  const subEventsWithPosters = subEvents.filter((sub) => sub.poster?.id);
+  if (subEventsWithPosters.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sub of subEventsWithPosters) {
+      await session.run(
+        `MATCH (se:SubEvent {id: $subEventId})
+         OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(se)
+         DELETE r
+         WITH se
+         MERGE (p:Picture {id: $posterId})
+         ON CREATE SET
+           p.title = $title,
+           p.url = $url,
+           p.type = 'poster'
+         ON MATCH SET
+           p.title = $title,
+           p.url = $url
+         MERGE (p)-[:POSTER]->(se)`,
+        {
+          subEventId: sub.id,
+          posterId: sub.poster.id,
+          title: sub.poster.title,
+          url: sub.poster.url,
+        }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create gallery photos
+const createGalleryPhotos = async (eventId: string, gallery: any[]) => {
+  if (gallery.length === 0) return;
+  const session = driver.session();
+  try {
+    for (const pic of gallery) {
+      await session.run(
+        `MATCH (e:Event {id: $eventId})
+         MERGE (p:Picture {id: $picId})
+         ON CREATE SET
+           p.title = $title,
+           p.url = $url,
+           p.type = 'photo'
+         ON MATCH SET
+           p.title = $title,
+           p.url = $url
+         MERGE (p)-[:PHOTO]->(e)`,
+        {
+          eventId,
+          picId: pic.id,
+          title: pic.title,
+          url: pic.url,
+        }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create sections
+const createSections = async (eventId: string, sections: any[]) => {
+  if (sections.length === 0) return;
+  const session = driver.session();
+  try {
+    await session.run(
+      `MATCH (e:Event {id: $eventId})
+       UNWIND $sections AS sec
+       MERGE (s:Section {id: sec.id})
+       ON CREATE SET
+         s.title = sec.title,
+         s.description = sec.description
+       ON MATCH SET
+         s.title = sec.title,
+         s.description = sec.description
+       MERGE (s)-[:IN]->(e)`,
+      { eventId, sections }
+    );
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create brackets
+const createBrackets = async (sections: any[]) => {
+  const sectionsWithBrackets = sections.filter(
+    (s) => s.hasBrackets && s.brackets?.length > 0
+  );
+  if (sectionsWithBrackets.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sec of sectionsWithBrackets) {
+      for (const br of sec.brackets) {
+        await session.run(
+          `MATCH (s:Section {id: $sectionId})
+           MERGE (b:Bracket {id: $bracketId})
+           ON CREATE SET
+             b.title = $title
+           ON MATCH SET
+             b.title = $title
+           MERGE (b)-[:IN]->(s)`,
+          { sectionId: sec.id, bracketId: br.id, title: br.title }
+        );
+      }
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create videos in brackets
+const createBracketVideos = async (sections: any[]) => {
+  const sectionsWithBrackets = sections.filter(
+    (s) => s.hasBrackets && s.brackets?.length > 0
+  );
+  if (sectionsWithBrackets.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sec of sectionsWithBrackets) {
+      for (const br of sec.brackets) {
+        for (const vid of br.videos || []) {
+          await session.run(
+            `MATCH (b:Bracket {id: $bracketId})
+             MERGE (v:Video {id: $videoId})
+             ON CREATE SET
+               v.title = $title,
+               v.src = $src
+             ON MATCH SET
+               v.title = $title,
+               v.src = $src
+             MERGE (v)-[:IN]->(b)`,
+            {
+              bracketId: br.id,
+              videoId: vid.id,
+              title: vid.title,
+              src: vid.src,
+            }
+          );
+
+          // Link tagged users
+          for (const user of vid.taggedUsers || []) {
+            await session.run(
+              `MATCH (v:Video {id: $videoId})
+               MERGE (u:User {id: $userId})
+               MERGE (u)-[:IN]->(v)`,
+              { videoId: vid.id, userId: user.id }
+            );
+          }
+        }
+      }
+    }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create videos directly in sections
+const createSectionVideos = async (sections: any[]) => {
+  const sectionsWithVideos = sections.filter(
+    (s) => !s.hasBrackets && s.videos?.length > 0
+  );
+  if (sectionsWithVideos.length === 0) return;
+
+  const session = driver.session();
+  try {
+    for (const sec of sectionsWithVideos) {
+      for (const vid of sec.videos) {
+        await session.run(
+          `MATCH (s:Section {id: $sectionId})
+           MERGE (v:Video {id: $videoId})
+           ON CREATE SET
+             v.title = $title,
+             v.src = $src
+           ON MATCH SET
+             v.title = $title,
+             v.src = $src
+           MERGE (v)-[:IN]->(s)`,
+          { sectionId: sec.id, videoId: vid.id, title: vid.title, src: vid.src }
+        );
+
+        // Link tagged users
+        for (const user of vid.taggedUsers || []) {
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:IN]->(v)`,
+            { videoId: vid.id, userId: user.id }
+          );
+        }
+      }
+    }
+  } finally {
+    await session.close();
+  }
+};
+
 export const insertEvent = async (event: Event) => {
+  // Validate all roles before inserting
+  if (event.roles && event.roles.length > 0) {
+    for (const role of event.roles) {
+      if (!isValidRole(role.title)) {
+        throw new Error(
+          `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
+            ", "
+          )}`
+        );
+      }
+    }
+  }
+
   const session = driver.session();
 
   const result = await session.run(
     `
-CREATE (e:Event {
-  id: $eventId,
-  title: $title,
-  description: $description,
-  address: $address,
-  prize: $prize,
-  entryCost: $entryCost,
-  startDate: $startDate,
-  startTime: $startTime,
-  endTime: $endTime,
-  schedule: $schedule
-})
+MERGE (e:Event {id: $eventId})
+  ON CREATE SET 
+    e.title = $title,
+    e.description = $description,
+    e.address = $address,
+    e.prize = $prize,
+    e.entryCost = $entryCost,
+    e.startDate = $startDate,
+    e.startTime = $startTime,
+    e.endTime = $endTime,
+    e.schedule = $schedule,
+    e.createdAt = $createdAt,
+    e.updatedAt = $updatedAt
+  ON MATCH SET
+    e.title = $title,
+    e.description = $description,
+    e.address = $address,
+    e.prize = $prize,
+    e.entryCost = $entryCost,
+    e.startDate = $startDate,
+    e.startTime = $startTime,
+    e.endTime = $endTime,
+    e.schedule = $schedule,
+    e.updatedAt = $updatedAt
 
 WITH e
 MERGE (c:City {id: $city.id})
@@ -335,103 +616,39 @@ MERGE (c:City {id: $city.id})
 MERGE (e)-[:IN]->(c)
 
 WITH e
-CREATE (newPoster:Picture {
-    id: $poster.id,
-    title: $poster.title,
-    url: $poster.url,
-    type: 'poster'
-})-[:POSTER]->(e)
-
+// Remove old poster relationship if it exists
+OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(e)
+DELETE r
 WITH e
-UNWIND $roles AS roleData
-MATCH (u:User { id: roleData.user.id })
-CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e)
-YIELD rel
-
-WITH e
-MATCH (u:User {id: $creatorId})
-MERGE (u)-[:CREATED]->(e)
-
-WITH e
-FOREACH (sub IN $subEvents |
-  CREATE (se:SubEvent { 
-    id: sub.id,
-    title: sub.title,
-    description: sub.description,
-    schedule: sub.schedule,
-    startDate: sub.startDate,
-    address: sub.address,
-    startTime: sub.startTime,
-    endTime: sub.endTime
-  })-[:PART_OF]->(e)
-  CREATE (subPic:Picture { 
-    id: sub.poster.id,
-    title: sub.poster.title,
-    url: sub.poster.url,
-    type: 'poster'
-  })-[:POSTER]->(se)
+// Create or merge poster only if poster exists
+FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
+  MERGE (newPoster:Picture {id: poster.id})
+  ON CREATE SET
+    newPoster.title = poster.title,
+    newPoster.url = poster.url,
+    newPoster.type = 'poster'
+  ON MATCH SET
+    newPoster.title = poster.title,
+    newPoster.url = poster.url
+  MERGE (newPoster)-[:POSTER]->(e)
 )
 
 WITH e
-FOREACH (pic IN $gallery |
-  CREATE (g:Picture { 
-    id: pic.id,
-    title: pic.title,
-    url: pic.url,
-    type: 'photo'
-  })-[:PHOTO]->(e)
-)
+MATCH (creator:User {id: $creatorId})
+MERGE (creator)-[:CREATED]->(e)
 
 WITH e
-FOREACH (sec IN $sections |
-  CREATE (s:Section {
-      id: sec.id,
-      title: sec.title,
-      description: sec.description
-  })-[:IN]->(e)
-)
+CALL {
+  WITH e
+  WITH e, $roles AS roles
+  UNWIND roles AS roleData
+  MATCH (u:User { id: roleData.user.id })
+  CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e) YIELD rel
+  RETURN count(rel) AS roleCount
+}
 
 WITH e
-FOREACH (sec IN [s IN $sections WHERE s.hasBrackets = true] |
-  MERGE (s:Section {id: sec.id})-[:IN]->(e)
-  FOREACH (br IN sec.brackets |
-    CREATE (b:Bracket {
-        id: br.id,
-        title: br.title
-    })-[:IN]->(s)
-    FOREACH (vid IN br.videos |
-      CREATE (v:Video { 
-        id: vid.id,
-        title: vid.title,
-        src: vid.src
-      })-[:IN]->(b)
-      FOREACH (user IN vid.taggedUsers |
-        MERGE (u:User { id: user.id })
-        MERGE (u)-[:IN]->(v)
-      )
-    )
-  )
-)
-
-WITH e
-FOREACH (sec IN [s IN $sections WHERE s.hasBrackets = false] |
-  MERGE (s:Section {id: sec.id})-[:IN]->(e)
-  FOREACH (vid IN sec.videos |
-    CREATE (v:Video { 
-      id: vid.id,
-      title: vid.title,
-      src: vid.src
-    })-[:IN]->(s)
-    FOREACH (user IN vid.taggedUsers |
-      MERGE (u:User { id: user.id })
-      MERGE (u)-[:IN]->(v)
-    )
-  )
-)
-
-WITH e
-MATCH (event:Event {id: $eventId})
-RETURN event
+RETURN e as event
 `,
     {
       eventId: event.id,
@@ -445,16 +662,42 @@ RETURN event
       startTime: event.eventDetails.startTime,
       endTime: event.eventDetails.endTime,
       schedule: event.eventDetails.schedule,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
       poster: event.eventDetails.poster,
       city: event.eventDetails.city,
-      sections: event.sections,
       roles: event.roles,
-      subEvents: event.subEvents,
-      gallery: event.gallery,
     }
   );
+
+  // Check if query returned results
+  if (!result.records || result.records.length === 0) {
+    await session.close();
+    throw new Error(
+      `Failed to create event ${event.id}: No records returned from query`
+    );
+  }
+
+  const eventNode = result.records[0].get("event");
+  if (!eventNode) {
+    await session.close();
+    throw new Error(
+      `Failed to create event ${event.id}: Event node not found in result`
+    );
+  }
+
   await session.close();
-  return result.records[0].get("event").properties;
+
+  // Create subevents, gallery, sections, brackets, and videos in separate queries
+  await createSubEvents(event.id, event.subEvents);
+  await createSubEventPosters(event.subEvents);
+  await createGalleryPhotos(event.id, event.gallery);
+  await createSections(event.id, event.sections);
+  await createBrackets(event.sections);
+  await createBracketVideos(event.sections);
+  await createSectionVideos(event.sections);
+
+  return eventNode.properties;
 };
 
 export const getEventSections = async (id: string) => {
@@ -512,15 +755,20 @@ export const getEventSections = async (id: string) => {
     { id }
   );
 
-  // Get tagged users for direct section videos
+  // Get tagged users for all videos in sections
+  // Match videos in sections first, then find their tagged users with role property
   const sectionVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[:IN]-(u:User)
-    RETURN s.id as sectionId, v.id as videoId, collect({
-      id: u.id,
-      displayName: u.displayName,
-      username: u.username
-    }) as taggedUsers
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[r:IN]-(u:User)
+    WITH s, v, collect(DISTINCT {user: u, role: r.role}) as userData
+    WHERE ANY(data IN userData WHERE data.user IS NOT NULL)
+    RETURN s.id as sectionId, v.id as videoId, [data IN userData WHERE data.user IS NOT NULL | {
+      id: data.user.id,
+      displayName: data.user.displayName,
+      username: data.user.username,
+      role: data.role
+    }] as taggedUsers
   `,
     { id }
   );
@@ -528,11 +776,11 @@ export const getEventSections = async (id: string) => {
   // Get tagged users for bracket videos
   const bracketVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(user:User)
-    RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect({
-      id: user.id,
-      displayName: user.displayName,
-      username: user.username
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(u:User)
+    RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect(DISTINCT {
+      id: u.id,
+      displayName: u.displayName,
+      username: u.username
     }) as taggedUsers
   `,
     { id }
@@ -550,13 +798,26 @@ export const getEventSections = async (id: string) => {
     })
   );
 
-  const sectionVideoUsers = sectionVideoUsersResult.records.map(
-    (record): SectionVideoUserRecord => ({
-      sectionId: record.get("sectionId"),
-      videoId: record.get("videoId"),
-      taggedUsers: record.get("taggedUsers"),
-    })
+  // Get all bracket video IDs to filter them out from section videos
+  const bracketVideoIdsSet = new Set(
+    bracketVideosResult.records.flatMap((record) =>
+      (record.get("videos") || []).map((v: any) => v.id)
+    )
   );
+
+  // Filter out bracket videos from section video users
+  const sectionVideoUsers = sectionVideoUsersResult.records
+    .filter((record) => {
+      const videoId = record.get("videoId");
+      return videoId && !bracketVideoIdsSet.has(videoId);
+    })
+    .map(
+      (record): SectionVideoUserRecord => ({
+        sectionId: record.get("sectionId"),
+        videoId: record.get("videoId"),
+        taggedUsers: record.get("taggedUsers") || [],
+      })
+    );
 
   const bracketVideoUsers = bracketVideoUsersResult.records.map(
     (record): BracketVideoUserRecord => ({
@@ -574,16 +835,20 @@ export const getEventSections = async (id: string) => {
 
   // Update sections with bracket videos
   sections.forEach((section: Section) => {
-    // Add tagged users to direct section videos
-    section.videos.forEach((video: Video) => {
+    // Add tagged users to direct section videos - create new objects to avoid mutating Neo4j objects
+    section.videos = section.videos.map((video: Video) => {
       const userData = sectionVideoUsers.find(
         (svu) => svu.sectionId === section.id && svu.videoId === video.id
       );
-      if (userData) {
-        video.taggedUsers = userData.taggedUsers;
-      } else {
-        video.taggedUsers = [];
-      }
+      return {
+        ...video,
+        taggedUsers:
+          userData &&
+          userData.taggedUsers &&
+          Array.isArray(userData.taggedUsers)
+            ? userData.taggedUsers
+            : [],
+      };
     });
 
     // Add videos and tagged users to brackets
@@ -592,21 +857,23 @@ export const getEventSections = async (id: string) => {
         (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id
       );
       if (bracketVideoData) {
-        bracket.videos = bracketVideoData.videos;
-
-        // Add tagged users to bracket videos
-        bracket.videos.forEach((video: Video) => {
+        // Create new video objects with taggedUsers to avoid mutating Neo4j objects
+        bracket.videos = bracketVideoData.videos.map((video: Video) => {
           const userData = bracketVideoUsers.find(
             (bvu) =>
               bvu.sectionId === section.id &&
               bvu.bracketId === bracket.id &&
               bvu.videoId === video.id
           );
-          if (userData) {
-            video.taggedUsers = userData.taggedUsers;
-          } else {
-            video.taggedUsers = [];
-          }
+          return {
+            ...video,
+            taggedUsers:
+              userData &&
+              userData.taggedUsers &&
+              Array.isArray(userData.taggedUsers)
+                ? userData.taggedUsers
+                : [],
+          };
         });
       } else {
         bracket.videos = [];
@@ -619,6 +886,20 @@ export const getEventSections = async (id: string) => {
 
 export const EditEvent = async (event: Event) => {
   const { id, eventDetails } = event;
+
+  // Validate all roles before editing
+  if (event.roles && event.roles.length > 0) {
+    for (const role of event.roles) {
+      if (!isValidRole(role.title)) {
+        throw new Error(
+          `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
+            ", "
+          )}`
+        );
+      }
+    }
+  }
+
   const session = driver.session();
 
   try {
@@ -959,10 +1240,13 @@ export const getEvents = async (): Promise<EventCard[]> => {
   const result = await session.run(
     `MATCH (e:Event)-[:IN]->(c:City)
     OPTIONAL MATCH (e)<-[:POSTER]-(p:Picture)
+    WITH DISTINCT e, c, p
     RETURN e {
       id: e.id,
       title: e.title,
+      series: null,
       imageUrl: p.url,
+      date: e.startDate,
       city: c.name,
       styles: []
     }`

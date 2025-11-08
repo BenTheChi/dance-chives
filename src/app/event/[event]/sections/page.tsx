@@ -2,6 +2,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import SectionBracketTabSelector from "@/components/SectionBracketTabSelector";
 import { getEventSections } from "@/db/queries/event";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -27,11 +28,17 @@ export default async function SectionsPage({ params }: PageProps) {
   }
 
   const { sections, title } = await getEventSections(paramResult.event);
+  const session = await auth();
 
   return (
     <>
       <AppNavbar />
-      <SectionBracketTabSelector sections={sections} eventTitle={title} />
+      <SectionBracketTabSelector
+        sections={sections}
+        eventTitle={title}
+        eventId={paramResult.event}
+        currentUserId={session?.user?.id}
+      />
     </>
   );
 }

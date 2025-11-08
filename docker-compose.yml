@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: dance-chives-postgres
+    environment:
+      POSTGRES_DB: dance_chives_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dance_chives_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  prisma-setup:
+    image: node:18-alpine
+    container_name: dance-chives-prisma-setup
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: "postgresql://postgres:dev_password@postgres:5432/dance_chives_dev?schema=public"
+      NEO4J_URI: "bolt://neo4j:7687"
+      NEO4J_USER: "neo4j"
+      NEO4J_PASSWORD: "dev_password"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    command: >
+      sh -c "
+        npm install &&
+        npx prisma generate &&
+        npx prisma db push &&
+        npx prisma db seed &&
+        npm run neo4j:seed &&
+        echo 'Database setup completed!'
+      "
+
+  neo4j:
+    image: neo4j:5.15
+    container_name: dance-chives-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/dev_password
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_apoc_export_file_enabled: true
+      NEO4J_apoc_import_file_enabled: true
+      NEO4J_apoc_import_file_use__neo4j__config: true
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: yes
+      # Allow unencrypted connections for local development
+      NEO4J_dbms_connector_bolt_listen__address: 0.0.0.0:7687
+      NEO4J_dbms_connector_bolt_tls__level: DISABLED
+    ports:
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+      - ./docker/neo4j/scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test:
+        ["CMD", "cypher-shell", "-u", "neo4j", "-p", "dev_password", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:

@@ -4,7 +4,7 @@ import "./globals.css";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { AuthProvider } from "@/components/providers/AuthProvider";
+import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -49,14 +49,14 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider session={session}>
+        <SessionProvider session={session}>
           <SidebarProvider>
             <div className="flex w-full">
               <AppSidebar />
               <main className="flex flex-col flex-1">{children}</main>
             </div>
           </SidebarProvider>
-        </AuthProvider>
+        </SessionProvider>
         <Toaster />
       </body>
     </html>

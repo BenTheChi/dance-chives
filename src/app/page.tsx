@@ -3,27 +3,27 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useAuth } from "@/components/providers/AuthProvider";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
-    const { session } = useAuth();
+  const { data: session } = useSession();
 
-    return (
+  return (
+    <div>
+      <AppNavbar />
+      {session ? (
         <div>
-            <AppNavbar />
-            {session ? (
-                <div>
-                    <header>
-                        <h1>Home</h1>
-                        <Link href="/add-event">
-                            <Button>Add Event</Button>
-                        </Link>
-                    </header>
-                    <section>Content here</section>
-                </div>
-            ) : (
-                <div>Not logged in</div>
-            )}
+          <header>
+            <h1>Home Dev Test</h1>
+            <Link href="/add-event">
+              <Button>Add Event</Button>
+            </Link>
+          </header>
+          <section>Content here</section>
         </div>
-    );
+      ) : (
+        <div>Not logged in</div>
+      )}
+    </div>
+  );
 }

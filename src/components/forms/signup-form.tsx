@@ -22,36 +22,51 @@ import {
 import DateInput from "../ui/dateinput";
 import { z } from "zod";
 import { signup } from "@/lib/server_actions/auth_actions";
+import { useSession } from "next-auth/react";
+import { Badge } from "@/components/ui/badge";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
 const signupSchema = z.object({
-  displayName: z.string().min(1),
-  username: z.string().min(1),
-  date: z.string().min(1),
-  auth: z.string().min(1),
+  displayName: z.string().min(1, "Display name is required"),
+  username: z.string().min(1, "Username is required"),
+  date: z.string().min(1, "Date of birth is required"),
+  city: z.string().min(1, "City is required"),
 });
 
 //The fields on this form may need to be conditional based on the user's OAuth provider
 //For example, if the user signs up with Instagram, we will not have an email address
 //UserInfo has any because I'm not sure what fields will be passed in depending on the OAuth provider
 export default function SignUpForm() {
+  const { data: session } = useSession();
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       displayName: "",
       username: "",
       date: "",
-      auth: "",
+      city: "",
     },
   });
+
+  // Check if this is an admin user
+  const isAdminUser = session?.user?.email === "benthechi@gmail.com";
 
   return (
     <Card className="w-3/4">
       <CardHeader>
-        <CardTitle className="text-xl">Sign Up</CardTitle>
+        <CardTitle className="text-xl">Complete Your Registration</CardTitle>
         <CardDescription>
-          Enter your information to create an account
+          You've signed in with OAuth. Complete your profile to verify your
+          account and access all features.
+          {isAdminUser && (
+            <div className="mt-2">
+              <Badge variant="default" className="text-xs">
+                🔑 Admin Account Detected - Super Admin privileges will be
+                automatically assigned
+              </Badge>
+            </div>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -109,6 +124,22 @@ export default function SignUpForm() {
             />
             <FormField
               control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Your primary city (e.g., Seattle, New York)"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="date"
               render={({ field }) => (
                 <FormItem>
@@ -120,21 +151,8 @@ export default function SignUpForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="auth"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Auth Code (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Auth code" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <Button type="submit" className="w-full">
-              Create an account
+              Complete Registration & Verify Account
             </Button>
           </form>
         </Form>

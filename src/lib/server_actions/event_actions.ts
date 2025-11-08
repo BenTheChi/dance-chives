@@ -8,6 +8,7 @@ import {
 } from "@/db/queries/event";
 import { Event, EventDetails, Section, SubEvent, Picture } from "@/types/event";
 import { generateSlugId } from "@/lib/utils";
+import { prisma } from "@/lib/primsa";
 
 interface addEventProps {
   eventDetails: {
@@ -236,6 +237,21 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Call insertEvent with the properly structured Event object
     const result = await insertEvent(event);
 
+    // Create corresponding PostgreSQL Event record to link Neo4j event to user
+    // Using upsert to handle cases where record might already exist
+    await prisma.event.upsert({
+      where: { eventId: event.id },
+      update: {
+        userId: session.user.id,
+        creator: true,
+      },
+      create: {
+        eventId: event.id, // Neo4j event ID
+        userId: session.user.id,
+        creator: true,
+      },
+    });
+
     return {
       status: 200,
       event: result,
@@ -448,6 +464,23 @@ export async function editEvent(
     const result = await editEventQuery(event);
 
     if (result) {
+      // Update corresponding PostgreSQL Event record to keep it in sync with Neo4j
+      // Use the original creator ID from oldEvent to preserve creator information
+      const creatorId = oldEvent.eventDetails.creatorId || session.user.id;
+
+      await prisma.event.upsert({
+        where: { eventId: eventId },
+        update: {
+          userId: creatorId,
+          creator: true,
+        },
+        create: {
+          eventId: eventId, // Neo4j event ID
+          userId: creatorId,
+          creator: true,
+        },
+      });
+
       return {
         status: 200,
         event: null,

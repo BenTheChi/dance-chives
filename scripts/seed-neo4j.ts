@@ -1,0 +1,104 @@
+import { signupUser } from "../src/db/queries/user";
+import driver from "../src/db/driver";
+
+async function seedNeo4j() {
+  console.log("🌱 Seeding Neo4j database using existing query functions...");
+  console.log("ℹ️  Note: Neo4j data is cleared by prisma/seed.ts");
+  console.log(
+    "ℹ️  This script only creates users if they don't exist (using MERGE)"
+  );
+
+  try {
+    // Create 5 users matching the Prisma seed structure
+    const testUsers = [
+      {
+        id: "test-user-0",
+        profile: {
+          displayName: "Base User",
+          username: "baseuser",
+          city: "Seattle",
+          date: "01/01/1990",
+        },
+      },
+      {
+        id: "test-user-1",
+        profile: {
+          displayName: "Creator",
+          username: "creator",
+          city: "New York",
+          date: "01/01/1990",
+        },
+      },
+      {
+        id: "test-user-2",
+        profile: {
+          displayName: "Moderator",
+          username: "moderator",
+          city: "New York",
+          date: "01/01/1990",
+        },
+      },
+      {
+        id: "test-user-3",
+        profile: {
+          displayName: "Admin",
+          username: "admin",
+          city: "Seattle",
+          date: "01/01/1990",
+        },
+      },
+      {
+        id: "test-user-4",
+        profile: {
+          displayName: "Super Admin",
+          username: "superadmin",
+          city: "New York",
+          date: "01/01/1990",
+        },
+      },
+    ];
+
+    // Create users using the signupUser function
+    for (const user of testUsers) {
+      try {
+        await signupUser(user.id, user.profile);
+        console.log(
+          `✅ Created user: ${user.profile.displayName} (${user.profile.username})`
+        );
+      } catch (error) {
+        console.log(
+          `ℹ️  User ${user.profile.username} may already exist, skipping...`
+        );
+      }
+    }
+
+    // Note: Events are created by prisma/seed.ts, not here
+    // This prevents duplicate events when both seed scripts run
+    console.log(
+      "ℹ️  Events are created by prisma/seed.ts, skipping event creation here."
+    );
+
+    console.log("🎉 Neo4j seeding completed using existing query functions!");
+    console.log(
+      "ℹ️  Note: Events are created by prisma/seed.ts, not this script."
+    );
+  } catch (error) {
+    console.error("❌ Neo4j seeding failed:", error);
+    throw error;
+  }
+}
+
+// Run the seeding if this file is executed directly
+if (require.main === module) {
+  seedNeo4j()
+    .then(() => {
+      console.log("✅ Neo4j seeding script completed successfully");
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("❌ Neo4j seeding script failed:", error);
+      process.exit(1);
+    });
+}
+
+export { seedNeo4j };

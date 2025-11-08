@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
 import { Video } from "@/types/event";
 import Link from "next/link";
+import { TagSelfVideoButton } from "@/components/events/TagSelfVideoButton";
+import { fromNeo4jRoleFormat, VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
 
 interface VideoLightboxProps {
   video: Video;
@@ -21,8 +23,10 @@ interface VideoLightboxProps {
   totalVideos: number;
   eventLink: string;
   eventTitle: string;
+  eventId: string;
   sectionTitle: string;
   bracketTitle?: string;
+  currentUserId?: string;
 }
 
 export function VideoLightbox({
@@ -37,8 +41,10 @@ export function VideoLightbox({
   totalVideos,
   eventLink,
   eventTitle,
+  eventId,
   sectionTitle,
   bracketTitle,
+  currentUserId,
 }: VideoLightboxProps) {
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -74,7 +80,21 @@ export function VideoLightbox({
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
   //   const winners = video.taggedUsers.filter((user) => user.isWinner);
-  const participants = video?.taggedUsers || [];
+  const allParticipants = video?.taggedUsers || [];
+
+  // Group participants by role, defaulting to "Dancer" if no role
+  const dancers = allParticipants.filter((user) => {
+    const role = fromNeo4jRoleFormat(user.role);
+    return !role || role === VIDEO_ROLE_DANCER;
+  });
+  const otherParticipants = allParticipants.filter((user) => {
+    const role = fromNeo4jRoleFormat(user.role);
+    return role && role !== VIDEO_ROLE_DANCER;
+  });
+
+  const isUserTagged = currentUserId
+    ? allParticipants.some((user) => user.id === currentUserId)
+    : false;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -202,6 +222,20 @@ export function VideoLightbox({
 
               <Separator />
 
+              {/* Tag Self Button */}
+              {currentUserId && (
+                <div className="space-y-2 sm:space-y-3">
+                  <TagSelfVideoButton
+                    eventId={eventId}
+                    videoId={video.id}
+                    currentUserId={currentUserId}
+                    isUserTagged={isUserTagged}
+                  />
+                </div>
+              )}
+
+              <Separator />
+
               {/* Winners */}
               {/* {winners.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
@@ -226,24 +260,57 @@ export function VideoLightbox({
                 </div>
               )} */}
 
-              {/* Participants */}
-              {participants.length > 0 && (
+              {/* Dancers */}
+              {dancers.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
                     <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                     <h3 className="font-semibold text-sm sm:text-base">
-                      Participants
+                      Dancers
                     </h3>
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {participants.map((participant, index) => (
-                      <Badge
+                    {dancers.map((participant, index) => (
+                      <Link
                         key={index}
-                        variant="secondary"
-                        className="text-xs"
+                        href={`/user/${participant.id}`}
+                        className="hover:opacity-80 transition-opacity"
                       >
-                        {participant.displayName}
-                      </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="text-xs cursor-pointer hover:bg-secondary/80"
+                        >
+                          {participant.displayName}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other Participants (non-dancers) */}
+              {otherParticipants.length > 0 && (
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex items-center">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <h3 className="font-semibold text-sm sm:text-base">
+                      Other Participants
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
+                    {otherParticipants.map((participant, index) => (
+                      <Link
+                        key={index}
+                        href={`/user/${participant.id}`}
+                        className="hover:opacity-80 transition-opacity"
+                      >
+                        <Badge
+                          variant="secondary"
+                          className="text-xs cursor-pointer hover:bg-secondary/80"
+                        >
+                          {participant.displayName}
+                        </Badge>
+                      </Link>
                     ))}
                   </div>
                 </div>

@@ -3,13 +3,13 @@
 import { signInWithGoogle } from "@/lib/server_actions/auth_actions";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { useAuth } from "@/components/providers/AuthProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import SignUpForm from "./signup-form";
 
 export function SignupContent() {
-  const { session } = useAuth();
+  const { data: session } = useSession();
   const router = useRouter();
 
   useEffect(() => {
