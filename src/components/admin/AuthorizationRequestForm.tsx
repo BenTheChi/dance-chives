@@ -21,19 +21,20 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Send } from "lucide-react";
 import { AUTH_LEVELS, getAuthLevelName } from "@/lib/utils/auth-utils";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 import { createAuthLevelChangeRequest } from "@/lib/server_actions/request_actions";
 
 interface AuthorizationRequestFormProps {
-  currentUserId: string;
   currentUserAuthLevel: number;
   onRequestSubmitted?: () => void | Promise<void>;
 }
 
 export function AuthorizationRequestForm({
-  currentUserId,
   currentUserAuthLevel,
   onRequestSubmitted,
 }: AuthorizationRequestFormProps) {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const [requestedLevel, setRequestedLevel] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,6 +62,11 @@ export function AuthorizationRequestForm({
 
     if (requestedLevel < currentUserAuthLevel) {
       toast.error("You cannot request a lower authorization level");
+      return;
+    }
+
+    if (!currentUserId) {
+      toast.error("You must be logged in to submit a request");
       return;
     }
 

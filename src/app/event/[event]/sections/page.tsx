@@ -37,7 +37,6 @@ export default async function SectionsPage({ params }: PageProps) {
         sections={sections}
         eventTitle={title}
         eventId={paramResult.event}
-        currentUserId={session?.user?.id}
       />
     </>
   );

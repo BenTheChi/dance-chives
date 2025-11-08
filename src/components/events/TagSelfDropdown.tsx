@@ -11,19 +11,19 @@ import {
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 import { tagSelfWithRole } from "@/lib/server_actions/request_actions";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 interface TagSelfDropdownProps {
   eventId: string;
   currentUserRoles: string[]; // Roles already assigned to the current user
-  currentUserId: string | undefined; // Current user ID
 }
 
 export function TagSelfDropdown({
   eventId,
   currentUserRoles,
-  currentUserId,
 }: TagSelfDropdownProps) {
+  const { data: session } = useSession();
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -34,7 +34,7 @@ export function TagSelfDropdown({
   );
 
   // Don't show the dropdown if user is not logged in or all roles are taken
-  if (!currentUserId || availableRoles.length === 0) {
+  if (!session?.user?.id || availableRoles.length === 0) {
     return null;
   }
 

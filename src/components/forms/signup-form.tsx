@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -21,10 +22,14 @@ import {
 } from "@/components/ui/form";
 import DateInput from "../ui/dateinput";
 import { z } from "zod";
-import { signup } from "@/lib/server_actions/auth_actions";
+import { signup, updateUserProfile } from "@/lib/server_actions/auth_actions";
 import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import Image from "next/image";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -34,35 +39,88 @@ const signupSchema = z.object({
   date: z.string().min(1, "Date of birth is required"),
   city: z.string().min(1, "City is required"),
   styles: z.array(z.string()).optional(),
+  bio: z.string().max(500, "Bio must be under 500 characters").optional(),
+  instagram: z.string().optional(),
+  website: z.string().url().optional().or(z.literal("")),
 });
+
+const editSchema = z.object({
+  displayName: z.string().min(1, "Display name is required"),
+  date: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  styles: z.array(z.string()).optional(),
+  bio: z.string().max(500, "Bio must be under 500 characters").optional(),
+  instagram: z.string().optional(),
+  website: z.string().url().optional().or(z.literal("")),
+});
+
+interface SignUpFormProps {
+  isEditMode?: boolean;
+  currentUser?: {
+    displayName?: string;
+    username?: string;
+    bio?: string;
+    instagram?: string;
+    website?: string;
+    city?: string;
+    date?: string;
+    styles?: string[];
+    image?: string;
+  };
+  userId?: string;
+}
 
 //The fields on this form may need to be conditional based on the user's OAuth provider
 //For example, if the user signs up with Instagram, we will not have an email address
 //UserInfo has any because I'm not sure what fields will be passed in depending on the OAuth provider
-export default function SignUpForm() {
+export default function SignUpForm({
+  isEditMode = false,
+  currentUser,
+  userId,
+}: SignUpFormProps = {}) {
   const { data: session } = useSession();
-  const form = useForm<z.infer<typeof signupSchema>>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      displayName: "",
-      username: "",
-      date: "",
-      city: "",
-      styles: [],
-    },
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profilePicturePreview, setProfilePicturePreview] = useState<
+    string | null
+  >(currentUser?.image || null);
+
+  const schema = isEditMode ? editSchema : signupSchema;
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: isEditMode
+      ? {
+          displayName: currentUser?.displayName || "",
+          date: currentUser?.date || "",
+          city: currentUser?.city || "",
+          styles: currentUser?.styles || [],
+          bio: currentUser?.bio || "",
+          instagram: currentUser?.instagram || "",
+          website: currentUser?.website || "",
+        }
+      : {
+          displayName: "",
+          username: "",
+          date: "",
+          city: "",
+          styles: [],
+        },
   });
 
   // Check if this is an admin user
   const isAdminUser = session?.user?.email === "benthechi@gmail.com";
 
   return (
-    <Card className="w-3/4">
+    <Card className={isEditMode ? "w-full max-w-2xl" : "w-3/4"}>
       <CardHeader>
-        <CardTitle className="text-xl">Complete Your Registration</CardTitle>
+        <CardTitle className="text-xl">
+          {isEditMode ? "Edit Profile" : "Complete Your Registration"}
+        </CardTitle>
         <CardDescription>
-          You've signed in with OAuth. Complete your profile to verify your
-          account and access all features.
-          {isAdminUser && (
+          {isEditMode
+            ? "Update your profile information"
+            : "You've signed in with OAuth. Complete your profile to verify your account and access all features."}
+          {!isEditMode && isAdminUser && (
             <div className="mt-2">
               <Badge variant="default" className="text-xs">
                 🔑 Admin Account Detected - Super Admin privileges will be
@@ -77,27 +135,153 @@ export default function SignUpForm() {
           <form
             className="space-y-4"
             action={async (formData: FormData) => {
-              // Get the date value from the form
-              const date = formData.get("date") as string;
-              // Validate the date format
-              if (
-                !date ||
-                !/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/.test(date)
-              ) {
-                form.setError("date", {
-                  type: "manual",
-                  message: "Please enter a valid date in MM/DD/YYYY format",
-                });
-                return;
+              setIsSubmitting(true);
+              try {
+                if (isEditMode) {
+                  // Edit mode - use updateUserProfile
+                  if (!userId) {
+                    toast.error("User ID is required");
+                    return;
+                  }
+
+                  // Get styles from form state and add to formData
+                  const styles = form.getValues("styles") || [];
+                  if (styles.length > 0) {
+                    formData.set("Dance Styles", JSON.stringify(styles));
+                  }
+
+                  const result = await updateUserProfile(userId, formData);
+
+                  if (result.success) {
+                    toast.success("Profile updated successfully!");
+                    // Get username from currentUser to redirect
+                    const username = currentUser?.username;
+                    if (username) {
+                      router.push(`/profile/${username}`);
+                    } else {
+                      router.push("/dashboard");
+                    }
+                    router.refresh();
+                  } else {
+                    toast.error(result.error || "Failed to update profile");
+                  }
+                } else {
+                  // Signup mode - use signup
+                  // Get the date value from the form
+                  const date = formData.get("date") as string;
+                  // Validate the date format
+                  if (
+                    !date ||
+                    !/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/.test(
+                      date
+                    )
+                  ) {
+                    form.setError("date", {
+                      type: "manual",
+                      message: "Please enter a valid date in MM/DD/YYYY format",
+                    });
+                    return;
+                  }
+                  // Get styles from form state and add to formData
+                  const styles = form.getValues("styles") || [];
+                  if (styles.length > 0) {
+                    formData.set("Dance Styles", JSON.stringify(styles));
+                  }
+                  await signup(formData);
+                }
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : "An error occurred"
+                );
+              } finally {
+                setIsSubmitting(false);
               }
-              // Get styles from form state and add to formData
-              const styles = form.getValues("styles") || [];
-              if (styles.length > 0) {
-                formData.set("Dance Styles", JSON.stringify(styles));
-              }
-              await signup(formData);
             }}
           >
+            {/* Username field - only show in signup mode */}
+            {!isEditMode && (
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Unique identifier. Cannot change."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Username display - only show in edit mode */}
+            {isEditMode && currentUser?.username && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Username
+                </label>
+                <Input value={currentUser.username} disabled />
+                <p className="text-xs text-gray-500">
+                  Username cannot be changed
+                </p>
+              </div>
+            )}
+
+            {/* Profile Picture */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Profile Picture {isEditMode ? "" : "(Optional)"}
+              </label>
+              {profilePicturePreview && (
+                <div className="mb-2">
+                  <Image
+                    src={profilePicturePreview}
+                    alt="Profile preview"
+                    width={80}
+                    height={80}
+                    className="w-20 h-20 rounded-full object-cover"
+                    unoptimized
+                  />
+                </div>
+              )}
+              {!isEditMode &&
+                session?.user?.image &&
+                !profilePicturePreview && (
+                  <div className="mb-2">
+                    <Image
+                      src={session.user.image}
+                      alt="Current OAuth profile"
+                      width={80}
+                      height={80}
+                      className="w-20 h-20 rounded-full object-cover"
+                      unoptimized
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Current profile picture from OAuth
+                    </p>
+                  </div>
+                )}
+              <Input
+                type="file"
+                name="profilePicture"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setProfilePicturePreview(reader.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
+              />
+            </div>
             <FormField
               control={form.control}
               name="displayName"
@@ -107,22 +291,6 @@ export default function SignUpForm() {
                   <FormControl>
                     <Input
                       placeholder="Will be displayed publicly. Can be changed."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Unique identifier. Cannot change."
                       {...field}
                     />
                   </FormControl>
@@ -175,8 +343,64 @@ export default function SignUpForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
-              Complete Registration & Verify Account
+
+            {/* Bio field */}
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Tell us about yourself..."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Instagram field */}
+            <FormField
+              control={form.control}
+              name="instagram"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instagram Username (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@username" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Website field */}
+            <FormField
+              control={form.control}
+              name="website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Website (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://yourwebsite.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting
+                ? isEditMode
+                  ? "Updating..."
+                  : "Processing..."
+                : isEditMode
+                ? "Update Profile"
+                : "Complete Registration & Verify Account"}
             </Button>
           </form>
         </Form>

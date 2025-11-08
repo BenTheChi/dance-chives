@@ -1,4 +1,5 @@
 import { Storage } from "@google-cloud/storage";
+import crypto from "crypto";
 
 // Initialize Google Cloud Storage with base64-encoded service account
 function initializeStorage() {
@@ -76,5 +77,36 @@ export async function deleteFromGCloudStorage(url: string): Promise<boolean> {
     }
 
     return false;
+  }
+}
+
+export async function uploadProfilePictureToGCloudStorage(
+  file: File
+): Promise<{ success: boolean; url?: string; id?: string }> {
+  const storage = initializeStorage();
+  const id = crypto.randomUUID();
+  const uniqueFileName = `${id}-${file.name}`;
+
+  try {
+    // Convert File to Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    await storage
+      .bucket("dance-chives-profile-pics")
+      .file(uniqueFileName)
+      .save(buffer);
+
+    return {
+      id: id,
+      success: true,
+      url: `https://storage.googleapis.com/dance-chives-profile-pics/${uniqueFileName}`,
+    };
+  } catch (error) {
+    console.error(
+      `Error uploading profile picture ${file.name} to GCloud Storage:`,
+      error
+    );
+    return { success: false };
   }
 }

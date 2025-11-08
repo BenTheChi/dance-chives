@@ -30,6 +30,7 @@ import {
   isEventCreator,
   getEventTeamMembers,
 } from "@/db/queries/team-member";
+import { getUser } from "@/db/queries/user";
 import { isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
 
@@ -1593,6 +1594,7 @@ export async function getDashboardData() {
     userEventsRaw,
     teamMemberships,
     user,
+    userProfile,
   ] = await Promise.all([
     getIncomingRequests(),
     getOutgoingRequests(),
@@ -1621,6 +1623,7 @@ export async function getDashboardData() {
         },
       },
     }),
+    getUser(userId).catch(() => null), // Get displayName from Neo4j
   ]);
 
   // Fetch event titles and creation dates from Neo4j for user events
@@ -1647,9 +1650,14 @@ export async function getDashboardData() {
     );
   }
 
+  // Destructure to exclude id from being sent to client
+  const { id, ...userWithoutId } = user || {};
+
   return {
     user: {
-      ...user,
+      ...userWithoutId,
+      displayName: userProfile?.displayName || null, // Add displayName from Neo4j
+      username: userProfile?.username || null, // Add username from Neo4j
       city: user?.city
         ? {
             ...user.city,

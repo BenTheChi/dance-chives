@@ -4,6 +4,12 @@ import Link from "next/link";
 import { EventCard } from "@/types/event";
 import { Card, CardContent } from "@/components/ui/card";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { Badge } from "@/components/ui/badge";
+import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
+
+interface EventcardProps extends EventCard {
+  roles?: string[];
+}
 
 const Eventcard = ({
   id,
@@ -13,7 +19,8 @@ const Eventcard = ({
   date,
   city,
   styles,
-}: EventCard) => {
+  roles,
+}: EventcardProps) => {
   return (
     <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
       <CardContent className="p-0">
@@ -42,6 +49,20 @@ const Eventcard = ({
             <div className="flex flex-wrap gap-1 pt-1">
               {styles.map((style) => (
                 <StyleBadge key={style} style={style} />
+              ))}
+            </div>
+          )}
+
+          {roles && roles.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {roles.map((role, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="text-xs"
+                >
+                  {fromNeo4jRoleFormat(role) || role}
+                </Badge>
               ))}
             </div>
           )}

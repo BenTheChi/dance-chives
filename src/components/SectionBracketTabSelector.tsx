@@ -6,19 +6,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "./ui/button";
 import { StyleBadge } from "./ui/style-badge";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import VideoGallery from "./VideoGallery";
 
 export default function SectionBracketTabSelector({
   sections,
   eventTitle,
   eventId,
-  currentUserId,
 }: {
   sections: Section[];
   eventTitle: string;
   eventId: string;
-  currentUserId?: string;
 }) {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const [activeSection, setActiveSection] = useState(0);
   const [activeBracket, setActiveBracket] = useState(
     sections[activeSection]?.brackets[0]?.id || ""

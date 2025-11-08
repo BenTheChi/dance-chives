@@ -2,7 +2,17 @@
 
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
-import { signupUser, getUser } from "@/db/queries/user";
+import {
+  signupUser,
+  getUser,
+  getUserByUsername,
+  getUserWithStyles,
+  getUserEvents,
+  updateUser,
+} from "@/db/queries/user";
+import { uploadProfilePictureToGCloudStorage } from "@/lib/GCloud";
+import { getNeo4jRoleFormats } from "@/lib/utils/roles";
+import driver from "@/db/driver";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import crypto from "crypto";
@@ -71,6 +81,23 @@ export async function signup(formData: FormData) {
       }
     }
 
+    // Extract optional fields
+    const bio = (formData.get("bio") as string) || "";
+    const instagram = (formData.get("instagram") as string) || "";
+    const website = (formData.get("website") as string) || "";
+
+    // Handle profile picture upload if provided
+    let imageUrl: string | null = null;
+    const profilePicture = formData.get("profilePicture") as File | null;
+    if (profilePicture && profilePicture.size > 0) {
+      const uploadResult = await uploadProfilePictureToGCloudStorage(
+        profilePicture
+      );
+      if (uploadResult.success && uploadResult.url) {
+        imageUrl = uploadResult.url;
+      }
+    }
+
     // Use admin defaults if this is an admin user, otherwise use form data
     const profileData = adminUser
       ? {
@@ -79,6 +106,10 @@ export async function signup(formData: FormData) {
           city: adminUser.defaultData.city,
           date: adminUser.defaultData.date,
           styles: [],
+          bio: "",
+          instagram: "",
+          website: "",
+          image: null,
         }
       : {
           displayName: formData.get("displayName") as string,
@@ -86,6 +117,10 @@ export async function signup(formData: FormData) {
           city: formData.get("city") as string,
           date: formData.get("date") as string,
           styles,
+          bio: bio || null,
+          instagram: instagram || null,
+          website: website || null,
+          image: imageUrl,
         };
 
     // Update user in Neo4j with profile information
@@ -462,5 +497,224 @@ export async function getUserAuthLevel(userId?: string) {
   } catch (error) {
     console.error("Failed to get user auth level:", error);
     return { success: false, error: "Failed to get auth level" };
+  }
+}
+
+/**
+ * Get complete user profile from Neo4j by userId or username
+ * Includes styles, events created, events with roles, and tagged videos
+ */
+export async function getUserProfile(userIdOrUsername: string) {
+  try {
+    const session = driver.session();
+
+    // Try to get user by username first, then by id
+    let userWithStyles = await getUserWithStyles(userIdOrUsername);
+    if (!userWithStyles) {
+      // If not found by id, try by username
+      const userByUsername = await getUserByUsername(userIdOrUsername);
+      if (userByUsername) {
+        userWithStyles = await getUserWithStyles(userByUsername.id);
+      }
+    }
+
+    if (!userWithStyles) {
+      return { success: false, error: "User not found" };
+    }
+
+    const userId = userWithStyles.id;
+
+    // Get events created by user with full event data
+    const eventsCreatedResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[:CREATED]->(e:Event)
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
+      RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate,
+             e.createdAt as createdAt, poster.url as imageUrl, c.name as city,
+             collect(DISTINCT s.name) as styles
+      ORDER BY e.createdAt DESC
+      `,
+      { userId }
+    );
+
+    const eventsCreated = eventsCreatedResult.records.map((record) => ({
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle") || "Untitled Event",
+      startDate: record.get("startDate"),
+      createdAt: record.get("createdAt"),
+      imageUrl: record.get("imageUrl"),
+      city: record.get("city"),
+      styles: record.get("styles") || [],
+    }));
+
+    // Get events where user has roles with full event data (collecting all roles)
+    const validRoleFormats = getNeo4jRoleFormats();
+    const eventsWithRolesResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[roleRel]->(e:Event)
+      WHERE type(roleRel) IN $validRoles
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
+      WITH e, c, poster, s, type(roleRel) as role
+      RETURN e.id as eventId, e.title as eventTitle, 
+             collect(DISTINCT role) as roles,
+             e.createdAt as createdAt, e.startDate as startDate,
+             head(collect(DISTINCT poster.url)) as imageUrl, 
+             head(collect(DISTINCT c.name)) as city,
+             collect(DISTINCT s.name) as styles
+      ORDER BY e.createdAt DESC
+      `,
+      { userId, validRoles: validRoleFormats }
+    );
+
+    const eventsWithRoles = eventsWithRolesResult.records.map((record) => ({
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle") || "Untitled Event",
+      roles: record.get("roles") || [],
+      createdAt: record.get("createdAt"),
+      startDate: record.get("startDate"),
+      imageUrl: record.get("imageUrl"),
+      city: record.get("city"),
+      styles: record.get("styles") || [],
+    }));
+
+    // Get videos where user is tagged with full video data (collecting all roles)
+    const taggedVideosResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:IN]->(v:Video)
+      OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
+      OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
+      OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
+      WITH v, COALESCE(e, e2) as event, COALESCE(s, s2) as section, r.role as role, style
+      WHERE event IS NOT NULL
+      RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
+             event.id as eventId, event.title as eventTitle, event.createdAt as eventCreatedAt,
+             section.id as sectionId, section.title as sectionTitle, 
+             collect(DISTINCT role) as roles, collect(DISTINCT style.name) as styles
+      ORDER BY eventCreatedAt DESC
+      `,
+      { userId }
+    );
+
+    const taggedVideos = taggedVideosResult.records.map((record) => ({
+      videoId: record.get("videoId"),
+      videoTitle: record.get("videoTitle") || "Untitled Video",
+      videoSrc: record.get("videoSrc"),
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle") || "Untitled Event",
+      sectionId: record.get("sectionId"),
+      sectionTitle: record.get("sectionTitle") || "Untitled Section",
+      roles: record.get("roles") || [],
+      styles: record.get("styles") || [],
+    }));
+
+    session.close();
+
+    return {
+      success: true,
+      profile: {
+        ...userWithStyles,
+        eventsCreated,
+        eventsWithRoles,
+        taggedVideos,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to get user profile:", error);
+    return { success: false, error: "Failed to get user profile" };
+  }
+}
+
+/**
+ * Update user profile in Neo4j
+ * Does NOT update username (cannot be changed after signup)
+ */
+export async function updateUserProfile(userId: string, formData: FormData) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  // Users can only update their own profile (unless admin)
+  if (session.user.id !== userId) {
+    // TODO: Add admin check if needed
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    // Validate required fields
+    const displayName = formData.get("displayName") as string;
+    const city = formData.get("city") as string;
+
+    if (!displayName || !city) {
+      return {
+        success: false,
+        error: "Display name and city are required",
+      };
+    }
+
+    // Get current user to preserve username
+    const currentUser = await getUser(userId);
+    if (!currentUser) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Extract optional fields
+    const bio = (formData.get("bio") as string) || "";
+    const instagram = (formData.get("instagram") as string) || "";
+    const website = (formData.get("website") as string) || "";
+    const date = (formData.get("date") as string) || currentUser.date || "";
+
+    // Extract styles
+    const stylesJson = formData.get("Dance Styles") as string | null;
+    let styles: string[] = [];
+    if (stylesJson) {
+      try {
+        styles = JSON.parse(stylesJson);
+      } catch (e) {
+        console.error("Failed to parse styles:", e);
+      }
+    }
+
+    // Handle profile picture upload if provided
+    let imageUrl = currentUser.image;
+    const profilePicture = formData.get("profilePicture") as File | null;
+    if (profilePicture && profilePicture.size > 0) {
+      const uploadResult = await uploadProfilePictureToGCloudStorage(
+        profilePicture
+      );
+      if (uploadResult.success && uploadResult.url) {
+        imageUrl = uploadResult.url;
+      }
+    }
+
+    // Build user update object (preserve username, don't update it)
+    const userUpdate: { [key: string]: any } = {
+      id: userId,
+      username: currentUser.username, // Preserve username
+      displayName,
+      city,
+      date,
+      bio: bio || null,
+      instagram: instagram || null,
+      website: website || null,
+      image: imageUrl || null,
+    };
+
+    // Update user in Neo4j with styles
+    await updateUser(userId, userUpdate, styles);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update user profile:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to update profile",
+    };
   }
 }

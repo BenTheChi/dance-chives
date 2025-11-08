@@ -181,7 +181,6 @@ export default async function EventPage({ params }: PageProps) {
               <TagSelfDropdown
                 eventId={event.id}
                 currentUserRoles={currentUserRoles}
-                currentUserId={session?.user?.id}
               />
               {event.roles.map((role) => (
                 <div key={role.id} className="flex flex-col gap-2">
@@ -190,11 +189,17 @@ export default async function EventPage({ params }: PageProps) {
                       <span className="text-lg font-bold">
                         {fromNeo4jRoleFormat(role.title) || role.title}:
                       </span>
-                      <Link href={`/user/${role.user.id}`}>
-                        <span className="text-blue-500 hover:text-blue-700 hover:underline">
+                      {role.user.username ? (
+                        <Link href={`/profile/${role.user.username}`}>
+                          <span className="text-blue-500 hover:text-blue-700 hover:underline">
+                            {role.user.displayName}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span className="text-blue-500">
                           {role.user.displayName}
                         </span>
-                      </Link>
+                      )}
                     </div>
                   )}
                 </div>

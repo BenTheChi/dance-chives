@@ -213,6 +213,10 @@ async function main() {
       username: "baseuser",
       city: "Seattle",
       date: "01/01/1990",
+      bio: "Dance enthusiast from Seattle",
+      instagram: "@baseuser",
+      website: "",
+      image: "",
     },
     {
       userId: "test-user-1",
@@ -220,6 +224,10 @@ async function main() {
       username: "creator",
       city: "New York",
       date: "01/01/1990",
+      bio: "Event creator and organizer",
+      instagram: "@creator",
+      website: "https://creator.example.com",
+      image: "",
     },
     {
       userId: "test-user-2",
@@ -227,6 +235,10 @@ async function main() {
       username: "moderator",
       city: "New York",
       date: "01/01/1990",
+      bio: "Community moderator",
+      instagram: "",
+      website: "",
+      image: "",
     },
     {
       userId: "test-user-3",
@@ -234,6 +246,10 @@ async function main() {
       username: "admin",
       city: "Seattle",
       date: "01/01/1990",
+      bio: "Platform administrator",
+      instagram: "@admin",
+      website: "",
+      image: "",
     },
     {
       userId: "test-user-4",
@@ -241,6 +257,10 @@ async function main() {
       username: "superadmin",
       city: "New York",
       date: "01/01/1990",
+      bio: "Super administrator with full access",
+      instagram: "@superadmin",
+      website: "https://superadmin.example.com",
+      image: "",
     },
   ];
 
@@ -251,6 +271,10 @@ async function main() {
         username: profile.username,
         city: profile.city,
         date: profile.date,
+        bio: profile.bio,
+        instagram: profile.instagram,
+        website: profile.website,
+        image: profile.image,
       });
       console.log(`✅ Created Neo4j profile for ${profile.userId}`);
     } catch (error) {

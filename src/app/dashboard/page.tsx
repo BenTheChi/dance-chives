@@ -19,8 +19,9 @@ import {
   OutgoingRequestCard,
 } from "@/components/requests/RequestCard";
 import { getAuthLevelName, AUTH_LEVELS } from "@/lib/utils/auth-utils";
-import { Bell } from "lucide-react";
+import { Bell, UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
 import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
 import { GlobalAccessRequestForm } from "@/components/admin/GlobalAccessRequestForm";
@@ -95,9 +96,10 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <CardTitle className="text-2xl font-semibold">
-                  Welcome, {user?.name || user?.email || "User"}!
+                  Welcome Back {user?.name || user?.email || "User"}
+                  {user?.displayName && ` (${user.displayName})`}!
                 </CardTitle>
                 <CardDescription className="space-y-1">
                   <div>
@@ -111,6 +113,24 @@ export default function DashboardPage() {
                     <div className="font-medium">Global Access</div>
                   )}
                 </CardDescription>
+                <div className="flex gap-2 mt-4">
+                  {user?.username && (
+                    <>
+                      <Button variant="outline" asChild>
+                        <Link href={`/profile/${user.username}`}>
+                          <UserIcon className="mr-2 h-4 w-4" />
+                          Go To Profile
+                        </Link>
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link href={`/profile/${user.username}/edit`}>
+                          <UserIcon className="mr-2 h-4 w-4" />
+                          Edit Profile
+                        </Link>
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
               {unreadCount > 0 && (
                 <div className="flex items-center gap-2">
@@ -130,7 +150,6 @@ export default function DashboardPage() {
         {/* Authorization Request Form - Base Users, Creators, and Moderators Only */}
         {user?.auth !== undefined && user.auth < AUTH_LEVELS.ADMIN && (
           <AuthorizationRequestForm
-            currentUserId={user.id}
             currentUserAuthLevel={user.auth ?? 0}
             onRequestSubmitted={loadDashboard}
           />

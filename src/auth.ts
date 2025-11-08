@@ -93,9 +93,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         });
 
+        // Fetch username from Neo4j
+        const { getUser } = await import("./db/queries/user");
+        let neo4jUser = null;
+        try {
+          neo4jUser = await getUser(token.sub);
+        } catch (error) {
+          // User might not have a Neo4j profile yet
+          console.log("No Neo4j profile found for user:", token.sub);
+        }
+
         session.user.id = token.sub;
         session.user.auth = dbUser?.auth ?? undefined;
         session.user.accountVerified = dbUser?.accountVerified ?? undefined;
+        session.user.username = neo4jUser?.username ?? undefined;
+        session.user.displayName = neo4jUser?.displayName ?? undefined;
+        // Use Neo4j profile image if available
+        // If user has Neo4j profile but no image (empty string or null), set to empty string to show placeholder
+        // If no Neo4j profile exists yet, keep OAuth image
+        if (neo4jUser) {
+          session.user.image = neo4jUser.image || "";
+        }
       }
       return session;
     },

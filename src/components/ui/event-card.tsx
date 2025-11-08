@@ -12,6 +12,7 @@ interface EventCardProps {
   eventLink: string;
   eventTitle: string;
   onClick: () => void;
+  roles?: string[]; // Kept for API compatibility but not displayed
 }
 
 export function EventCard({
@@ -19,6 +20,7 @@ export function EventCard({
   eventLink,
   eventTitle,
   onClick,
+  roles,
 }: EventCardProps) {
   //Parse youtube id from src
   const youtubeId = video.src.split("v=")[1]?.split("&")[0];

@@ -38,7 +38,7 @@ export function UserMenu({ session }: UserMenuProps) {
           variant="ghost"
           className="relative h-8 w-8 rounded-full overflow-hidden border border-border hover:border-primary"
         >
-          {session?.user?.image ? (
+          {session?.user?.image && session.user.image.trim() !== "" ? (
             <Image
               src={session.user.image}
               alt={session.user.name || "User avatar"}
@@ -48,7 +48,12 @@ export function UserMenu({ session }: UserMenuProps) {
               unoptimized
             />
           ) : (
-            <UserIcon className="h-4 w-4" />
+            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-600 text-sm font-semibold">
+              {(session?.user?.displayName ||
+                session?.user?.name ||
+                session?.user?.email ||
+                "U")[0].toUpperCase()}
+            </div>
           )}
         </Button>
       </PopoverTrigger>
@@ -62,6 +67,18 @@ export function UserMenu({ session }: UserMenuProps) {
             <HomeIcon className="mr-2 h-4 w-4" />
             Dashboard
           </Button>
+          {session?.user?.username && (
+            <>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => router.push(`/profile/${session.user.username}`)}
+              >
+                <UserIcon className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+            </>
+          )}
         </div>
         <div className="flex flex-col gap-2">
           <Button
