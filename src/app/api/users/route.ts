@@ -8,7 +8,6 @@ const keyWord = searchParams.get("keyword");
   const res = await getUsers(keyWord)
   
   const data = res.map((record) => ({
-    id: record.id,
     username: record.username,
     displayName: record.displayName,
   }));

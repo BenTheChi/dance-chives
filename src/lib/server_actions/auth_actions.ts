@@ -599,6 +599,36 @@ export async function getUserProfile(userIdOrUsername: string) {
       { userId }
     );
 
+    // Get all tagged users for each video
+    const videoIds = taggedVideosResult.records.map((record) =>
+      record.get("videoId")
+    );
+    const taggedUsersMap = new Map<string, any[]>();
+
+    if (videoIds.length > 0) {
+      const taggedUsersResult = await session.run(
+        `
+        MATCH (v:Video)<-[r:IN]-(u:User)
+        WHERE v.id IN $videoIds
+        RETURN v.id as videoId, collect(DISTINCT {
+          id: u.id,
+          displayName: u.displayName,
+          username: u.username,
+          role: r.role
+        }) as taggedUsers
+        `,
+        { videoIds }
+      );
+
+      taggedUsersResult.records.forEach((record) => {
+        const videoId = record.get("videoId");
+        const taggedUsers = (record.get("taggedUsers") || []).filter(
+          (tu: any) => tu.id !== null && tu.id !== undefined
+        );
+        taggedUsersMap.set(videoId, taggedUsers);
+      });
+    }
+
     const taggedVideos = taggedVideosResult.records.map((record) => ({
       videoId: record.get("videoId"),
       videoTitle: record.get("videoTitle") || "Untitled Video",
@@ -609,14 +639,18 @@ export async function getUserProfile(userIdOrUsername: string) {
       sectionTitle: record.get("sectionTitle") || "Untitled Section",
       roles: record.get("roles") || [],
       styles: record.get("styles") || [],
+      taggedUsers: taggedUsersMap.get(record.get("videoId")) || [],
     }));
 
     session.close();
 
+    // Exclude id from being sent to client
+    const { id, ...userWithoutId } = userWithStyles || {};
+
     return {
       success: true,
       profile: {
-        ...userWithStyles,
+        ...userWithoutId,
         eventsCreated,
         eventsWithRoles,
         taggedVideos,

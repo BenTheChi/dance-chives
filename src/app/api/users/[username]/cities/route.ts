@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import { AUTH_LEVELS, canUpdateUserCities } from "@/lib/utils/auth-utils";
+import { getUserByUsername } from "@/db/queries/user";
 
 /**
  * Update user cities and global flag
@@ -9,7 +10,7 @@ import { AUTH_LEVELS, canUpdateUserCities } from "@/lib/utils/auth-utils";
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> | { userId: string } }
+  { params }: { params: Promise<{ username: string }> | { username: string } }
 ) {
   const session = await auth();
 
@@ -29,18 +30,26 @@ export async function PUT(
 
   try {
     const resolvedParams = params instanceof Promise ? await params : params;
-    const { userId } = resolvedParams;
+    const username = resolvedParams.username;
     const { cityId, allCityAccess } = await request.json();
 
-    // Validate userId
-    if (!userId) {
+    // Validate username
+    if (!username) {
       return NextResponse.json(
-        { error: "userId is required" },
+        { error: "username is required" },
         { status: 400 }
       );
     }
 
-    // Validate that user exists
+    // Get user from Neo4j by username to get the ID
+    const neo4jUser = await getUserByUsername(username);
+    if (!neo4jUser || !neo4jUser.id) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userId = neo4jUser.id;
+
+    // Validate that user exists in PostgreSQL
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, auth: true },
@@ -62,7 +71,6 @@ export async function PUT(
         where: { id: userId },
         data: updateData,
         select: {
-          id: true,
           email: true,
           name: true,
           auth: true,
@@ -129,7 +137,7 @@ export async function PUT(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ userId: string }> | { userId: string } }
+  { params }: { params: Promise<{ username: string }> | { username: string } }
 ) {
   const session = await auth();
 
@@ -139,7 +147,22 @@ export async function GET(
 
   try {
     const resolvedParams = params instanceof Promise ? await params : params;
-    const { userId } = resolvedParams;
+    const username = resolvedParams.username;
+
+    if (!username) {
+      return NextResponse.json(
+        { error: "username is required" },
+        { status: 400 }
+      );
+    }
+
+    // Get user from Neo4j by username to get the ID
+    const neo4jUser = await getUserByUsername(username);
+    if (!neo4jUser || !neo4jUser.id) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userId = neo4jUser.id;
 
     // Users can view their own cities, or admins can view any user's cities
     const userAuthLevel = session.user.auth || 0;
@@ -174,7 +197,6 @@ export async function GET(
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
         email: user.email,
         name: user.name,
         auth: user.auth,
@@ -190,3 +212,4 @@ export async function GET(
     );
   }
 }
+

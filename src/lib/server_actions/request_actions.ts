@@ -1660,7 +1660,7 @@ export async function getDashboardData() {
       username: userProfile?.username || null, // Add username from Neo4j
       city: user?.city
         ? {
-            ...user.city,
+            cityId: user.city.cityId,
             name: cityName || user.city.cityId, // Fallback to cityId if name not found
           }
         : null,

@@ -68,10 +68,12 @@ export function AuthorizationChanger() {
   }, [debouncedSearch]);
 
   // Fetch user's current auth level when user is selected
-  const fetchUserAuthLevel = async (userId: string) => {
+  const fetchUserAuthLevel = async (username: string) => {
     setIsFetchingUser(true);
     try {
-      const response = await fetch(`/api/users/${userId}/auth-level`);
+      const response = await fetch(
+        `/api/users/${encodeURIComponent(username)}/auth-level`
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch user auth level");
       }
@@ -96,7 +98,7 @@ export function AuthorizationChanger() {
         : user.username
     );
     setUsers([]);
-    fetchUserAuthLevel(user.id);
+    fetchUserAuthLevel(user.username);
   };
 
   // Handle search input change

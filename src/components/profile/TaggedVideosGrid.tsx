@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { EventCard as VideoCard } from "@/components/ui/event-card";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/event";
+import { UserSearchItem } from "@/types/user";
 
 interface TaggedVideo {
   videoId: string;
@@ -15,6 +17,7 @@ interface TaggedVideo {
   sectionTitle: string;
   roles?: string[];
   styles: string[];
+  taggedUsers?: UserSearchItem[];
 }
 
 interface TaggedVideosGridProps {
@@ -22,6 +25,7 @@ interface TaggedVideosGridProps {
 }
 
 export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
+  const { data: session } = useSession();
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
     null
   );
@@ -36,7 +40,7 @@ export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
     title: taggedVideo.videoTitle,
     src: taggedVideo.videoSrc || "",
     styles: taggedVideo.styles || [],
-    taggedUsers: [], // VideoLightbox will handle this if needed
+    taggedUsers: taggedVideo.taggedUsers || [],
   });
 
   return (
@@ -86,7 +90,7 @@ export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
           bracketTitle={undefined}
           sectionStyles={undefined}
           applyStylesToVideos={undefined}
-          currentUserId={undefined}
+          currentUserId={session?.user?.id}
         />
       )}
     </>

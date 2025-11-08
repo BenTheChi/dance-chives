@@ -302,7 +302,7 @@ export function VideoLightbox({
                     {dancers.map((participant, index) => (
                       <Link
                         key={index}
-                        href={`/user/${participant.id}`}
+                        href={`/profile/${participant.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >
                         <Badge
@@ -330,7 +330,7 @@ export function VideoLightbox({
                     {otherParticipants.map((participant, index) => (
                       <Link
                         key={index}
-                        href={`/user/${participant.id}`}
+                        href={`/profile/${participant.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >
                         <Badge

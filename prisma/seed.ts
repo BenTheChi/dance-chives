@@ -384,12 +384,12 @@ async function main() {
             {
               id: "video-1-breaking-1v1-r1",
               title: "Breaking 1v1 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
             {
               id: "video-2-breaking-1v1-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
           ]
         ),
@@ -402,12 +402,12 @@ async function main() {
             {
               id: "video-1-popping-2v2-r1",
               title: "Popping 2v2 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+              src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
             },
             {
               id: "video-2-popping-2v2-r1",
               title: "Popping 2v2 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+              src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
             },
           ]
         ),
@@ -450,30 +450,30 @@ async function main() {
             {
               id: "video-1-breaking-1v1-seattle-r1",
               title: "Breaking 1v1 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
             {
               id: "video-2-breaking-1v1-seattle-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
           ]
         ),
         createSectionWithVideos(
-          "section-2-popping-2v2-seattle",
-          "Popping 2v2",
-          "bracket-1-popping-2v2-seattle",
+          "section-2-waacking-2v2-seattle",
+          "Waacking 2v2",
+          "bracket-1-waacking-2v2-seattle",
           "Round 1",
           [
             {
-              id: "video-1-popping-2v2-seattle-r1",
-              title: "Popping 2v2 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+              id: "video-1-waacking-2v2-seattle-r1",
+              title: "Waacking 2v2 - Round 1 Battle",
+              src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
             },
             {
-              id: "video-2-popping-2v2-seattle-r1",
-              title: "Popping 2v2 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+              id: "video-2-waacking-2v2-seattle-r1",
+              title: "Waacking 2v2 - Round 1 Battle 2",
+              src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
             },
           ]
         ),
@@ -516,30 +516,30 @@ async function main() {
             {
               id: "video-1-breaking-1v1-moderator-r1",
               title: "Breaking 1v1 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
             {
               id: "video-2-breaking-1v1-moderator-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
           ]
         ),
         createSectionWithVideos(
-          "section-2-popping-2v2-moderator",
-          "Popping 2v2",
-          "bracket-1-popping-2v2-moderator",
+          "section-2-locking-2v2-moderator",
+          "Locking 2v2",
+          "bracket-1-locking-2v2-moderator",
           "Round 1",
           [
             {
-              id: "video-1-popping-2v2-moderator-r1",
-              title: "Popping 2v2 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+              id: "video-1-locking-2v2-moderator-r1",
+              title: "Locking 2v2 - Round 1 Battle",
+              src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
             },
             {
-              id: "video-2-popping-2v2-moderator-r1",
-              title: "Popping 2v2 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+              id: "video-2-locking-2v2-moderator-r1",
+              title: "Locking 2v2 - Round 1 Battle 2",
+              src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
             },
           ]
         ),
@@ -582,30 +582,30 @@ async function main() {
             {
               id: "video-1-breaking-1v1-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
             {
               id: "video-2-breaking-1v1-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
           ]
         ),
         createSectionWithVideos(
-          "section-2-popping-2v2-admin",
-          "Popping 2v2",
-          "bracket-1-popping-2v2-admin",
+          "section-2-hip-hop-2v2-admin",
+          "Hip Hop 2v2",
+          "bracket-1-hip-hop-2v2-admin",
           "Round 1",
           [
             {
-              id: "video-1-popping-2v2-admin-r1",
-              title: "Popping 2v2 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+              id: "video-1-hip-hop-2v2-admin-r1",
+              title: "Hip Hop 2v2 - Round 1 Battle",
+              src: "https://www.youtube.com/watch?v=YzHOD9t1fKM",
             },
             {
-              id: "video-2-popping-2v2-admin-r1",
-              title: "Popping 2v2 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+              id: "video-2-hip-hop-2v2-admin-r1",
+              title: "Hip Hop 2v2 - Round 1 Battle 2",
+              src: "https://www.youtube.com/watch?v=YzHOD9t1fKM",
             },
           ]
         ),
@@ -648,12 +648,12 @@ async function main() {
             {
               id: "video-1-breaking-1v1-super-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
             {
               id: "video-2-breaking-1v1-super-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+              src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
           ]
         ),
@@ -666,12 +666,12 @@ async function main() {
             {
               id: "video-1-popping-2v2-super-admin-r1",
               title: "Popping 2v2 - Round 1 Battle",
-              src: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+              src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
             },
             {
               id: "video-2-popping-2v2-super-admin-r1",
               title: "Popping 2v2 - Round 1 Battle 2",
-              src: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+              src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
             },
           ]
         ),
@@ -740,7 +740,7 @@ async function main() {
       eventId: "event-2-seattle-creator",
       senderId: "test-user-0",
       targetUserId: "test-user-0", // Self-tagging
-      videoId: "video-1-popping-2v2-seattle-r1", // Video from Popping 2v2 section
+      videoId: "video-1-waacking-2v2-seattle-r1", // Video from Waacking 2v2 section
       role: null,
       status: "PENDING" as const,
     },

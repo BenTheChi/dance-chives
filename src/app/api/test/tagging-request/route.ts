@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
                sectionId,
                bracketId,
                collect({
-                 userId: u.id,
                  displayName: u.displayName,
                  username: u.username,
                  role: r.role
@@ -104,13 +103,11 @@ export async function GET(request: NextRequest) {
         videoId: req.videoId,
         role: req.role,
         sender: {
-          id: req.sender.id,
           name: req.sender.name,
           email: req.sender.email,
           auth: req.sender.auth,
         },
         targetUser: {
-          id: req.targetUser.id,
           name: req.targetUser.name,
           email: req.targetUser.email,
         },

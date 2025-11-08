@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Return user info so the client can call signIn
+    // Note: id is excluded for security, but this endpoint is dev-only
     return NextResponse.json({
       success: true,
       user: {
-        id: user.id,
         name: user.name,
         email: user.email,
         auth: user.auth,

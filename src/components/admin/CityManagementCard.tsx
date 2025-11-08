@@ -16,26 +16,26 @@ import { useSession } from "next-auth/react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface CityManagementCardProps {
-  userId?: string;
+  username?: string;
 }
 
-export function CityManagementCard({ userId }: CityManagementCardProps) {
+export function CityManagementCard({ username }: CityManagementCardProps) {
   const { data: session } = useSession();
-  const [targetUserId, setTargetUserId] = useState(userId || "");
+  const [targetUsername, setTargetUsername] = useState(username || "");
   const [cityId, setCityId] = useState<string>("");
   const [allCityAccess, setAllCityAccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
 
   const fetchUserCity = async () => {
-    if (!targetUserId) {
-      toast.error("Please enter a user ID");
+    if (!targetUsername) {
+      toast.error("Please enter a username");
       return;
     }
 
     setFetching(true);
     try {
-      const response = await fetch(`/api/users/${targetUserId}/cities`);
+      const response = await fetch(`/api/users/${encodeURIComponent(targetUsername)}/cities`);
       const data = await response.json();
 
       if (data.success) {
@@ -54,14 +54,14 @@ export function CityManagementCard({ userId }: CityManagementCardProps) {
   };
 
   const handleUpdate = async () => {
-    if (!targetUserId) {
-      toast.error("Please enter a user ID");
+    if (!targetUsername) {
+      toast.error("Please enter a username");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/users/${targetUserId}/cities`, {
+      const response = await fetch(`/api/users/${encodeURIComponent(targetUsername)}/cities`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -90,11 +90,11 @@ export function CityManagementCard({ userId }: CityManagementCardProps) {
   };
 
   useEffect(() => {
-    if (userId) {
-      setTargetUserId(userId);
+    if (username) {
+      setTargetUsername(username);
       fetchUserCity();
     }
-  }, [userId]);
+  }, [username]);
 
   return (
     <Card className="w-full">
@@ -107,25 +107,25 @@ export function CityManagementCard({ userId }: CityManagementCardProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="userId">User ID</Label>
+          <Label htmlFor="username">Username</Label>
           <div className="flex gap-2">
             <Input
-              id="userId"
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value)}
-              placeholder="Enter user ID"
+              id="username"
+              value={targetUsername}
+              onChange={(e) => setTargetUsername(e.target.value)}
+              placeholder="Enter username"
               disabled={loading || fetching}
             />
             <Button
               onClick={fetchUserCity}
-              disabled={loading || fetching || !targetUserId}
+              disabled={loading || fetching || !targetUsername}
             >
               {fetching ? "Loading..." : "Load"}
             </Button>
           </div>
         </div>
 
-        {targetUserId && (
+        {targetUsername && (
           <>
             <div className="space-y-2">
               <Label>Can Edit All Cities</Label>
