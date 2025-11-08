@@ -4,7 +4,7 @@ import { Section } from "@/types/event";
 import { useEffect, useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { StyleBadge } from "./ui/style-badge";
 import { useRouter } from "next/navigation";
 import VideoGallery from "./VideoGallery";
 
@@ -87,9 +87,7 @@ export default function SectionBracketTabSelector({
         {displayStyles.length > 0 && (
           <div className="flex flex-wrap gap-1 justify-center mt-1">
             {displayStyles.map((style) => (
-              <Badge key={style} variant="outline" className="text-xs">
-                {style}
-              </Badge>
+              <StyleBadge key={style} style={style} />
             ))}
           </div>
         )}

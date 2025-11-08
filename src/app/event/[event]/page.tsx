@@ -26,6 +26,7 @@ import { auth } from "@/auth";
 import { isEventCreator } from "@/db/queries/team-member";
 import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
+import { StyleBadge } from "@/components/ui/style-badge";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -168,12 +169,7 @@ export default async function EventPage({ params }: PageProps) {
                   <b>Styles:</b>
                   <div className="flex flex-wrap gap-1">
                     {eventStyles.map((style) => (
-                      <span
-                        key={style}
-                        className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
-                      >
-                        {style}
-                      </span>
+                      <StyleBadge key={style} style={style} />
                     ))}
                   </div>
                 </div>
@@ -234,109 +230,97 @@ export default async function EventPage({ params }: PageProps) {
 
           {/* Sections */}
           <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md hover:bg-green-200 hover:cursor-pointer hover:shadow-none">
-            <Link href={`/event/${event.id}/sections`} className="w-full">
-              <div className="w-full">
+            <div className="w-full">
+              <Link href={`/event/${event.id}/sections`} className="w-full">
                 <h2 className="text-2xl font-bold mb-4 text-center">
                   Sections
                 </h2>
+              </Link>
 
-                <div className="flex flex-col gap-4">
-                  {event.sections.map((section) => (
-                    <div
-                      key={section.id}
-                      className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-xl font-semibold text-gray-800">
-                          {section.title}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          {section.videos.length}{" "}
-                          {section.videos.length === 1 ? "video" : "videos"}
-                        </span>
-                      </div>
-                      {/* Display section styles */}
-                      {section.applyStylesToVideos &&
-                        section.styles &&
-                        section.styles.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {section.styles.map((style) => (
-                              <span
-                                key={style}
-                                className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
-                              >
-                                {style}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      {/* Display aggregated video styles if applyStylesToVideos is false */}
-                      {!section.applyStylesToVideos &&
-                        (() => {
-                          const videoStyles = new Set<string>();
-                          section.videos.forEach((video) => {
+              <div className="flex flex-col gap-4">
+                {event.sections.map((section) => (
+                  <div
+                    key={section.id}
+                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-xl font-semibold text-gray-800">
+                        {section.title}
+                      </h3>
+                      <span className="text-sm text-gray-500">
+                        {section.videos.length}{" "}
+                        {section.videos.length === 1 ? "video" : "videos"}
+                      </span>
+                    </div>
+                    {/* Display section styles */}
+                    {section.applyStylesToVideos &&
+                      section.styles &&
+                      section.styles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {section.styles.map((style) => (
+                            <StyleBadge key={style} style={style} />
+                          ))}
+                        </div>
+                      )}
+                    {/* Display aggregated video styles if applyStylesToVideos is false */}
+                    {!section.applyStylesToVideos &&
+                      (() => {
+                        const videoStyles = new Set<string>();
+                        section.videos.forEach((video) => {
+                          if (video.styles) {
+                            video.styles.forEach((style) =>
+                              videoStyles.add(style)
+                            );
+                          }
+                        });
+                        section.brackets.forEach((bracket) => {
+                          bracket.videos.forEach((video) => {
                             if (video.styles) {
                               video.styles.forEach((style) =>
                                 videoStyles.add(style)
                               );
                             }
                           });
-                          section.brackets.forEach((bracket) => {
-                            bracket.videos.forEach((video) => {
-                              if (video.styles) {
-                                video.styles.forEach((style) =>
-                                  videoStyles.add(style)
-                                );
-                              }
-                            });
-                          });
-                          const stylesArray = Array.from(videoStyles);
-                          return stylesArray.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {stylesArray.map((style) => (
-                                <span
-                                  key={style}
-                                  className="bg-green-200 text-green-800 text-xs font-medium px-2 py-1 rounded"
-                                >
-                                  {style}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null;
-                        })()}
-
-                      {section.brackets.length > 0 ? (
-                        <div className="space-y-2">
-                          <div className="text-sm text-gray-600 mb-2">
-                            Brackets:
+                        });
+                        const stylesArray = Array.from(videoStyles);
+                        return stylesArray.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {stylesArray.map((style) => (
+                              <StyleBadge key={style} style={style} />
+                            ))}
                           </div>
-                          {section.brackets.map((bracket) => (
-                            <div
-                              key={bracket.id}
-                              className="bg-gray-50 rounded p-2 flex justify-between items-center"
-                            >
-                              <span className="font-medium text-gray-700">
-                                {bracket.title}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {bracket.videos.length}{" "}
-                                {bracket.videos.length === 1
-                                  ? "video"
-                                  : "videos"}
-                              </span>
-                            </div>
-                          ))}
+                        ) : null;
+                      })()}
+
+                    {section.brackets.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="text-sm text-gray-600 mb-2">
+                          Brackets:
                         </div>
-                      ) : (
-                        <div className="text-sm text-gray-600 italic">
-                          No brackets - direct video collection
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        {section.brackets.map((bracket) => (
+                          <div
+                            key={bracket.id}
+                            className="bg-gray-50 rounded p-2 flex justify-between items-center"
+                          >
+                            <span className="font-medium text-gray-700">
+                              {bracket.title}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {bracket.videos.length}{" "}
+                              {bracket.videos.length === 1 ? "video" : "videos"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600 italic">
+                        No brackets - direct video collection
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            </Link>
+            </div>
           </section>
 
           {/* Sub Events */}

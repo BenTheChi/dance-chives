@@ -10,19 +10,21 @@ export default async function EventsPage() {
     <>
       <main>
         <AppNavbar />
-        <div className="flex flex-wrap gap-3 p-5">
-          {events.map((event: EventCard) => (
-            <Eventcard
-              key={event.id}
-              id={event.id}
-              title={event.title}
-              series={event.series}
-              imageUrl={event.imageUrl}
-              date={event.date}
-              city={event.city}
-              styles={event.styles}
-            />
-          ))}
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {events.map((event: EventCard) => (
+              <Eventcard
+                key={event.id}
+                id={event.id}
+                title={event.title}
+                series={event.series}
+                imageUrl={event.imageUrl}
+                date={event.date}
+                city={event.city}
+                styles={event.styles}
+              />
+            ))}
+          </div>
         </div>
       </main>
     </>

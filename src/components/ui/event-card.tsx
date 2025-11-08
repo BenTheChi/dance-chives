@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Video } from "@/types/event";
 import { Play } from "lucide-react";
+import { StyleBadge } from "@/components/ui/style-badge";
 
 interface EventCardProps {
   video: Video;
@@ -60,12 +61,7 @@ export function EventCard({
           {video.styles && video.styles.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {video.styles.map((style) => (
-                <span
-                  key={style}
-                  className="bg-green-200 text-green-800 text-xs font-medium px-2 py-0.5 rounded"
-                >
-                  {style}
-                </span>
+                <StyleBadge key={style} style={style} />
               ))}
             </div>
           )}

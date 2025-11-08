@@ -66,6 +66,7 @@ export function SubEventForm({
               <FormControl>
                 <Textarea
                   {...field}
+                  value={field.value ?? ""}
                   className="bg-white"
                   placeholder="New SubEvent Description"
                 />
@@ -84,6 +85,7 @@ export function SubEventForm({
               <FormControl>
                 <Textarea
                   {...field}
+                  value={field.value ?? ""}
                   className="bg-white"
                   placeholder="Schedule"
                 />

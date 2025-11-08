@@ -53,7 +53,7 @@ const bracketSchema = z.object({
 const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
-  description: z.string().optional(),
+  description: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
@@ -87,8 +87,8 @@ const eventDetailsSchema = z.object({
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
       "Event date must be in a valid format"
     ), // switch to min for all non-optional
-  description: z.string().optional(),
-  schedule: z.string().optional(),
+  description: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
+  schedule: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
   address: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -112,8 +112,8 @@ const roleSchema = z.object({
 const subEventSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Sub-event title is required"), // switch to min for all non-optional
-  description: z.string().optional(),
-  schedule: z.string().optional(),
+  description: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
+  schedule: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
   startDate: z
     .string()
     .min(1, "Start date is required")

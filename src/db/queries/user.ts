@@ -1,4 +1,5 @@
 import driver from "../driver";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 export const getUser = async (id: string) => {
   const session = driver.session();
@@ -58,6 +59,7 @@ export const signupUser = async (
 
     // Create Style nodes and relationships if styles are provided
     if (user.styles && user.styles.length > 0) {
+      const normalizedStyles = normalizeStyleNames(user.styles);
       await session.run(
         `
         MATCH (u:User {id: $id})
@@ -66,7 +68,7 @@ export const signupUser = async (
         MERGE (s:Style {name: styleName})
         MERGE (u)-[:STYLE]->(s)
         `,
-        { id, styles: user.styles }
+        { id, styles: normalizedStyles }
       );
     }
 

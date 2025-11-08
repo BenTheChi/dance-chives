@@ -241,7 +241,7 @@ export function SectionForm({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea {...field} />
+                <Textarea {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>

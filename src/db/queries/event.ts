@@ -14,6 +14,10 @@ import {
   isValidRole,
   AVAILABLE_ROLES,
 } from "@/lib/utils/roles";
+import {
+  normalizeStyleNames,
+  normalizeStyleName,
+} from "@/lib/utils/style-utils";
 
 // Neo4j record interfaces
 interface BracketVideoRecord {
@@ -529,6 +533,7 @@ const createSections = async (eventId: string, sections: any[]) => {
 
       // Create section style relationships if applyStylesToVideos is true
       if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {
+        const normalizedStyles = normalizeStyleNames(sec.styles);
         await session.run(
           `
           MATCH (s:Section {id: $sectionId})
@@ -537,7 +542,7 @@ const createSections = async (eventId: string, sections: any[]) => {
           MERGE (style:Style {name: styleName})
           MERGE (s)-[:STYLE]->(style)
           `,
-          { sectionId: sec.id, styles: sec.styles }
+          { sectionId: sec.id, styles: normalizedStyles }
         );
       }
     }
@@ -617,6 +622,7 @@ const createBracketVideos = async (sections: any[]) => {
           // Create video style relationships
           const videoStyles = vid.styles || [];
           if (videoStyles.length > 0) {
+            const normalizedStyles = normalizeStyleNames(videoStyles);
             await session.run(
               `
               MATCH (v:Video {id: $videoId})
@@ -625,7 +631,7 @@ const createBracketVideos = async (sections: any[]) => {
               MERGE (style:Style {name: styleName})
               MERGE (v)-[:STYLE]->(style)
               `,
-              { videoId: vid.id, styles: videoStyles }
+              { videoId: vid.id, styles: normalizedStyles }
             );
           }
         }
@@ -673,6 +679,7 @@ const createSectionVideos = async (sections: any[]) => {
         // Create video style relationships
         const videoStyles = vid.styles || [];
         if (videoStyles.length > 0) {
+          const normalizedStyles = normalizeStyleNames(videoStyles);
           await session.run(
             `
             MATCH (v:Video {id: $videoId})
@@ -681,7 +688,7 @@ const createSectionVideos = async (sections: any[]) => {
             MERGE (style:Style {name: styleName})
             MERGE (v)-[:STYLE]->(style)
             `,
-            { videoId: vid.id, styles: videoStyles }
+            { videoId: vid.id, styles: normalizedStyles }
           );
         }
       }
@@ -1298,6 +1305,7 @@ export const EditEvent = async (event: Event) => {
     // Create section style relationships (only if applyStylesToVideos is true)
     for (const sec of event.sections) {
       if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {
+        const normalizedStyles = normalizeStyleNames(sec.styles);
         await tx.run(
           `
           MATCH (s:Section {id: $sectionId})
@@ -1306,7 +1314,7 @@ export const EditEvent = async (event: Event) => {
           MERGE (style:Style {name: styleName})
           MERGE (s)-[:STYLE]->(style)
           `,
-          { sectionId: sec.id, styles: sec.styles }
+          { sectionId: sec.id, styles: normalizedStyles }
         );
       }
     }
@@ -1415,6 +1423,7 @@ export const EditEvent = async (event: Event) => {
           if (br.videos) {
             for (const bvid of br.videos) {
               if (bvid.styles && bvid.styles.length > 0) {
+                const normalizedStyles = normalizeStyleNames(bvid.styles);
                 await tx.run(
                   `
                   MATCH (bv:Video {id: $videoId})
@@ -1423,7 +1432,7 @@ export const EditEvent = async (event: Event) => {
                   MERGE (style:Style {name: styleName})
                   MERGE (bv)-[:STYLE]->(style)
                   `,
-                  { videoId: bvid.id, styles: bvid.styles }
+                  { videoId: bvid.id, styles: normalizedStyles }
                 );
               }
             }
@@ -1491,6 +1500,7 @@ export const EditEvent = async (event: Event) => {
       if (!sec.hasBrackets && sec.videos) {
         for (const vid of sec.videos) {
           if (vid.styles && vid.styles.length > 0) {
+            const normalizedStyles = normalizeStyleNames(vid.styles);
             await tx.run(
               `
               MATCH (v:Video {id: $videoId})
@@ -1499,7 +1509,7 @@ export const EditEvent = async (event: Event) => {
               MERGE (style:Style {name: styleName})
               MERGE (v)-[:STYLE]->(style)
               `,
-              { videoId: vid.id, styles: vid.styles }
+              { videoId: vid.id, styles: normalizedStyles }
             );
           }
         }
@@ -1604,22 +1614,297 @@ export const deleteEvent = async (eventId: string) => {
 
 export const getEvents = async (): Promise<EventCard[]> => {
   const session = driver.session();
-  const result = await session.run(
+
+  // Get events with basic info
+  const eventsResult = await session.run(
     `MATCH (e:Event)-[:IN]->(c:City)
     OPTIONAL MATCH (e)<-[:POSTER]-(p:Picture)
     WITH DISTINCT e, c, p
-    RETURN e {
-      id: e.id,
-      title: e.title,
-      series: null,
-      imageUrl: p.url,
-      date: e.startDate,
-      city: c.name,
-      styles: []
-    }`
+    RETURN e.id as eventId, e.title as title, e.startDate as date, c.name as city, p.url as imageUrl`
   );
+
+  // Get all styles for each event (from sections and videos)
+  const stylesResult = await session.run(
+    `MATCH (e:Event)
+    OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+    OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+    OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+    WITH e.id as eventId, 
+         collect(DISTINCT sectionStyle.name) as sectionStyles,
+         collect(DISTINCT videoStyle.name) as videoStyles,
+         collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+    WITH eventId, 
+         [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+         [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+         [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+    RETURN eventId, 
+           filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`
+  );
+
+  // Create a map of eventId -> styles
+  const stylesMap = new Map<string, string[]>();
+  stylesResult.records.forEach((record) => {
+    const eventId = record.get("eventId");
+    const allStyles = (record.get("allStyles") || []) as unknown[];
+    // Remove duplicates and filter out nulls
+    const uniqueStyles = Array.from(
+      new Set(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        )
+      )
+    );
+    stylesMap.set(eventId, uniqueStyles);
+  });
+
   await session.close();
-  return result.records.map((record) => record.get("e"));
+
+  // Combine event data with styles
+  return eventsResult.records.map((record) => {
+    const eventId = record.get("eventId");
+    return {
+      id: eventId,
+      title: record.get("title"),
+      series: undefined,
+      imageUrl: record.get("imageUrl"),
+      date: record.get("date"),
+      city: record.get("city"),
+      styles: stylesMap.get(eventId) || [],
+    };
+  });
+};
+
+export interface StyleData {
+  styleName: string;
+  events: EventCard[];
+  sections: Array<{
+    id: string;
+    title: string;
+    eventId: string;
+    eventTitle: string;
+  }>;
+  videos: Array<{
+    video: Video;
+    eventId: string;
+    eventTitle: string;
+    sectionId: string;
+    sectionTitle: string;
+  }>;
+}
+
+export const getStyleData = async (
+  styleName: string
+): Promise<StyleData | null> => {
+  const session = driver.session();
+
+  try {
+    // Normalize style name to lowercase for querying
+    const normalizedStyleName = normalizeStyleName(styleName);
+
+    // Check if style exists
+    const styleCheckResult = await session.run(
+      `MATCH (s:Style {name: $styleName})
+       RETURN s.name as styleName`,
+      { styleName: normalizedStyleName }
+    );
+
+    if (styleCheckResult.records.length === 0) {
+      return null;
+    }
+
+    // Get events with this style (from sections or videos)
+    const eventsResult = await session.run(
+      `MATCH (style:Style {name: $styleName})
+       OPTIONAL MATCH (style)<-[:STYLE]-(s:Section)-[:IN]->(e:Event)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v2:Video)-[:IN]->(b:Bracket)-[:IN]->(s3:Section)-[:IN]->(e3:Event)
+       WITH collect(DISTINCT e) as events1, collect(DISTINCT e2) as events2, collect(DISTINCT e3) as events3
+       WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
+       UNWIND allEvents as event
+       WITH DISTINCT event
+       OPTIONAL MATCH (event)-[:IN]->(c:City)
+       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(event)
+       RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, poster.url as imageUrl
+       ORDER BY event.startDate DESC`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Get sections with this style
+    const sectionsResult = await session.run(
+      `MATCH (style:Style {name: $styleName})<-[:STYLE]-(s:Section)-[:IN]->(e:Event)
+       RETURN s.id as sectionId, s.title as sectionTitle, e.id as eventId, e.title as eventTitle
+       ORDER BY e.startDate DESC, s.title`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Get videos with this style (from sections and brackets)
+    const videosResult = await session.run(
+      `MATCH (style:Style {name: $styleName})<-[:STYLE]-(v:Video)
+       OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
+       OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
+       WITH v, 
+            COALESCE(s, s2) as section,
+            COALESCE(e, e2) as event
+       WHERE section IS NOT NULL AND event IS NOT NULL
+       RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
+              section.id as sectionId, section.title as sectionTitle,
+              event.id as eventId, event.title as eventTitle
+       ORDER BY event.startDate DESC, section.title, v.title`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Get all styles for each event
+    const eventStylesResult = await session.run(
+      `MATCH (style:Style {name: $styleName})
+       OPTIONAL MATCH (style)<-[:STYLE]-(s:Section)-[:IN]->(e:Event)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v2:Video)-[:IN]->(b:Bracket)-[:IN]->(s3:Section)-[:IN]->(e3:Event)
+       WITH collect(DISTINCT e) as events1, collect(DISTINCT e2) as events2, collect(DISTINCT e3) as events3
+       WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
+       UNWIND allEvents as event
+       WITH DISTINCT event
+       OPTIONAL MATCH (event)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+       OPTIONAL MATCH (event)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+       OPTIONAL MATCH (event)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+       WITH event.id as eventId,
+            collect(DISTINCT sectionStyle.name) as sectionStyles,
+            collect(DISTINCT videoStyle.name) as videoStyles,
+            collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+       WITH eventId,
+            [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+            [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+            [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+       RETURN eventId,
+              filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Create styles map for events
+    const eventStylesMap = new Map<string, string[]>();
+    eventStylesResult.records.forEach((record) => {
+      const eventId = record.get("eventId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      eventStylesMap.set(eventId, uniqueStyles);
+    });
+
+    // Get video styles
+    const videoStylesResult = await session.run(
+      `MATCH (style:Style {name: $styleName})<-[:STYLE]-(v:Video)
+       OPTIONAL MATCH (v)-[:STYLE]->(vs:Style)
+       OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
+       OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
+       WITH v, 
+            COALESCE(s, s2) as section,
+            COALESCE(e, e2) as event,
+            collect(DISTINCT vs.name) as videoStyles
+       WHERE section IS NOT NULL AND event IS NOT NULL
+       RETURN v.id as videoId, 
+              [style IN videoStyles WHERE style IS NOT NULL] as styles`,
+      { styleName: normalizedStyleName }
+    );
+
+    const videoStylesMap = new Map<string, string[]>();
+    videoStylesResult.records.forEach((record) => {
+      const videoId = record.get("videoId");
+      const styles = (record.get("styles") || []) as string[];
+      videoStylesMap.set(videoId, styles);
+    });
+
+    // Get tagged users for videos
+    const videoUsersResult = await session.run(
+      `MATCH (style:Style {name: $styleName})<-[:STYLE]-(v:Video)<-[:IN]-(u:User)
+       RETURN v.id as videoId, collect(DISTINCT {
+         id: u.id,
+         displayName: u.displayName,
+         username: u.username
+       }) as taggedUsers`,
+      { styleName: normalizedStyleName }
+    );
+
+    const videoUsersMap = new Map<string, UserSearchItem[]>();
+    videoUsersResult.records.forEach((record) => {
+      const videoId = record.get("videoId");
+      const taggedUsers = record.get("taggedUsers") || [];
+      videoUsersMap.set(videoId, taggedUsers);
+    });
+
+    await session.close();
+
+    // Build events array
+    const events: EventCard[] = eventsResult.records.map((record) => {
+      const eventId = record.get("eventId");
+      return {
+        id: eventId,
+        title: record.get("title"),
+        series: undefined,
+        imageUrl: record.get("imageUrl"),
+        date: record.get("date"),
+        city: record.get("city"),
+        styles: eventStylesMap.get(eventId) || [],
+      };
+    });
+
+    // Build sections array
+    const sections = sectionsResult.records.map((record) => ({
+      id: record.get("sectionId"),
+      title: record.get("sectionTitle"),
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle"),
+    }));
+
+    // Build videos array
+    const videos = videosResult.records.map((record) => ({
+      video: {
+        id: record.get("videoId"),
+        title: record.get("videoTitle"),
+        src: record.get("videoSrc"),
+        taggedUsers: videoUsersMap.get(record.get("videoId")) || [],
+        styles: videoStylesMap.get(record.get("videoId")) || [],
+      } as Video,
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle"),
+      sectionId: record.get("sectionId"),
+      sectionTitle: record.get("sectionTitle"),
+    }));
+
+    return {
+      styleName: normalizedStyleName,
+      events,
+      sections,
+      videos,
+    };
+  } catch (error) {
+    console.error("Error fetching style data:", error);
+    await session.close();
+    return null;
+  }
+};
+
+export const getAllStyles = async (): Promise<string[]> => {
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `MATCH (s:Style)
+       RETURN DISTINCT s.name as styleName
+       ORDER BY s.name ASC`
+    );
+
+    await session.close();
+
+    return result.records.map((record) => record.get("styleName") as string);
+  } catch (error) {
+    console.error("Error fetching all styles:", error);
+    await session.close();
+    return [];
+  }
 };
 
 //Gets all pictures including poster, gallery, and subevent posters

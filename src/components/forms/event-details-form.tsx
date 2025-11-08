@@ -179,6 +179,7 @@ export function EventDetailsForm({
             <FormControl>
               <textarea
                 {...field}
+                value={field.value ?? ""}
                 className="bg-white h-32 p-2 rounded-md border border-gray-300"
               />
             </FormControl>
@@ -196,6 +197,7 @@ export function EventDetailsForm({
             <FormControl>
               <textarea
                 {...field}
+                value={field.value ?? ""}
                 className="bg-white h-32 p-2 rounded-md border border-gray-300"
               />
             </FormControl>

@@ -664,19 +664,30 @@ async function main() {
       console.log(`✅ Created Neo4j event: ${event.id}`);
 
       // Create PostgreSQL Event record so it shows up in the dashboard
-      await prisma.event.upsert({
+      // Use findFirst + create/update instead of upsert since unique constraint might not exist in migrations
+      const existingEvent = await prisma.event.findFirst({
         where: { eventId: event.id },
-        update: {
-          userId: event.eventDetails.creatorId,
-          creator: true,
-        },
-        create: {
-          eventId: event.id,
-          userId: event.eventDetails.creatorId,
-          creator: true,
-        },
       });
-      console.log(`✅ Created/Updated PostgreSQL Event record: ${event.id}`);
+
+      if (existingEvent) {
+        await prisma.event.update({
+          where: { id: existingEvent.id },
+          data: {
+            userId: event.eventDetails.creatorId,
+            creator: true,
+          },
+        });
+        console.log(`✅ Updated PostgreSQL Event record: ${event.id}`);
+      } else {
+        await prisma.event.create({
+          data: {
+            eventId: event.id,
+            userId: event.eventDetails.creatorId,
+            creator: true,
+          },
+        });
+        console.log(`✅ Created PostgreSQL Event record: ${event.id}`);
+      }
     } catch (error) {
       console.error(`❌ Failed to create event ${event.id}:`, error);
       // Don't silently continue - log the actual error

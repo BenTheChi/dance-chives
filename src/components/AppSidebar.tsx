@@ -1,6 +1,6 @@
 "use client";
 
-import { BookIcon, CalendarIcon, SearchIcon } from "lucide-react";
+import { CalendarIcon, SearchIcon, Tag } from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,
@@ -19,7 +19,7 @@ import { usePathname } from "next/navigation";
 
 const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
-  { title: "Education", url: "/styles", icon: BookIcon },
+  { title: "Styles", url: "/style", icon: Tag },
   { title: "Events", url: "/events", icon: CalendarIcon },
 ];
 

@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StyleBadge } from "@/components/ui/style-badge";
 import { Separator } from "@/components/ui/separator";
 import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
 import { Video } from "@/types/event";
@@ -242,9 +243,7 @@ export function VideoLightbox({
                   </h3>
                   <div className="flex flex-wrap gap-1 sm:gap-2">
                     {displayStyles.map((style) => (
-                      <Badge key={style} variant="outline" className="text-xs">
-                        {style}
-                      </Badge>
+                      <StyleBadge key={style} style={style} />
                     ))}
                   </div>
                 </div>
