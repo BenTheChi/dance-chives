@@ -12,6 +12,27 @@ export const AVAILABLE_ROLES = [
 ] as const;
 
 /**
+ * Video-only role
+ * This role can only be assigned to users in videos, not events
+ */
+export const VIDEO_ROLE_DANCER = "Dancer";
+
+/**
+ * Check if a role is valid for events (excludes video-only roles)
+ */
+export function isValidEventRole(role: string): role is RoleTitle {
+  return isValidRole(role);
+}
+
+/**
+ * Check if a role is valid for videos
+ * Includes both event roles and video-only roles
+ */
+export function isValidVideoRole(role: string): boolean {
+  return isValidRole(role) || role === VIDEO_ROLE_DANCER;
+}
+
+/**
  * Type for a valid role title
  */
 export type RoleTitle = (typeof AVAILABLE_ROLES)[number];
@@ -43,7 +64,12 @@ export function toNeo4jRoleFormat(role: string): string {
  * Neo4j stores roles in uppercase, but we want to display them with proper capitalization
  * Special cases: DJ and MC stay as-is
  */
-export function fromNeo4jRoleFormat(role: string): string {
+export function fromNeo4jRoleFormat(
+  role: string | null | undefined
+): string | null {
+  if (!role) {
+    return null;
+  }
   if (role === "DJ" || role === "MC") {
     return role;
   }

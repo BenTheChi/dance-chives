@@ -16,7 +16,7 @@ export default async function EditEventPage({
   const formattedRoles = currEvent.roles.map((role) => {
     return {
       ...role,
-      title: fromNeo4jRoleFormat(role.title),
+      title: fromNeo4jRoleFormat(role.title) || role.title,
       id: role.id + "-" + generateShortId(),
     };
   });

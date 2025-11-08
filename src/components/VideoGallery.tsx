@@ -9,16 +9,20 @@ interface VideoGalleryProps {
   videos: Video[];
   eventLink: string;
   eventTitle: string;
+  eventId: string;
   sectionTitle: string;
   bracketTitle?: string;
+  currentUserId?: string;
 }
 
 export default function VideoGallery({
   videos,
   eventLink,
   eventTitle,
+  eventId,
   sectionTitle,
   bracketTitle,
+  currentUserId,
 }: VideoGalleryProps) {
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
     null
@@ -65,8 +69,10 @@ export default function VideoGallery({
           totalVideos={videos.length}
           eventLink={eventLink}
           eventTitle={eventTitle}
+          eventId={eventId}
           sectionTitle={sectionTitle}
           bracketTitle={bracketTitle}
+          currentUserId={currentUserId}
         />
       )}
     </div>

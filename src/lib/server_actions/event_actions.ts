@@ -464,6 +464,23 @@ export async function editEvent(
     const result = await editEventQuery(event);
 
     if (result) {
+      // Update corresponding PostgreSQL Event record to keep it in sync with Neo4j
+      // Use the original creator ID from oldEvent to preserve creator information
+      const creatorId = oldEvent.eventDetails.creatorId || session.user.id;
+
+      await prisma.event.upsert({
+        where: { eventId: eventId },
+        update: {
+          userId: creatorId,
+          creator: true,
+        },
+        create: {
+          eventId: eventId, // Neo4j event ID
+          userId: creatorId,
+          creator: true,
+        },
+      });
+
       return {
         status: 200,
         event: null,

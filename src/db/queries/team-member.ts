@@ -3,6 +3,8 @@ import {
   toNeo4jRoleFormat,
   isValidRole,
   AVAILABLE_ROLES,
+  VIDEO_ROLE_DANCER,
+  isValidVideoRole,
 } from "@/lib/utils/roles";
 
 /**
@@ -238,6 +240,7 @@ export async function getCityName(cityId: string): Promise<string | null> {
 
 /**
  * Get event city ID from Neo4j
+ * Note: cityId is stored as number in Neo4j but as string in PostgreSQL
  */
 export async function getEventCityId(eventId: string): Promise<string | null> {
   const session = driver.session();
@@ -255,7 +258,9 @@ export async function getEventCityId(eventId: string): Promise<string | null> {
       return null;
     }
 
-    return result.records[0].get("cityId");
+    const cityId = result.records[0].get("cityId");
+    // Convert Neo4j numeric cityId to string for PostgreSQL
+    return cityId != null ? String(cityId) : null;
   } finally {
     await session.close();
   }
@@ -286,14 +291,38 @@ export async function applyTag(
         throw new Error(`Video ${videoId} does not exist in event ${eventId}`);
       }
 
-      // Tag user in specific video
+      // Default to "Dancer" role for video tags if no role specified
+      const videoRole = role || VIDEO_ROLE_DANCER;
+
+      // Validate video role (allows both event roles and video-only roles like Dancer)
+      if (!isValidVideoRole(videoRole)) {
+        throw new Error(
+          `Invalid video role: ${videoRole}. Must be one of: ${AVAILABLE_ROLES.join(
+            ", "
+          )}, or ${VIDEO_ROLE_DANCER}`
+        );
+      }
+
+      // Tag user in specific video with role property on the relationship
+      // Handle both videos directly in sections and videos in brackets
+      const neo4jRole = toNeo4jRoleFormat(videoRole);
+      console.log(
+        "✅ [applyTag] Neo4j role:",
+        eventId,
+        videoId,
+        userId,
+        neo4jRole
+      );
       await session.run(
         `
         MATCH (u:User {id: $userId})
-        MATCH (v:Video {id: $videoId})-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
-        MERGE (u)-[:IN]->(v)
+        MATCH (v:Video {id: $videoId})
+        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        MERGE (u)-[r:IN]->(v)
+        SET r.role = $role
         `,
-        { eventId, videoId, userId }
+        { eventId, videoId, userId, role: neo4jRole }
       );
     } else if (role) {
       // Validate role
@@ -333,8 +362,14 @@ export async function applyTag(
  * Get event title and createdAt from Neo4j
  */
 export async function getEventTitle(eventId: string): Promise<string | null>;
-export async function getEventTitle(eventId: string, includeCreatedAt: true): Promise<{ title: string | null; createdAt: string | null }>;
-export async function getEventTitle(eventId: string, includeCreatedAt?: boolean): Promise<string | null | { title: string | null; createdAt: string | null }> {
+export async function getEventTitle(
+  eventId: string,
+  includeCreatedAt: true
+): Promise<{ title: string | null; createdAt: string | null }>;
+export async function getEventTitle(
+  eventId: string,
+  includeCreatedAt?: boolean
+): Promise<string | null | { title: string | null; createdAt: string | null }> {
   const session = driver.session();
   try {
     const result = await session.run(
@@ -389,6 +424,108 @@ export async function getVideoTitle(videoId: string): Promise<string | null> {
     }
 
     return result.records[0].get("title");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Check if a user is tagged in a video
+ * Returns true if user has (User)-[:IN]->(Video) relationship
+ */
+export async function isUserTaggedInVideo(
+  eventId: string,
+  videoId: string,
+  userId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    // Validate video exists and belongs to event
+    const videoExists = await videoExistsInEvent(eventId, videoId);
+    if (!videoExists) {
+      return false;
+    }
+
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[:IN]->(v:Video {id: $videoId})
+      WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+         OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+      RETURN count(v) as count
+      `,
+      { eventId, videoId, userId }
+    );
+
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Remove a tag from a user (for videos or event roles)
+ * Deletes the relationship in Neo4j
+ * Throws error if event or video doesn't exist
+ */
+export async function removeTag(
+  eventId: string,
+  videoId: string | null,
+  userId: string,
+  role?: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate event exists
+    const eventExistsCheck = await eventExists(eventId);
+    if (!eventExistsCheck) {
+      throw new Error(`Event ${eventId} does not exist`);
+    }
+
+    if (videoId) {
+      // Validate video exists and belongs to event
+      const videoExists = await videoExistsInEvent(eventId, videoId);
+      if (!videoExists) {
+        throw new Error(`Video ${videoId} does not exist in event ${eventId}`);
+      }
+
+      // Remove user tag from specific video
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})-[r:IN]->(v:Video {id: $videoId})
+        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        DELETE r
+        `,
+        { eventId, videoId, userId }
+      );
+    } else if (role) {
+      // Validate role
+      if (!isValidRole(role)) {
+        throw new Error(
+          `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+        );
+      }
+
+      // Remove role relationship (converted to Neo4j format)
+      const neo4jRole = toNeo4jRoleFormat(role);
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})-[r:${neo4jRole}]->(e:Event {id: $eventId})
+        DELETE r
+        `,
+        { eventId, userId, role: neo4jRole }
+      );
+    } else {
+      // Remove default tagging relationship
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})-[r:TAGGED]->(e:Event {id: $eventId})
+        DELETE r
+        `,
+        { eventId, userId }
+      );
+    }
   } finally {
     await session.close();
   }

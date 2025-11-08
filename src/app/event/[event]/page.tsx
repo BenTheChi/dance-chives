@@ -23,6 +23,8 @@ import { notFound } from "next/navigation";
 import { DeleteEventButton } from "@/components/DeleteEventButton";
 import { auth } from "@/auth";
 import { isEventCreator } from "@/db/queries/team-member";
+import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
+import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -48,12 +50,18 @@ export default async function EventPage({ params }: PageProps) {
   }
 
   const event = (await getEvent(paramResult.event)) as Event;
-  
+
   // Check if current user is the creator
   const session = await auth();
-  const isCreator = session?.user?.id 
+  const isCreator = session?.user?.id
     ? await isEventCreator(event.id, session.user.id)
     : false;
+
+  // Get current user's roles for this event (convert from Neo4j format to display format)
+  const currentUserRoles = event.roles
+    .filter((role) => role.user?.id === session?.user?.id)
+    .map((role) => fromNeo4jRoleFormat(role.title))
+    .filter((role): role is string => role !== null);
 
   return (
     <>
@@ -133,11 +141,18 @@ export default async function EventPage({ params }: PageProps) {
 
             {/* Roles */}
             <section className="p-4 rounded-md bg-green-100 flex flex-col gap-2">
+              <TagSelfDropdown
+                eventId={event.id}
+                currentUserRoles={currentUserRoles}
+                currentUserId={session?.user?.id}
+              />
               {event.roles.map((role) => (
                 <div key={role.id} className="flex flex-col gap-2">
                   {role.user && (
                     <div className="flex flex-row gap-1 items-center">
-                      <span className="text-lg font-bold">{role.title}:</span>
+                      <span className="text-lg font-bold">
+                        {fromNeo4jRoleFormat(role.title) || role.title}:
+                      </span>
                       <Link href={`/user/${role.user.id}`}>
                         <span className="text-blue-500 hover:text-blue-700 hover:underline">
                           {role.user.displayName}

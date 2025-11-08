@@ -8,7 +8,12 @@ import {
   EventCard,
 } from "../../types/event";
 import { UserSearchItem } from "../../types/user";
-import { getNeo4jRoleFormats, toNeo4jRoleFormat, isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
+import {
+  getNeo4jRoleFormats,
+  toNeo4jRoleFormat,
+  isValidRole,
+  AVAILABLE_ROLES,
+} from "@/lib/utils/roles";
 
 // Neo4j record interfaces
 interface BracketVideoRecord {
@@ -136,27 +141,29 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-  // Get tagged users for bracket videos
+  // Get tagged users for bracket videos with role property
   const bracketVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(u:User)
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
     RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect({
       id: u.id,
       displayName: u.displayName,
-      username: u.username
+      username: u.username,
+      role: r.role
     }) as taggedUsers
   `,
     { id }
   );
 
-  // Get tagged users for direct section videos
+  // Get tagged users for direct section videos with role property
   const sectionVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[:IN]-(u:User)
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
     RETURN s.id as sectionId, v.id as videoId, collect({
       id: u.id,
       displayName: u.displayName,
-      username: u.username
+      username: u.username,
+      role: r.role
     }) as taggedUsers
   `,
     { id }
@@ -558,7 +565,11 @@ export const insertEvent = async (event: Event) => {
   if (event.roles && event.roles.length > 0) {
     for (const role of event.roles) {
       if (!isValidRole(role.title)) {
-        throw new Error(`Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`);
+        throw new Error(
+          `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
+            ", "
+          )}`
+        );
       }
     }
   }
@@ -658,17 +669,21 @@ RETURN e as event
       roles: event.roles,
     }
   );
-  
+
   // Check if query returned results
   if (!result.records || result.records.length === 0) {
     await session.close();
-    throw new Error(`Failed to create event ${event.id}: No records returned from query`);
+    throw new Error(
+      `Failed to create event ${event.id}: No records returned from query`
+    );
   }
 
   const eventNode = result.records[0].get("event");
   if (!eventNode) {
     await session.close();
-    throw new Error(`Failed to create event ${event.id}: Event node not found in result`);
+    throw new Error(
+      `Failed to create event ${event.id}: Event node not found in result`
+    );
   }
 
   await session.close();
@@ -740,15 +755,20 @@ export const getEventSections = async (id: string) => {
     { id }
   );
 
-  // Get tagged users for direct section videos
+  // Get tagged users for all videos in sections
+  // Match videos in sections first, then find their tagged users with role property
   const sectionVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[:IN]-(u:User)
-    RETURN s.id as sectionId, v.id as videoId, collect({
-      id: u.id,
-      displayName: u.displayName,
-      username: u.username
-    }) as taggedUsers
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[r:IN]-(u:User)
+    WITH s, v, collect(DISTINCT {user: u, role: r.role}) as userData
+    WHERE ANY(data IN userData WHERE data.user IS NOT NULL)
+    RETURN s.id as sectionId, v.id as videoId, [data IN userData WHERE data.user IS NOT NULL | {
+      id: data.user.id,
+      displayName: data.user.displayName,
+      username: data.user.username,
+      role: data.role
+    }] as taggedUsers
   `,
     { id }
   );
@@ -756,11 +776,11 @@ export const getEventSections = async (id: string) => {
   // Get tagged users for bracket videos
   const bracketVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(user:User)
-    RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect({
-      id: user.id,
-      displayName: user.displayName,
-      username: user.username
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[:IN]-(u:User)
+    RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect(DISTINCT {
+      id: u.id,
+      displayName: u.displayName,
+      username: u.username
     }) as taggedUsers
   `,
     { id }
@@ -778,13 +798,26 @@ export const getEventSections = async (id: string) => {
     })
   );
 
-  const sectionVideoUsers = sectionVideoUsersResult.records.map(
-    (record): SectionVideoUserRecord => ({
-      sectionId: record.get("sectionId"),
-      videoId: record.get("videoId"),
-      taggedUsers: record.get("taggedUsers"),
-    })
+  // Get all bracket video IDs to filter them out from section videos
+  const bracketVideoIdsSet = new Set(
+    bracketVideosResult.records.flatMap((record) =>
+      (record.get("videos") || []).map((v: any) => v.id)
+    )
   );
+
+  // Filter out bracket videos from section video users
+  const sectionVideoUsers = sectionVideoUsersResult.records
+    .filter((record) => {
+      const videoId = record.get("videoId");
+      return videoId && !bracketVideoIdsSet.has(videoId);
+    })
+    .map(
+      (record): SectionVideoUserRecord => ({
+        sectionId: record.get("sectionId"),
+        videoId: record.get("videoId"),
+        taggedUsers: record.get("taggedUsers") || [],
+      })
+    );
 
   const bracketVideoUsers = bracketVideoUsersResult.records.map(
     (record): BracketVideoUserRecord => ({
@@ -802,16 +835,20 @@ export const getEventSections = async (id: string) => {
 
   // Update sections with bracket videos
   sections.forEach((section: Section) => {
-    // Add tagged users to direct section videos
-    section.videos.forEach((video: Video) => {
+    // Add tagged users to direct section videos - create new objects to avoid mutating Neo4j objects
+    section.videos = section.videos.map((video: Video) => {
       const userData = sectionVideoUsers.find(
         (svu) => svu.sectionId === section.id && svu.videoId === video.id
       );
-      if (userData) {
-        video.taggedUsers = userData.taggedUsers;
-      } else {
-        video.taggedUsers = [];
-      }
+      return {
+        ...video,
+        taggedUsers:
+          userData &&
+          userData.taggedUsers &&
+          Array.isArray(userData.taggedUsers)
+            ? userData.taggedUsers
+            : [],
+      };
     });
 
     // Add videos and tagged users to brackets
@@ -820,21 +857,23 @@ export const getEventSections = async (id: string) => {
         (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id
       );
       if (bracketVideoData) {
-        bracket.videos = bracketVideoData.videos;
-
-        // Add tagged users to bracket videos
-        bracket.videos.forEach((video: Video) => {
+        // Create new video objects with taggedUsers to avoid mutating Neo4j objects
+        bracket.videos = bracketVideoData.videos.map((video: Video) => {
           const userData = bracketVideoUsers.find(
             (bvu) =>
               bvu.sectionId === section.id &&
               bvu.bracketId === bracket.id &&
               bvu.videoId === video.id
           );
-          if (userData) {
-            video.taggedUsers = userData.taggedUsers;
-          } else {
-            video.taggedUsers = [];
-          }
+          return {
+            ...video,
+            taggedUsers:
+              userData &&
+              userData.taggedUsers &&
+              Array.isArray(userData.taggedUsers)
+                ? userData.taggedUsers
+                : [],
+          };
         });
       } else {
         bracket.videos = [];
@@ -847,16 +886,20 @@ export const getEventSections = async (id: string) => {
 
 export const EditEvent = async (event: Event) => {
   const { id, eventDetails } = event;
-  
+
   // Validate all roles before editing
   if (event.roles && event.roles.length > 0) {
     for (const role of event.roles) {
       if (!isValidRole(role.title)) {
-        throw new Error(`Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`);
+        throw new Error(
+          `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
+            ", "
+          )}`
+        );
       }
     }
   }
-  
+
   const session = driver.session();
 
   try {

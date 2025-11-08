@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import {
   Select,
@@ -59,6 +60,7 @@ const TEST_USERS: TestUser[] = [
 ];
 
 export function TestLoginDropdown() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>("");
 
@@ -102,8 +104,8 @@ export function TestLoginDropdown() {
         alert(`Sign in failed: ${result.error}`);
       } else {
         console.log("✅ Test login successful");
-        // Reload to refresh the page with the new session
-        window.location.reload();
+        // Redirect to dashboard after successful sign in
+        router.push("/dashboard");
       }
     } catch (error) {
       console.error("❌ Test login error:", error);

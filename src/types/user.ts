@@ -21,4 +21,5 @@ export interface UserSearchItem {
   id: string;
   username: string;
   displayName: string;
+  role?: string; // Optional role property (e.g., "DANCER" for video tags)
 }

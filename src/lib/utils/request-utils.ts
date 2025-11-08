@@ -37,7 +37,7 @@ export async function getTaggingRequestApprovers(
 
   // Get city ID from Neo4j if not provided
   if (!eventCityId) {
-    eventCityId = await getEventCityId(eventId) || undefined;
+    eventCityId = (await getEventCityId(eventId)) || undefined;
   }
 
   // Get city moderators (auth level 2+) for the event's city
@@ -139,7 +139,8 @@ export async function canUserApproveRequest(
             userId,
           },
         });
-        if (cityAssignment && cityAssignment.cityId === context.eventCityId) return true;
+        if (cityAssignment && cityAssignment.cityId === context.eventCityId)
+          return true;
       }
       // Check if user is event creator or team member (from Neo4j)
       if (context?.eventId) {
@@ -201,4 +202,34 @@ export async function hasGlobalAccess(userId: string): Promise<boolean> {
 
   // For creators and moderators, check allCityAccess flag
   return user.allCityAccess === true;
+}
+
+/**
+ * Check if a user has access to a specific city
+ * Returns true if:
+ * - User has allCityAccess flag set to true
+ * - User is an admin or super admin (they have allCityAccess by default)
+ * - User is assigned to the specific city
+ */
+export async function hasCityAccess(
+  userId: string,
+  cityId: string
+): Promise<boolean> {
+  // Check if user has global access (allCityAccess or admin)
+  const hasGlobal = await hasGlobalAccess(userId);
+  if (hasGlobal) {
+    return true;
+  }
+
+  // Check if user is assigned to this specific city
+  const cityAssignment = await prisma.city.findUnique({
+    where: { userId },
+    select: { cityId: true },
+  });
+
+  if (cityAssignment && cityAssignment.cityId === cityId) {
+    return true;
+  }
+
+  return false;
 }

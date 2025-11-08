@@ -4,26 +4,25 @@ import { Section } from "@/types/event";
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "./ui/button";
-import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import VideoGallery from "./VideoGallery";
 
 export default function SectionBracketTabSelector({
   sections,
   eventTitle,
+  eventId,
+  currentUserId,
 }: {
   sections: Section[];
   eventTitle: string;
+  eventId: string;
+  currentUserId?: string;
 }) {
   const [activeSection, setActiveSection] = useState(0);
   const [activeBracket, setActiveBracket] = useState(
     sections[activeSection]?.brackets[0]?.id || ""
   );
   const router = useRouter();
-
-  //Get params from url
-  const path = usePathname();
-  const eventId = path.split("/")[2];
 
   useEffect(() => {
     if (sections[activeSection]?.brackets.length > 0) {
@@ -83,12 +82,14 @@ export default function SectionBracketTabSelector({
                 }
                 eventLink={`/event/${eventId}`}
                 eventTitle={eventTitle}
+                eventId={eventId}
                 sectionTitle={sections[activeSection]?.title}
                 bracketTitle={
                   sections[activeSection]?.brackets.find(
                     (bracket) => bracket.id === activeBracket
                   )?.title
                 }
+                currentUserId={currentUserId}
               />
             </TabsContent>
           </Tabs>
@@ -99,7 +100,9 @@ export default function SectionBracketTabSelector({
             videos={sections[activeSection]?.videos}
             eventLink={`/event/${eventId}`}
             eventTitle={eventTitle}
+            eventId={eventId}
             sectionTitle={sections[activeSection]?.title}
+            currentUserId={currentUserId}
           />
         </div>
       )}

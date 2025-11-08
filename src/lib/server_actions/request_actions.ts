@@ -9,6 +9,7 @@ import {
   getAuthLevelChangeRequestApprovers,
   canUserApproveRequest,
   createNotification,
+  hasCityAccess,
   REQUEST_TYPES,
   RequestType,
 } from "@/lib/utils/request-utils";
@@ -16,15 +17,18 @@ import {
   isTeamMember,
   addTeamMember,
   applyTag,
+  removeTag,
   getEventCityId,
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
+  isUserTaggedInVideo,
   getEventTitle,
   getVideoTitle,
   getCityName,
   getEventCreator,
   isEventCreator,
+  getEventTeamMembers,
 } from "@/db/queries/team-member";
 import { isValidRole, AVAILABLE_ROLES } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
@@ -186,19 +190,24 @@ export async function createTaggingRequest(
   videoId?: string,
   role?: string
 ) {
+  console.log("🔵 [createTaggingRequest] Starting", { eventId, videoId, role });
   const senderId = await requireAuth();
+  console.log("🔵 [createTaggingRequest] Authenticated user:", senderId);
 
   // Require either videoId or role, but not both
   if (!videoId && !role) {
+    console.error("❌ [createTaggingRequest] Missing both videoId and role");
     throw new Error("Either videoId or role must be provided");
   }
 
   if (videoId && role) {
+    console.error("❌ [createTaggingRequest] Both videoId and role provided");
     throw new Error("Cannot specify both videoId and role");
   }
 
   // Validate role if provided
   if (role && !isValidRole(role)) {
+    console.error("❌ [createTaggingRequest] Invalid role:", role);
     throw new Error(
       `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
     );
@@ -208,87 +217,165 @@ export async function createTaggingRequest(
   const targetUserId = senderId;
 
   // Validate event exists in Neo4j
+  console.log("🔵 [createTaggingRequest] Checking if event exists...");
   const eventExistsInNeo4j = await eventExists(eventId);
   if (!eventExistsInNeo4j) {
+    console.error("❌ [createTaggingRequest] Event not found:", eventId);
     throw new Error("Event not found");
   }
+  console.log("✅ [createTaggingRequest] Event exists");
 
   // Validate video exists if provided
   if (videoId) {
+    console.log("🔵 [createTaggingRequest] Checking if video exists...");
     const videoExists = await videoExistsInEvent(eventId, videoId);
     if (!videoExists) {
+      console.error("❌ [createTaggingRequest] Video not found:", videoId);
       throw new Error("Video not found in this event");
     }
+    console.log("✅ [createTaggingRequest] Video exists");
+
+    // Check if user is already tagged in the video
+    console.log("🔵 [createTaggingRequest] Checking if user already tagged...");
+    const alreadyTagged = await isUserTaggedInVideo(
+      eventId,
+      videoId,
+      targetUserId
+    );
+    if (alreadyTagged) {
+      console.error("❌ [createTaggingRequest] User already tagged");
+      throw new Error("You are already tagged in this video");
+    }
+    console.log("✅ [createTaggingRequest] User not already tagged");
   }
 
   // Check if a pending request already exists
+  console.log("🔵 [createTaggingRequest] Checking for existing requests...");
   const existingRequest = await prisma.taggingRequest.findFirst({
     where: {
       eventId,
       senderId,
       targetUserId,
       videoId: videoId || null,
+      role: role || null,
       status: "PENDING",
     },
   });
 
   if (existingRequest) {
+    console.error(
+      "❌ [createTaggingRequest] Pending request already exists:",
+      existingRequest.id
+    );
     throw new Error("A pending tagging request already exists");
   }
+  console.log("✅ [createTaggingRequest] No existing request found");
 
   // Create the request
-  const request = await prisma.taggingRequest.create({
-    data: {
-      eventId,
-      videoId,
-      senderId,
-      targetUserId,
-      role,
-      status: "PENDING",
-    },
-    include: {
-      sender: {
-        select: { id: true, name: true, email: true },
+  console.log("🔵 [createTaggingRequest] Creating request in database...");
+  let request;
+  try {
+    request = await prisma.taggingRequest.create({
+      data: {
+        eventId,
+        videoId,
+        senderId,
+        targetUserId,
+        role,
+        status: "PENDING",
       },
-      targetUser: {
-        select: { id: true, name: true, email: true },
+      include: {
+        sender: {
+          select: { id: true, name: true, email: true },
+        },
+        targetUser: {
+          select: { id: true, name: true, email: true },
+        },
       },
-    },
-  });
+    });
+    console.log("✅ [createTaggingRequest] Request created:", request.id);
+  } catch (error) {
+    console.error("❌ [createTaggingRequest] Failed to create request:", error);
+    throw error;
+  }
 
   // Get approvers and create notifications
-  const eventCityId = await getEventCityId(eventId);
-  const approvers = await getTaggingRequestApprovers(
-    eventId,
-    eventCityId || undefined
-  );
+  console.log("🔵 [createTaggingRequest] Getting event city ID...");
+  let eventCityId;
+  try {
+    eventCityId = await getEventCityId(eventId);
+    console.log("✅ [createTaggingRequest] Event city ID:", eventCityId);
+  } catch (error) {
+    console.error(
+      "⚠️ [createTaggingRequest] Error getting city ID (continuing):",
+      error
+    );
+    eventCityId = null;
+  }
+
+  console.log("🔵 [createTaggingRequest] Getting approvers...");
+  let approvers: string[] = [];
+  try {
+    approvers = await getTaggingRequestApprovers(
+      eventId,
+      eventCityId || undefined
+    );
+    console.log("✅ [createTaggingRequest] Approvers found:", approvers.length);
+  } catch (error) {
+    console.error("❌ [createTaggingRequest] Error getting approvers:", error);
+    // Don't fail the request creation if approvers can't be found
+    approvers = [];
+  }
 
   // Create notifications for approvers
-  const eventTitle = await getEventTitle(eventId);
-  const eventDisplayName = eventTitle || eventId;
-  const username = request.sender.name || request.sender.email;
+  console.log("🔵 [createTaggingRequest] Creating notifications...");
+  try {
+    const eventTitle = await getEventTitle(eventId);
+    const eventDisplayName = eventTitle || eventId;
+    const username = request.sender.name || request.sender.email;
 
-  let notificationMessage: string;
-  if (videoId) {
-    const videoTitle = await getVideoTitle(videoId);
-    const videoDisplayName = videoTitle || videoId;
-    notificationMessage = `${username} requesting tag for video ${videoDisplayName} in event ${eventDisplayName}`;
-  } else {
-    // role is guaranteed to exist here due to validation above
-    notificationMessage = `${username} requesting tag for role ${role} in event ${eventDisplayName}`;
-  }
+    let notificationMessage: string;
+    if (videoId) {
+      const videoTitle = await getVideoTitle(videoId);
+      const videoDisplayName = videoTitle || videoId;
+      notificationMessage = `${username} requesting tag for video ${videoDisplayName} in event ${eventDisplayName}`;
+    } else {
+      // role is guaranteed to exist here due to validation above
+      notificationMessage = `${username} requesting tag for role ${role} in event ${eventDisplayName}`;
+    }
 
-  for (const approverId of approvers) {
-    await createNotification(
-      approverId,
-      "INCOMING_REQUEST",
-      "New Tagging Request",
-      notificationMessage,
-      REQUEST_TYPES.TAGGING,
-      request.id
+    for (const approverId of approvers) {
+      try {
+        await createNotification(
+          approverId,
+          "INCOMING_REQUEST",
+          "New Tagging Request",
+          notificationMessage,
+          REQUEST_TYPES.TAGGING,
+          request.id
+        );
+        console.log(
+          "✅ [createTaggingRequest] Notification created for:",
+          approverId
+        );
+      } catch (error) {
+        console.error(
+          `⚠️ [createTaggingRequest] Failed to create notification for ${approverId}:`,
+          error
+        );
+        // Continue with other approvers even if one fails
+      }
+    }
+    console.log("✅ [createTaggingRequest] Notifications completed");
+  } catch (error) {
+    console.error(
+      "⚠️ [createTaggingRequest] Error creating notifications (request still created):",
+      error
     );
+    // Don't fail the request creation if notifications fail
   }
 
+  console.log("✅ [createTaggingRequest] Successfully completed");
   return { success: true, request };
 }
 
@@ -386,11 +473,14 @@ export async function approveTaggingRequest(
   );
 
   // Apply the tag in Neo4j
+  // For video requests, default to "Dancer" role if no role specified
+  const roleToApply = request.videoId ? request.role || "Dancer" : request.role;
+
   await applyTag(
     request.eventId,
     request.videoId || null,
     request.targetUserId,
-    request.role || undefined
+    roleToApply || undefined
   );
 
   return { success: true };
@@ -1207,6 +1297,7 @@ export async function getIncomingRequests() {
   });
 
   // Filter requests user can approve and enrich with event/video info
+  // Also filter by city access level - users should only see requests for cities they have access to
   const canApproveTagging = await Promise.all(
     taggingRequests.map(async (req) => {
       const eventCityId = await getEventCityId(req.eventId);
@@ -1221,6 +1312,31 @@ export async function getIncomingRequests() {
         }
       );
 
+      // Check city access - user must have access to the event's city
+      // Exception: event creators and team members can see requests for their events regardless of city access
+      let hasAccess = false;
+
+      // Check if user is specifically a creator or team member (not just an admin who can approve)
+      const creatorId = await getEventCreator(req.eventId);
+      const teamMembers = await getEventTeamMembers(req.eventId);
+      const isCreatorOrTeamMember =
+        creatorId === userId || teamMembers.includes(userId);
+
+      if (isCreatorOrTeamMember) {
+        // Event creators and team members have implicit access to their events
+        hasAccess = true;
+      } else if (cityIdString) {
+        // For others, check city access
+        hasAccess = await hasCityAccess(userId, cityIdString);
+      } else {
+        // If no city ID, only show to admins (who have allCityAccess)
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { auth: true },
+        });
+        hasAccess = user?.auth && user.auth >= AUTH_LEVELS.ADMIN ? true : false;
+      }
+
       // Fetch event and video titles
       const eventTitle = await getEventTitle(req.eventId);
       const videoTitle = req.videoId ? await getVideoTitle(req.videoId) : null;
@@ -1232,6 +1348,7 @@ export async function getIncomingRequests() {
           videoTitle: videoTitle || null,
         },
         canApprove,
+        hasCityAccess: hasAccess,
       };
     })
   );
@@ -1241,17 +1358,45 @@ export async function getIncomingRequests() {
       const eventCityId = await getEventCityId(req.eventId);
       // Convert to string if needed (Neo4j may return number)
       const cityIdString = eventCityId ? String(eventCityId) : undefined;
+      const canApprove = await canUserApproveRequest(
+        userId,
+        REQUEST_TYPES.TEAM_MEMBER,
+        { eventId: req.eventId, eventCityId: cityIdString }
+      );
+
+      // Check city access - user must have access to the event's city
+      // Exception: event creators and team members can see requests for their events regardless of city access
+      let hasAccess = false;
+
+      // Check if user is specifically a creator or team member (not just an admin who can approve)
+      const creatorId = await getEventCreator(req.eventId);
+      const teamMembers = await getEventTeamMembers(req.eventId);
+      const isCreatorOrTeamMember =
+        creatorId === userId || teamMembers.includes(userId);
+
+      if (isCreatorOrTeamMember) {
+        // Event creators and team members have implicit access to their events
+        hasAccess = true;
+      } else if (cityIdString) {
+        // For others, check city access
+        hasAccess = await hasCityAccess(userId, cityIdString);
+      } else {
+        // If no city ID, only show to admins (who have allCityAccess)
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { auth: true },
+        });
+        hasAccess = user?.auth && user.auth >= AUTH_LEVELS.ADMIN ? true : false;
+      }
+
       const eventTitle = await getEventTitle(req.eventId);
       return {
         request: {
           ...req,
           eventTitle: eventTitle || req.eventId,
         },
-        canApprove: await canUserApproveRequest(
-          userId,
-          REQUEST_TYPES.TEAM_MEMBER,
-          { eventId: req.eventId, eventCityId: cityIdString }
-        ),
+        canApprove,
+        hasCityAccess: hasAccess,
       };
     })
   );
@@ -1277,12 +1422,14 @@ export async function getIncomingRequests() {
   );
 
   return {
+    // Filter by both canApprove AND city access for event-based requests
     tagging: canApproveTagging
-      .filter((item) => item.canApprove)
+      .filter((item) => item.canApprove && item.hasCityAccess)
       .map((item) => ({ ...item.request, type: "TAGGING" })),
     teamMember: canApproveTeamMember
-      .filter((item) => item.canApprove)
+      .filter((item) => item.canApprove && item.hasCityAccess)
       .map((item) => ({ ...item.request, type: "TEAM_MEMBER" })),
+    // Global access and auth level change requests are admin-only (they have allCityAccess by default)
     globalAccess: canApproveGlobalAccess
       .filter((item) => item.canApprove)
       .map((item) => ({ ...item.request, type: "GLOBAL_ACCESS" })),
@@ -1516,4 +1663,220 @@ export async function getDashboardData() {
     userEvents,
     teamMemberships,
   };
+}
+
+/**
+ * Tag self with a role in an event
+ * If user has permission (admin, super admin, moderator, event creator, or team member), tags directly
+ * Otherwise, creates a tagging request
+ */
+export async function tagSelfWithRole(eventId: string, role: string) {
+  const userId = await requireAuth();
+  const session = await auth();
+
+  // Validate role
+  if (!isValidRole(role)) {
+    throw new Error(
+      `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+    );
+  }
+
+  // Validate event exists
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+
+  // Check if user has permission to tag directly
+  const authLevel = session?.user?.auth || 0;
+  const canTagDirectly =
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isTeamMember(eventId, userId)) ||
+    (await isEventCreator(eventId, userId));
+
+  if (canTagDirectly) {
+    // User has permission - tag directly
+    try {
+      await applyTag(eventId, null, userId, role);
+      return { success: true, directTag: true };
+    } catch (error) {
+      console.error("Error tagging self with role:", error);
+      throw error;
+    }
+  } else {
+    // User doesn't have permission - create a tagging request
+    console.log(
+      "🔵 [tagSelfWithRole] User doesn't have permission, creating request..."
+    );
+    try {
+      const result = await createTaggingRequest(eventId, undefined, role);
+      console.log(
+        "✅ [tagSelfWithRole] Request created successfully:",
+        result.request.id
+      );
+      return { success: true, directTag: false, request: result.request };
+    } catch (error) {
+      console.error(
+        "❌ [tagSelfWithRole] Error creating tagging request:",
+        error
+      );
+      throw error;
+    }
+  }
+}
+
+/**
+ * Tag self in a video
+ * If user has permission (admin, super admin, moderator, event creator, or team member), tags directly
+ * Otherwise, creates a tagging request
+ */
+export async function tagSelfInVideo(
+  eventId: string,
+  videoId: string
+): Promise<{ success: true; directTag: boolean }> {
+  const userId = await requireAuth();
+  const session = await auth();
+
+  // Validate event exists
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+
+  // Validate video exists
+  const videoExists = await videoExistsInEvent(eventId, videoId);
+  if (!videoExists) {
+    throw new Error("Video not found in this event");
+  }
+
+  // Check if user is already tagged
+  const alreadyTagged = await isUserTaggedInVideo(eventId, videoId, userId);
+  if (alreadyTagged) {
+    throw new Error("You are already tagged in this video");
+  }
+
+  // Check if user has permission to tag directly
+  const authLevel = session?.user?.auth || 0;
+  const canTagDirectly =
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isTeamMember(eventId, userId)) ||
+    (await isEventCreator(eventId, userId));
+
+  if (canTagDirectly) {
+    console.log("Applying tag in Neo4j");
+
+    // User has permission - tag directly with "Dancer" role
+    try {
+      const result = await applyTag(eventId, videoId, userId, "Dancer");
+      console.log("✅ [tagSelfInVideo] Tag applied successfully:", result);
+      return { success: true, directTag: true };
+    } catch (error) {
+      console.error("Error tagging self in video:", error);
+      throw error;
+    }
+  } else {
+    // User doesn't have permission - create a tagging request
+    console.log(
+      "🔵 [tagSelfInVideo] User doesn't have permission, creating request..."
+    );
+    try {
+      const result = await createTaggingRequest(eventId, videoId);
+      console.log(
+        "✅ [tagSelfInVideo] Request created successfully:",
+        result.request.id
+      );
+      return { success: true, directTag: false };
+    } catch (error) {
+      console.error(
+        "❌ [tagSelfInVideo] Error creating tagging request:",
+        error
+      );
+      throw error;
+    }
+  }
+}
+
+/**
+ * Remove tag from video
+ * Users can remove their own tags directly
+ * Privileged users can remove any tags
+ */
+export async function removeTagFromVideo(
+  eventId: string,
+  videoId: string,
+  userId: string
+): Promise<{ success: true; directRemove: boolean }> {
+  const currentUserId = await requireAuth();
+  const session = await auth();
+
+  // Validate event exists
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+
+  // Validate video exists
+  const videoExists = await videoExistsInEvent(eventId, videoId);
+  if (!videoExists) {
+    throw new Error("Video not found in this event");
+  }
+
+  // Check if user is tagged
+  const isTagged = await isUserTaggedInVideo(eventId, videoId, userId);
+  if (!isTagged) {
+    throw new Error("User is not tagged in this video");
+  }
+
+  // Check permissions: users can remove their own tags, privileged users can remove any
+  const authLevel = session?.user?.auth || 0;
+  const canRemoveDirectly =
+    currentUserId === userId || // User removing their own tag
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isTeamMember(eventId, currentUserId)) ||
+    (await isEventCreator(eventId, currentUserId));
+
+  if (canRemoveDirectly) {
+    // User has permission - remove directly
+    try {
+      await removeTag(eventId, videoId, userId);
+      return { success: true, directRemove: true };
+    } catch (error) {
+      console.error("Error removing tag from video:", error);
+      throw error;
+    }
+  } else {
+    // User trying to remove someone else's tag without permission
+    throw new Error("You do not have permission to remove this tag");
+  }
+}
+
+/**
+ * Get pending tagging request for a user in a video
+ * Returns the request if one exists, null otherwise
+ */
+export async function getPendingTagRequest(
+  eventId: string,
+  videoId: string,
+  userId: string
+): Promise<{
+  id: string;
+  status: string;
+  createdAt: Date;
+} | null> {
+  const request = await prisma.taggingRequest.findFirst({
+    where: {
+      eventId,
+      videoId,
+      senderId: userId,
+      targetUserId: userId,
+      status: "PENDING",
+    },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return request;
 }
