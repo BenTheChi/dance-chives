@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteEvent, getEventPictures } from "@/db/queries/event";
+import { deleteEvent, getEventPictures, getEvent as getEventQuery } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { deleteFromGCloudStorage } from "@/lib/GCloud";
 import { prisma } from "@/lib/primsa";
-import { getEventCreator } from "@/db/queries/team-member";
+import { canDeleteEvent } from "@/lib/utils/auth-utils";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -20,11 +20,35 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    // Check if user is the event creator - only creators can delete events
-    const creatorId = await getEventCreator(id);
-    if (creatorId !== session.user.id) {
+    // Check authorization - get event to check creator ID
+    const event = await getEventQuery(id);
+    if (!event) {
       return NextResponse.json(
-        { message: "Only the event creator can delete this event" },
+        { message: "Event not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has permission to delete this event
+    if (!session.user.auth) {
+      return NextResponse.json(
+        { message: "User authorization level not found" },
+        { status: 403 }
+      );
+    }
+
+    const hasPermission = canDeleteEvent(
+      session.user.auth,
+      {
+        eventId: id,
+        eventCreatorId: event.eventDetails.creatorId,
+      },
+      session.user.id
+    );
+
+    if (!hasPermission) {
+      return NextResponse.json(
+        { message: "You do not have permission to delete this event" },
         { status: 403 }
       );
     }

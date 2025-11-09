@@ -22,9 +22,13 @@ interface TaggedVideo {
 
 interface TaggedVideosGridProps {
   videos: TaggedVideo[];
+  isWinner?: boolean;
 }
 
-export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
+export function TaggedVideosGrid({
+  videos,
+  isWinner = false,
+}: TaggedVideosGridProps) {
   const { data: session } = useSession();
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
     null
@@ -58,6 +62,7 @@ export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
             eventLink={`/event/${video.eventId}`}
             eventTitle={video.eventTitle}
             onClick={() => handleVideoSelect(index)}
+            isWinner={isWinner}
           />
         ))}
       </div>

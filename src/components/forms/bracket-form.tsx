@@ -16,6 +16,14 @@ import { VideoForm } from "./video-form";
 import { FormValues } from "./event-form";
 import { Section, Bracket, Video } from "@/types/event";
 
+// Helper function to normalize sections for form (ensures description is always string)
+function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
+  return sections.map((section) => ({
+    ...section,
+    description: section.description ?? "",
+  }));
+}
+
 interface BracketFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
@@ -25,6 +33,7 @@ interface BracketFormProps {
   sections: Section[];
   activeSectionId: string;
   activeBracketId: string;
+  eventId?: string; // Event ID for winner tagging (only in edit mode)
 }
 
 export function BracketForm({
@@ -36,6 +45,7 @@ export function BracketForm({
   sections,
   activeSectionId,
   activeBracketId,
+  eventId,
 }: BracketFormProps) {
   const addVideoToBracket = () => {
     const newVideo: Video = {
@@ -58,7 +68,7 @@ export function BracketForm({
         : section
     );
 
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
   const removeVideoFromBracket = (videoId: string) => {
@@ -76,7 +86,7 @@ export function BracketForm({
         : section
     );
 
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
   return (
@@ -126,6 +136,7 @@ export function BracketForm({
               activeBracketId={activeBracketId}
               onRemove={() => removeVideoFromBracket(video.id)}
               context="bracket"
+              eventId={eventId}
             />
           ))}
         </div>

@@ -13,6 +13,7 @@ interface EventCardProps {
   eventTitle: string;
   onClick: () => void;
   roles?: string[]; // Kept for API compatibility but not displayed
+  isWinner?: boolean;
 }
 
 export function EventCard({
@@ -21,13 +22,18 @@ export function EventCard({
   eventTitle,
   onClick,
   roles,
+  isWinner = false,
 }: EventCardProps) {
   //Parse youtube id from src
   const youtubeId = video.src.split("v=")[1]?.split("&")[0];
   const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
 
   return (
-    <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02">
+    <Card
+      className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
+        isWinner ? "border-2 border-yellow-400 shadow-md" : ""
+      }`}
+    >
       <CardContent className="p-0">
         <div className="relative aspect-video overflow-hidden rounded-t-lg">
           <Image
@@ -48,12 +54,19 @@ export function EventCard({
         </div>
 
         <div className="sm:p-4 space-y-2 sm:space-y-3">
-          <h3
-            className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
-            onClick={onClick}
-          >
-            {video.title}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3
+              className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors flex-1"
+              onClick={onClick}
+            >
+              {video.title}
+            </h3>
+            {isWinner && (
+              <span className="text-xs font-semibold text-yellow-600 bg-yellow-100 px-2 py-1 rounded whitespace-nowrap">
+                🏆 Winner
+              </span>
+            )}
+          </div>
 
           <Link href={eventLink} className="text-sm text-muted-foreground">
             {eventTitle}

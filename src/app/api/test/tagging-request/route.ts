@@ -175,9 +175,11 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      result = await tagSelfInVideo(eventId, videoId);
+      // Role is required - default to "Dancer" if not provided
+      const videoRole = role || "Dancer";
+      result = await tagSelfInVideo(eventId, videoId, videoRole);
     } else if (action === "createTaggingRequest") {
-      result = await createTaggingRequest(eventId, videoId, role);
+      result = await createTaggingRequest(eventId, videoId, undefined, role);
     } else {
       return NextResponse.json(
         {

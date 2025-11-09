@@ -18,7 +18,19 @@ export const AVAILABLE_ROLES = [
 export const VIDEO_ROLE_DANCER = "Dancer";
 
 /**
- * Check if a role is valid for events (excludes video-only roles)
+ * Video-only role for winners
+ * This role can only be assigned to users in videos, not events
+ */
+export const VIDEO_ROLE_WINNER = "Winner";
+
+/**
+ * Section-only role for winners
+ * This role can only be assigned to users in sections, not events
+ */
+export const SECTION_ROLE_WINNER = "Winner";
+
+/**
+ * Check if a role is valid for events (excludes video-only and section-only roles)
  */
 export function isValidEventRole(role: string): role is RoleTitle {
   return isValidRole(role);
@@ -29,7 +41,27 @@ export function isValidEventRole(role: string): role is RoleTitle {
  * Includes both event roles and video-only roles
  */
 export function isValidVideoRole(role: string): boolean {
-  return isValidRole(role) || role === VIDEO_ROLE_DANCER;
+  return (
+    isValidRole(role) ||
+    role === VIDEO_ROLE_DANCER ||
+    role === VIDEO_ROLE_WINNER
+  );
+}
+
+/**
+ * Check if a role is valid for sections
+ * Currently only supports Winner role, but extensible for future roles
+ */
+export function isValidSectionRole(role: string): boolean {
+  return role === SECTION_ROLE_WINNER;
+}
+
+/**
+ * Check if a role is valid for videos or sections
+ * Helper function for combined validation
+ */
+export function isValidVideoOrSectionRole(role: string): boolean {
+  return isValidVideoRole(role) || isValidSectionRole(role);
 }
 
 /**

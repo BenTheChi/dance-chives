@@ -10,7 +10,14 @@ import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
 import { Video } from "@/types/event";
 import Link from "next/link";
 import { TagSelfVideoButton } from "@/components/events/TagSelfVideoButton";
-import { fromNeo4jRoleFormat, VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
+import { TagSelfAsWinnerVideoButton } from "@/components/events/TagSelfAsWinnerVideoButton";
+import { RemoveWinnerTagButton } from "@/components/events/RemoveWinnerTagButton";
+import {
+  fromNeo4jRoleFormat,
+  VIDEO_ROLE_DANCER,
+  VIDEO_ROLE_WINNER,
+} from "@/lib/utils/roles";
+import { Trophy } from "lucide-react";
 
 interface VideoLightboxProps {
   video: Video;
@@ -84,21 +91,27 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
-  //   const winners = video.taggedUsers.filter((user) => user.isWinner);
   const allParticipants = video?.taggedUsers || [];
 
-  // Group participants by role, defaulting to "Dancer" if no role
+  // Group participants by role
+  const winners = allParticipants.filter((user) => {
+    const role = fromNeo4jRoleFormat(user.role);
+    return role === VIDEO_ROLE_WINNER;
+  });
   const dancers = allParticipants.filter((user) => {
     const role = fromNeo4jRoleFormat(user.role);
     return !role || role === VIDEO_ROLE_DANCER;
   });
   const otherParticipants = allParticipants.filter((user) => {
     const role = fromNeo4jRoleFormat(user.role);
-    return role && role !== VIDEO_ROLE_DANCER;
+    return role && role !== VIDEO_ROLE_DANCER && role !== VIDEO_ROLE_WINNER;
   });
 
   const isUserTagged = currentUserId
     ? allParticipants.some((user) => user.id === currentUserId)
+    : false;
+  const isUserWinner = currentUserId
+    ? winners.some((user) => user.id === currentUserId)
     : false;
 
   // Determine which styles to display: section styles if applyStylesToVideos is true, otherwise video styles
@@ -109,6 +122,9 @@ export function VideoLightbox({
     return video.styles || [];
   }, [applyStylesToVideos, sectionStyles, video.styles]);
 
+  console.log(allParticipants);
+  console.log(winners);
+  console.log(isUserWinner);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogTitle className="sr-only">{video.title}</DialogTitle>
@@ -251,7 +267,7 @@ export function VideoLightbox({
 
               {displayStyles.length > 0 && <Separator />}
 
-              {/* Tag Self Button */}
+              {/* Tag Self Buttons */}
               {currentUserId && (
                 <div className="space-y-2 sm:space-y-3">
                   <TagSelfVideoButton
@@ -260,13 +276,28 @@ export function VideoLightbox({
                     currentUserId={currentUserId}
                     isUserTagged={isUserTagged}
                   />
+                  {!isUserWinner && (
+                    <TagSelfAsWinnerVideoButton
+                      eventId={eventId}
+                      videoId={video.id}
+                      currentUserId={currentUserId}
+                      isUserWinner={isUserWinner}
+                    />
+                  )}
+                  {isUserWinner && (
+                    <RemoveWinnerTagButton
+                      eventId={eventId}
+                      videoId={video.id}
+                      currentUserId={currentUserId}
+                    />
+                  )}
                 </div>
               )}
 
-              <Separator />
+              {(isUserWinner || currentUserId) && <Separator />}
 
               {/* Winners */}
-              {/* {winners.length > 0 && (
+              {winners.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-500" />
@@ -276,18 +307,25 @@ export function VideoLightbox({
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-2">
                     {winners.map((winner, index) => (
-                      <Badge
+                      <Link
                         key={index}
-                        variant="default"
-                        className="bg-yellow-500 hover:bg-yellow-600 text-xs"
+                        href={`/profile/${winner.username}`}
+                        className="hover:opacity-80 transition-opacity"
                       >
-                        <Trophy className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
-                        {winner.name}
-                      </Badge>
+                        <Badge
+                          variant="default"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-xs cursor-pointer"
+                        >
+                          <Trophy className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
+                          {winner.displayName}
+                        </Badge>
+                      </Link>
                     ))}
                   </div>
                 </div>
-              )} */}
+              )}
+
+              {winners.length > 0 && <Separator />}
 
               {/* Dancers */}
               {dancers.length > 0 && (

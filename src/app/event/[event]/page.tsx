@@ -27,6 +27,8 @@ import { isEventCreator } from "@/db/queries/team-member";
 import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { Badge } from "@/components/ui/badge";
+import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -58,6 +60,32 @@ export default async function EventPage({ params }: PageProps) {
   const isCreator = session?.user?.id
     ? await isEventCreator(event.id, session.user.id)
     : false;
+
+  // Check if user can edit the event
+  const canEdit =
+    session?.user?.id && session?.user?.auth !== undefined
+      ? canUpdateEvent(
+          session.user.auth,
+          {
+            eventId: event.id,
+            eventCreatorId: event.eventDetails.creatorId,
+          },
+          session.user.id
+        )
+      : false;
+
+  // Check if user can delete the event
+  const canDelete =
+    session?.user?.id && session?.user?.auth !== undefined
+      ? canDeleteEvent(
+          session.user.auth,
+          {
+            eventId: event.id,
+            eventCreatorId: event.eventDetails.creatorId,
+          },
+          session.user.id
+        )
+      : false;
 
   // Get current user's roles for this event (convert from Neo4j format to display format)
   const currentUserRoles = event.roles
@@ -98,10 +126,12 @@ export default async function EventPage({ params }: PageProps) {
             <Link href="/events" className="hover:underline">
               {`Back to Events`}
             </Link>
-            <Button asChild>
-              <Link href={`/event/${event.id}/edit`}>Edit</Link>
-            </Button>
-            {isCreator && <DeleteEventButton eventId={event.id} />}
+            {canEdit && (
+              <Button asChild>
+                <Link href={`/event/${event.id}/edit`}>Edit</Link>
+              </Button>
+            )}
+            {canDelete && <DeleteEventButton eventId={event.id} />}
           </div>
 
           {event.eventDetails.poster ? (
@@ -271,6 +301,28 @@ export default async function EventPage({ params }: PageProps) {
                         {section.videos.length === 1 ? "video" : "videos"}
                       </span>
                     </div>
+                    {/* Display section winners */}
+                    {section.winners && section.winners.length > 0 && (
+                      <div className="flex flex-wrap gap-1 items-center mb-2">
+                        <span className="text-lg font-bold">Winner:</span>
+                        {section.winners.map((winner) => (
+                          <Badge
+                            key={winner.id}
+                            variant="secondary"
+                            className="text-xs"
+                            asChild
+                          >
+                            {winner.username ? (
+                              <Link href={`/profile/${winner.username}`}>
+                                {winner.displayName}
+                              </Link>
+                            ) : (
+                              <span>{winner.displayName}</span>
+                            )}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                     {/* Display section styles */}
                     {section.applyStylesToVideos &&
                       section.styles &&

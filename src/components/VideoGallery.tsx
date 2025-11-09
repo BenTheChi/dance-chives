@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { EventCard } from "@/components/ui/event-card";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/event";
+import { VIDEO_ROLE_WINNER, fromNeo4jRoleFormat } from "@/lib/utils/roles";
 
 interface VideoGalleryProps {
   videos: Video[];
@@ -36,16 +37,32 @@ export default function VideoGallery({
     setSelectedVideoIndex(index);
   };
 
+  // Check if current user is a winner for each video
+  const videosWithWinnerStatus = useMemo(() => {
+    return videos.map((video) => {
+      if (!currentUserId || !video.taggedUsers) {
+        return { video, isWinner: false };
+      }
+      const isWinner = video.taggedUsers.some((user) => {
+        if (user.id !== currentUserId) return false;
+        const role = fromNeo4jRoleFormat(user.role);
+        return role === VIDEO_ROLE_WINNER;
+      });
+      return { video, isWinner };
+    });
+  }, [videos, currentUserId]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {videos.map((video: Video, index: number) => (
+        {videosWithWinnerStatus.map(({ video, isWinner }, index: number) => (
           <EventCard
             eventLink={eventLink}
             eventTitle={eventTitle}
             key={video.id}
             video={video}
             onClick={() => handleVideoSelect(index)}
+            isWinner={isWinner}
           />
         ))}
       </div>

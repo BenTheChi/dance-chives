@@ -4,6 +4,9 @@ import { getEvent } from "@/db/queries/event";
 import { generateShortId } from "@/lib/utils";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { FormValues } from "@/components/forms/event-form";
+import { auth } from "@/auth";
+import { canUpdateEvent } from "@/lib/utils/auth-utils";
+import { notFound, redirect } from "next/navigation";
 
 export default async function EditEventPage({
   params,
@@ -11,7 +14,37 @@ export default async function EditEventPage({
   params: Promise<{ event: string }>;
 }) {
   const { event } = await params;
+  const session = await auth();
+
+  // Check authentication
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const currEvent = await getEvent(event);
+
+  // Check if event exists
+  if (!currEvent) {
+    notFound();
+  }
+
+  // Check authorization
+  if (!session.user.auth) {
+    redirect(`/event/${event}`);
+  }
+
+  const hasPermission = canUpdateEvent(
+    session.user.auth,
+    {
+      eventId: event,
+      eventCreatorId: currEvent.eventDetails.creatorId,
+    },
+    session.user.id
+  );
+
+  if (!hasPermission) {
+    redirect(`/event/${event}`);
+  }
 
   //Convert roles from Neo4j format (uppercase) to display format
   const formattedRoles = currEvent.roles.map((role) => {

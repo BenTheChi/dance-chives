@@ -8,24 +8,24 @@ import {
   removeTagFromVideo,
   getPendingTagRequest,
 } from "@/lib/server_actions/request_actions";
-import { VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
+import { VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Trophy } from "lucide-react";
 
-interface TagSelfVideoButtonProps {
+interface TagSelfAsWinnerVideoButtonProps {
   eventId: string;
   videoId: string;
   currentUserId: string | undefined;
-  isUserTagged: boolean;
+  isUserWinner: boolean;
 }
 
-export function TagSelfVideoButton({
+export function TagSelfAsWinnerVideoButton({
   eventId,
   videoId,
   currentUserId,
-  isUserTagged,
-}: TagSelfVideoButtonProps) {
+  isUserWinner,
+}: TagSelfAsWinnerVideoButtonProps) {
   const [pendingRequest, setPendingRequest] = useState<{
     id: string;
     status: string;
@@ -46,20 +46,20 @@ export function TagSelfVideoButton({
       return;
     }
 
-    // If user is already tagged, they shouldn't have a pending request
-    if (isUserTagged) {
+    // If user is already a winner, they shouldn't have a pending request
+    if (isUserWinner) {
       setPendingRequest(null);
       return;
     }
 
-    // Check for pending dancer request - include role to differentiate from other roles
-    // Note: Role is stored in database as "Dancer" (not Neo4j format), so we search for it as-is
+    // Check for pending winner request - include role to differentiate from other roles
+    // Note: Role is stored in database as "Winner" (not Neo4j format), so we search for it as-is
     getPendingTagRequest(
       eventId,
       videoId,
       currentUserId,
       undefined,
-      VIDEO_ROLE_DANCER
+      VIDEO_ROLE_WINNER
     )
       .then((request) => {
         setPendingRequest(request);
@@ -68,14 +68,18 @@ export function TagSelfVideoButton({
         console.error("Error fetching pending request:", error);
         setPendingRequest(null);
       });
-  }, [eventId, videoId, currentUserId, isUserTagged]);
+  }, [eventId, videoId, currentUserId, isUserWinner]);
 
-  const handleTagSelf = () => {
+  const handleTagSelfAsWinner = () => {
     if (!currentUserId) return;
 
     startTransition(async () => {
       try {
-        const result = await tagSelfInVideo(eventId, videoId, "Dancer");
+        const result = await tagSelfInVideo(
+          eventId,
+          videoId,
+          VIDEO_ROLE_WINNER
+        );
 
         // Check if all requests already existed
         if (result.existingRequests && result.existingRequests.length > 0) {
@@ -97,7 +101,7 @@ export function TagSelfVideoButton({
               videoId,
               currentUserId,
               undefined,
-              VIDEO_ROLE_DANCER
+              VIDEO_ROLE_WINNER
             );
             setPendingRequest(request);
           } catch (fetchError) {
@@ -108,22 +112,21 @@ export function TagSelfVideoButton({
         }
 
         if (result.directTag) {
-          toast.success("Successfully tagged yourself in this video");
+          toast.success("Successfully tagged yourself as winner in this video");
           setPendingRequest(null);
-          router.refresh(); // Refresh the page to show the updated tag
+          router.refresh();
         } else {
           toast.success(
-            "Request to tag yourself in this video has been created"
+            "Request to tag yourself as winner in this video has been created"
           );
           setPendingRequest(null);
           try {
-            // Refresh to get pending request status
             const request = await getPendingTagRequest(
               eventId,
               videoId,
               currentUserId,
               undefined,
-              VIDEO_ROLE_DANCER
+              VIDEO_ROLE_WINNER
             );
             setPendingRequest(request);
           } catch (fetchError) {
@@ -132,73 +135,66 @@ export function TagSelfVideoButton({
           }
         }
       } catch (error) {
-        console.error("Error tagging self:", error);
+        console.error("Error tagging self as winner:", error);
         // Show error as a notification (toast) - this is graceful and won't crash the app
         const errorMessage =
           error instanceof Error
             ? error.message
-            : "Failed to tag yourself. Please try again.";
+            : "Failed to tag yourself as winner. Please try again.";
         toast.error(errorMessage);
         // Don't re-throw - we've handled it gracefully
       }
     });
   };
 
-  const handleRemoveTag = () => {
+  const handleRemoveWinnerTag = () => {
     if (!currentUserId) return;
 
     startTransition(async () => {
       try {
         await removeTagFromVideo(eventId, videoId, currentUserId);
-        toast.success("Successfully removed tag from this video");
-        router.refresh(); // Refresh the page to show the updated tag
+        toast.success("Successfully removed winner tag from this video");
+        router.refresh();
       } catch (error) {
-        console.error("Error removing tag:", error);
+        console.error("Error removing winner tag:", error);
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to remove tag. Please try again."
+            : "Failed to remove winner tag. Please try again."
         );
       }
     });
   };
 
+  // Hide button if user is already a winner
+  if (isUserWinner) {
+    return null;
+  }
+
   // Show pending request status
-  if (pendingRequest && !isUserTagged) {
+  if (pendingRequest) {
     return (
       <div className="flex flex-col gap-2">
         <Badge variant="outline" className="w-fit">
-          Dancer tag request pending
+          Winner tag request pending
         </Badge>
       </div>
     );
   }
 
-  // Show tag/untag button
+  // Show tag button
   return (
     <div className="flex flex-col gap-2">
-      {isUserTagged ? (
-        <Button
-          onClick={handleRemoveTag}
-          disabled={isPending}
-          variant="outline"
-          size="sm"
-          className="w-fit"
-        >
-          <X className="h-4 w-4 mr-2" />
-          Remove Tag
-        </Button>
-      ) : (
-        <Button
-          onClick={handleTagSelf}
-          disabled={isPending}
-          variant="default"
-          size="sm"
-          className="w-fit"
-        >
-          {isPending ? "Processing..." : "Tag Self"}
-        </Button>
-      )}
+      <Button
+        onClick={handleTagSelfAsWinner}
+        disabled={isPending}
+        variant="default"
+        size="sm"
+        className="w-fit bg-yellow-500 hover:bg-yellow-600"
+      >
+        <Trophy className="h-4 w-4 mr-2" />
+        {isPending ? "Processing..." : "Tag Self as Winner"}
+      </Button>
     </div>
   );
 }

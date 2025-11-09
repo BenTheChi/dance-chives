@@ -9,6 +9,7 @@ import {
 import { Event, EventDetails, Section, SubEvent, Picture } from "@/types/event";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
+import { canUpdateEvent } from "@/lib/utils/auth-utils";
 
 interface addEventProps {
   eventDetails: {
@@ -297,6 +298,32 @@ export async function editEvent(
   }
 
   const oldEvent = response.event as Event;
+
+  // Check authorization
+  if (!session.user.auth) {
+    return {
+      error: "User authorization level not found",
+      status: 403,
+      event: null,
+    };
+  }
+
+  const hasPermission = canUpdateEvent(
+    session.user.auth,
+    {
+      eventId: eventId,
+      eventCreatorId: oldEvent.eventDetails.creatorId,
+    },
+    session.user.id
+  );
+
+  if (!hasPermission) {
+    return {
+      error: "You do not have permission to edit this event",
+      status: 403,
+      event: null,
+    };
+  }
 
   try {
     //Delete pictures that have a file and a url

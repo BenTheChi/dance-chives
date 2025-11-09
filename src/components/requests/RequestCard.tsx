@@ -15,6 +15,7 @@ import {
 } from "@/lib/server_actions/request_actions";
 import { toast } from "sonner";
 import { useState, ReactElement } from "react";
+import { VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
 
 interface RequestCardProps {
   request: {
@@ -26,6 +27,8 @@ interface RequestCardProps {
     eventTitle?: string;
     videoId?: string;
     videoTitle?: string | null;
+    sectionId?: string;
+    sectionTitle?: string | null;
     role?: string;
     status: string;
     createdAt: Date;
@@ -61,11 +64,20 @@ function getRequestTitle(
   type: string,
   videoTitle?: string | null,
   videoId?: string,
+  sectionTitle?: string | null,
+  sectionId?: string,
   role?: string
 ): string {
   if (type === "TAGGING") {
-    if (videoTitle || videoId) return "Video Tag";
-    if (role) return "Role Tag";
+    if (videoTitle || videoId) {
+      // For video tags, always show the role (default to "Dancer" if missing)
+      const displayRole = role || VIDEO_ROLE_DANCER;
+      return `Video Tag - ${displayRole}`;
+    }
+    if (sectionTitle || sectionId) {
+      return role ? `Section Tag - ${role}` : "Section Tag";
+    }
+    if (role) return `Role Tag - ${role}`;
   }
   if (type === "TEAM_MEMBER") return "Team Member Request";
   if (type === "AUTH_LEVEL_CHANGE") return "Authorization Level Change Request";
@@ -97,6 +109,7 @@ function renderRequestDetails(
   request: RequestCardProps["request"]
 ): ReactElement[] {
   const details: ReactElement[] = [];
+  console.log(request);
 
   // Common: sender information
   if (request.sender) {
@@ -121,6 +134,13 @@ function renderRequestDetails(
       details.push(
         <p key="video">
           <span className="font-medium">Video:</span> {request.videoTitle}
+        </p>
+      );
+    }
+    if (request.sectionTitle) {
+      details.push(
+        <p key="section">
+          <span className="font-medium">Section:</span> {request.sectionTitle}
         </p>
       );
     }
@@ -219,6 +239,8 @@ export function IncomingRequestCard({ request }: RequestCardProps) {
             request.type,
             request.videoTitle,
             request.videoId,
+            request.sectionTitle,
+            request.sectionId,
             request.role
           )}
         </CardTitle>
@@ -300,6 +322,8 @@ export function OutgoingRequestCard({ request }: RequestCardProps) {
             request.type,
             request.videoTitle,
             request.videoId,
+            request.sectionTitle,
+            request.sectionId,
             request.role
           )}
         </CardTitle>

@@ -5,6 +5,9 @@ import {
   AVAILABLE_ROLES,
   VIDEO_ROLE_DANCER,
   isValidVideoRole,
+  isValidSectionRole,
+  SECTION_ROLE_WINNER,
+  VIDEO_ROLE_WINNER,
 } from "@/lib/utils/roles";
 
 /**
@@ -75,6 +78,29 @@ export async function videoExistsInEvent(
       0
     );
     return total > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Check if a section exists in Neo4j and belongs to the event
+ */
+export async function sectionExistsInEvent(
+  eventId: string,
+  sectionId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (e:Event {id: $eventId})<-[:IN]-(s:Section {id: $sectionId})
+      RETURN count(s) as count
+      `,
+      { eventId, sectionId }
+    );
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
   } finally {
     await session.close();
   }
@@ -233,12 +259,14 @@ export async function getEventCityId(eventId: string): Promise<string | null> {
 }
 
 /**
- * Apply a tag to a user in Neo4j (for videos or event roles)
- * Throws error if event or video doesn't exist
+ * Apply a tag to a user in Neo4j (for videos, sections, or event roles)
+ * Throws error if event, video, or section doesn't exist
+ * Role is required for videos and sections
  */
 export async function applyTag(
   eventId: string,
   videoId: string | null,
+  sectionId: string | null,
   userId: string,
   role?: string
 ): Promise<void> {
@@ -250,6 +278,26 @@ export async function applyTag(
       throw new Error(`Event ${eventId} does not exist`);
     }
 
+    // Validate parameter combinations:
+    // - videoId + role: video tagging with role (e.g., "Dancer", "Winner")
+    // - sectionId + role: section tagging with role (e.g., "Winner")
+    // - role only: event role tagging (e.g., "Organizer", "DJ")
+    // Invalid: videoId + sectionId, videoId without role, sectionId without role
+    if (videoId && sectionId) {
+      throw new Error("Cannot provide both videoId and sectionId");
+    }
+    if (videoId && !role) {
+      throw new Error("Role is required when videoId is provided");
+    }
+    if (sectionId && !role) {
+      throw new Error("Role is required when sectionId is provided");
+    }
+    if (!videoId && !sectionId && !role) {
+      throw new Error(
+        "At least one of videoId, sectionId, or role must be provided"
+      );
+    }
+
     if (videoId) {
       // Validate video exists and belongs to event
       const videoExists = await videoExistsInEvent(eventId, videoId);
@@ -257,21 +305,24 @@ export async function applyTag(
         throw new Error(`Video ${videoId} does not exist in event ${eventId}`);
       }
 
-      // Default to "Dancer" role for video tags if no role specified
-      const videoRole = role || VIDEO_ROLE_DANCER;
+      // Role is required for video tags
+      if (!role) {
+        throw new Error("Role is required for video tags");
+      }
 
-      // Validate video role (allows both event roles and video-only roles like Dancer)
-      if (!isValidVideoRole(videoRole)) {
+      // Validate video role (allows both event roles and video-only roles like Dancer, Winner)
+      if (!isValidVideoRole(role)) {
         throw new Error(
-          `Invalid video role: ${videoRole}. Must be one of: ${AVAILABLE_ROLES.join(
+          `Invalid video role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(
             ", "
-          )}, or ${VIDEO_ROLE_DANCER}`
+          )}, ${VIDEO_ROLE_DANCER}, or ${VIDEO_ROLE_WINNER}`
         );
       }
 
       // Tag user in specific video with role property on the relationship
+      // Support multiple roles by storing roles in an array
       // Handle both videos directly in sections and videos in brackets
-      const neo4jRole = toNeo4jRoleFormat(videoRole);
+      const neo4jRole = toNeo4jRoleFormat(role);
       console.log(
         "✅ [applyTag] Neo4j role:",
         eventId,
@@ -286,9 +337,53 @@ export async function applyTag(
         WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
            OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
         MERGE (u)-[r:IN]->(v)
-        SET r.role = $role
+        ON CREATE SET r.roles = [$role]
+        ON MATCH SET r.roles = CASE 
+          WHEN $role IN r.roles THEN r.roles 
+          ELSE r.roles + $role 
+        END
         `,
         { eventId, videoId, userId, role: neo4jRole }
+      );
+    } else if (sectionId) {
+      // Validate section exists and belongs to event
+      const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+      if (!sectionExists) {
+        throw new Error(
+          `Section ${sectionId} does not exist in event ${eventId}`
+        );
+      }
+
+      // Role is required for section tags
+      if (!role) {
+        throw new Error("Role is required for section tags");
+      }
+
+      // Validate section role (currently only Winner is supported)
+      if (!isValidSectionRole(role)) {
+        throw new Error(
+          `Invalid section role: ${role}. Must be: ${SECTION_ROLE_WINNER}`
+        );
+      }
+
+      // Tag user in specific section with role property on the relationship
+      const neo4jRole = toNeo4jRoleFormat(role);
+      console.log(
+        "✅ [applyTag] Section tag:",
+        eventId,
+        sectionId,
+        userId,
+        neo4jRole
+      );
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})
+        MATCH (s:Section {id: $sectionId})
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        MERGE (u)-[r:IN]->(s)
+        SET r.role = $role
+        `,
+        { eventId, sectionId, userId, role: neo4jRole }
       );
     } else if (role) {
       // Validate role
@@ -309,7 +404,7 @@ export async function applyTag(
         { eventId, userId, role: neo4jRole }
       );
     } else {
-      // Default tagging relationship
+      // Default tagging relationship (no role specified)
       await session.run(
         `
         MATCH (u:User {id: $userId})
@@ -430,13 +525,98 @@ export async function isUserTaggedInVideo(
 }
 
 /**
- * Remove a tag from a user (for videos or event roles)
+ * Check if a user has a specific role in a video
+ * Returns true if user has (User)-[r:IN]->(Video) relationship with the specified role
+ */
+export async function isUserTaggedInVideoWithRole(
+  eventId: string,
+  videoId: string,
+  userId: string,
+  role: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    // Validate video exists and belongs to event
+    const videoExists = await videoExistsInEvent(eventId, videoId);
+    if (!videoExists) {
+      return false;
+    }
+
+    const neo4jRole = toNeo4jRoleFormat(role);
+
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:IN]->(v:Video {id: $videoId})
+      WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+         OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+      WITH r, v,
+           CASE 
+             WHEN r.roles IS NOT NULL THEN r.roles
+             WHEN r.role IS NOT NULL THEN [r.role]
+             ELSE []
+           END as roles
+      WHERE $role IN roles
+      RETURN count(v) as count
+      `,
+      { eventId, videoId, userId, role: neo4jRole }
+    );
+
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Check if a user is a winner of a section
+ * Returns true if user has (User)-[r:IN {role: "WINNER"}]->(Section) relationship
+ */
+export async function isUserWinnerOfSection(
+  eventId: string,
+  sectionId: string,
+  userId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      return false;
+    }
+
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:IN]->(s:Section {id: $sectionId})
+      WHERE (s)-[:IN]->(:Event {id: $eventId})
+      WITH r, s,
+           CASE 
+             WHEN r.roles IS NOT NULL THEN r.roles
+             WHEN r.role IS NOT NULL THEN [r.role]
+             ELSE []
+           END as roles
+      WHERE "WINNER" IN roles
+      RETURN count(s) as count
+      `,
+      { eventId, sectionId, userId }
+    );
+
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Remove a tag from a user (for videos, sections, or event roles)
  * Deletes the relationship in Neo4j
- * Throws error if event or video doesn't exist
+ * Throws error if event, video, or section doesn't exist
  */
 export async function removeTag(
   eventId: string,
   videoId: string | null,
+  sectionId: string | null,
   userId: string,
   role?: string
 ): Promise<void> {
@@ -456,14 +636,56 @@ export async function removeTag(
       }
 
       // Remove user tag from specific video
+      // If role is specified, remove only that role from the array; otherwise delete the relationship
+      if (role) {
+        const neo4jRole = toNeo4jRoleFormat(role);
+        await session.run(
+          `
+          MATCH (u:User {id: $userId})-[r:IN]->(v:Video {id: $videoId})
+          WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+             OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+          WITH r,
+               CASE 
+                 WHEN r.roles IS NOT NULL THEN [role IN r.roles WHERE role <> $role]
+                 WHEN r.role = $role THEN []
+                 ELSE []
+               END as newRoles
+          SET r.roles = newRoles
+          WITH r, newRoles
+          WHERE size(newRoles) = 0
+          DELETE r
+          `,
+          { eventId, videoId, userId, role: neo4jRole }
+        );
+      } else {
+        // Remove entire relationship if no specific role
+        await session.run(
+          `
+          MATCH (u:User {id: $userId})-[r:IN]->(v:Video {id: $videoId})
+          WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+             OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+          DELETE r
+          `,
+          { eventId, videoId, userId }
+        );
+      }
+    } else if (sectionId) {
+      // Validate section exists and belongs to event
+      const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+      if (!sectionExists) {
+        throw new Error(
+          `Section ${sectionId} does not exist in event ${eventId}`
+        );
+      }
+
+      // Remove user tag from specific section
       await session.run(
         `
-        MATCH (u:User {id: $userId})-[r:IN]->(v:Video {id: $videoId})
-        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
-           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        MATCH (u:User {id: $userId})-[r:IN]->(s:Section {id: $sectionId})
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
         DELETE r
         `,
-        { eventId, videoId, userId }
+        { eventId, sectionId, userId }
       );
     } else if (role) {
       // Validate role

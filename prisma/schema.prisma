@@ -134,9 +134,10 @@ model TaggingRequest {
   id           String        @id @default(cuid())
   eventId      String // Event ID from Neo4j
   videoId      String? // Optional video ID from Neo4j
+  sectionId    String? // Optional section ID from Neo4j
   senderId     String // User requesting the tag
   targetUserId String // User being tagged
-  role         String? // Optional role/tag type
+  role         String? // Optional role/tag type (required for videos and sections)
   status       RequestStatus @default(PENDING)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -147,6 +148,7 @@ model TaggingRequest {
   @@index([eventId])
   @@index([senderId])
   @@index([targetUserId])
+  @@index([sectionId])
   @@index([status])
 }
 

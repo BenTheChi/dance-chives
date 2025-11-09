@@ -54,6 +54,7 @@ export interface Section {
   brackets: Bracket[];
   styles?: string[];
   applyStylesToVideos?: boolean;
+  winners?: UserSearchItem[];
 }
 
 export interface Bracket {

@@ -53,7 +53,7 @@ const bracketSchema = z.object({
 const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
-  description: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
+  description: z.string(),
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
@@ -87,8 +87,8 @@ const eventDetailsSchema = z.object({
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
       "Event date must be in a valid format"
     ), // switch to min for all non-optional
-  description: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
-  schedule: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
+  description: z.string(),
+  schedule: z.string(),
   address: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -112,8 +112,8 @@ const roleSchema = z.object({
 const subEventSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Sub-event title is required"), // switch to min for all non-optional
-  description: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
-  schedule: z.preprocess((val) => val === null || val === undefined ? "" : val, z.string().default("")),
+  description: z.string(),
+  schedule: z.string(),
   startDate: z
     .string()
     .min(1, "Start date is required")
@@ -136,6 +136,25 @@ const formSchema = z.object({
 });
 
 export type FormValues = z.infer<typeof formSchema>;
+
+// Helper function to normalize sections for form (ensures description is always string)
+function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
+  return sections.map((section) => ({
+    ...section,
+    description: section.description ?? "",
+  }));
+}
+
+// Helper function to normalize subevents for form (ensures description and schedule are always string)
+function normalizeSubEventsForForm(
+  subEvents: SubEvent[]
+): FormValues["subEvents"] {
+  return subEvents.map((subEvent) => ({
+    ...subEvent,
+    description: subEvent.description ?? "",
+    schedule: subEvent.schedule ?? "",
+  }));
+}
 
 interface EventFormProps {
   initialData?: FormValues;
@@ -211,7 +230,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       videos: [],
       brackets: [],
     };
-    setValue("sections", [...sections, newSection]);
+    setValue("sections", normalizeSectionsForForm([...sections, newSection]));
     setActiveSectionId(newSection.id);
   };
 
@@ -219,7 +238,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     const updatedSections = sections.filter(
       (section) => section.id !== sectionId
     );
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
 
     // If we removed the active section, switch to the first available section
     if (activeSectionId === sectionId && updatedSections.length > 0) {
@@ -243,13 +262,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       schedule: "",
       poster: null,
     };
-    setValue("subEvents", [...subEvents, newSubEvent]);
+    setValue(
+      "subEvents",
+      normalizeSubEventsForForm([...subEvents, newSubEvent])
+    );
     setActiveSubEventId(newSubEvent.id);
   };
 
   const removeSubEvent = (subEventId: string) => {
     const updatedSubEvents = subEvents.filter((s) => s.id !== subEventId);
-    setValue("subEvents", updatedSubEvents);
+    setValue("subEvents", normalizeSubEventsForForm(updatedSubEvents));
 
     // If we removed the active subevent, switch to the first available subevent
     if (activeSubEventId === subEventId && updatedSubEvents.length > 0) {
@@ -285,11 +307,23 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     setIsSubmitting(true);
 
     try {
+      // Ensure creatorId is a string (will be overridden by session in server action, but needed for type safety)
+      const normalizedData = {
+        ...data,
+        eventDetails: {
+          ...data.eventDetails,
+          creatorId: data.eventDetails.creatorId || "",
+        },
+      };
+
       let response;
       if (isEditing) {
-        response = await editEvent(pathname[pathname.length - 2], data);
+        response = await editEvent(
+          pathname[pathname.length - 2],
+          normalizedData
+        );
       } else {
-        response = await addEvent(data);
+        response = await addEvent(normalizedData);
       }
 
       if (response.error) {
@@ -597,6 +631,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   activeSection={activeSection}
                   sections={sections}
                   activeSectionId={activeSectionId}
+                  eventId={
+                    isEditing ? pathname[pathname.length - 2] : undefined
+                  }
                 />
               )}
             </div>

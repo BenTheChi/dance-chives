@@ -16,6 +16,7 @@ import Link from "next/link";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import Eventcard from "@/components/cards";
 import { TaggedVideosGrid } from "@/components/profile/TaggedVideosGrid";
+import { WinningSectionCard } from "@/components/profile/WinningSectionCard";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -203,6 +204,24 @@ export default async function ProfilePage({ params }: PageProps) {
           </Card>
         )}
 
+        {/* Winning Videos */}
+        {profile.winningVideos && profile.winningVideos.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Winning Videos</CardTitle>
+              <CardDescription>
+                Videos you won ({profile.winningVideos.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TaggedVideosGrid
+                videos={profile.winningVideos}
+                isWinner={true}
+              />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tagged Videos */}
         {profile.taggedVideos && profile.taggedVideos.length > 0 && (
           <Card>
@@ -218,10 +237,35 @@ export default async function ProfilePage({ params }: PageProps) {
           </Card>
         )}
 
+        {/* Sections Won */}
+        {profile.winningSections && profile.winningSections.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Sections Won</CardTitle>
+              <CardDescription>
+                Sections you won ({profile.winningSections.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {profile.winningSections.map((section: any) => (
+                  <WinningSectionCard
+                    key={section.sectionId}
+                    section={section}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Empty State */}
         {(!profile.eventsCreated || profile.eventsCreated.length === 0) &&
           (!profile.eventsWithRoles || profile.eventsWithRoles.length === 0) &&
-          (!profile.taggedVideos || profile.taggedVideos.length === 0) && (
+          (!profile.taggedVideos || profile.taggedVideos.length === 0) &&
+          (!profile.winningVideos || profile.winningVideos.length === 0) &&
+          (!profile.winningSections ||
+            profile.winningSections.length === 0) && (
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">

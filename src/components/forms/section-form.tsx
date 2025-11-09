@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,13 +14,39 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Trophy } from "lucide-react";
 import type { Control, UseFormSetValue } from "react-hook-form";
 import { Section, Bracket, Video } from "@/types/event";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
 import { FormValues } from "./event-form";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
+import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
+import { UserSearchItem } from "@/types/user";
+import { Badge } from "@/components/ui/badge";
+import {
+  markUserAsSectionWinner,
+  removeSectionWinnerTag,
+} from "@/lib/server_actions/request_actions";
+import { toast } from "sonner";
+
+async function searchUsers(query: string): Promise<UserSearchItem[]> {
+  return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to fetch users", response.statusText);
+        return [];
+      }
+      return response.json();
+    })
+    .then((data) => {
+      return data.data;
+    })
+    .catch((error) => {
+      console.error(error);
+      return [];
+    });
+}
 
 interface SectionFormProps {
   control: Control<FormValues>;
@@ -29,6 +55,15 @@ interface SectionFormProps {
   activeSection: Section;
   sections: Section[];
   activeSectionId: string;
+  eventId?: string; // Event ID for winner tagging (only in edit mode)
+}
+
+// Helper function to normalize sections for form (ensures description is always string)
+function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
+  return sections.map((section) => ({
+    ...section,
+    description: section.description ?? "",
+  }));
 }
 
 export function SectionForm({
@@ -38,10 +73,23 @@ export function SectionForm({
   activeSection,
   sections,
   activeSectionId,
+  eventId,
 }: SectionFormProps) {
   const [activeBracketId, setActiveBracketId] = useState(
     activeSection.brackets.length > 0 ? activeSection.brackets[0].id : ""
   );
+  const [sectionWinners, setSectionWinners] = useState<UserSearchItem[]>([]);
+  const [isProcessingWinner, setIsProcessingWinner] = useState<string | null>(
+    null
+  );
+
+  // Load existing section winners (would need to be passed from parent or fetched)
+  // For now, we'll manage it locally
+  useEffect(() => {
+    // Section winners would need to be loaded from the event data
+    // This is a placeholder - in a real implementation, you'd fetch this
+    setSectionWinners([]);
+  }, [activeSectionId, eventId]);
 
   const addBracket = () => {
     if (!activeSection) return;
@@ -59,7 +107,9 @@ export function SectionForm({
     );
 
     // Set active bracket first, then update form
-    setValue("sections", updatedSections, { shouldValidate: true });
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
+      shouldValidate: true,
+    });
     setActiveBracketId(newBracket.id);
   };
 
@@ -75,7 +125,7 @@ export function SectionForm({
         : section
     );
 
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
 
     // If we removed the active bracket, switch to the first available bracket
     if (activeBracketId === bracketId && updatedBrackets.length > 0) {
@@ -95,11 +145,15 @@ export function SectionForm({
 
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId
-        ? { ...section, videos: [...section.videos, newVideo] }
-        : section
+        ? {
+            ...section,
+            videos: [...section.videos, newVideo],
+            description: section.description ?? "",
+          }
+        : { ...section, description: section.description ?? "" }
     );
 
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
   const removeVideoFromSection = (videoId: string) => {
@@ -114,14 +168,14 @@ export function SectionForm({
         : section
     );
 
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
   const handleStylesChange = (styles: string[]) => {
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId ? { ...section, styles } : section
     );
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
 
     // If applyStylesToVideos is true, propagate styles to all videos
     if (activeSection.applyStylesToVideos) {
@@ -167,7 +221,7 @@ export function SectionForm({
       }
     });
 
-    setValue("sections", updatedSections, {
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
       shouldValidate: false,
       shouldDirty: false,
       shouldTouch: false,
@@ -209,7 +263,53 @@ export function SectionForm({
       };
     });
 
-    setValue("sections", updatedSections);
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+  };
+
+  const handleMarkAsSectionWinner = async (user: UserSearchItem) => {
+    if (!eventId) {
+      toast.error("Event ID is required to mark winners");
+      return;
+    }
+
+    setIsProcessingWinner(user.id);
+    try {
+      await markUserAsSectionWinner(eventId, activeSection.id, user.id);
+      setSectionWinners((prev) => [...prev, user]);
+      toast.success("User marked as section winner");
+    } catch (error) {
+      console.error("Error marking user as section winner:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to mark user as section winner"
+      );
+    } finally {
+      setIsProcessingWinner(null);
+    }
+  };
+
+  const handleRemoveSectionWinner = async (userId: string) => {
+    if (!eventId) {
+      toast.error("Event ID is required to remove winner tags");
+      return;
+    }
+
+    setIsProcessingWinner(userId);
+    try {
+      await removeSectionWinnerTag(eventId, activeSection.id, userId);
+      setSectionWinners((prev) => prev.filter((w) => w.id !== userId));
+      toast.success("Section winner tag removed");
+    } catch (error) {
+      console.error("Error removing section winner tag:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove section winner tag"
+      );
+    } finally {
+      setIsProcessingWinner(null);
+    }
   };
 
   return (
@@ -314,6 +414,55 @@ export function SectionForm({
           )}
         />
 
+        {/* Section Winners - Only show in edit mode */}
+        {eventId && (
+          <div className="space-y-2">
+            <FormLabel>Section Winners</FormLabel>
+            <DebouncedSearchMultiSelect<UserSearchItem>
+              onSearch={searchUsers}
+              placeholder="Search users to mark as section winners..."
+              getDisplayValue={(item) =>
+                `${item.displayName} (${item.username})`
+              }
+              getItemId={(item) => item.id}
+              onChange={(users) => {
+                // When users are selected, mark them as winners
+                users.forEach((user) => {
+                  if (!sectionWinners.find((w) => w.id === user.id)) {
+                    handleMarkAsSectionWinner(user);
+                  }
+                });
+              }}
+              value={sectionWinners}
+              name="Section Winners"
+            />
+            {sectionWinners.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {sectionWinners.map((winner) => (
+                  <Badge
+                    key={winner.id}
+                    variant="default"
+                    className="bg-yellow-500 hover:bg-yellow-600"
+                  >
+                    <Trophy className="w-3 h-3 mr-1" />
+                    {winner.displayName}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveSectionWinner(winner.id)}
+                      disabled={isProcessingWinner === winner.id}
+                      className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Videos Section - Always shown */}
         <div className="space-y-4">
           {activeSection.hasBrackets ? (
@@ -372,6 +521,7 @@ export function SectionForm({
                         sections={sections}
                         activeSectionId={activeSectionId}
                         activeBracketId={activeBracketId}
+                        eventId={eventId}
                       />
                     )}
                   </TabsContent>
@@ -407,6 +557,7 @@ export function SectionForm({
                     activeSectionId={activeSectionId}
                     onRemove={() => removeVideoFromSection(video.id)}
                     context="section"
+                    eventId={eventId}
                   />
                 ))}
               </div>

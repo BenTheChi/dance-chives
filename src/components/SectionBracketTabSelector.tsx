@@ -8,6 +8,9 @@ import { StyleBadge } from "./ui/style-badge";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import VideoGallery from "./VideoGallery";
+import { TagSelfAsWinnerSectionButton } from "@/components/events/TagSelfAsWinnerSectionButton";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 export default function SectionBracketTabSelector({
   sections,
@@ -24,7 +27,33 @@ export default function SectionBracketTabSelector({
   const [activeBracket, setActiveBracket] = useState(
     sections[activeSection]?.brackets[0]?.id || ""
   );
+  const [isUserWinner, setIsUserWinner] = useState(false);
   const router = useRouter();
+
+  // Check if current user is winner of active section
+  useEffect(() => {
+    const checkWinnerStatus = async () => {
+      if (currentUserId && sections[activeSection]?.id) {
+        try {
+          const { checkUserWinnerOfSection } = await import(
+            "@/lib/server_actions/request_actions"
+          );
+          const isWinner = await checkUserWinnerOfSection(
+            eventId,
+            sections[activeSection].id,
+            currentUserId
+          );
+          setIsUserWinner(isWinner);
+        } catch (error) {
+          console.error("Error checking winner status:", error);
+          setIsUserWinner(false);
+        }
+      } else {
+        setIsUserWinner(false);
+      }
+    };
+    checkWinnerStatus();
+  }, [currentUserId, activeSection, sections, eventId]);
 
   useEffect(() => {
     if (sections[activeSection]?.brackets.length > 0) {
@@ -85,6 +114,29 @@ export default function SectionBracketTabSelector({
       </nav>
       <div className="flex flex-col gap-1 items-center p-5">
         <h1 className="text-xl font-bold">{sections[activeSection]?.title}</h1>
+        {/* Display section winners */}
+        {sections[activeSection]?.winners &&
+          sections[activeSection]!.winners.length > 0 && (
+            <div className="flex flex-wrap gap-1 items-center">
+              <span className="text-lg font-bold">Winner:</span>
+              {sections[activeSection]!.winners.map((winner) => (
+                <Badge
+                  key={winner.id}
+                  variant="secondary"
+                  className="text-xs"
+                  asChild
+                >
+                  {winner.username ? (
+                    <Link href={`/profile/${winner.username}`}>
+                      {winner.displayName}
+                    </Link>
+                  ) : (
+                    <span>{winner.displayName}</span>
+                  )}
+                </Badge>
+              ))}
+            </div>
+          )}
         {displayStyles.length > 0 && (
           <div className="flex flex-wrap gap-1 justify-center mt-1">
             {displayStyles.map((style) => (
@@ -95,6 +147,16 @@ export default function SectionBracketTabSelector({
         <p className="text-sm text-gray-500">
           {sections[activeSection]?.description}
         </p>
+        {currentUserId && sections[activeSection]?.id && (
+          <div className="mt-4">
+            <TagSelfAsWinnerSectionButton
+              eventId={eventId}
+              sectionId={sections[activeSection].id}
+              currentUserId={currentUserId}
+              isUserWinner={isUserWinner}
+            />
+          </div>
+        )}
       </div>
       {sections[activeSection]?.hasBrackets ? (
         <div>

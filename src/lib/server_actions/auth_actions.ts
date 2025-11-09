@@ -520,18 +520,75 @@ export async function getUserProfile(userIdOrUsername: string) {
     }));
 
     // Get videos where user is tagged with full video data (collecting all roles)
+    // Support both r.role (legacy) and r.roles (array) for backward compatibility
     const taggedVideosResult = await session.run(
       `
       MATCH (u:User {id: $userId})-[r:IN]->(v:Video)
       OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
       OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
       OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
-      WITH v, COALESCE(e, e2) as event, COALESCE(s, s2) as section, r.role as role, style
+      WITH v, COALESCE(e, e2) as event, COALESCE(s, s2) as section, style,
+           CASE 
+             WHEN r.roles IS NOT NULL THEN r.roles
+             WHEN r.role IS NOT NULL THEN [r.role]
+             ELSE []
+           END as roles
       WHERE event IS NOT NULL
+      UNWIND roles as role
       RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
              event.id as eventId, event.title as eventTitle, event.createdAt as eventCreatedAt,
              section.id as sectionId, section.title as sectionTitle, 
              collect(DISTINCT role) as roles, collect(DISTINCT style.name) as styles
+      ORDER BY eventCreatedAt DESC
+      `,
+      { userId }
+    );
+
+    // Get winning videos (where role contains "WINNER")
+    // Support both r.role (legacy) and r.roles (array) for backward compatibility
+    const winningVideosResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:IN]->(v:Video)
+      WITH v, r,
+           CASE 
+             WHEN r.roles IS NOT NULL THEN r.roles
+             WHEN r.role IS NOT NULL THEN [r.role]
+             ELSE []
+           END as roles
+      WHERE "WINNER" IN roles
+      OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
+      OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
+      OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
+      WITH v, COALESCE(e, e2) as event, COALESCE(s, s2) as section, style
+      WHERE event IS NOT NULL
+      RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
+             event.id as eventId, event.title as eventTitle, event.createdAt as eventCreatedAt,
+             section.id as sectionId, section.title as sectionTitle,
+             collect(DISTINCT style.name) as styles
+      ORDER BY eventCreatedAt DESC
+      `,
+      { userId }
+    );
+
+    // Get winning sections (where role contains "WINNER")
+    // Support both r.role (legacy) and r.roles (array) for backward compatibility
+    const winningSectionsResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:IN]->(s:Section)
+      WITH s, r,
+           CASE 
+             WHEN r.roles IS NOT NULL THEN r.roles
+             WHEN r.role IS NOT NULL THEN [r.role]
+             ELSE []
+           END as roles
+      WHERE "WINNER" IN roles
+      MATCH (s)-[:IN]->(e:Event)
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      RETURN s.id as sectionId, s.title as sectionTitle,
+             e.id as eventId, e.title as eventTitle, e.startDate as startDate,
+             e.createdAt as eventCreatedAt, poster.url as imageUrl,
+             c.name as city, c.id as cityId
       ORDER BY eventCreatedAt DESC
       `,
       { userId }
@@ -548,11 +605,19 @@ export async function getUserProfile(userIdOrUsername: string) {
         `
         MATCH (v:Video)<-[r:IN]-(u:User)
         WHERE v.id IN $videoIds
-        RETURN v.id as videoId, collect(DISTINCT {
+        WITH v, u, r,
+             CASE 
+               WHEN r.roles IS NOT NULL THEN r.roles
+               WHEN r.role IS NOT NULL THEN [r.role]
+               ELSE []
+             END as roles
+        UNWIND roles as role
+        WITH v, u, role
+        RETURN v.id as videoId, collect({
           id: u.id,
           displayName: u.displayName,
           username: u.username,
-          role: r.role
+          role: role
         }) as taggedUsers
         `,
         { videoIds }
@@ -580,6 +645,68 @@ export async function getUserProfile(userIdOrUsername: string) {
       taggedUsers: taggedUsersMap.get(record.get("videoId")) || [],
     }));
 
+    // Get all tagged users for winning videos
+    const winningVideoIds = winningVideosResult.records.map((record) =>
+      record.get("videoId")
+    );
+    const winningVideoUsersMap = new Map<string, any[]>();
+
+    if (winningVideoIds.length > 0) {
+      const winningVideoUsersResult = await session.run(
+        `
+        MATCH (v:Video)<-[r:IN]-(u:User)
+        WHERE v.id IN $videoIds
+        WITH v, u, r,
+             CASE 
+               WHEN r.roles IS NOT NULL THEN r.roles
+               WHEN r.role IS NOT NULL THEN [r.role]
+               ELSE []
+             END as roles
+        UNWIND roles as role
+        WITH v, u, role
+        RETURN v.id as videoId, collect({
+          id: u.id,
+          displayName: u.displayName,
+          username: u.username,
+          role: role
+        }) as taggedUsers
+        `,
+        { videoIds: winningVideoIds }
+      );
+
+      winningVideoUsersResult.records.forEach((record) => {
+        const videoId = record.get("videoId");
+        const taggedUsers = (record.get("taggedUsers") || []).filter(
+          (tu: any) => tu.id !== null && tu.id !== undefined
+        );
+        winningVideoUsersMap.set(videoId, taggedUsers);
+      });
+    }
+
+    const winningVideos = winningVideosResult.records.map((record) => ({
+      videoId: record.get("videoId"),
+      videoTitle: record.get("videoTitle") || "Untitled Video",
+      videoSrc: record.get("videoSrc"),
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle") || "Untitled Event",
+      sectionId: record.get("sectionId"),
+      sectionTitle: record.get("sectionTitle") || "Untitled Section",
+      styles: record.get("styles") || [],
+      taggedUsers: winningVideoUsersMap.get(record.get("videoId")) || [],
+    }));
+
+    const winningSections = winningSectionsResult.records.map((record) => ({
+      sectionId: record.get("sectionId"),
+      sectionTitle: record.get("sectionTitle") || "Untitled Section",
+      eventId: record.get("eventId"),
+      eventTitle: record.get("eventTitle") || "Untitled Event",
+      startDate: record.get("startDate"),
+      createdAt: record.get("eventCreatedAt"),
+      imageUrl: record.get("imageUrl"),
+      city: record.get("city"),
+      cityId: record.get("cityId") as number | undefined,
+    }));
+
     session.close();
 
     // Exclude id from being sent to client
@@ -592,6 +719,8 @@ export async function getUserProfile(userIdOrUsername: string) {
         eventsCreated,
         eventsWithRoles,
         taggedVideos,
+        winningVideos,
+        winningSections,
       },
     };
   } catch (error) {
