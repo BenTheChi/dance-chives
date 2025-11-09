@@ -1,8 +1,6 @@
 "use client";
 
 import { AppNavbar } from "@/components/AppNavbar";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 
 export default function Home() {
@@ -15,9 +13,6 @@ export default function Home() {
         <div>
           <header>
             <h1>Home Dev Test</h1>
-            <Link href="/add-event">
-              <Button>Add Event</Button>
-            </Link>
           </header>
           <section>Content here</section>
         </div>

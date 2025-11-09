@@ -157,10 +157,6 @@ export function canUpdateUserPermissions(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
 
-export function canUpdateUserCities(authLevel: number): boolean {
-  return authLevel >= AUTH_LEVELS.ADMIN;
-}
-
 export function canBanAnyUsers(authLevel: number): boolean {
   return authLevel >= AUTH_LEVELS.ADMIN;
 }
@@ -197,48 +193,27 @@ export function cannotBeDeletedOrBanned(authLevel: number): boolean {
 // Event-specific permissions
 export interface EventPermissionContext {
   eventId: string;
-  eventCityId?: string;
   eventCreatorId: string;
-  userCity?: string;
 }
 
 export function canUpdateEvent(
   authLevel: number,
   context: EventPermissionContext,
-  userId: string,
-  allCityAccess: boolean = false
+  userId: string
 ): boolean {
   // Admins can update any events
   if (canUpdateAnyEvents(authLevel)) {
     return true;
   }
 
-  // Moderators can update any events in their assigned city (or all cities if flag is set)
+  // Moderators can update any events
   if (canUpdateAnyEventsInCity(authLevel)) {
-    if (allCityAccess) {
-      return true;
-    }
-    if (
-      context.eventCityId &&
-      context.userCity &&
-      context.userCity === context.eventCityId
-    ) {
-      return true;
-    }
+    return true;
   }
 
-  // Creators can update their own events in their assigned city (or all cities if flag is set)
+  // Creators can update their own events
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
-    if (allCityAccess) {
-      return true;
-    }
-    if (
-      context.eventCityId &&
-      context.userCity &&
-      context.userCity === context.eventCityId
-    ) {
-      return true;
-    }
+    return true;
   }
 
   return false;
@@ -247,40 +222,21 @@ export function canUpdateEvent(
 export function canDeleteEvent(
   authLevel: number,
   context: EventPermissionContext,
-  userId: string,
-  allCityAccess: boolean = false
+  userId: string
 ): boolean {
   // Admins can delete any events
   if (canDeleteAnyEvents(authLevel)) {
     return true;
   }
 
-  // Moderators can delete any events in their assigned city (or all cities if flag is set)
+  // Moderators can delete any events
   if (canDeleteAnyEventsInCity(authLevel)) {
-    if (allCityAccess) {
-      return true;
-    }
-    if (
-      context.eventCityId &&
-      context.userCity &&
-      context.userCity === context.eventCityId
-    ) {
-      return true;
-    }
+    return true;
   }
 
-  // Creators can delete their own events in their assigned city (or all cities if flag is set)
+  // Creators can delete their own events
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
-    if (allCityAccess) {
-      return true;
-    }
-    if (
-      context.eventCityId &&
-      context.userCity &&
-      context.userCity === context.eventCityId
-    ) {
-      return true;
-    }
+    return true;
   }
 
   return false;

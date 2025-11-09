@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
 import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
-import { GlobalAccessRequestForm } from "@/components/admin/GlobalAccessRequestForm";
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -69,14 +68,12 @@ export default function DashboardPage() {
   const allIncoming = [
     ...(incomingRequests.tagging || []),
     ...(incomingRequests.teamMember || []),
-    ...(incomingRequests.globalAccess || []),
     ...(incomingRequests.authLevelChange || []),
   ];
 
   const allOutgoing = [
     ...(outgoingRequests.tagging || []),
     ...(outgoingRequests.teamMember || []),
-    ...(outgoingRequests.globalAccess || []),
     ...(outgoingRequests.authLevelChange || []),
   ];
 
@@ -106,14 +103,14 @@ export default function DashboardPage() {
                     Authorization Level: {getAuthLevelName(user?.auth ?? 0)} (
                     {user?.auth ?? 0})
                   </div>
-                  {user?.city && user.city.name && (
-                    <div>City: {user.city.name}</div>
-                  )}
-                  {user?.allCityAccess && (
-                    <div className="font-medium">Global Access</div>
-                  )}
                 </CardDescription>
                 <div className="flex gap-2 mt-4">
+                  {user?.auth !== undefined &&
+                    user.auth >= AUTH_LEVELS.CREATOR && (
+                      <Button asChild>
+                        <Link href="/add-event">Add Event</Link>
+                      </Button>
+                    )}
                   {user?.username && (
                     <>
                       <Button variant="outline" asChild>
@@ -154,14 +151,6 @@ export default function DashboardPage() {
             onRequestSubmitted={loadDashboard}
           />
         )}
-
-        {/* Global Access Request Form - Creators and Moderators Only */}
-        {user?.auth !== undefined &&
-          user.auth >= AUTH_LEVELS.CREATOR &&
-          user.auth < AUTH_LEVELS.ADMIN &&
-          !user.allCityAccess && (
-            <GlobalAccessRequestForm onRequestSubmitted={loadDashboard} />
-          )}
 
         {/* Notifications Section */}
         {notifications.length > 0 && (

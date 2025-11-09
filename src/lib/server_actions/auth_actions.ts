@@ -17,6 +17,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import crypto from "crypto";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { City } from "@/types/city";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -98,12 +99,26 @@ export async function signup(formData: FormData) {
       }
     }
 
+    // Parse city from formData (it's stored as JSON string)
+    let cityData: City | string;
+    const cityJson = formData.get("city") as string;
+    if (cityJson) {
+      try {
+        cityData = JSON.parse(cityJson);
+      } catch {
+        // Fallback to string if JSON parsing fails
+        cityData = cityJson;
+      }
+    } else {
+      throw new Error("City is required");
+    }
+
     // Use admin defaults if this is an admin user, otherwise use form data
     const profileData = adminUser
       ? {
           displayName: adminUser.defaultData.displayName,
           username: adminUser.defaultData.username,
-          city: adminUser.defaultData.city,
+          city: adminUser.defaultData.city as string, // Admin defaults use string for now
           date: adminUser.defaultData.date,
           styles: [],
           bio: "",
@@ -114,7 +129,7 @@ export async function signup(formData: FormData) {
       : {
           displayName: formData.get("displayName") as string,
           username: formData.get("username") as string,
-          city: formData.get("city") as string,
+          city: cityData,
           date: formData.get("date") as string,
           styles,
           bio: bio || null,
@@ -129,9 +144,6 @@ export async function signup(formData: FormData) {
     // Determine auth level
     const authLevel = adminUser ? adminUser.authLevel : AUTH_LEVELS.BASE_USER; // Base user level
 
-    // Admins and SuperAdmins always have allCityAccess
-    const shouldHaveAllCityAccess = authLevel >= AUTH_LEVELS.ADMIN;
-
     // Mark account as verified in PostgreSQL (user completed registration)
     await prisma.user.update({
       where: { id: session.user.id },
@@ -139,37 +151,8 @@ export async function signup(formData: FormData) {
         accountVerified: new Date(),
         name: profileData.displayName || session.user.name,
         auth: authLevel,
-        allCityAccess: shouldHaveAllCityAccess,
       },
     });
-
-    // If user is creator or moderator, add their profile city to their cities
-    if (
-      authLevel >= AUTH_LEVELS.CREATOR &&
-      authLevel < AUTH_LEVELS.ADMIN &&
-      profileData.city
-    ) {
-      // Check if city already exists for this user
-      const existingCity = await prisma.city.findFirst({
-        where: {
-          userId: session.user.id,
-          cityId: profileData.city,
-        },
-      });
-
-      // If not, add it
-      if (!existingCity) {
-        await prisma.city.create({
-          data: {
-            userId: session.user.id,
-            cityId: profileData.city,
-          },
-        });
-        console.log(
-          `✅ Added profile city ${profileData.city} to user's cities`
-        );
-      }
-    }
 
     if (adminUser) {
       console.log(
@@ -190,25 +173,19 @@ export async function signup(formData: FormData) {
 
 /**
  * Update user's auth level in PostgreSQL
- * Automatically sets allCityAccess to true for Admins and SuperAdmins
  */
 export async function updateUserAuthLevel(userId: string, authLevel: number) {
   try {
-    // Admins and SuperAdmins always have allCityAccess
-    const shouldHaveAllCityAccess = authLevel >= AUTH_LEVELS.ADMIN;
-
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         auth: authLevel,
-        allCityAccess: shouldHaveAllCityAccess,
       },
       select: {
         id: true,
         email: true,
         name: true,
         auth: true,
-        allCityAccess: true,
       },
     });
 
@@ -265,16 +242,12 @@ export async function acceptInvitation(token: string) {
       };
     }
 
-    // Admins and SuperAdmins always have allCityAccess
-    const shouldHaveAllCityAccess = invitation.authLevel >= AUTH_LEVELS.ADMIN;
-
     // Update user's auth level and mark invitation as used
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: session.user.id },
         data: {
           auth: invitation.authLevel,
-          allCityAccess: shouldHaveAllCityAccess,
         },
       }),
       prisma.invitation.update({
@@ -285,44 +258,6 @@ export async function acceptInvitation(token: string) {
         },
       }),
     ]);
-
-    // If user is now a creator or moderator, add their profile city to their cities
-    if (
-      invitation.authLevel >= AUTH_LEVELS.CREATOR &&
-      invitation.authLevel < AUTH_LEVELS.ADMIN
-    ) {
-      try {
-        // Get user's profile city from Neo4j
-        const userProfile = await getUser(session.user.id);
-        const profileCity = userProfile?.city as string | undefined;
-
-        if (profileCity) {
-          // Check if city already exists for this user
-          const existingCity = await prisma.city.findFirst({
-            where: {
-              userId: session.user.id,
-              cityId: profileCity,
-            },
-          });
-
-          // If not, add it
-          if (!existingCity) {
-            await prisma.city.create({
-              data: {
-                userId: session.user.id,
-                cityId: profileCity,
-              },
-            });
-            console.log(
-              `✅ Added profile city ${profileCity} to user's cities after invitation acceptance`
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Failed to add profile city:", error);
-        // Don't fail the invitation acceptance if city addition fails
-      }
-    }
 
     console.log(
       `✅ User ${session.user.email} accepted invitation from ${invitation.inviter.email} for auth level ${invitation.authLevel}`
@@ -682,12 +617,23 @@ export async function updateUserProfile(userId: string, formData: FormData) {
   try {
     // Validate required fields
     const displayName = formData.get("displayName") as string;
-    const city = formData.get("city") as string;
+    const cityJson = formData.get("city") as string;
 
-    if (!displayName || !city) {
+    if (!displayName || !cityJson) {
       return {
         success: false,
         error: "Display name and city are required",
+      };
+    }
+
+    // Parse city from JSON
+    let cityData: City;
+    try {
+      cityData = JSON.parse(cityJson);
+    } catch {
+      return {
+        success: false,
+        error: "Invalid city data format",
       };
     }
 
@@ -731,7 +677,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       id: userId,
       username: currentUser.username, // Preserve username
       displayName,
-      city,
+      city: cityData,
       date,
       bio: bio || null,
       instagram: instagram || null,

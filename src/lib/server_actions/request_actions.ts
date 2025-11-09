@@ -5,11 +5,9 @@ import { prisma } from "@/lib/primsa";
 import {
   getTaggingRequestApprovers,
   getTeamMemberRequestApprovers,
-  getGlobalAccessRequestApprovers,
   getAuthLevelChangeRequestApprovers,
   canUserApproveRequest,
   createNotification,
-  hasCityAccess,
   REQUEST_TYPES,
   RequestType,
 } from "@/lib/utils/request-utils";
@@ -18,14 +16,12 @@ import {
   addTeamMember,
   applyTag,
   removeTag,
-  getEventCityId,
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
   isUserTaggedInVideo,
   getEventTitle,
   getVideoTitle,
-  getCityName,
   getEventCreator,
   isEventCreator,
   getEventTeamMembers,
@@ -301,26 +297,10 @@ export async function createTaggingRequest(
   }
 
   // Get approvers and create notifications
-  console.log("🔵 [createTaggingRequest] Getting event city ID...");
-  let eventCityId;
-  try {
-    eventCityId = await getEventCityId(eventId);
-    console.log("✅ [createTaggingRequest] Event city ID:", eventCityId);
-  } catch (error) {
-    console.error(
-      "⚠️ [createTaggingRequest] Error getting city ID (continuing):",
-      error
-    );
-    eventCityId = null;
-  }
-
   console.log("🔵 [createTaggingRequest] Getting approvers...");
   let approvers: string[] = [];
   try {
-    approvers = await getTaggingRequestApprovers(
-      eventId,
-      eventCityId || undefined
-    );
+    approvers = await getTaggingRequestApprovers(eventId);
     console.log("✅ [createTaggingRequest] Approvers found:", approvers.length);
   } catch (error) {
     console.error("❌ [createTaggingRequest] Error getting approvers:", error);
@@ -610,11 +590,7 @@ export async function createTeamMemberRequest(eventId: string) {
     },
   });
 
-  const eventCityId = await getEventCityId(eventId);
-  const approvers = await getTeamMemberRequestApprovers(
-    eventId,
-    eventCityId || undefined
-  );
+  const approvers = await getTeamMemberRequestApprovers(eventId);
 
   for (const approverId of approvers) {
     await createNotification(
@@ -757,206 +733,6 @@ export async function denyTeamMemberRequest(
     "Team Member Request Denied",
     `Your team member request has been denied`,
     REQUEST_TYPES.TEAM_MEMBER,
-    requestId
-  );
-
-  return { success: true };
-}
-
-// ============================================================================
-// Global Access Requests
-// ============================================================================
-
-export async function createGlobalAccessRequest(message: string) {
-  const senderId = await requireAuth();
-
-  if (!message || message.trim().length === 0) {
-    throw new Error("Message is required for global access requests");
-  }
-
-  // Check if user is creator or moderator
-  const user = await prisma.user.findUnique({
-    where: { id: senderId },
-    select: { auth: true },
-  });
-
-  if (!user?.auth || user.auth < AUTH_LEVELS.CREATOR) {
-    throw new Error("Only creators and moderators can request global access");
-  }
-
-  // Check if user already has global access
-  const hasGlobal = await prisma.user.findUnique({
-    where: { id: senderId },
-    select: { auth: true, allCityAccess: true },
-  });
-
-  if (hasGlobal?.auth && hasGlobal.auth >= AUTH_LEVELS.ADMIN) {
-    throw new Error("Admins already have global access by default");
-  }
-
-  if (hasGlobal?.allCityAccess) {
-    throw new Error("You already have global access");
-  }
-
-  // Check if a pending request already exists
-  const existingRequest = await prisma.globalAccessRequest.findFirst({
-    where: {
-      senderId,
-      status: "PENDING",
-    },
-  });
-
-  if (existingRequest) {
-    throw new Error("A pending global access request already exists");
-  }
-
-  const request = await prisma.globalAccessRequest.create({
-    data: {
-      senderId,
-      message: message.trim(),
-      status: "PENDING",
-    },
-    include: {
-      sender: {
-        select: { id: true, name: true, email: true },
-      },
-    },
-  });
-
-  const approvers = await getGlobalAccessRequestApprovers();
-
-  for (const approverId of approvers) {
-    await createNotification(
-      approverId,
-      "INCOMING_REQUEST",
-      "New Global Access Request",
-      `${
-        request.sender.name || request.sender.email
-      } is requesting global access`,
-      REQUEST_TYPES.GLOBAL_ACCESS,
-      request.id
-    );
-  }
-
-  return { success: true, request };
-}
-
-export async function approveGlobalAccessRequest(
-  requestId: string,
-  message?: string
-) {
-  const approverId = await requireAuth();
-
-  const request = await prisma.globalAccessRequest.findUnique({
-    where: { id: requestId },
-    include: {
-      sender: true,
-    },
-  });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Request is not pending");
-  }
-
-  const canApprove = await canUserApproveRequest(
-    approverId,
-    REQUEST_TYPES.GLOBAL_ACCESS
-  );
-
-  if (!canApprove) {
-    throw new Error("You do not have permission to approve this request");
-  }
-
-  if (
-    await hasUserResponded(REQUEST_TYPES.GLOBAL_ACCESS, requestId, approverId)
-  ) {
-    throw new Error("You have already responded to this request");
-  }
-
-  await createApprovalRecord(
-    REQUEST_TYPES.GLOBAL_ACCESS,
-    requestId,
-    approverId,
-    true,
-    message
-  );
-
-  await updateRequestStatus(REQUEST_TYPES.GLOBAL_ACCESS, requestId, "APPROVED");
-
-  // Grant global access
-  await prisma.user.update({
-    where: { id: request.senderId },
-    data: { allCityAccess: true },
-  });
-
-  await createNotification(
-    request.senderId,
-    "GLOBAL_ACCESS_GRANTED",
-    "Global Access Request Approved",
-    `Your global access request has been approved`,
-    REQUEST_TYPES.GLOBAL_ACCESS,
-    requestId
-  );
-
-  return { success: true };
-}
-
-export async function denyGlobalAccessRequest(
-  requestId: string,
-  message?: string
-) {
-  const approverId = await requireAuth();
-
-  const request = await prisma.globalAccessRequest.findUnique({
-    where: { id: requestId },
-    include: {
-      sender: true,
-    },
-  });
-
-  if (!request) {
-    throw new Error("Request not found");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Request is not pending");
-  }
-
-  const canApprove = await canUserApproveRequest(
-    approverId,
-    REQUEST_TYPES.GLOBAL_ACCESS
-  );
-
-  if (!canApprove) {
-    throw new Error("You do not have permission to deny this request");
-  }
-
-  if (
-    await hasUserResponded(REQUEST_TYPES.GLOBAL_ACCESS, requestId, approverId)
-  ) {
-    throw new Error("You have already responded to this request");
-  }
-
-  await createApprovalRecord(
-    REQUEST_TYPES.GLOBAL_ACCESS,
-    requestId,
-    approverId,
-    false,
-    message
-  );
-
-  await updateRequestStatus(REQUEST_TYPES.GLOBAL_ACCESS, requestId, "DENIED");
-
-  await createNotification(
-    request.senderId,
-    "REQUEST_DENIED",
-    "Global Access Request Denied",
-    `Your global access request has been denied`,
-    REQUEST_TYPES.GLOBAL_ACCESS,
     requestId
   );
 
@@ -1227,12 +1003,6 @@ export async function cancelTeamMemberRequest(requestId: string) {
   return { success: true };
 }
 
-export async function cancelGlobalAccessRequest(requestId: string) {
-  const userId = await requireAuth();
-  await cancelRequest(REQUEST_TYPES.GLOBAL_ACCESS, requestId, userId);
-  return { success: true };
-}
-
 export async function cancelAuthLevelChangeRequest(requestId: string) {
   const userId = await requireAuth();
   await cancelRequest(REQUEST_TYPES.AUTH_LEVEL_CHANGE, requestId, userId);
@@ -1272,17 +1042,6 @@ export async function getIncomingRequests() {
     },
   });
 
-  const globalAccessRequests = await prisma.globalAccessRequest.findMany({
-    where: {
-      status: "PENDING",
-    },
-    include: {
-      sender: {
-        select: { id: true, name: true, email: true },
-      },
-    },
-  });
-
   const authLevelChangeRequests = await prisma.authLevelChangeRequest.findMany({
     where: {
       status: "PENDING",
@@ -1298,45 +1057,15 @@ export async function getIncomingRequests() {
   });
 
   // Filter requests user can approve and enrich with event/video info
-  // Also filter by city access level - users should only see requests for cities they have access to
   const canApproveTagging = await Promise.all(
     taggingRequests.map(async (req) => {
-      const eventCityId = await getEventCityId(req.eventId);
-      // Convert to string if needed (Neo4j may return number)
-      const cityIdString = eventCityId ? String(eventCityId) : undefined;
       const canApprove = await canUserApproveRequest(
         userId,
         REQUEST_TYPES.TAGGING,
         {
           eventId: req.eventId,
-          eventCityId: cityIdString,
         }
       );
-
-      // Check city access - user must have access to the event's city
-      // Exception: event creators and team members can see requests for their events regardless of city access
-      let hasAccess = false;
-
-      // Check if user is specifically a creator or team member (not just an admin who can approve)
-      const creatorId = await getEventCreator(req.eventId);
-      const teamMembers = await getEventTeamMembers(req.eventId);
-      const isCreatorOrTeamMember =
-        creatorId === userId || teamMembers.includes(userId);
-
-      if (isCreatorOrTeamMember) {
-        // Event creators and team members have implicit access to their events
-        hasAccess = true;
-      } else if (cityIdString) {
-        // For others, check city access
-        hasAccess = await hasCityAccess(userId, cityIdString);
-      } else {
-        // If no city ID, only show to admins (who have allCityAccess)
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { auth: true },
-        });
-        hasAccess = user?.auth && user.auth >= AUTH_LEVELS.ADMIN ? true : false;
-      }
 
       // Fetch event and video titles
       const eventTitle = await getEventTitle(req.eventId);
@@ -1349,46 +1078,17 @@ export async function getIncomingRequests() {
           videoTitle: videoTitle || null,
         },
         canApprove,
-        hasCityAccess: hasAccess,
       };
     })
   );
 
   const canApproveTeamMember = await Promise.all(
     teamMemberRequests.map(async (req) => {
-      const eventCityId = await getEventCityId(req.eventId);
-      // Convert to string if needed (Neo4j may return number)
-      const cityIdString = eventCityId ? String(eventCityId) : undefined;
       const canApprove = await canUserApproveRequest(
         userId,
         REQUEST_TYPES.TEAM_MEMBER,
-        { eventId: req.eventId, eventCityId: cityIdString }
+        { eventId: req.eventId }
       );
-
-      // Check city access - user must have access to the event's city
-      // Exception: event creators and team members can see requests for their events regardless of city access
-      let hasAccess = false;
-
-      // Check if user is specifically a creator or team member (not just an admin who can approve)
-      const creatorId = await getEventCreator(req.eventId);
-      const teamMembers = await getEventTeamMembers(req.eventId);
-      const isCreatorOrTeamMember =
-        creatorId === userId || teamMembers.includes(userId);
-
-      if (isCreatorOrTeamMember) {
-        // Event creators and team members have implicit access to their events
-        hasAccess = true;
-      } else if (cityIdString) {
-        // For others, check city access
-        hasAccess = await hasCityAccess(userId, cityIdString);
-      } else {
-        // If no city ID, only show to admins (who have allCityAccess)
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { auth: true },
-        });
-        hasAccess = user?.auth && user.auth >= AUTH_LEVELS.ADMIN ? true : false;
-      }
 
       const eventTitle = await getEventTitle(req.eventId);
       return {
@@ -1397,19 +1097,8 @@ export async function getIncomingRequests() {
           eventTitle: eventTitle || req.eventId,
         },
         canApprove,
-        hasCityAccess: hasAccess,
       };
     })
-  );
-
-  const canApproveGlobalAccess = await Promise.all(
-    globalAccessRequests.map(async (req) => ({
-      request: req,
-      canApprove: await canUserApproveRequest(
-        userId,
-        REQUEST_TYPES.GLOBAL_ACCESS
-      ),
-    }))
   );
 
   const canApproveAuthLevel = await Promise.all(
@@ -1423,17 +1112,12 @@ export async function getIncomingRequests() {
   );
 
   return {
-    // Filter by both canApprove AND city access for event-based requests
     tagging: canApproveTagging
-      .filter((item) => item.canApprove && item.hasCityAccess)
+      .filter((item) => item.canApprove)
       .map((item) => ({ ...item.request, type: "TAGGING" })),
     teamMember: canApproveTeamMember
-      .filter((item) => item.canApprove && item.hasCityAccess)
-      .map((item) => ({ ...item.request, type: "TEAM_MEMBER" })),
-    // Global access and auth level change requests are admin-only (they have allCityAccess by default)
-    globalAccess: canApproveGlobalAccess
       .filter((item) => item.canApprove)
-      .map((item) => ({ ...item.request, type: "GLOBAL_ACCESS" })),
+      .map((item) => ({ ...item.request, type: "TEAM_MEMBER" })),
     authLevelChange: canApproveAuthLevel
       .filter((item) => item.canApprove)
       .map((item) => ({ ...item.request, type: "AUTH_LEVEL_CHANGE" })),
@@ -1443,39 +1127,31 @@ export async function getIncomingRequests() {
 export async function getOutgoingRequests() {
   const userId = await requireAuth();
 
-  const [
-    taggingRequests,
-    teamMemberRequests,
-    globalAccessRequests,
-    authLevelChangeRequests,
-  ] = await Promise.all([
-    prisma.taggingRequest.findMany({
-      where: { senderId: userId },
-      include: {
-        targetUser: {
-          select: { id: true, name: true, email: true },
+  const [taggingRequests, teamMemberRequests, authLevelChangeRequests] =
+    await Promise.all([
+      prisma.taggingRequest.findMany({
+        where: { senderId: userId },
+        include: {
+          targetUser: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.teamMemberRequest.findMany({
-      where: { senderId: userId },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.globalAccessRequest.findMany({
-      where: { senderId: userId },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.authLevelChangeRequest.findMany({
-      where: { senderId: userId },
-      include: {
-        targetUser: {
-          select: { id: true, name: true, email: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.teamMemberRequest.findMany({
+        where: { senderId: userId },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.authLevelChangeRequest.findMany({
+        where: { senderId: userId },
+        include: {
+          targetUser: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
 
   // Enrich tagging requests with event and video titles
   const enrichedTaggingRequests = await Promise.all(
@@ -1506,10 +1182,6 @@ export async function getOutgoingRequests() {
   return {
     tagging: enrichedTaggingRequests,
     teamMember: enrichedTeamMemberRequests,
-    globalAccess: globalAccessRequests.map((req) => ({
-      ...req,
-      type: "GLOBAL_ACCESS",
-    })),
     authLevelChange: authLevelChangeRequests.map((req) => ({
       ...req,
       type: "AUTH_LEVEL_CHANGE",
@@ -1617,10 +1289,6 @@ export async function getDashboardData() {
         name: true,
         email: true,
         auth: true,
-        allCityAccess: true,
-        city: {
-          select: { id: true, cityId: true },
-        },
       },
     }),
     getUser(userId).catch(() => null), // Get displayName from Neo4j
@@ -1638,18 +1306,6 @@ export async function getDashboardData() {
     })
   );
 
-  // Fetch city name from Neo4j if city exists
-  // Note: City is required at application level (enforced by seed data and user creation)
-  let cityName: string | null = null;
-  if (user?.city) {
-    cityName = await getCityName(user.city.cityId);
-  } else {
-    // Log warning if user doesn't have a city (should not happen in production)
-    console.warn(
-      `User ${userId} does not have a city assigned. This should be handled during user creation.`
-    );
-  }
-
   // Destructure to exclude id from being sent to client
   const { id, ...userWithoutId } = user || {};
 
@@ -1658,12 +1314,6 @@ export async function getDashboardData() {
       ...userWithoutId,
       displayName: userProfile?.displayName || null, // Add displayName from Neo4j
       username: userProfile?.username || null, // Add username from Neo4j
-      city: user?.city
-        ? {
-            cityId: user.city.cityId,
-            name: cityName || user.city.cityId, // Fallback to cityId if name not found
-          }
-        : null,
     },
     incomingRequests,
     outgoingRequests,

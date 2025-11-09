@@ -16,7 +16,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AUTH_LEVELS, getAuthLevelName } from "@/lib/utils/auth-utils";
 import { AppNavbar } from "@/components/AppNavbar";
-import { CityManagementCard } from "@/components/admin/CityManagementCard";
 
 export default function AuthDemoPage() {
   const { data: session } = useSession();
@@ -123,9 +122,6 @@ export default function AuthDemoPage() {
           {/* Admin Invitation Generator */}
           {isAdmin && <AdminInvitationGenerator />}
 
-          {/* City Management - Admin only */}
-          {isAdmin && <CityManagementCard />}
-
           {!isAdmin && (
             <Card>
               <CardHeader>
@@ -171,7 +167,6 @@ export default function AuthDemoPage() {
                         <>
                           <li>• Full event management</li>
                           <li>• User permission management</li>
-                          <li>• Manage user cities and global flags</li>
                           <li>• Ban/delete any users</li>
                           <li>• Read user reports</li>
                         </>

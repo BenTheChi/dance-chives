@@ -3,7 +3,6 @@ import { AUTH_LEVELS } from "./auth-utils";
 import {
   getEventTeamMembers,
   getEventCreator,
-  getEventCityId,
 } from "@/db/queries/team-member";
 
 export const REQUEST_TYPES = {
@@ -17,7 +16,7 @@ export type RequestType = (typeof REQUEST_TYPES)[keyof typeof REQUEST_TYPES];
 
 /**
  * Get users who can approve tagging requests for an event
- * Returns: event creator, team members, city moderators, admins
+ * Returns: event creator, team members, moderators, admins
  */
 export async function getTaggingRequestApprovers(
   eventId: string,
@@ -35,27 +34,17 @@ export async function getTaggingRequestApprovers(
   const teamMembers = await getEventTeamMembers(eventId);
   teamMembers.forEach((userId) => approverIds.add(userId));
 
-  // Get city ID from Neo4j if not provided
-  if (!eventCityId) {
-    eventCityId = (await getEventCityId(eventId)) || undefined;
-  }
-
-  // Get city moderators (auth level 2+) for the event's city
-  if (eventCityId) {
-    const cityModerators = await prisma.user.findMany({
-      where: {
-        city: {
-          cityId: eventCityId,
-        },
-        auth: {
-          gte: AUTH_LEVELS.MODERATOR,
-        },
+  // Get all moderators (auth level 2+)
+  const moderators = await prisma.user.findMany({
+    where: {
+      auth: {
+        gte: AUTH_LEVELS.MODERATOR,
       },
-      select: { id: true },
-    });
+    },
+    select: { id: true },
+  });
 
-    cityModerators.forEach((user) => approverIds.add(user.id));
-  }
+  moderators.forEach((user) => approverIds.add(user.id));
 
   // Get all admins (auth level 3+)
   const admins = await prisma.user.findMany({
@@ -84,10 +73,10 @@ export async function getTeamMemberRequestApprovers(
 }
 
 /**
- * Get users who can approve global access requests
+ * Get users who can approve authorization level change requests
  * Returns: admins and super admins only
  */
-export async function getGlobalAccessRequestApprovers(): Promise<string[]> {
+export async function getAuthLevelChangeRequestApprovers(): Promise<string[]> {
   const admins = await prisma.user.findMany({
     where: {
       auth: {
@@ -98,14 +87,6 @@ export async function getGlobalAccessRequestApprovers(): Promise<string[]> {
   });
 
   return admins.map((user) => user.id);
-}
-
-/**
- * Get users who can approve authorization level change requests
- * Returns: admins and super admins only
- */
-export async function getAuthLevelChangeRequestApprovers(): Promise<string[]> {
-  return getGlobalAccessRequestApprovers(); // Same approvers
 }
 
 /**
@@ -132,16 +113,7 @@ export async function canUserApproveRequest(
     case REQUEST_TYPES.TAGGING:
     case REQUEST_TYPES.TEAM_MEMBER:
       if (authLevel >= AUTH_LEVELS.ADMIN) return true;
-      if (authLevel >= AUTH_LEVELS.MODERATOR && context?.eventCityId) {
-        // Check if user is a moderator for this city
-        const cityAssignment = await prisma.city.findUnique({
-          where: {
-            userId,
-          },
-        });
-        if (cityAssignment && cityAssignment.cityId === context.eventCityId)
-          return true;
-      }
+      if (authLevel >= AUTH_LEVELS.MODERATOR) return true;
       // Check if user is event creator or team member (from Neo4j)
       if (context?.eventId) {
         const creatorId = await getEventCreator(context.eventId);
@@ -152,7 +124,6 @@ export async function canUserApproveRequest(
       }
       return false;
 
-    case REQUEST_TYPES.GLOBAL_ACCESS:
     case REQUEST_TYPES.AUTH_LEVEL_CHANGE:
       return authLevel >= AUTH_LEVELS.ADMIN;
 
@@ -190,46 +161,11 @@ export async function createNotification(
 export async function hasGlobalAccess(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { auth: true, allCityAccess: true },
+    select: { auth: true },
   });
 
   if (!user) return false;
 
-  // Admins and super admins have global access by default
-  if (user.auth && user.auth >= AUTH_LEVELS.ADMIN) {
-    return true;
-  }
-
-  // For creators and moderators, check allCityAccess flag
-  return user.allCityAccess === true;
-}
-
-/**
- * Check if a user has access to a specific city
- * Returns true if:
- * - User has allCityAccess flag set to true
- * - User is an admin or super admin (they have allCityAccess by default)
- * - User is assigned to the specific city
- */
-export async function hasCityAccess(
-  userId: string,
-  cityId: string
-): Promise<boolean> {
-  // Check if user has global access (allCityAccess or admin)
-  const hasGlobal = await hasGlobalAccess(userId);
-  if (hasGlobal) {
-    return true;
-  }
-
-  // Check if user is assigned to this specific city
-  const cityAssignment = await prisma.city.findUnique({
-    where: { userId },
-    select: { cityId: true },
-  });
-
-  if (cityAssignment && cityAssignment.cityId === cityId) {
-    return true;
-  }
-
-  return false;
+  // Admins and super admins have global access
+  return !!(user.auth && user.auth >= AUTH_LEVELS.ADMIN);
 }

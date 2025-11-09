@@ -1,13 +1,47 @@
 import driver from "../driver";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import { City } from "@/types/city";
 
 export const getUser = async (id: string) => {
   const session = driver.session();
-  const result = await session.run("MATCH (u:User {id: $id}) RETURN u", {
-    id,
-  });
-  session.close();
-  return result.records[0].get("u").properties;
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $id})
+      OPTIONAL MATCH (u)-[:LOCATED_IN]->(c:City)
+      RETURN u, c as city
+      `,
+      { id }
+    );
+    
+    if (result.records.length === 0) {
+      return null;
+    }
+
+    const record = result.records[0];
+    const user = record.get("u").properties;
+    const cityNode = record.get("city");
+
+    // Convert city node to City object if it exists
+    let city: City | null = null;
+    if (cityNode) {
+      city = {
+        id: cityNode.properties.id,
+        name: cityNode.properties.name,
+        region: cityNode.properties.region || "",
+        countryCode: cityNode.properties.countryCode || "",
+        population: cityNode.properties.population || 0,
+        timezone: cityNode.properties.timezone,
+      };
+    }
+
+    return {
+      ...user,
+      city: city,
+    };
+  } finally {
+    session.close();
+  }
 };
 
 export const getUserByUsername = async (username: string) => {
@@ -61,7 +95,7 @@ export const signupUser = async (
     displayName: string;
     username: string;
     date: string;
-    city: string;
+    city: City | string;
     styles?: string[];
     bio?: string | null;
     instagram?: string | null;
@@ -71,12 +105,31 @@ export const signupUser = async (
 ) => {
   const session = driver.session();
   try {
+    // Parse city if it's a string (legacy support)
+    let cityData: City;
+    if (typeof user.city === "string") {
+      try {
+        cityData = JSON.parse(user.city);
+      } catch {
+        // If parsing fails, create a minimal city object from string
+        // This handles legacy data where city was just a name
+        cityData = {
+          id: 0,
+          name: user.city,
+          region: "",
+          countryCode: "",
+          population: 0,
+        };
+      }
+    } else {
+      cityData = user.city;
+    }
+
     // Build SET clause dynamically to only set properties that are provided
     const setClauses: string[] = [
       "u.displayName = $user.displayName",
       "u.username = $user.username",
       "u.date = $user.date",
-      "u.city = $user.city",
     ];
 
     if (user.bio !== undefined) {
@@ -94,10 +147,37 @@ export const signupUser = async (
 
     const setClause = setClauses.join(", ");
 
-    // Create/update user
+    // Create/update user and connect to City node
     const result = await session.run(
-      `MERGE (u:User {id: $id}) ON CREATE SET ${setClause} RETURN u`,
-      { id, user }
+      `
+      MERGE (u:User {id: $id})
+      ON CREATE SET ${setClause}
+      WITH u
+      MERGE (c:City {id: $city.id})
+      ON CREATE SET 
+        c.name = $city.name,
+        c.countryCode = $city.countryCode,
+        c.region = $city.region,
+        c.population = $city.population,
+        c.timezone = $city.timezone
+      ON MATCH SET
+        c.population = $city.population
+      MERGE (u)-[:LOCATED_IN]->(c)
+      RETURN u
+      `,
+      { 
+        id, 
+        user: {
+          displayName: user.displayName,
+          username: user.username,
+          date: user.date,
+          bio: user.bio,
+          instagram: user.instagram,
+          website: user.website,
+          image: user.image,
+        },
+        city: cityData
+      }
     );
 
     // Create Style nodes and relationships if styles are provided
@@ -128,11 +208,52 @@ export const updateUser = async (
 ) => {
   const session = driver.session();
   try {
-    // Update user properties
+    // Extract city from user object if present
+    let cityData: City | null = null;
+    const userWithoutCity = { ...user };
+    
+    if (user.city) {
+      if (typeof user.city === "string") {
+        try {
+          cityData = JSON.parse(user.city);
+        } catch {
+          // If parsing fails, skip city update
+          console.warn("Failed to parse city data, skipping city update");
+        }
+      } else if (typeof user.city === "object" && user.city.id) {
+        cityData = user.city as City;
+      }
+      delete userWithoutCity.city;
+    }
+
+    // Update user properties (excluding city)
     const result = await session.run(
       "MATCH (u:User {id: $id}) SET u = $user RETURN u",
-      { id, user }
+      { id, user: userWithoutCity }
     );
+
+    // Update city relationship if city data is provided
+    if (cityData) {
+      await session.run(
+        `
+        MATCH (u:User {id: $id})
+        OPTIONAL MATCH (u)-[r:LOCATED_IN]->(oldCity:City)
+        DELETE r
+        WITH u
+        MERGE (c:City {id: $city.id})
+        ON CREATE SET 
+          c.name = $city.name,
+          c.countryCode = $city.countryCode,
+          c.region = $city.region,
+          c.population = $city.population,
+          c.timezone = $city.timezone
+        ON MATCH SET
+          c.population = $city.population
+        MERGE (u)-[:LOCATED_IN]->(c)
+        `,
+        { id, city: cityData }
+      );
+    }
 
     // Handle style relationships if provided
     if (styles !== undefined) {
@@ -174,7 +295,8 @@ export const getUserWithStyles = async (id: string) => {
       `
       MATCH (u:User {id: $id})
       OPTIONAL MATCH (u)-[:STYLE]->(s:Style)
-      RETURN u, collect(s.name) as styles
+      OPTIONAL MATCH (u)-[:LOCATED_IN]->(c:City)
+      RETURN u, collect(s.name) as styles, c as city
       `,
       { id }
     );
@@ -186,10 +308,25 @@ export const getUserWithStyles = async (id: string) => {
     const record = result.records[0];
     const user = record.get("u").properties;
     const styles = record.get("styles") || [];
+    const cityNode = record.get("city");
+
+    // Convert city node to City object if it exists
+    let city: City | null = null;
+    if (cityNode) {
+      city = {
+        id: cityNode.properties.id,
+        name: cityNode.properties.name,
+        region: cityNode.properties.region || "",
+        countryCode: cityNode.properties.countryCode || "",
+        population: cityNode.properties.population || 0,
+        timezone: cityNode.properties.timezone,
+      };
+    }
 
     return {
       ...user,
       styles: styles.filter((s: any) => s !== null),
+      city: city,
     };
   } finally {
     session.close();

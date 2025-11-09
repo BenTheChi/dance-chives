@@ -54,16 +54,11 @@ async function main() {
     "AuthLevelChangeRequest"
   );
   await safeDelete(
-    () => prisma.globalAccessRequest.deleteMany(),
-    "GlobalAccessRequest"
-  );
-  await safeDelete(
     () => prisma.teamMemberRequest.deleteMany(),
     "TeamMemberRequest"
   );
   await safeDelete(() => prisma.taggingRequest.deleteMany(), "TaggingRequest");
   await prisma.event.deleteMany();
-  await prisma.city.deleteMany();
   await prisma.invitation.deleteMany();
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
@@ -79,7 +74,6 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/base.jpg",
       auth: 0, // BASE_USER
-      allCityAccess: false,
     },
     {
       id: "test-user-1",
@@ -89,7 +83,6 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/creator.jpg",
       auth: 1, // CREATOR
-      allCityAccess: false,
     },
     {
       id: "test-user-2",
@@ -99,7 +92,6 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/moderator.jpg",
       auth: 2, // MODERATOR
-      allCityAccess: false,
     },
     {
       id: "test-user-3",
@@ -109,7 +101,6 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/admin.jpg",
       auth: 3, // ADMIN
-      allCityAccess: true, // Admins always have allCityAccess
     },
     {
       id: "test-user-4",
@@ -119,7 +110,6 @@ async function main() {
       accountVerified: new Date(),
       image: "https://example.com/super-admin.jpg",
       auth: 4, // SUPER_ADMIN
-      allCityAccess: true, // SuperAdmins always have allCityAccess
     },
   ];
 
@@ -282,7 +272,7 @@ async function main() {
     }
   }
 
-  // City definitions
+  // City definitions (for events in Neo4j, not user authorization)
   const newYorkCity: City = {
     id: 1,
     name: "New York",
@@ -300,28 +290,6 @@ async function main() {
     population: 753675,
     timezone: "America/Los_Angeles",
   };
-
-  // Assign cities to all users (mandatory)
-  console.log("🌱 Assigning cities to users...");
-  const userCityAssignments = [
-    { userId: "test-user-0", cityId: "5" }, // Base User -> Seattle
-    { userId: "test-user-1", cityId: "1" }, // Creator -> New York
-    { userId: "test-user-2", cityId: "1" }, // Moderator -> New York
-    { userId: "test-user-3", cityId: "5" }, // Admin -> Seattle
-    { userId: "test-user-4", cityId: "1" }, // Super Admin -> New York
-  ];
-
-  for (const assignment of userCityAssignments) {
-    await prisma.city.create({
-      data: {
-        userId: assignment.userId,
-        cityId: assignment.cityId,
-      },
-    });
-    console.log(
-      `✅ Assigned city ${assignment.cityId} to user ${assignment.userId}`
-    );
-  }
 
   // Helper function to create sections with brackets and videos
   const createSectionWithVideos = (

@@ -21,17 +21,14 @@ model User {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   auth             Int?
-  allCityAccess Boolean @default(false) // Override assigned cities for creators/moderators. Admins and SuperAdmins always have this set to true.
 
   events          Event[]
-  city            City?
   sentInvitations Invitation[]
 
   // Request relationships
   sentTaggingRequests           TaggingRequest[]         @relation("TaggingRequestSender")
   receivedTaggingRequests       TaggingRequest[]         @relation("TaggingRequestTarget")
   sentTeamMemberRequests        TeamMemberRequest[]      @relation("TeamMemberRequestSender")
-  sentGlobalAccessRequests      GlobalAccessRequest[]
   sentAuthLevelChangeRequests   AuthLevelChangeRequest[] @relation("AuthLevelChangeRequestSender")
   targetAuthLevelChangeRequests AuthLevelChangeRequest[] @relation("AuthLevelChangeRequestTarget")
 
@@ -106,16 +103,6 @@ model Event {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model City {
-  id     String @id @default(cuid())
-  cityId String
-  userId String @unique
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([cityId])
-}
-
 model Invitation {
   id        String    @id @default(cuid())
   email     String
@@ -175,20 +162,6 @@ model TeamMemberRequest {
   // Note: eventId references Neo4j event, not PostgreSQL Event model
 
   @@index([eventId])
-  @@index([senderId])
-  @@index([status])
-}
-
-model GlobalAccessRequest {
-  id        String        @id @default(cuid())
-  senderId  String // Creator or Moderator requesting global access
-  message   String // Mandatory explanation message
-  status    RequestStatus @default(PENDING)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
-
   @@index([senderId])
   @@index([status])
 }

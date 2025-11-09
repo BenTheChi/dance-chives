@@ -205,40 +205,6 @@ export async function getUserTeamMemberships(
 }
 
 /**
- * Get city name from Neo4j by cityId
- * Note: cityId is stored as string in PostgreSQL but as number in Neo4j
- */
-export async function getCityName(cityId: string): Promise<string | null> {
-  const session = driver.session();
-  try {
-    // Convert cityId string to number for Neo4j query
-    // Neo4j stores city id as a number, but PostgreSQL stores it as a string
-    const cityIdNum = parseInt(cityId, 10);
-    if (isNaN(cityIdNum)) {
-      console.warn(`Invalid cityId format: ${cityId}`);
-      return null;
-    }
-
-    const result = await session.run(
-      `
-      MATCH (c:City {id: $cityId})
-      RETURN c.name as cityName
-      LIMIT 1
-      `,
-      { cityId: cityIdNum }
-    );
-
-    if (result.records.length === 0) {
-      return null;
-    }
-
-    return result.records[0].get("cityName");
-  } finally {
-    await session.close();
-  }
-}
-
-/**
  * Get event city ID from Neo4j
  * Note: cityId is stored as number in Neo4j but as string in PostgreSQL
  */

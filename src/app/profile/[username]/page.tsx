@@ -75,7 +75,9 @@ export default async function ProfilePage({ params }: PageProps) {
                   <div className="flex gap-4 mt-4">
                     {profile.city && (
                       <div className="text-sm text-muted-foreground">
-                        📍 {profile.city}
+                        📍 {typeof profile.city === "object" 
+                          ? `${profile.city.name}${profile.city.region ? `, ${profile.city.region}` : ""}`
+                          : profile.city}
                       </div>
                     )}
                   </div>

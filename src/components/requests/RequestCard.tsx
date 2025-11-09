@@ -7,13 +7,10 @@ import {
   denyTaggingRequest,
   approveTeamMemberRequest,
   denyTeamMemberRequest,
-  approveGlobalAccessRequest,
-  denyGlobalAccessRequest,
   approveAuthLevelChangeRequest,
   denyAuthLevelChangeRequest,
   cancelTaggingRequest,
   cancelTeamMemberRequest,
-  cancelGlobalAccessRequest,
   cancelAuthLevelChangeRequest,
 } from "@/lib/server_actions/request_actions";
 import { toast } from "sonner";
@@ -42,21 +39,18 @@ interface RequestCardProps {
 const APPROVE_HANDLERS: Record<string, (id: string) => Promise<any>> = {
   TAGGING: approveTaggingRequest,
   TEAM_MEMBER: approveTeamMemberRequest,
-  GLOBAL_ACCESS: approveGlobalAccessRequest,
   AUTH_LEVEL_CHANGE: approveAuthLevelChangeRequest,
 };
 
 const DENY_HANDLERS: Record<string, (id: string) => Promise<any>> = {
   TAGGING: denyTaggingRequest,
   TEAM_MEMBER: denyTeamMemberRequest,
-  GLOBAL_ACCESS: denyGlobalAccessRequest,
   AUTH_LEVEL_CHANGE: denyAuthLevelChangeRequest,
 };
 
 const CANCEL_HANDLERS: Record<string, (id: string) => Promise<any>> = {
   TAGGING: cancelTaggingRequest,
   TEAM_MEMBER: cancelTeamMemberRequest,
-  GLOBAL_ACCESS: cancelGlobalAccessRequest,
   AUTH_LEVEL_CHANGE: cancelAuthLevelChangeRequest,
 };
 
@@ -74,7 +68,6 @@ function getRequestTitle(
     if (role) return "Role Tag";
   }
   if (type === "TEAM_MEMBER") return "Team Member Request";
-  if (type === "GLOBAL_ACCESS") return "Global Access Request";
   if (type === "AUTH_LEVEL_CHANGE") return "Authorization Level Change Request";
   return "Request";
 }
@@ -169,11 +162,8 @@ function renderRequestDetails(
     }
   }
 
-  // Message display (for global access and auth level change)
-  if (
-    request.message &&
-    (request.type === "GLOBAL_ACCESS" || request.type === "AUTH_LEVEL_CHANGE")
-  ) {
+  // Message display (for auth level change)
+  if (request.message && request.type === "AUTH_LEVEL_CHANGE") {
     details.push(
       <div key="message" className="mt-2 p-3 bg-muted rounded-md">
         <p className="font-medium text-sm mb-1">Message:</p>

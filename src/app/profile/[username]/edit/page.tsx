@@ -69,7 +69,7 @@ export default async function EditProfilePage({ params }: PageProps) {
             styles: profile.styles,
             image: profile.image,
           }}
-          userId={profile.id}
+          userId={session.user.id}
         />
       </main>
     </AccountVerificationGuard>
