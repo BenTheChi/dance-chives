@@ -85,5 +85,6 @@ export interface EventCard {
   imageUrl?: string;
   date: string;
   city: string;
+  cityId?: number;
   styles: string[];
 }

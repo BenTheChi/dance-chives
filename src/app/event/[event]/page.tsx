@@ -129,9 +129,23 @@ export default async function EventPage({ params }: PageProps) {
               </div>
               <div className="flex flex-row gap-2">
                 <Building />
-                <b>City:</b> {event.eventDetails.city.name}
-                {event.eventDetails.city.countryCode &&
-                  `, ${event.eventDetails.city.countryCode}`}
+                <b>City:</b>{" "}
+                {event.eventDetails.city.id ? (
+                  <Link
+                    href={`/city/${event.eventDetails.city.id}`}
+                    className="hover:text-blue-600 hover:underline transition-colors"
+                  >
+                    {event.eventDetails.city.name}
+                    {event.eventDetails.city.countryCode &&
+                      `, ${event.eventDetails.city.countryCode}`}
+                  </Link>
+                ) : (
+                  <>
+                    {event.eventDetails.city.name}
+                    {event.eventDetails.city.countryCode &&
+                      `, ${event.eventDetails.city.countryCode}`}
+                  </>
+                )}
               </div>
               {event.eventDetails.address && (
                 <div className="flex flex-row gap-2">

@@ -108,12 +108,6 @@ async function updateRequestStatus(
         data: updateData,
       });
       break;
-    case REQUEST_TYPES.GLOBAL_ACCESS:
-      await prisma.globalAccessRequest.update({
-        where: { id: requestId },
-        data: updateData,
-      });
-      break;
     case REQUEST_TYPES.AUTH_LEVEL_CHANGE:
       await prisma.authLevelChangeRequest.update({
         where: { id: requestId },
@@ -144,12 +138,6 @@ async function cancelRequest(
       break;
     case REQUEST_TYPES.TEAM_MEMBER:
       request = await prisma.teamMemberRequest.findUnique({
-        where: { id: requestId },
-        select: { senderId: true, status: true },
-      });
-      break;
-    case REQUEST_TYPES.GLOBAL_ACCESS:
-      request = await prisma.globalAccessRequest.findUnique({
         where: { id: requestId },
         select: { senderId: true, status: true },
       });
@@ -892,7 +880,6 @@ export async function approveAuthLevelChangeRequest(
     where: { id: request.targetUserId },
     data: {
       auth: request.requestedLevel,
-      allCityAccess: shouldHaveAllCityAccess,
     },
   });
 

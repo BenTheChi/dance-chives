@@ -30,8 +30,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
-import { CitySearchInput } from "../CitySearchInput";
-import { City } from "@/types/city";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -39,17 +37,7 @@ const signupSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
   username: z.string().min(1, "Username is required"),
   date: z.string().min(1, "Date of birth is required"),
-  city: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      region: z.string(),
-      countryCode: z.string(),
-      population: z.number(),
-      timezone: z.string().optional(),
-    })
-    .nullable()
-    .refine((val) => val !== null, { message: "City is required" }),
+  city: z.string().min(1, "City is required"),
   styles: z.array(z.string()).optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
@@ -59,17 +47,7 @@ const signupSchema = z.object({
 const editSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
   date: z.string().optional(),
-  city: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      region: z.string(),
-      countryCode: z.string(),
-      population: z.number(),
-      timezone: z.string().optional(),
-    })
-    .nullable()
-    .refine((val) => val !== null, { message: "City is required" }),
+  city: z.string().min(1, "City is required"),
   styles: z.array(z.string()).optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
@@ -84,7 +62,7 @@ interface SignUpFormProps {
     bio?: string;
     instagram?: string;
     website?: string;
-    city?: City | string | null;
+    city?: string;
     date?: string;
     styles?: string[];
     image?: string;
@@ -107,48 +85,27 @@ export default function SignUpForm({
     string | null
   >(currentUser?.image || null);
 
-  // Helper to convert city string to City object if needed
-  const getCityValue = (city?: City | string | null): City | null => {
-    if (!city) return null;
-    if (typeof city === "string") {
-      // If it's a string, try to parse it as JSON, otherwise return null
-      try {
-        const parsed = JSON.parse(city);
-        if (parsed && typeof parsed === "object" && parsed.id) {
-          return parsed as City;
-        }
-      } catch {
-        // If parsing fails, return null (will need to be selected)
-        return null;
-      }
-      return null;
-    }
-    return city as City;
-  };
-
-  const form = isEditMode
-    ? useForm<z.infer<typeof editSchema>>({
-        resolver: zodResolver(editSchema),
-        defaultValues: {
+  const schema = isEditMode ? editSchema : signupSchema;
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: isEditMode
+      ? {
           displayName: currentUser?.displayName || "",
           date: currentUser?.date || "",
-          city: getCityValue(currentUser?.city),
+          city: currentUser?.city || "",
           styles: currentUser?.styles || [],
           bio: currentUser?.bio || "",
           instagram: currentUser?.instagram || "",
           website: currentUser?.website || "",
-        },
-      })
-    : useForm<z.infer<typeof signupSchema>>({
-        resolver: zodResolver(signupSchema),
-        defaultValues: {
+        }
+      : {
           displayName: "",
           username: "",
           date: "",
-          city: null,
+          city: "",
           styles: [],
         },
-      });
+  });
 
   // Check if this is an admin user
   const isAdminUser = session?.user?.email === "benthechi@gmail.com";
@@ -174,33 +131,12 @@ export default function SignUpForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...(form as any)}>
+        <Form {...form}>
           <form
             className="space-y-4"
-            onSubmit={form.handleSubmit(async (data: any) => {
+            action={async (formData: FormData) => {
               setIsSubmitting(true);
               try {
-                // Create FormData from form data
-                const formData = new FormData();
-                formData.set("displayName", data.displayName);
-                if (!isEditMode && "username" in data) {
-                  formData.set("username", data.username);
-                }
-                formData.set("date", data.date || "");
-                // Store city as JSON string
-                if (data.city) {
-                  formData.set("city", JSON.stringify(data.city));
-                }
-                if (data.bio) {
-                  formData.set("bio", data.bio);
-                }
-                if (data.instagram) {
-                  formData.set("instagram", data.instagram);
-                }
-                if (data.website) {
-                  formData.set("website", data.website);
-                }
-
                 if (isEditMode) {
                   // Edit mode - use updateUserProfile
                   if (!userId) {
@@ -209,7 +145,7 @@ export default function SignUpForm({
                   }
 
                   // Get styles from form state and add to formData
-                  const styles = data.styles || [];
+                  const styles = form.getValues("styles") || [];
                   if (styles.length > 0) {
                     formData.set("Dance Styles", JSON.stringify(styles));
                   }
@@ -231,11 +167,13 @@ export default function SignUpForm({
                   }
                 } else {
                   // Signup mode - use signup
+                  // Get the date value from the form
+                  const date = formData.get("date") as string;
                   // Validate the date format
                   if (
-                    !data.date ||
+                    !date ||
                     !/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/.test(
-                      data.date
+                      date
                     )
                   ) {
                     form.setError("date", {
@@ -245,7 +183,7 @@ export default function SignUpForm({
                     return;
                   }
                   // Get styles from form state and add to formData
-                  const styles = data.styles || [];
+                  const styles = form.getValues("styles") || [];
                   if (styles.length > 0) {
                     formData.set("Dance Styles", JSON.stringify(styles));
                   }
@@ -258,7 +196,7 @@ export default function SignUpForm({
               } finally {
                 setIsSubmitting(false);
               }
-            })}
+            }}
           >
             {/* Username field - only show in signup mode */}
             {!isEditMode && (
@@ -360,16 +298,21 @@ export default function SignUpForm({
                 </FormItem>
               )}
             />
-            <CitySearchInput
-              control={form.control as any}
+            <FormField
+              control={form.control}
               name="city"
-              label="City"
-              value={(form.watch("city") as any) || null}
-              onChange={(city) => {
-                (form.setValue as any)("city", city);
-              }}
-              placeholder="Search for your city..."
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Your primary city (e.g., Seattle, New York)"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
             <FormField
               control={form.control}

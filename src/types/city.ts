@@ -13,4 +13,6 @@ export interface City {
   region: string;
   population: number;
   timezone?: string;
+  latitude?: number;
+  longitude?: number;
 }

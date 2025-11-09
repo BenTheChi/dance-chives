@@ -33,7 +33,7 @@ export default async function ProfilePage({ params }: PageProps) {
   }
 
   const profile = profileResult.profile;
-  const isOwnProfile = session?.user?.id === profile.id;
+  const isOwnProfile = session?.user?.username === username;
 
   return (
     <>
@@ -75,9 +75,30 @@ export default async function ProfilePage({ params }: PageProps) {
                   <div className="flex gap-4 mt-4">
                     {profile.city && (
                       <div className="text-sm text-muted-foreground">
-                        📍 {typeof profile.city === "object" 
-                          ? `${profile.city.name}${profile.city.region ? `, ${profile.city.region}` : ""}`
-                          : profile.city}
+                        {typeof profile.city === "object" && profile.city.id ? (
+                          <Link
+                            href={`/city/${profile.city.id}`}
+                            className="hover:text-blue-600 hover:underline transition-colors"
+                          >
+                            📍{" "}
+                            {`${profile.city.name}${
+                              profile.city.region
+                                ? `, ${profile.city.region}`
+                                : ""
+                            }`}
+                          </Link>
+                        ) : (
+                          <span>
+                            📍{" "}
+                            {typeof profile.city === "object"
+                              ? `${profile.city.name}${
+                                  profile.city.region
+                                    ? `, ${profile.city.region}`
+                                    : ""
+                                }`
+                              : profile.city}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -144,6 +165,7 @@ export default async function ProfilePage({ params }: PageProps) {
                     imageUrl={event.imageUrl}
                     date={event.startDate || ""}
                     city={event.city || ""}
+                    cityId={event.cityId}
                     styles={event.styles || []}
                   />
                 ))}
@@ -171,6 +193,7 @@ export default async function ProfilePage({ params }: PageProps) {
                     imageUrl={event.imageUrl}
                     date={event.startDate || ""}
                     city={event.city || ""}
+                    cityId={event.cityId}
                     styles={event.styles || []}
                     roles={event.roles || []}
                   />

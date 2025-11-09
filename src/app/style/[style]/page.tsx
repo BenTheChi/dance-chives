@@ -46,6 +46,7 @@ export default async function StylePage({ params }: PageProps) {
                   imageUrl={event.imageUrl}
                   date={event.date}
                   city={event.city}
+                  cityId={event.cityId}
                   styles={event.styles}
                 />
               ))}
@@ -92,4 +93,3 @@ export default async function StylePage({ params }: PageProps) {
     </>
   );
 }
-

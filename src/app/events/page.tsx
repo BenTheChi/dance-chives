@@ -21,6 +21,7 @@ export default async function EventsPage() {
                 imageUrl={event.imageUrl}
                 date={event.date}
                 city={event.city}
+                cityId={event.cityId}
                 styles={event.styles}
               />
             ))}

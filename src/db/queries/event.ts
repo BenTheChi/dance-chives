@@ -8,6 +8,7 @@ import {
   EventCard,
 } from "../../types/event";
 import { UserSearchItem } from "../../types/user";
+import { City } from "../../types/city";
 import {
   getNeo4jRoleFormats,
   toNeo4jRoleFormat,
@@ -18,6 +19,41 @@ import {
   normalizeStyleNames,
   normalizeStyleName,
 } from "@/lib/utils/style-utils";
+
+// Function to fetch city coordinates from GeoDB API
+async function fetchCityCoordinates(
+  cityId: number
+): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const response = await fetch(
+      `http://geodb-free-service.wirefreethought.com/v1/geo/places/${cityId}`
+    );
+
+    if (!response.ok) {
+      console.warn(`Failed to fetch coordinates for city ${cityId}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const place = data.data;
+
+    if (
+      place &&
+      place.latitude !== undefined &&
+      place.longitude !== undefined
+    ) {
+      return {
+        latitude: place.latitude,
+        longitude: place.longitude,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error fetching coordinates for city ${cityId}:`, error);
+    return null;
+  }
+}
 
 // Neo4j record interfaces
 interface BracketVideoRecord {
@@ -1620,7 +1656,7 @@ export const getEvents = async (): Promise<EventCard[]> => {
     `MATCH (e:Event)-[:IN]->(c:City)
     OPTIONAL MATCH (e)<-[:POSTER]-(p:Picture)
     WITH DISTINCT e, c, p
-    RETURN e.id as eventId, e.title as title, e.startDate as date, c.name as city, p.url as imageUrl`
+    RETURN e.id as eventId, e.title as title, e.startDate as date, c.name as city, c.id as cityId, p.url as imageUrl`
   );
 
   // Get all styles for each event (from sections and videos)
@@ -1669,6 +1705,7 @@ export const getEvents = async (): Promise<EventCard[]> => {
       imageUrl: record.get("imageUrl"),
       date: record.get("date"),
       city: record.get("city"),
+      cityId: record.get("cityId") as number | undefined,
       styles: stylesMap.get(eventId) || [],
     };
   });
@@ -1722,10 +1759,10 @@ export const getStyleData = async (
        WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
        UNWIND allEvents as event
        WITH DISTINCT event
-       OPTIONAL MATCH (event)-[:IN]->(c:City)
-       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(event)
-       RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, poster.url as imageUrl
-       ORDER BY event.startDate DESC`,
+      OPTIONAL MATCH (event)-[:IN]->(c:City)
+      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(event)
+      RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl
+      ORDER BY event.startDate DESC`,
       { styleName: normalizedStyleName }
     );
 
@@ -1847,6 +1884,7 @@ export const getStyleData = async (
         imageUrl: record.get("imageUrl"),
         date: record.get("date"),
         city: record.get("city"),
+        cityId: record.get("cityId") as number | undefined,
         styles: eventStylesMap.get(eventId) || [],
       };
     });
@@ -1939,4 +1977,170 @@ export const getEventPictures = async (eventId: string) => {
   });
 
   return pictures;
+};
+
+export interface CityData {
+  city: City;
+  events: EventCard[];
+  users: Array<{
+    id: string;
+    displayName: string;
+    username: string;
+    image?: string;
+    styles?: string[];
+  }>;
+}
+
+export const getAllCities = async (): Promise<City[]> => {
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `MATCH (c:City)
+       RETURN DISTINCT c.id as id, c.name as name, c.region as region, 
+              c.countryCode as countryCode, c.population as population,
+              c.timezone as timezone
+       ORDER BY c.name ASC`
+    );
+
+    await session.close();
+
+    return result.records.map((record) => ({
+      id: record.get("id") as number,
+      name: record.get("name") as string,
+      region: record.get("region") || "",
+      countryCode: record.get("countryCode") || "",
+      population: record.get("population") || 0,
+      timezone: record.get("timezone"),
+    }));
+  } catch (error) {
+    console.error("Error fetching all cities:", error);
+    await session.close();
+    return [];
+  }
+};
+
+export const getCityData = async (cityId: number): Promise<CityData | null> => {
+  const session = driver.session();
+
+  try {
+    // Check if city exists
+    const cityCheckResult = await session.run(
+      `MATCH (c:City {id: $cityId})
+       RETURN c.id as id, c.name as name, c.region as region,
+              c.countryCode as countryCode, c.population as population,
+              c.timezone as timezone`,
+      { cityId }
+    );
+
+    if (cityCheckResult.records.length === 0) {
+      return null;
+    }
+
+    const cityRecord = cityCheckResult.records[0];
+
+    // Fetch coordinates from GeoDB API
+    const coordinates = await fetchCityCoordinates(cityId);
+
+    const city: City = {
+      id: cityRecord.get("id") as number,
+      name: cityRecord.get("name") as string,
+      region: cityRecord.get("region") || "",
+      countryCode: cityRecord.get("countryCode") || "",
+      population: cityRecord.get("population") || 0,
+      timezone: cityRecord.get("timezone"),
+      latitude: coordinates?.latitude,
+      longitude: coordinates?.longitude,
+    };
+
+    // Get events in this city
+    const eventsResult = await session.run(
+      `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+       RETURN e.id as eventId, e.title as title, e.startDate as date, 
+              poster.url as imageUrl
+       ORDER BY e.startDate DESC`,
+      { cityId }
+    );
+
+    // Get all styles for each event
+    const eventStylesResult = await session.run(
+      `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+       OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+       OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+       WITH e.id as eventId,
+            collect(DISTINCT sectionStyle.name) as sectionStyles,
+            collect(DISTINCT videoStyle.name) as videoStyles,
+            collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+       WITH eventId,
+            [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+            [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+            [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+       RETURN eventId,
+              filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
+      { cityId }
+    );
+
+    // Create styles map for events
+    const eventStylesMap = new Map<string, string[]>();
+    eventStylesResult.records.forEach((record) => {
+      const eventId = record.get("eventId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      eventStylesMap.set(eventId, uniqueStyles);
+    });
+
+    // Build events array
+    const events: EventCard[] = eventsResult.records.map((record) => {
+      const eventId = record.get("eventId");
+      return {
+        id: eventId,
+        title: record.get("title"),
+        series: undefined,
+        imageUrl: record.get("imageUrl"),
+        date: record.get("date"),
+        city: city.name,
+        styles: eventStylesMap.get(eventId) || [],
+      };
+    });
+
+    // Get users in this city
+    const usersResult = await session.run(
+      `MATCH (u:User)-[:LOCATED_IN]->(c:City {id: $cityId})
+       OPTIONAL MATCH (u)-[:STYLE]->(s:Style)
+       RETURN u.id as id, u.displayName as displayName, u.username as username,
+              u.image as image, collect(DISTINCT s.name) as styles
+       ORDER BY u.displayName ASC, u.username ASC`,
+      { cityId }
+    );
+
+    const users = usersResult.records.map((record) => ({
+      id: record.get("id"),
+      displayName: record.get("displayName") || "",
+      username: record.get("username") || "",
+      image: record.get("image"),
+      styles: (record.get("styles") || []).filter(
+        (s: any) => s !== null && s !== undefined
+      ) as string[],
+    }));
+
+    await session.close();
+
+    return {
+      city,
+      events,
+      users,
+    };
+  } catch (error) {
+    console.error("Error fetching city data:", error);
+    await session.close();
+    return null;
+  }
 };

@@ -18,6 +18,7 @@ const Eventcard = ({
   imageUrl,
   date,
   city,
+  cityId,
   styles,
   roles,
 }: EventcardProps) => {
@@ -43,7 +44,16 @@ const Eventcard = ({
           </Link>
           {series && <p className="text-sm text-muted-foreground">{series}</p>}
           <p className="text-sm text-muted-foreground">{date}</p>
-          <p className="text-sm text-muted-foreground">{city}</p>
+          {cityId ? (
+            <Link
+              href={`/city/${cityId}`}
+              className="text-sm text-muted-foreground hover:text-blue-600 hover:underline transition-colors"
+            >
+              {city}
+            </Link>
+          ) : (
+            <p className="text-sm text-muted-foreground">{city}</p>
+          )}
 
           {styles && styles.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
@@ -56,11 +66,7 @@ const Eventcard = ({
           {roles && roles.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {roles.map((role, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="text-xs"
-                >
+                <Badge key={index} variant="secondary" className="text-xs">
                   {fromNeo4jRoleFormat(role) || role}
                 </Badge>
               ))}

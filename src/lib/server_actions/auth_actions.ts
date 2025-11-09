@@ -467,7 +467,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate,
-             e.createdAt as createdAt, poster.url as imageUrl, c.name as city,
+             e.createdAt as createdAt, poster.url as imageUrl, c.name as city, c.id as cityId,
              collect(DISTINCT s.name) as styles
       ORDER BY e.createdAt DESC
       `,
@@ -481,6 +481,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       createdAt: record.get("createdAt"),
       imageUrl: record.get("imageUrl"),
       city: record.get("city"),
+      cityId: record.get("cityId") as number | undefined,
       styles: record.get("styles") || [],
     }));
 
@@ -499,6 +500,7 @@ export async function getUserProfile(userIdOrUsername: string) {
              e.createdAt as createdAt, e.startDate as startDate,
              head(collect(DISTINCT poster.url)) as imageUrl, 
              head(collect(DISTINCT c.name)) as city,
+             head(collect(DISTINCT c.id)) as cityId,
              collect(DISTINCT s.name) as styles
       ORDER BY e.createdAt DESC
       `,
@@ -513,6 +515,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       startDate: record.get("startDate"),
       imageUrl: record.get("imageUrl"),
       city: record.get("city"),
+      cityId: record.get("cityId") as number | undefined,
       styles: record.get("styles") || [],
     }));
 
