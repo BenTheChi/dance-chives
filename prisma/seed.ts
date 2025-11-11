@@ -10,7 +10,11 @@ import {
   VIDEO_ROLE_WINNER,
   SECTION_ROLE_WINNER,
 } from "../src/lib/utils/roles";
-import { applyTag } from "../src/db/queries/team-member";
+import {
+  setVideoRoles,
+  setSectionWinner,
+  applyTag,
+} from "../src/db/queries/team-member";
 
 const prisma = new PrismaClient();
 
@@ -854,12 +858,11 @@ async function main() {
 
   // Moderator (test-user-2) tags themselves as Dancer in a video
   try {
-    await applyTag(
+    await setVideoRoles(
       "event-3-new-york-moderator",
       "video-1-breaking-1v1-moderator-r1",
-      null,
       "test-user-2",
-      VIDEO_ROLE_DANCER
+      [VIDEO_ROLE_DANCER]
     );
     console.log(
       `✅ Tagged moderator as Dancer in video: event-3-new-york-moderator -> video-1-breaking-1v1-moderator-r1`
@@ -872,23 +875,13 @@ async function main() {
     );
   }
 
-  // Admin (test-user-3) tags themselves as Winner in a video (which also tags as Dancer)
+  // Admin (test-user-3) tags themselves as Winner in a video (setVideoRoles automatically ensures Dancer is present)
   try {
-    await applyTag(
+    await setVideoRoles(
       "event-4-seattle-admin",
       "video-1-breaking-1v1-admin-r1",
-      null,
       "test-user-3",
-      VIDEO_ROLE_WINNER
-    );
-    // Note: When tagging as Winner, the system automatically also tags as Dancer if not already tagged
-    // But we need to explicitly tag as Dancer here since applyTag doesn't do that automatically
-    await applyTag(
-      "event-4-seattle-admin",
-      "video-1-breaking-1v1-admin-r1",
-      null,
-      "test-user-3",
-      VIDEO_ROLE_DANCER
+      [VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER]
     );
     console.log(
       `✅ Tagged admin as Winner and Dancer in video: event-4-seattle-admin -> video-1-breaking-1v1-admin-r1`
@@ -903,12 +896,10 @@ async function main() {
 
   // Super Admin (test-user-4) tags themselves as Winner in a section
   try {
-    await applyTag(
+    await setSectionWinner(
       "event-5-new-york-super-admin",
-      null,
       "section-1-breaking-1v1-super-admin",
-      "test-user-4",
-      SECTION_ROLE_WINNER
+      "test-user-4"
     );
     console.log(
       `✅ Tagged super admin as Winner in section: event-5-new-york-super-admin -> section-1-breaking-1v1-super-admin`

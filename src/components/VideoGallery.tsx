@@ -40,13 +40,11 @@ export default function VideoGallery({
   // Check if current user is a winner for each video
   const videosWithWinnerStatus = useMemo(() => {
     return videos.map((video) => {
-      if (!currentUserId || !video.taggedUsers) {
+      if (!currentUserId || !video.taggedWinners) {
         return { video, isWinner: false };
       }
-      const isWinner = video.taggedUsers.some((user) => {
-        if (user.id !== currentUserId) return false;
-        const role = fromNeo4jRoleFormat(user.role);
-        return role === VIDEO_ROLE_WINNER;
+      const isWinner = video.taggedWinners.some((user) => {
+        return user.id === currentUserId || user.username === currentUserId;
       });
       return { video, isWinner };
     });

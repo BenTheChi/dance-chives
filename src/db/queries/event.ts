@@ -93,13 +93,15 @@ interface BracketVideoUserRecord {
   sectionId: string;
   bracketId: string;
   videoId: string;
-  taggedUsers: UserSearchItem[];
+  taggedWinners: UserSearchItem[];
+  taggedDancers: UserSearchItem[];
 }
 
 interface SectionVideoUserRecord {
   sectionId: string;
   videoId: string;
-  taggedUsers: UserSearchItem[];
+  taggedWinners: UserSearchItem[];
+  taggedDancers: UserSearchItem[];
 }
 
 export const getEvent = async (id: string): Promise<Event> => {
@@ -208,61 +210,66 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-  // Get tagged users for bracket videos with role property
-  // Support both r.role (legacy) and r.roles (array) for backward compatibility
-  // UNWIND roles to create one entry per user-role combination
+  // Get tagged users for bracket videos using relationship types - separate winners and dancers
   const bracketVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
-    WITH s, b, v, u, 
-         CASE 
-           WHEN r.roles IS NOT NULL THEN r.roles
-           WHEN r.role IS NOT NULL THEN [r.role]
-           ELSE []
-         END as roles
-    UNWIND roles as role
-    WITH s, b, v, u, role
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+    WITH s, b, v, 
+         collect(DISTINCT {
+           id: winner.id,
+           displayName: winner.displayName,
+           username: winner.username
+         }) as allWinners,
+         collect(DISTINCT {
+           id: dancer.id,
+           displayName: dancer.displayName,
+           username: dancer.username
+         }) as allDancers
+    WITH s, b, v,
+         [w in allWinners WHERE w.id IS NOT NULL] as winners,
+         [d in allDancers WHERE d.id IS NOT NULL] as dancers
+    WHERE size(winners) > 0 OR size(dancers) > 0
     RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, 
-           collect({
-             id: u.id,
-             displayName: u.displayName,
-             username: u.username,
-             role: role
-           }) as taggedUsers
+           winners as taggedWinners,
+           dancers as taggedDancers
   `,
     { id }
   );
 
-  // Get tagged users for direct section videos with role property
-  // Support both r.role (legacy) and r.roles (array) for backward compatibility
-  // UNWIND roles to create one entry per user-role combination
+  // Get tagged users for direct section videos using relationship types - separate winners and dancers
   const sectionVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
-    WITH s, v, u,
-         CASE 
-           WHEN r.roles IS NOT NULL THEN r.roles
-           WHEN r.role IS NOT NULL THEN [r.role]
-           ELSE []
-         END as roles
-    UNWIND roles as role
-    WITH s, v, u, role
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+    WITH s, v, 
+         collect(DISTINCT {
+           id: winner.id,
+           displayName: winner.displayName,
+           username: winner.username
+         }) as allWinners,
+         collect(DISTINCT {
+           id: dancer.id,
+           displayName: dancer.displayName,
+           username: dancer.username
+         }) as allDancers
+    WITH s, v,
+         [w in allWinners WHERE w.id IS NOT NULL] as winners,
+         [d in allDancers WHERE d.id IS NOT NULL] as dancers
+    WHERE size(winners) > 0 OR size(dancers) > 0
     RETURN s.id as sectionId, v.id as videoId, 
-           collect({
-             id: u.id,
-             displayName: u.displayName,
-             username: u.username,
-             role: role
-           }) as taggedUsers
+           winners as taggedWinners,
+           dancers as taggedDancers
   `,
     { id }
   );
 
-  // Get section winners (users with role="WINNER" for each section)
+  // Get section winners using :WINNER relationship type
   const sectionWinnersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[r:IN]-(u:User)
-    WHERE r.role = "WINNER"
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[r:WINNER]-(u:User)
     RETURN s.id as sectionId, collect({
       id: u.id,
       displayName: u.displayName,
@@ -323,7 +330,8 @@ export const getEvent = async (id: string): Promise<Event> => {
       sectionId: record.get("sectionId"),
       bracketId: record.get("bracketId"),
       videoId: record.get("videoId"),
-      taggedUsers: record.get("taggedUsers"),
+      taggedWinners: record.get("taggedWinners") || [],
+      taggedDancers: record.get("taggedDancers") || [],
     })
   );
 
@@ -382,9 +390,11 @@ export const getEvent = async (id: string): Promise<Event> => {
           record.get("videoId") === video.id
       );
       if (userData) {
-        video.taggedUsers = userData.get("taggedUsers");
+        video.taggedWinners = userData.get("taggedWinners") || [];
+        video.taggedDancers = userData.get("taggedDancers") || [];
       } else {
-        video.taggedUsers = [];
+        video.taggedWinners = [];
+        video.taggedDancers = [];
       }
 
       // Add video styles
@@ -409,9 +419,11 @@ export const getEvent = async (id: string): Promise<Event> => {
               bvu.videoId === video.id
           );
           if (userData) {
-            video.taggedUsers = userData.taggedUsers;
+            video.taggedWinners = userData.taggedWinners;
+            video.taggedDancers = userData.taggedDancers;
           } else {
-            video.taggedUsers = [];
+            video.taggedWinners = [];
+            video.taggedDancers = [];
           }
 
           // Add video styles
@@ -1027,55 +1039,58 @@ export const getEventSections = async (id: string) => {
     { id }
   );
 
-  // Get tagged users for all videos in sections
-  // Match videos in sections first, then find their tagged users with role property
-  // Support both r.role (legacy) and r.roles (array) for backward compatibility
-  // UNWIND roles to create one entry per user-role combination
+  // Get tagged users for all videos in sections using relationship types - separate winners and dancers
   const sectionVideoUsersResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)
-    OPTIONAL MATCH (v)<-[r:IN]-(u:User)
-    WITH s, v, u, r,
-         CASE 
-           WHEN r.roles IS NOT NULL THEN r.roles
-           WHEN r.role IS NOT NULL THEN [r.role]
-           ELSE []
-         END as roles
-    WHERE u IS NOT NULL
-    UNWIND roles as role
-    WITH s, v, u, role
+    OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+    WITH s, v, 
+         collect(DISTINCT {
+           id: winner.id,
+           displayName: winner.displayName,
+           username: winner.username
+         }) as allWinners,
+         collect(DISTINCT {
+           id: dancer.id,
+           displayName: dancer.displayName,
+           username: dancer.username
+         }) as allDancers
+    WITH s, v,
+         [w in allWinners WHERE w.id IS NOT NULL] as winners,
+         [d in allDancers WHERE d.id IS NOT NULL] as dancers
+    WHERE size(winners) > 0 OR size(dancers) > 0
     RETURN s.id as sectionId, v.id as videoId, 
-           collect({
-             id: u.id,
-             displayName: u.displayName,
-             username: u.username,
-             role: role
-           }) as taggedUsers
+           winners as taggedWinners,
+           dancers as taggedDancers
   `,
     { id }
   );
 
-  // Get tagged users for bracket videos
-  // Support both r.role (legacy) and r.roles (array) for backward compatibility
-  // UNWIND roles to create one entry per user-role combination
+  // Get tagged users for bracket videos using relationship types - separate winners and dancers
   const bracketVideoUsersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)<-[r:IN]-(u:User)
-    WITH s, b, v, u,
-         CASE 
-           WHEN r.roles IS NOT NULL THEN r.roles
-           WHEN r.role IS NOT NULL THEN [r.role]
-           ELSE []
-         END as roles
-    UNWIND roles as role
-    WITH s, b, v, u, role
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+    WITH s, b, v, 
+         collect(DISTINCT {
+           id: winner.id,
+           displayName: winner.displayName,
+           username: winner.username
+         }) as allWinners,
+         collect(DISTINCT {
+           id: dancer.id,
+           displayName: dancer.displayName,
+           username: dancer.username
+         }) as allDancers
+    WITH s, b, v,
+         [w in allWinners WHERE w.id IS NOT NULL] as winners,
+         [d in allDancers WHERE d.id IS NOT NULL] as dancers
+    WHERE size(winners) > 0 OR size(dancers) > 0
     RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, 
-           collect({
-             id: u.id,
-             displayName: u.displayName,
-             username: u.username,
-             role: role
-           }) as taggedUsers
+           winners as taggedWinners,
+           dancers as taggedDancers
   `,
     { id }
   );
@@ -1116,11 +1131,10 @@ export const getEventSections = async (id: string) => {
     { id }
   );
 
-  // Get section winners (users with role="WINNER" for each section)
+  // Get section winners using :WINNER relationship type
   const sectionWinnersResult = await session.run(
     `
-    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[r:IN]-(u:User)
-    WHERE r.role = "WINNER"
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[r:WINNER]-(u:User)
     RETURN s.id as sectionId, collect({
       id: u.id,
       displayName: u.displayName,
@@ -1159,7 +1173,8 @@ export const getEventSections = async (id: string) => {
       (record): SectionVideoUserRecord => ({
         sectionId: record.get("sectionId"),
         videoId: record.get("videoId"),
-        taggedUsers: record.get("taggedUsers") || [],
+        taggedWinners: record.get("taggedWinners") || [],
+        taggedDancers: record.get("taggedDancers") || [],
       })
     );
 
@@ -1168,7 +1183,8 @@ export const getEventSections = async (id: string) => {
       sectionId: record.get("sectionId"),
       bracketId: record.get("bracketId"),
       videoId: record.get("videoId"),
-      taggedUsers: record.get("taggedUsers"),
+      taggedWinners: record.get("taggedWinners") || [],
+      taggedDancers: record.get("taggedDancers") || [],
     })
   );
 
@@ -1232,12 +1248,8 @@ export const getEventSections = async (id: string) => {
       const styleKey = `${section.id}:${video.id}`;
       return {
         ...video,
-        taggedUsers:
-          userData &&
-          userData.taggedUsers &&
-          Array.isArray(userData.taggedUsers)
-            ? userData.taggedUsers
-            : [],
+        taggedWinners: userData?.taggedWinners || [],
+        taggedDancers: userData?.taggedDancers || [],
         styles: sectionVideoStylesMap.get(styleKey) || [],
       };
     });
@@ -1248,7 +1260,7 @@ export const getEventSections = async (id: string) => {
         (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id
       );
       if (bracketVideoData) {
-        // Create new video objects with taggedUsers and styles to avoid mutating Neo4j objects
+        // Create new video objects with taggedWinners/taggedDancers and styles to avoid mutating Neo4j objects
         bracket.videos = bracketVideoData.videos.map((video: Video) => {
           const userData = bracketVideoUsers.find(
             (bvu) =>
@@ -1259,12 +1271,8 @@ export const getEventSections = async (id: string) => {
           const styleKey = `${section.id}:${bracket.id}:${video.id}`;
           return {
             ...video,
-            taggedUsers:
-              userData &&
-              userData.taggedUsers &&
-              Array.isArray(userData.taggedUsers)
-                ? userData.taggedUsers
-                : [],
+            taggedWinners: userData?.taggedWinners || [],
+            taggedDancers: userData?.taggedDancers || [],
             styles: bracketVideoStylesMap.get(styleKey) || [],
           };
         });

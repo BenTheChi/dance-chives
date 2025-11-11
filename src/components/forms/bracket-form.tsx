@@ -11,7 +11,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Plus } from "lucide-react";
-import type { Control, UseFormSetValue } from "react-hook-form";
+import type {
+  Control,
+  UseFormSetValue,
+  UseFormGetValues,
+} from "react-hook-form";
 import { VideoForm } from "./video-form";
 import { FormValues } from "./event-form";
 import { Section, Bracket, Video } from "@/types/event";
@@ -27,6 +31,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
 interface BracketFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
+  getValues: UseFormGetValues<FormValues>;
   activeSectionIndex: number;
   activeBracketIndex: number;
   bracket: Bracket;
@@ -39,6 +44,7 @@ interface BracketFormProps {
 export function BracketForm({
   control,
   setValue,
+  getValues,
   activeSectionIndex,
   activeBracketIndex,
   bracket,
@@ -52,7 +58,8 @@ export function BracketForm({
       id: Date.now().toString(),
       title: `Video ${bracket.videos.length + 1}`,
       src: "https://example.com/video",
-      taggedUsers: [],
+      taggedWinners: [],
+      taggedDancers: [],
     };
 
     const updatedSections = sections.map((section) =>
@@ -128,6 +135,7 @@ export function BracketForm({
               key={video.id}
               control={control}
               setValue={setValue}
+              getValues={getValues}
               video={video}
               videoIndex={videoIndex}
               sectionIndex={activeSectionIndex}

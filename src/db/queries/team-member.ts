@@ -259,9 +259,172 @@ export async function getEventCityId(eventId: string): Promise<string | null> {
 }
 
 /**
+ * Set video roles for a user declaratively
+ * Replaces all existing role relationships with the specified roles
+ * Uses relationship types :DANCER and :WINNER instead of :IN with properties
+ * Automatically ensures DANCER is present if WINNER is specified
+ */
+export async function setVideoRoles(
+  eventId: string,
+  videoId: string,
+  userId: string,
+  roles: string[]
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate event exists
+    const eventExistsCheck = await eventExists(eventId);
+    if (!eventExistsCheck) {
+      throw new Error(`Event ${eventId} does not exist`);
+    }
+
+    // Validate video exists and belongs to event
+    const videoExists = await videoExistsInEvent(eventId, videoId);
+    if (!videoExists) {
+      throw new Error(`Video ${videoId} does not exist in event ${eventId}`);
+    }
+
+    // Validate all roles
+    for (const role of roles) {
+      if (!isValidVideoRole(role)) {
+        throw new Error(
+          `Invalid video role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(
+            ", "
+          )}, ${VIDEO_ROLE_DANCER}, or ${VIDEO_ROLE_WINNER}`
+        );
+      }
+    }
+
+    // Normalize roles to Neo4j format and ensure DANCER if WINNER is present
+    const normalizedRoles = roles.map((r) => toNeo4jRoleFormat(r));
+    const hasWinner =
+      normalizedRoles.includes("WINNER") ||
+      normalizedRoles.includes(VIDEO_ROLE_WINNER.toUpperCase());
+    const hasDancer =
+      normalizedRoles.includes("DANCER") ||
+      normalizedRoles.includes(VIDEO_ROLE_DANCER.toUpperCase());
+
+    // Ensure DANCER is included if WINNER is present
+    const finalRoles = new Set(normalizedRoles);
+    if (hasWinner && !hasDancer) {
+      finalRoles.add("DANCER");
+    }
+
+    console.log(
+      `✅ [setVideoRoles] Setting roles for user ${userId} in video ${videoId}:`,
+      Array.from(finalRoles)
+    );
+
+    // Delete all existing role relationships for this user-video pair
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:DANCER|WINNER]->(v:Video {id: $videoId})
+      WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+         OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+      DELETE r
+      `,
+      { eventId, videoId, userId }
+    );
+
+    // Create new relationships for each role
+    // Use conditional logic since Cypher doesn't support dynamic relationship types in MERGE
+    if (finalRoles.has("DANCER")) {
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})
+        MATCH (v:Video {id: $videoId})
+        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        MERGE (u)-[:DANCER]->(v)
+        `,
+        { eventId, videoId, userId }
+      );
+    }
+    if (finalRoles.has("WINNER")) {
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})
+        MATCH (v:Video {id: $videoId})
+        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        MERGE (u)-[:WINNER]->(v)
+        `,
+        { eventId, videoId, userId }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Set section winner declaratively
+ * Uses :WINNER relationship type instead of :IN with property
+ * If userId is null, removes all winners from the section
+ */
+export async function setSectionWinner(
+  eventId: string,
+  sectionId: string,
+  userId: string | null
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate event exists
+    const eventExistsCheck = await eventExists(eventId);
+    if (!eventExistsCheck) {
+      throw new Error(`Event ${eventId} does not exist`);
+    }
+
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      throw new Error(
+        `Section ${sectionId} does not exist in event ${eventId}`
+      );
+    }
+
+    if (userId === null) {
+      // Remove all winners from section
+      console.log(
+        `✅ [setSectionWinner] Removing all winners from section ${sectionId}`
+      );
+      await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})<-[r:WINNER]-(u:User)
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        DELETE r
+        `,
+        { eventId, sectionId }
+      );
+    } else {
+      // Set user as winner (remove all other winners first, then add this one)
+      console.log(
+        `✅ [setSectionWinner] Setting user ${userId} as winner of section ${sectionId}`
+      );
+      await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})<-[r:WINNER]-(u:User)
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        DELETE r
+        WITH s
+        MATCH (u:User {id: $userId})
+        MATCH (s:Section {id: $sectionId})
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        MERGE (u)-[:WINNER]->(s)
+        `,
+        { eventId, sectionId, userId }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Apply a tag to a user in Neo4j (for videos, sections, or event roles)
  * Throws error if event, video, or section doesn't exist
  * Role is required for videos and sections
+ * @deprecated Use setVideoRoles or setSectionWinner instead
  */
 export async function applyTag(
   eventId: string,
@@ -507,7 +670,7 @@ export async function getVideoTitle(videoId: string): Promise<string | null> {
 
 /**
  * Check if a user is tagged in a video
- * Returns true if user has (User)-[:IN]->(Video) relationship
+ * Returns true if user has any role relationship (:DANCER or :WINNER) with the video
  */
 export async function isUserTaggedInVideo(
   eventId: string,
@@ -524,7 +687,7 @@ export async function isUserTaggedInVideo(
 
     const result = await session.run(
       `
-      MATCH (u:User {id: $userId})-[:IN]->(v:Video {id: $videoId})
+      MATCH (u:User {id: $userId})-[r:DANCER|WINNER]->(v:Video {id: $videoId})
       WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
          OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
       RETURN count(v) as count
@@ -541,7 +704,7 @@ export async function isUserTaggedInVideo(
 
 /**
  * Check if a user has a specific role in a video
- * Returns true if user has (User)-[r:IN]->(Video) relationship with the specified role
+ * Returns true if user has relationship of the specified type (:DANCER or :WINNER) with the video
  */
 export async function isUserTaggedInVideoWithRole(
   eventId: string,
@@ -559,22 +722,31 @@ export async function isUserTaggedInVideoWithRole(
 
     const neo4jRole = toNeo4jRoleFormat(role);
 
-    const result = await session.run(
-      `
-      MATCH (u:User {id: $userId})-[r:IN]->(v:Video {id: $videoId})
-      WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
-         OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
-      WITH r, v,
-           CASE 
-             WHEN r.roles IS NOT NULL THEN r.roles
-             WHEN r.role IS NOT NULL THEN [r.role]
-             ELSE []
-           END as roles
-      WHERE $role IN roles
-      RETURN count(v) as count
-      `,
-      { eventId, videoId, userId, role: neo4jRole }
-    );
+    // Map role to relationship type - use conditional queries since Cypher doesn't support dynamic relationship types
+    let result;
+    if (neo4jRole === "DANCER" || role.toUpperCase() === "DANCER") {
+      result = await session.run(
+        `
+        MATCH (u:User {id: $userId})-[r:DANCER]->(v:Video {id: $videoId})
+        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        RETURN count(v) as count
+        `,
+        { eventId, videoId, userId }
+      );
+    } else if (neo4jRole === "WINNER" || role.toUpperCase() === "WINNER") {
+      result = await session.run(
+        `
+        MATCH (u:User {id: $userId})-[r:WINNER]->(v:Video {id: $videoId})
+        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
+        RETURN count(v) as count
+        `,
+        { eventId, videoId, userId }
+      );
+    } else {
+      return false;
+    }
 
     const count = result.records[0]?.get("count")?.toNumber() || 0;
     return count > 0;
@@ -585,7 +757,7 @@ export async function isUserTaggedInVideoWithRole(
 
 /**
  * Check if a user is a winner of a section
- * Returns true if user has (User)-[r:IN {role: "WINNER"}]->(Section) relationship
+ * Returns true if user has :WINNER relationship with the section
  */
 export async function isUserWinnerOfSection(
   eventId: string,
@@ -602,15 +774,8 @@ export async function isUserWinnerOfSection(
 
     const result = await session.run(
       `
-      MATCH (u:User {id: $userId})-[r:IN]->(s:Section {id: $sectionId})
+      MATCH (u:User {id: $userId})-[r:WINNER]->(s:Section {id: $sectionId})
       WHERE (s)-[:IN]->(:Event {id: $eventId})
-      WITH r, s,
-           CASE 
-             WHEN r.roles IS NOT NULL THEN r.roles
-             WHEN r.role IS NOT NULL THEN [r.role]
-             ELSE []
-           END as roles
-      WHERE "WINNER" IN roles
       RETURN count(s) as count
       `,
       { eventId, sectionId, userId }

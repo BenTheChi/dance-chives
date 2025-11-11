@@ -11,7 +11,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { X, Trophy } from "lucide-react";
-import type { Control, UseFormSetValue } from "react-hook-form";
+import type {
+  Control,
+  UseFormSetValue,
+  UseFormGetValues,
+} from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Section, Video } from "@/types/event";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
@@ -33,6 +37,7 @@ interface VideoFormProps {
   onRemove: () => void;
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
+  getValues: UseFormGetValues<FormValues>;
   eventId?: string; // Event ID for winner tagging (only in edit mode)
 }
 
@@ -73,187 +78,33 @@ export function VideoForm({
   onRemove,
   control,
   setValue,
+  getValues,
   eventId,
 }: VideoFormProps) {
   const bracketIndex = sections[sectionIndex].brackets.findIndex(
     (b) => b.id === activeBracketId
   );
   const [videoWinners, setVideoWinners] = useState<UserSearchItem[]>([]);
+  const [videoDancers, setVideoDancers] = useState<UserSearchItem[]>([]);
 
-  // Load existing winners from taggedUsers (users with WINNER role)
-  // Extract winners as UserSearchItem objects, deduplicating by ID
+  // Load existing winners and dancers from separate arrays
   useEffect(() => {
-    if (video.taggedUsers && Array.isArray(video.taggedUsers)) {
-      // Create a Map to deduplicate winners by username
-      const winnersMap = new Map<string, UserSearchItem>();
-      video.taggedUsers.forEach((user) => {
-        if (user && user.username) {
-          const role = user.role;
-          // Check for both Neo4j format (WINNER) and display format (Winner)
-          if (
-            role === "WINNER" ||
-            role === "Winner" ||
-            role?.toUpperCase() === "WINNER"
-          ) {
-            // Only add if not already in map (deduplicate)
-            if (!winnersMap.has(user.username)) {
-              winnersMap.set(user.username, {
-                id: user.id, // Preserve id if present (from server data)
-                displayName: user.displayName,
-                username: user.username,
-              });
-            }
-          }
-        }
-      });
-      setVideoWinners(Array.from(winnersMap.values()));
-    } else {
-      setVideoWinners([]);
-    }
-  }, [video.taggedUsers, video.id]);
+    setVideoWinners(video.taggedWinners || []);
+    setVideoDancers(video.taggedDancers || []);
+  }, [video.taggedWinners, video.taggedDancers, video.id]);
 
-  const handleMarkAsVideoWinner = (user: UserSearchItem) => {
-    // Prevent duplicate submissions
-    if (videoWinners.find((w) => w.username === user.username)) {
-      return;
-    }
+  const updateTaggedDancers = (dancers: UserSearchItem[]) => {
+    console.log("🟢 [updateTaggedDancers] Updating tagged dancers:", dancers);
+    const currentSections = getValues("sections") || [];
 
-    // Get current video from sections to ensure we have the latest state
-    const currentSection = sections.find((s) => s.id === activeSectionId);
-    let currentVideo: Video | undefined;
-
-    if (context === "section" && currentSection) {
-      currentVideo = currentSection.videos.find((v) => v.id === video.id);
-    } else if (context === "bracket" && currentSection) {
-      const currentBracket = currentSection.brackets.find(
-        (b) => b.id === activeBracketId
-      );
-      currentVideo = currentBracket?.videos.find((v) => v.id === video.id);
-    }
-
-    const currentTaggedUsers =
-      currentVideo?.taggedUsers || video.taggedUsers || [];
-
-    // Update taggedUsers: add WINNER role, and ensure Dancer role is present
-    // Create separate entries for each role (matching Neo4j UNWIND structure)
-    const existingUserEntries = currentTaggedUsers.filter(
-      (tu) => tu.username === user.username
-    );
-    const existingRoles = new Set(
-      existingUserEntries.map((tu) => tu.role).filter((r): r is string => !!r)
-    );
-
-    // Remove all existing entries for this user
-    const otherUsers = currentTaggedUsers.filter(
-      (tu) => tu.username !== user.username
-    );
-
-    // Create new entries: one for DANCER, one for WINNER
-    const newEntries: UserSearchItem[] = [];
-
-    // Always include DANCER role
-    if (!existingRoles.has(VIDEO_ROLE_DANCER) && !existingRoles.has("DANCER")) {
-      newEntries.push({
-        id: user.id,
-        username: user.username,
-        displayName: user.displayName,
-        role: VIDEO_ROLE_DANCER,
-      });
-    } else {
-      // Keep existing DANCER entry if it exists
-      const dancerEntry = existingUserEntries.find(
-        (tu) => tu.role === VIDEO_ROLE_DANCER || tu.role === "DANCER"
-      );
-      if (dancerEntry) {
-        newEntries.push(dancerEntry);
-      }
-    }
-
-    // Always include WINNER role
-    if (!existingRoles.has(VIDEO_ROLE_WINNER) && !existingRoles.has("WINNER")) {
-      newEntries.push({
-        id: user.id,
-        username: user.username,
-        displayName: user.displayName,
-        role: VIDEO_ROLE_WINNER,
-      });
-    } else {
-      // Keep existing WINNER entry if it exists
-      const winnerEntry = existingUserEntries.find(
-        (tu) => tu.role === VIDEO_ROLE_WINNER || tu.role === "WINNER"
-      );
-      if (winnerEntry) {
-        newEntries.push(winnerEntry);
-      }
-    }
-
-    const updatedTaggedUsers = [...otherUsers, ...newEntries];
-
-    // Update form state
-    updateTaggedUsers(updatedTaggedUsers);
-
-    // Update local winners state for display
-    setVideoWinners((prev) => {
-      if (prev.find((w) => w.username === user.username)) {
-        return prev;
-      }
-      return [...prev, user];
-    });
-  };
-
-  const handleRemoveVideoWinner = (username: string) => {
-    const winnerToRemove = videoWinners.find((w) => w.username === username);
-    if (!winnerToRemove) {
-      return;
-    }
-
-    // Get current video from sections
-    const currentSection = sections.find((s) => s.id === activeSectionId);
-    let currentVideo: Video | undefined;
-
-    if (context === "section" && currentSection) {
-      currentVideo = currentSection.videos.find((v) => v.id === video.id);
-    } else if (context === "bracket" && currentSection) {
-      const currentBracket = currentSection.brackets.find(
-        (b) => b.id === activeBracketId
-      );
-      currentVideo = currentBracket?.videos.find((v) => v.id === video.id);
-    }
-
-    const currentTaggedUsers =
-      currentVideo?.taggedUsers || video.taggedUsers || [];
-
-    // Update taggedUsers: remove WINNER role entry, but keep Dancer role entry if present
-    const updatedTaggedUsers = currentTaggedUsers.filter((taggedUser) => {
-      // Remove only the WINNER entry for this user, keep DANCER entry
-      if (taggedUser.username === username) {
-        const role = taggedUser.role;
-        const isWinner =
-          role === VIDEO_ROLE_WINNER ||
-          role === "WINNER" ||
-          role?.toUpperCase() === "WINNER";
-        // Filter out WINNER entry, keep everything else (including DANCER entry)
-        return !isWinner;
-      }
-      return true; // Keep all entries for other users
-    });
-
-    // Update form state
-    updateTaggedUsers(updatedTaggedUsers);
-
-    // Update local winners state for display
-    setVideoWinners((prev) => prev.filter((w) => w.username !== username));
-  };
-
-  const updateTaggedUsers = (users: UserSearchItem[]) => {
-    const updatedSections = sections.map((section) => {
+    const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
       if (context === "section") {
         return {
           ...section,
           videos: section.videos.map((v) =>
-            v.id === video.id ? { ...v, taggedUsers: users } : v
+            v.id === video.id ? { ...v, taggedDancers: dancers } : v
           ),
         };
       } else {
@@ -264,7 +115,7 @@ export function VideoForm({
               ? {
                   ...bracket,
                   videos: bracket.videos.map((v) =>
-                    v.id === video.id ? { ...v, taggedUsers: users } : v
+                    v.id === video.id ? { ...v, taggedDancers: dancers } : v
                   ),
                 }
               : bracket
@@ -274,10 +125,71 @@ export function VideoForm({
     });
 
     setValue("sections", normalizeSectionsForForm(updatedSections));
+    setVideoDancers(dancers);
+  };
+
+  const updateTaggedWinners = (winners: UserSearchItem[]) => {
+    console.log("🟢 [updateTaggedWinners] Updating tagged winners:", winners);
+    const currentSections = getValues("sections") || [];
+
+    const updatedSections = currentSections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (context === "section") {
+        return {
+          ...section,
+          videos: section.videos.map((v) =>
+            v.id === video.id ? { ...v, taggedWinners: winners } : v
+          ),
+        };
+      } else {
+        return {
+          ...section,
+          brackets: section.brackets.map((bracket) =>
+            bracket.id === activeBracketId
+              ? {
+                  ...bracket,
+                  videos: bracket.videos.map((v) =>
+                    v.id === video.id ? { ...v, taggedWinners: winners } : v
+                  ),
+                }
+              : bracket
+          ),
+        };
+      }
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+    setVideoWinners(winners);
+  };
+
+  const handleMarkAsVideoWinner = (user: UserSearchItem) => {
+    // Prevent duplicate submissions
+    if (videoWinners.find((w) => w.username === user.username)) {
+      return;
+    }
+
+    // Add to winners list
+    const newWinners = [...videoWinners, user];
+    updateTaggedWinners(newWinners);
+
+    // Ensure user is also in dancers list if not already
+    if (!videoDancers.find((d) => d.username === user.username)) {
+      const newDancers = [...videoDancers, user];
+      updateTaggedDancers(newDancers);
+    }
+  };
+
+  const handleRemoveVideoWinner = (username: string) => {
+    // Remove from winners but keep in dancers
+    const newWinners = videoWinners.filter((w) => w.username !== username);
+    updateTaggedWinners(newWinners);
   };
 
   const updateVideoStyles = (styles: string[]) => {
-    const updatedSections = sections.map((section) => {
+    // Read current form state to ensure we have the latest data
+    const currentSections = getValues("sections") || [];
+    const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
       if (context === "section") {
@@ -366,12 +278,12 @@ export function VideoForm({
 
         <DebouncedSearchMultiSelect<UserSearchItem>
           onSearch={searchUsers}
-          placeholder="Search users..."
+          placeholder="Search dancers..."
           getDisplayValue={(item) => `${item.displayName} (${item.username})`}
           getItemId={(item) => item.username}
-          onChange={updateTaggedUsers}
-          value={video.taggedUsers ?? []}
-          name="Tagged Users"
+          onChange={updateTaggedDancers}
+          value={video.taggedDancers ?? []}
+          name="Tagged Dancers"
         />
 
         {/* Video Winners Section - Only show in edit mode */}
@@ -385,24 +297,24 @@ export function VideoForm({
               }
               getItemId={(item) => item.username}
               onChange={(users) => {
-                // When users are selected, mark them as winners
-                // Only process new users that aren't already winners
-                const newUsers = users.filter(
-                  (user) =>
-                    !videoWinners.find((w) => w.username === user.username)
-                );
+                // Update winners list directly
+                updateTaggedWinners(users);
 
-                // Process each new user
-                for (const user of newUsers) {
-                  handleMarkAsVideoWinner(user);
-                }
-
-                // Remove users that are no longer selected
-                const removedUsers = videoWinners.filter(
-                  (winner) => !users.find((u) => u.username === winner.username)
+                // Ensure all winners are also in dancers list
+                const currentDancers = videoDancers || [];
+                const dancersSet = new Set(
+                  currentDancers.map((d) => d.username)
                 );
-                for (const removedUser of removedUsers) {
-                  handleRemoveVideoWinner(removedUser.username);
+                const newDancers = [...currentDancers];
+
+                users.forEach((winner) => {
+                  if (!dancersSet.has(winner.username)) {
+                    newDancers.push(winner);
+                  }
+                });
+
+                if (newDancers.length !== currentDancers.length) {
+                  updateTaggedDancers(newDancers);
                 }
               }}
               value={videoWinners}

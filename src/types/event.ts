@@ -67,7 +67,8 @@ export interface Video {
   id: string;
   title: string;
   src: string;
-  taggedUsers?: UserSearchItem[];
+  taggedWinners?: UserSearchItem[];
+  taggedDancers?: UserSearchItem[];
   styles?: string[];
 }
 

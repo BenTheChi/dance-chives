@@ -15,7 +15,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Plus, X, Trophy } from "lucide-react";
-import type { Control, UseFormSetValue } from "react-hook-form";
+import type {
+  Control,
+  UseFormSetValue,
+  UseFormGetValues,
+} from "react-hook-form";
 import { Section, Bracket, Video } from "@/types/event";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
@@ -47,6 +51,7 @@ async function searchUsers(query: string): Promise<UserSearchItem[]> {
 interface SectionFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
+  getValues: UseFormGetValues<FormValues>;
   activeSectionIndex: number;
   activeSection: Section;
   sections: Section[];
@@ -65,6 +70,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
 export function SectionForm({
   control,
   setValue,
+  getValues,
   activeSectionIndex,
   activeSection,
   sections,
@@ -143,7 +149,8 @@ export function SectionForm({
       id: Date.now().toString(),
       title: `Video ${activeSection.videos.length + 1}`,
       src: "https://example.com/video",
-      taggedUsers: [],
+      taggedWinners: [],
+      taggedDancers: [],
     };
 
     const updatedSections = sections.map((section) =>
@@ -544,6 +551,7 @@ export function SectionForm({
                       <BracketForm
                         control={control}
                         setValue={setValue}
+                        getValues={getValues}
                         activeSectionIndex={activeSectionIndex}
                         activeBracketIndex={bracketIndex}
                         bracket={bracket}
@@ -579,6 +587,7 @@ export function SectionForm({
                     key={video.id}
                     control={control}
                     setValue={setValue}
+                    getValues={getValues}
                     video={video}
                     videoIndex={videoIndex}
                     sectionIndex={activeSectionIndex}

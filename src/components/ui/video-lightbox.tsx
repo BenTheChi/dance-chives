@@ -89,58 +89,24 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
-  const allParticipants = video?.taggedUsers || [];
+  const winners = video?.taggedWinners || [];
+  const dancers = video?.taggedDancers || [];
 
-  // Group participants by role, deduplicating by user ID
-  // A user might appear multiple times with different roles (e.g., both DANCER and WINNER)
-  // First, collect all roles for each user
-  const userRolesMap = new Map<string, Set<string>>();
-  const userDataMap = new Map<string, (typeof allParticipants)[0]>();
-
-  allParticipants.forEach((user) => {
-    if (!user || !user.username) return;
-    const role = fromNeo4jRoleFormat(user.role);
-
-    if (!userRolesMap.has(user.username)) {
-      userRolesMap.set(user.username, new Set());
-      userDataMap.set(user.username, user);
-    }
-
-    if (role) {
-      userRolesMap.get(user.username)!.add(role);
+  // Combine all participants (winners are also dancers, so we deduplicate)
+  const allParticipantsSet = new Map<string, (typeof winners)[0]>();
+  dancers.forEach((user) => {
+    if (user && user.username) {
+      allParticipantsSet.set(user.username, user);
     }
   });
-
-  // Now categorize users based on their roles
-  const winnersMap = new Map<string, (typeof allParticipants)[0]>();
-  const dancersMap = new Map<string, (typeof allParticipants)[0]>();
-  const otherParticipantsMap = new Map<string, (typeof allParticipants)[0]>();
-
-  userRolesMap.forEach((roles, username) => {
-    const user = userDataMap.get(username)!;
-    const hasWinner = roles.has(VIDEO_ROLE_WINNER);
-    const hasDancer = roles.has(VIDEO_ROLE_DANCER) || roles.size === 0; // No role defaults to dancer
-
-    if (hasWinner) {
-      winnersMap.set(username, user);
-    }
-
-    if (hasDancer) {
-      dancersMap.set(username, user);
-    }
-
-    // Other roles (not Winner or Dancer)
-    const otherRoles = Array.from(roles).filter(
-      (role) => role !== VIDEO_ROLE_WINNER && role !== VIDEO_ROLE_DANCER
-    );
-    if (otherRoles.length > 0 && !hasWinner && !hasDancer) {
-      otherParticipantsMap.set(username, user);
+  winners.forEach((user) => {
+    if (user && user.username) {
+      allParticipantsSet.set(user.username, user);
     }
   });
+  const allParticipants = Array.from(allParticipantsSet.values());
 
-  const winners = Array.from(winnersMap.values());
-  const dancers = Array.from(dancersMap.values());
-  const otherParticipants = Array.from(otherParticipantsMap.values());
+  const otherParticipants: typeof allParticipants = [];
 
   // For user comparisons, we need to check by username if currentUserId is a username
   // or by id if currentUserId is an id. Since currentUserId comes from session, it's likely an id.

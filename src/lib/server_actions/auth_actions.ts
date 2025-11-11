@@ -520,21 +520,15 @@ export async function getUserProfile(userIdOrUsername: string) {
     }));
 
     // Get videos where user is tagged with full video data (collecting all roles)
-    // Support both r.role (legacy) and r.roles (array) for backward compatibility
+    // Use relationship types :DANCER and :WINNER
     const taggedVideosResult = await session.run(
       `
-      MATCH (u:User {id: $userId})-[r:IN]->(v:Video)
+      MATCH (u:User {id: $userId})-[r:DANCER|WINNER]->(v:Video)
       OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
       OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
       OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
-      WITH v, COALESCE(e, e2) as event, COALESCE(s, s2) as section, style,
-           CASE 
-             WHEN r.roles IS NOT NULL THEN r.roles
-             WHEN r.role IS NOT NULL THEN [r.role]
-             ELSE []
-           END as roles
+      WITH v, COALESCE(e, e2) as event, COALESCE(s, s2) as section, style, type(r) as role
       WHERE event IS NOT NULL
-      UNWIND roles as role
       RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
              event.id as eventId, event.title as eventTitle, event.createdAt as eventCreatedAt,
              section.id as sectionId, section.title as sectionTitle, 
@@ -544,18 +538,10 @@ export async function getUserProfile(userIdOrUsername: string) {
       { userId }
     );
 
-    // Get winning videos (where role contains "WINNER")
-    // Support both r.role (legacy) and r.roles (array) for backward compatibility
+    // Get winning videos (where user has :WINNER relationship)
     const winningVideosResult = await session.run(
       `
-      MATCH (u:User {id: $userId})-[r:IN]->(v:Video)
-      WITH v, r,
-           CASE 
-             WHEN r.roles IS NOT NULL THEN r.roles
-             WHEN r.role IS NOT NULL THEN [r.role]
-             ELSE []
-           END as roles
-      WHERE "WINNER" IN roles
+      MATCH (u:User {id: $userId})-[r:WINNER]->(v:Video)
       OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
       OPTIONAL MATCH (v)-[:IN]->(b:Bracket)-[:IN]->(s2:Section)-[:IN]->(e2:Event)
       OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
@@ -570,18 +556,10 @@ export async function getUserProfile(userIdOrUsername: string) {
       { userId }
     );
 
-    // Get winning sections (where role contains "WINNER")
-    // Support both r.role (legacy) and r.roles (array) for backward compatibility
+    // Get winning sections (where user has :WINNER relationship)
     const winningSectionsResult = await session.run(
       `
-      MATCH (u:User {id: $userId})-[r:IN]->(s:Section)
-      WITH s, r,
-           CASE 
-             WHEN r.roles IS NOT NULL THEN r.roles
-             WHEN r.role IS NOT NULL THEN [r.role]
-             ELSE []
-           END as roles
-      WHERE "WINNER" IN roles
+      MATCH (u:User {id: $userId})-[r:WINNER]->(s:Section)
       MATCH (s)-[:IN]->(e:Event)
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
@@ -603,16 +581,9 @@ export async function getUserProfile(userIdOrUsername: string) {
     if (videoIds.length > 0) {
       const taggedUsersResult = await session.run(
         `
-        MATCH (v:Video)<-[r:IN]-(u:User)
+        MATCH (v:Video)<-[r:DANCER|WINNER]-(u:User)
         WHERE v.id IN $videoIds
-        WITH v, u, r,
-             CASE 
-               WHEN r.roles IS NOT NULL THEN r.roles
-               WHEN r.role IS NOT NULL THEN [r.role]
-               ELSE []
-             END as roles
-        UNWIND roles as role
-        WITH v, u, role
+        WITH v, u, type(r) as role
         RETURN v.id as videoId, collect({
           id: u.id,
           displayName: u.displayName,

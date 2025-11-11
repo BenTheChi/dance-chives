@@ -40,7 +40,8 @@ const videoSchema = z.object({
       /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}(&.*)?$/,
       "Video source must be a valid YouTube URL"
     ),
-  taggedUsers: z.array(userSearchItemSchema).optional(),
+  taggedWinners: z.array(userSearchItemSchema).optional(),
+  taggedDancers: z.array(userSearchItemSchema).optional(),
   styles: z.array(z.string()).optional(),
 });
 
@@ -203,7 +204,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     },
   });
 
-  const { control, handleSubmit, setValue, register, watch } = form;
+  const { control, handleSubmit, setValue, getValues, register, watch } = form;
 
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
@@ -627,6 +628,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                 <SectionForm
                   control={control}
                   setValue={setValue}
+                  getValues={getValues}
                   activeSectionIndex={activeSectionIndex}
                   activeSection={activeSection}
                   sections={sections}

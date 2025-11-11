@@ -14,8 +14,9 @@ import {
 import {
   isTeamMember,
   addTeamMember,
-  applyTag,
-  removeTag,
+  setVideoRoles,
+  setSectionWinner,
+  applyTag, // Still needed for event roles (not part of this refactor)
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
@@ -604,37 +605,43 @@ export async function approveTaggingRequest(
     requestId
   );
 
-  // Apply the tag in Neo4j
-  // Role is required for videos and sections
-  await applyTag(
-    request.eventId,
-    request.videoId || null,
-    request.sectionId || null,
-    request.targetUserId,
-    request.role || undefined
-  );
+  // Apply the tag in Neo4j using declarative functions
+  if (request.videoId && request.role) {
+    // Get existing roles for this user in this video
+    const existingRoles: string[] = [];
+    for (const roleToCheck of [VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER]) {
+      const hasRole = await isUserTaggedInVideoWithRole(
+        request.eventId,
+        request.videoId,
+        request.targetUserId,
+        roleToCheck
+      );
+      if (hasRole) {
+        existingRoles.push(roleToCheck);
+      }
+    }
 
-  // If approving Winner role for a video and user is not already tagged as Dancer,
-  // also tag them as Dancer
-  if (request.videoId && request.role === VIDEO_ROLE_WINNER) {
-    const isDancer = await isUserTaggedInVideoWithRole(
+    // Combine existing roles with new role to set
+    const rolesToSet = Array.from(new Set([...existingRoles, request.role]));
+    await setVideoRoles(
       request.eventId,
       request.videoId,
       request.targetUserId,
-      VIDEO_ROLE_DANCER
+      rolesToSet
     );
-    if (!isDancer) {
-      console.log(
-        "🔵 [approveTaggingRequest] User not tagged as Dancer, also tagging as Dancer"
-      );
-      await applyTag(
-        request.eventId,
-        request.videoId,
-        null,
-        request.targetUserId,
-        VIDEO_ROLE_DANCER
-      );
-    }
+  } else if (request.sectionId && request.role) {
+    // Set section winner
+    await setSectionWinner(
+      request.eventId,
+      request.sectionId,
+      request.targetUserId
+    );
+  } else if (request.role) {
+    // Event role - still use applyTag for event roles (not part of this refactor)
+    // This would need to be handled separately if event roles also need refactoring
+    throw new Error(
+      "Event role tagging not yet refactored to use declarative approach"
+    );
   }
 
   return { success: true };
@@ -1701,10 +1708,23 @@ export async function tagSelfInVideo(
 
     // User has permission - tag directly with specified role(s)
     try {
-      // Apply all roles (Winner and Dancer if needed)
-      for (const roleToTag of rolesToTag) {
-        await applyTag(eventId, videoId, null, userId, roleToTag);
+      // Get existing roles for this user in this video
+      const existingRoles: string[] = [];
+      for (const roleToCheck of [VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER]) {
+        const hasRole = await isUserTaggedInVideoWithRole(
+          eventId,
+          videoId,
+          userId,
+          roleToCheck
+        );
+        if (hasRole) {
+          existingRoles.push(roleToCheck);
+        }
       }
+
+      // Combine existing roles with new roles to set
+      const allRoles = Array.from(new Set([...existingRoles, ...rolesToTag]));
+      await setVideoRoles(eventId, videoId, userId, allRoles);
       console.log("✅ [tagSelfInVideo] Tag(s) applied successfully");
       return { success: true, directTag: true };
     } catch (error) {
@@ -1850,7 +1870,7 @@ export async function tagSelfInSection(
 
     // User has permission - tag directly with specified role
     try {
-      await applyTag(eventId, null, sectionId, userId, role);
+      await setSectionWinner(eventId, sectionId, userId);
       console.log("✅ [tagSelfInSection] Tag applied successfully");
       return { success: true, directTag: true };
     } catch (error) {
@@ -1924,9 +1944,9 @@ export async function removeTagFromVideo(
     (await isEventCreator(eventId, currentUserId));
 
   if (canRemoveDirectly) {
-    // User has permission - remove directly
+    // User has permission - remove directly by setting empty roles
     try {
-      await removeTag(eventId, videoId, null, userId);
+      await setVideoRoles(eventId, videoId, userId, []);
       return { success: true, directRemove: true };
     } catch (error) {
       console.error("Error removing tag from video:", error);
@@ -1972,9 +1992,9 @@ export async function removeTagFromSection(
     (await isEventCreator(eventId, currentUserId));
 
   if (canRemoveDirectly) {
-    // User has permission - remove directly
+    // User has permission - remove directly by setting winner to null
     try {
-      await removeTag(eventId, null, sectionId, userId);
+      await setSectionWinner(eventId, sectionId, null);
       return { success: true, directRemove: true };
     } catch (error) {
       console.error("Error removing tag from section:", error);
@@ -2052,22 +2072,23 @@ export async function markUserAsVideoWinner(
     throw new Error("Either userId or username must be provided");
   }
 
-  // Apply winner tag
-  await applyTag(eventId, videoId, null, userId, VIDEO_ROLE_WINNER);
-
-  // If user is not already tagged as Dancer, also tag them as Dancer
+  // Get existing roles for this user in this video
+  const existingRoles: string[] = [];
   const isDancer = await isUserTaggedInVideoWithRole(
     eventId,
     videoId,
     userId,
     VIDEO_ROLE_DANCER
   );
-  if (!isDancer) {
-    console.log(
-      "🔵 [markUserAsVideoWinner] User not tagged as Dancer, also tagging as Dancer"
-    );
-    await applyTag(eventId, videoId, null, userId, VIDEO_ROLE_DANCER);
+  if (isDancer) {
+    existingRoles.push(VIDEO_ROLE_DANCER);
   }
+
+  // Set roles: DANCER and WINNER (setVideoRoles ensures DANCER is present if WINNER is specified)
+  const rolesToSet = Array.from(
+    new Set([...existingRoles, VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER])
+  );
+  await setVideoRoles(eventId, videoId, userId, rolesToSet);
 
   return { success: true };
 }
@@ -2126,8 +2147,8 @@ export async function markUserAsSectionWinner(
     throw new Error("Either userId or username must be provided");
   }
 
-  // Apply winner tag
-  await applyTag(eventId, null, sectionId, userId, SECTION_ROLE_WINNER);
+  // Set section winner declaratively
+  await setSectionWinner(eventId, sectionId, userId);
 
   return { success: true };
 }
@@ -2157,7 +2178,19 @@ export async function removeVideoWinnerTag(
     );
   }
 
-  await removeTag(eventId, videoId, null, userId, VIDEO_ROLE_WINNER);
+  // Get existing roles and remove WINNER, keep DANCER
+  const existingRoles: string[] = [];
+  const isDancer = await isUserTaggedInVideoWithRole(
+    eventId,
+    videoId,
+    userId,
+    VIDEO_ROLE_DANCER
+  );
+  if (isDancer) {
+    existingRoles.push(VIDEO_ROLE_DANCER);
+  }
+  // Don't add WINNER - we're removing it
+  await setVideoRoles(eventId, videoId, userId, existingRoles);
 
   return { success: true };
 }
@@ -2187,7 +2220,7 @@ export async function removeSectionWinnerTag(
     );
   }
 
-  await removeTag(eventId, null, sectionId, userId);
+  await setSectionWinner(eventId, sectionId, null);
 
   return { success: true };
 }

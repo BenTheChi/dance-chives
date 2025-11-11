@@ -6,6 +6,7 @@ import { EventCard as VideoCard } from "@/components/ui/event-card";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
+import { VIDEO_ROLE_WINNER, VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
 
 interface TaggedVideo {
   videoId: string;
@@ -39,13 +40,31 @@ export function TaggedVideosGrid({
   };
 
   // Convert TaggedVideo to Video format for VideoLightbox
-  const convertToVideo = (taggedVideo: TaggedVideo): Video => ({
-    id: taggedVideo.videoId,
-    title: taggedVideo.videoTitle,
-    src: taggedVideo.videoSrc || "",
-    styles: taggedVideo.styles || [],
-    taggedUsers: taggedVideo.taggedUsers || [],
-  });
+  const convertToVideo = (taggedVideo: TaggedVideo): Video => {
+    // Separate winners and dancers from taggedUsers based on roles
+    const winners: typeof taggedVideo.taggedUsers = [];
+    const dancers: typeof taggedVideo.taggedUsers = [];
+
+    (taggedVideo.taggedUsers || []).forEach((user) => {
+      if (!user || !user.username) return;
+      const role = user.role?.toUpperCase();
+      if (role === "WINNER" || role === VIDEO_ROLE_WINNER) {
+        winners.push(user);
+      }
+      if (role === "DANCER" || role === VIDEO_ROLE_DANCER || !role) {
+        dancers.push(user);
+      }
+    });
+
+    return {
+      id: taggedVideo.videoId,
+      title: taggedVideo.videoTitle,
+      src: taggedVideo.videoSrc || "",
+      styles: taggedVideo.styles || [],
+      taggedWinners: winners,
+      taggedDancers: dancers,
+    };
+  };
 
   return (
     <>
