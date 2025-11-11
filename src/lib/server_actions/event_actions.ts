@@ -10,7 +10,11 @@ import { Event, EventDetails, Section, SubEvent, Picture } from "@/types/event";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
-import { setVideoRoles, setSectionWinner } from "@/db/queries/team-member";
+import {
+  setVideoRoles,
+  setSectionWinner,
+  setSectionWinners,
+} from "@/db/queries/team-member";
 import { getUserByUsername } from "@/db/queries/user";
 import { UserSearchItem } from "@/types/user";
 import {
@@ -713,43 +717,62 @@ export async function editEvent(
             }
           }
 
-          // Process section winners
-          // Note: setSectionWinner sets one winner and removes all others
-          // If multiple winners are needed, we'll set the first one
-          // For now, sections have a single winner
+          // Process section winners - compare old vs new and only update differences
+          const oldWinners = oldSection?.winners || [];
           const newWinners = newSection.winners || [];
 
-          if (newWinners.length > 0) {
-            // Set the first winner (setSectionWinner will remove all others)
-            const firstWinner = newWinners[0];
+          // Get sets of usernames for comparison
+          const oldWinnerUsernames = new Set(
+            oldWinners.map((w) => w.username).filter(Boolean)
+          );
+          const newWinnerUsernames = new Set(
+            newWinners.map((w) => w.username).filter(Boolean)
+          );
+
+          // Check if winners have changed
+          const winnersChanged =
+            oldWinnerUsernames.size !== newWinnerUsernames.size ||
+            [...oldWinnerUsernames].some(
+              (username) => !newWinnerUsernames.has(username)
+            ) ||
+            [...newWinnerUsernames].some(
+              (username) => !oldWinnerUsernames.has(username)
+            );
+
+          if (winnersChanged) {
             try {
-              console.log(
-                `🟢 [editEvent] Setting section winner ${firstWinner.username} for section ${newSection.id}`
-              );
-              const userId = await getUserId(firstWinner);
-              await setSectionWinner(eventId, newSection.id, userId);
-              console.log(
-                `✅ [editEvent] Successfully set section winner ${firstWinner.username}`
-              );
+              if (newWinners.length > 0) {
+                // Convert all winners to user IDs
+                const winnerUserIds = await Promise.all(
+                  newWinners.map((winner) => getUserId(winner))
+                );
+                console.log(
+                  `🟢 [editEvent] Setting ${winnerUserIds.length} winners for section ${newSection.id} (was ${oldWinners.length})`
+                );
+                await setSectionWinners(eventId, newSection.id, winnerUserIds);
+                console.log(
+                  `✅ [editEvent] Successfully set ${winnerUserIds.length} section winners`
+                );
+              } else {
+                // No winners - remove all winners from section
+                console.log(
+                  `🟢 [editEvent] Removing all winners from section ${newSection.id} (was ${oldWinners.length})`
+                );
+                await setSectionWinners(eventId, newSection.id, []);
+                console.log(
+                  `✅ [editEvent] Successfully removed all section winners`
+                );
+              }
             } catch (winnerError) {
               console.error(
-                `❌ [editEvent] Error setting section winner ${firstWinner.username}:`,
+                `❌ [editEvent] Error setting section winners:`,
                 winnerError
               );
             }
           } else {
-            // No winners - remove all winners from section
-            try {
-              console.log(
-                `🟢 [editEvent] Removing all winners from section ${newSection.id}`
-              );
-              await setSectionWinner(eventId, newSection.id, null);
-            } catch (winnerError) {
-              console.error(
-                `❌ [editEvent] Error removing section winners:`,
-                winnerError
-              );
-            }
+            console.log(
+              `🟢 [editEvent] Section winners unchanged for section ${newSection.id}, skipping update`
+            );
           }
         }
       } catch (tagError) {

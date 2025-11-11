@@ -60,6 +60,7 @@ const sectionSchema = z.object({
   brackets: z.array(bracketSchema),
   styles: z.array(z.string()).optional(),
   applyStylesToVideos: z.boolean().optional(),
+  winners: z.array(userSearchItemSchema).optional(),
 });
 
 const pictureSchema = z.object({

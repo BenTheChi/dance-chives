@@ -421,6 +421,69 @@ export async function setSectionWinner(
 }
 
 /**
+ * Set multiple section winners declaratively
+ * Uses :WINNER relationship type instead of :IN with property
+ * If userIds is empty array, removes all winners from the section
+ * Replaces all existing winners with the new set
+ */
+export async function setSectionWinners(
+  eventId: string,
+  sectionId: string,
+  userIds: string[]
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate event exists
+    const eventExistsCheck = await eventExists(eventId);
+    if (!eventExistsCheck) {
+      throw new Error(`Event ${eventId} does not exist`);
+    }
+
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      throw new Error(
+        `Section ${sectionId} does not exist in event ${eventId}`
+      );
+    }
+
+    // Remove all existing winners first
+    await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[r:WINNER]-(u:User)
+      WHERE (s)-[:IN]->(:Event {id: $eventId})
+      DELETE r
+      `,
+      { eventId, sectionId }
+    );
+
+    // Add new winners if any
+    if (userIds.length > 0) {
+      console.log(
+        `✅ [setSectionWinners] Setting ${userIds.length} winners for section ${sectionId}`
+      );
+      await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        WITH s
+        UNWIND $userIds as userId
+        MATCH (u:User {id: userId})
+        MERGE (u)-[:WINNER]->(s)
+        `,
+        { eventId, sectionId, userIds }
+      );
+    } else {
+      console.log(
+        `✅ [setSectionWinners] Removed all winners from section ${sectionId}`
+      );
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Apply a tag to a user in Neo4j (for videos, sections, or event roles)
  * Throws error if event, video, or section doesn't exist
  * Role is required for videos and sections
@@ -783,6 +846,38 @@ export async function isUserWinnerOfSection(
 
     const count = result.records[0]?.get("count")?.toNumber() || 0;
     return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get all winner user IDs for a section
+ * Returns array of user IDs who are winners of the section
+ */
+export async function getSectionWinnerIds(
+  eventId: string,
+  sectionId: string
+): Promise<string[]> {
+  const session = driver.session();
+  try {
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      return [];
+    }
+
+    const result = await session.run(
+      `
+      MATCH (u:User)-[r:WINNER]->(s:Section {id: $sectionId})
+      WHERE (s)-[:IN]->(:Event {id: $eventId})
+      RETURN collect(u.id) as winnerIds
+      `,
+      { eventId, sectionId }
+    );
+
+    const winnerIds = result.records[0]?.get("winnerIds") || [];
+    return winnerIds;
   } finally {
     await session.close();
   }

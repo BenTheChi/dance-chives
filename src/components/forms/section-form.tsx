@@ -426,25 +426,19 @@ export function SectionForm({
               }
               getItemId={(item) => item.username}
               onChange={(users) => {
-                // When users are selected, mark them as winners
-                // Only process new users that aren't already winners
-                const newUsers = users.filter(
-                  (user) =>
-                    !sectionWinners.find((w) => w.username === user.username)
-                );
+                // Update section winners in form state with the complete list
+                const updatedSections = sections.map((section) => {
+                  if (section.id !== activeSectionId) return section;
+                  return {
+                    ...section,
+                    winners: users,
+                  };
+                });
 
-                // Process each new user
-                for (const user of newUsers) {
-                  handleMarkAsSectionWinner(user);
-                }
+                setValue("sections", normalizeSectionsForForm(updatedSections));
 
-                // Remove users that are no longer selected
-                const removedUsers = sectionWinners.filter(
-                  (winner) => !users.find((u) => u.username === winner.username)
-                );
-                for (const removedUser of removedUsers) {
-                  handleRemoveSectionWinner(removedUser.username);
-                }
+                // Update local winners state for display
+                setSectionWinners(users);
               }}
               value={sectionWinners}
               name="Section Winners"

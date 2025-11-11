@@ -97,6 +97,26 @@ export function VideoForm({
     console.log("🟢 [updateTaggedDancers] Updating tagged dancers:", dancers);
     const currentSections = getValues("sections") || [];
 
+    // Find users that were removed from dancers list
+    const currentDancerUsernames = new Set(videoDancers.map((d) => d.username));
+    const newDancerUsernames = new Set(dancers.map((d) => d.username));
+    const removedUsernames = Array.from(currentDancerUsernames).filter(
+      (username) => !newDancerUsernames.has(username)
+    );
+
+    // If any removed users are also winners, remove them from winners list
+    let winnersToUpdate = videoWinners;
+    if (removedUsernames.length > 0 && videoWinners.length > 0) {
+      const winnersToKeep = videoWinners.filter(
+        (winner) => !removedUsernames.includes(winner.username)
+      );
+      if (winnersToKeep.length !== videoWinners.length) {
+        // Some winners were removed, update winners list
+        winnersToUpdate = winnersToKeep;
+        setVideoWinners(winnersToKeep);
+      }
+    }
+
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -104,7 +124,9 @@ export function VideoForm({
         return {
           ...section,
           videos: section.videos.map((v) =>
-            v.id === video.id ? { ...v, taggedDancers: dancers } : v
+            v.id === video.id
+              ? { ...v, taggedDancers: dancers, taggedWinners: winnersToUpdate }
+              : v
           ),
         };
       } else {
@@ -115,7 +137,13 @@ export function VideoForm({
               ? {
                   ...bracket,
                   videos: bracket.videos.map((v) =>
-                    v.id === video.id ? { ...v, taggedDancers: dancers } : v
+                    v.id === video.id
+                      ? {
+                          ...v,
+                          taggedDancers: dancers,
+                          taggedWinners: winnersToUpdate,
+                        }
+                      : v
                   ),
                 }
               : bracket
@@ -132,6 +160,36 @@ export function VideoForm({
     console.log("🟢 [updateTaggedWinners] Updating tagged winners:", winners);
     const currentSections = getValues("sections") || [];
 
+    // Find users that were added to winners list
+    const currentWinnerUsernames = new Set(videoWinners.map((w) => w.username));
+    const newWinnerUsernames = new Set(winners.map((w) => w.username));
+    const addedUsernames = Array.from(newWinnerUsernames).filter(
+      (username) => !currentWinnerUsernames.has(username)
+    );
+
+    // If any new winners are not in dancers list, add them
+    let dancersToUpdate = videoDancers;
+    if (addedUsernames.length > 0) {
+      const currentDancerUsernames = new Set(
+        videoDancers.map((d) => d.username)
+      );
+      const newDancers = [...videoDancers];
+
+      winners.forEach((winner) => {
+        if (
+          addedUsernames.includes(winner.username) &&
+          !currentDancerUsernames.has(winner.username)
+        ) {
+          newDancers.push(winner);
+        }
+      });
+
+      if (newDancers.length !== videoDancers.length) {
+        dancersToUpdate = newDancers;
+        setVideoDancers(newDancers);
+      }
+    }
+
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -139,7 +197,9 @@ export function VideoForm({
         return {
           ...section,
           videos: section.videos.map((v) =>
-            v.id === video.id ? { ...v, taggedWinners: winners } : v
+            v.id === video.id
+              ? { ...v, taggedWinners: winners, taggedDancers: dancersToUpdate }
+              : v
           ),
         };
       } else {
@@ -150,7 +210,13 @@ export function VideoForm({
               ? {
                   ...bracket,
                   videos: bracket.videos.map((v) =>
-                    v.id === video.id ? { ...v, taggedWinners: winners } : v
+                    v.id === video.id
+                      ? {
+                          ...v,
+                          taggedWinners: winners,
+                          taggedDancers: dancersToUpdate,
+                        }
+                      : v
                   ),
                 }
               : bracket
@@ -169,15 +235,9 @@ export function VideoForm({
       return;
     }
 
-    // Add to winners list
+    // Add to winners list - updateTaggedWinners will automatically add to dancers if needed
     const newWinners = [...videoWinners, user];
     updateTaggedWinners(newWinners);
-
-    // Ensure user is also in dancers list if not already
-    if (!videoDancers.find((d) => d.username === user.username)) {
-      const newDancers = [...videoDancers, user];
-      updateTaggedDancers(newDancers);
-    }
   };
 
   const handleRemoveVideoWinner = (username: string) => {
@@ -297,25 +357,8 @@ export function VideoForm({
               }
               getItemId={(item) => item.username}
               onChange={(users) => {
-                // Update winners list directly
+                // updateTaggedWinners will automatically add new winners to dancers list
                 updateTaggedWinners(users);
-
-                // Ensure all winners are also in dancers list
-                const currentDancers = videoDancers || [];
-                const dancersSet = new Set(
-                  currentDancers.map((d) => d.username)
-                );
-                const newDancers = [...currentDancers];
-
-                users.forEach((winner) => {
-                  if (!dancersSet.has(winner.username)) {
-                    newDancers.push(winner);
-                  }
-                });
-
-                if (newDancers.length !== currentDancers.length) {
-                  updateTaggedDancers(newDancers);
-                }
               }}
               value={videoWinners}
               name="Video Winners"

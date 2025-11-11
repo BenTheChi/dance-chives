@@ -16,6 +16,8 @@ import {
   addTeamMember,
   setVideoRoles,
   setSectionWinner,
+  setSectionWinners,
+  getSectionWinnerIds,
   applyTag, // Still needed for event roles (not part of this refactor)
   getUserTeamMemberships,
   eventExists,
@@ -1869,9 +1871,17 @@ export async function tagSelfInSection(
     console.log("Applying section tag in Neo4j");
 
     // User has permission - tag directly with specified role
+    // Get current winners and add this user to the list (don't remove existing winners)
     try {
-      await setSectionWinner(eventId, sectionId, userId);
-      console.log("✅ [tagSelfInSection] Tag applied successfully");
+      const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
+      // Check if user is already a winner
+      if (!currentWinnerIds.includes(userId)) {
+        const updatedWinnerIds = [...currentWinnerIds, userId];
+        await setSectionWinners(eventId, sectionId, updatedWinnerIds);
+        console.log("✅ [tagSelfInSection] Tag applied successfully");
+      } else {
+        console.log("✅ [tagSelfInSection] User is already a winner");
+      }
       return { success: true, directTag: true };
     } catch (error) {
       console.error("Error tagging self in section:", error);
@@ -2147,8 +2157,12 @@ export async function markUserAsSectionWinner(
     throw new Error("Either userId or username must be provided");
   }
 
-  // Set section winner declaratively
-  await setSectionWinner(eventId, sectionId, userId);
+  // Get current winners and add this user to the list (don't remove existing winners)
+  const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
+  if (!currentWinnerIds.includes(userId)) {
+    const updatedWinnerIds = [...currentWinnerIds, userId];
+    await setSectionWinners(eventId, sectionId, updatedWinnerIds);
+  }
 
   return { success: true };
 }
