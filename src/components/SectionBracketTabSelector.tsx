@@ -8,7 +8,8 @@ import { StyleBadge } from "./ui/style-badge";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import VideoGallery from "./VideoGallery";
-import { TagSelfAsWinnerSectionButton } from "@/components/events/TagSelfAsWinnerSectionButton";
+import { TagSelfButton } from "@/components/events/TagSelfButton";
+import { SECTION_ROLE_WINNER } from "@/lib/utils/roles";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
@@ -119,9 +120,15 @@ export default function SectionBracketTabSelector({
           sections[activeSection]!.winners.length > 0 && (
             <div className="flex flex-wrap gap-1 items-center">
               <span className="text-lg font-bold">Winner:</span>
-              {sections[activeSection]!.winners.map((winner) => (
+              {Array.from(
+                new Map(
+                  sections[activeSection]!.winners.filter(
+                    (w) => w && w.username
+                  ).map((w) => [w.username, w])
+                ).values()
+              ).map((winner) => (
                 <Badge
-                  key={winner.id}
+                  key={winner.username}
                   variant="secondary"
                   className="text-xs"
                   asChild
@@ -149,11 +156,17 @@ export default function SectionBracketTabSelector({
         </p>
         {currentUserId && sections[activeSection]?.id && (
           <div className="mt-4">
-            <TagSelfAsWinnerSectionButton
+            <TagSelfButton
               eventId={eventId}
-              sectionId={sections[activeSection].id}
+              target="section"
+              targetId={sections[activeSection].id}
               currentUserId={currentUserId}
-              isUserWinner={isUserWinner}
+              role={SECTION_ROLE_WINNER}
+              isUserTagged={isUserWinner}
+              showRemoveButton={true}
+              buttonLabel="Tag Self as Winner"
+              pendingLabel="Winner tag request pending"
+              successLabel="Tagged as Winner"
             />
           </div>
         )}

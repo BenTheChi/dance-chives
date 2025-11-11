@@ -20,12 +20,7 @@ import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import {
-  markUserAsVideoWinner,
-  removeVideoWinnerTag,
-} from "@/lib/server_actions/request_actions";
-import { toast } from "sonner";
-import { useSession } from "next-auth/react";
+import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 
 interface VideoFormProps {
   video: Video;
@@ -80,72 +75,174 @@ export function VideoForm({
   setValue,
   eventId,
 }: VideoFormProps) {
-  const { data: session } = useSession();
   const bracketIndex = sections[sectionIndex].brackets.findIndex(
     (b) => b.id === activeBracketId
   );
-  const [videoWinners, setVideoWinners] = useState<Set<string>>(new Set());
-  const [isProcessingWinner, setIsProcessingWinner] = useState<string | null>(
-    null
-  );
+  const [videoWinners, setVideoWinners] = useState<UserSearchItem[]>([]);
 
   // Load existing winners from taggedUsers (users with WINNER role)
+  // Extract winners as UserSearchItem objects, deduplicating by ID
   useEffect(() => {
-    if (video.taggedUsers) {
-      const winners = video.taggedUsers
-        .filter((user) => {
+    if (video.taggedUsers && Array.isArray(video.taggedUsers)) {
+      // Create a Map to deduplicate winners by username
+      const winnersMap = new Map<string, UserSearchItem>();
+      video.taggedUsers.forEach((user) => {
+        if (user && user.username) {
           const role = user.role;
-          return role === "WINNER" || role === "Winner";
-        })
-        .map((user) => user.id);
-      setVideoWinners(new Set(winners));
+          // Check for both Neo4j format (WINNER) and display format (Winner)
+          if (
+            role === "WINNER" ||
+            role === "Winner" ||
+            role?.toUpperCase() === "WINNER"
+          ) {
+            // Only add if not already in map (deduplicate)
+            if (!winnersMap.has(user.username)) {
+              winnersMap.set(user.username, {
+                id: user.id, // Preserve id if present (from server data)
+                displayName: user.displayName,
+                username: user.username,
+              });
+            }
+          }
+        }
+      });
+      setVideoWinners(Array.from(winnersMap.values()));
+    } else {
+      setVideoWinners([]);
     }
-  }, [video.taggedUsers]);
+  }, [video.taggedUsers, video.id]);
 
-  const handleMarkAsWinner = async (userId: string) => {
-    if (!eventId) {
-      toast.error("Event ID is required to mark winners");
+  const handleMarkAsVideoWinner = (user: UserSearchItem) => {
+    // Prevent duplicate submissions
+    if (videoWinners.find((w) => w.username === user.username)) {
       return;
     }
 
-    setIsProcessingWinner(userId);
-    try {
-      await markUserAsVideoWinner(eventId, video.id, userId);
-      setVideoWinners((prev) => new Set([...prev, userId]));
-      toast.success("User marked as winner");
-    } catch (error) {
-      console.error("Error marking user as winner:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to mark user as winner"
+    // Get current video from sections to ensure we have the latest state
+    const currentSection = sections.find((s) => s.id === activeSectionId);
+    let currentVideo: Video | undefined;
+
+    if (context === "section" && currentSection) {
+      currentVideo = currentSection.videos.find((v) => v.id === video.id);
+    } else if (context === "bracket" && currentSection) {
+      const currentBracket = currentSection.brackets.find(
+        (b) => b.id === activeBracketId
       );
-    } finally {
-      setIsProcessingWinner(null);
+      currentVideo = currentBracket?.videos.find((v) => v.id === video.id);
     }
+
+    const currentTaggedUsers =
+      currentVideo?.taggedUsers || video.taggedUsers || [];
+
+    // Update taggedUsers: add WINNER role, and ensure Dancer role is present
+    // Create separate entries for each role (matching Neo4j UNWIND structure)
+    const existingUserEntries = currentTaggedUsers.filter(
+      (tu) => tu.username === user.username
+    );
+    const existingRoles = new Set(
+      existingUserEntries.map((tu) => tu.role).filter((r): r is string => !!r)
+    );
+
+    // Remove all existing entries for this user
+    const otherUsers = currentTaggedUsers.filter(
+      (tu) => tu.username !== user.username
+    );
+
+    // Create new entries: one for DANCER, one for WINNER
+    const newEntries: UserSearchItem[] = [];
+
+    // Always include DANCER role
+    if (!existingRoles.has(VIDEO_ROLE_DANCER) && !existingRoles.has("DANCER")) {
+      newEntries.push({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        role: VIDEO_ROLE_DANCER,
+      });
+    } else {
+      // Keep existing DANCER entry if it exists
+      const dancerEntry = existingUserEntries.find(
+        (tu) => tu.role === VIDEO_ROLE_DANCER || tu.role === "DANCER"
+      );
+      if (dancerEntry) {
+        newEntries.push(dancerEntry);
+      }
+    }
+
+    // Always include WINNER role
+    if (!existingRoles.has(VIDEO_ROLE_WINNER) && !existingRoles.has("WINNER")) {
+      newEntries.push({
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        role: VIDEO_ROLE_WINNER,
+      });
+    } else {
+      // Keep existing WINNER entry if it exists
+      const winnerEntry = existingUserEntries.find(
+        (tu) => tu.role === VIDEO_ROLE_WINNER || tu.role === "WINNER"
+      );
+      if (winnerEntry) {
+        newEntries.push(winnerEntry);
+      }
+    }
+
+    const updatedTaggedUsers = [...otherUsers, ...newEntries];
+
+    // Update form state
+    updateTaggedUsers(updatedTaggedUsers);
+
+    // Update local winners state for display
+    setVideoWinners((prev) => {
+      if (prev.find((w) => w.username === user.username)) {
+        return prev;
+      }
+      return [...prev, user];
+    });
   };
 
-  const handleRemoveWinner = async (userId: string) => {
-    if (!eventId) {
-      toast.error("Event ID is required to remove winner tags");
+  const handleRemoveVideoWinner = (username: string) => {
+    const winnerToRemove = videoWinners.find((w) => w.username === username);
+    if (!winnerToRemove) {
       return;
     }
 
-    setIsProcessingWinner(userId);
-    try {
-      await removeVideoWinnerTag(eventId, video.id, userId);
-      setVideoWinners((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
-      toast.success("Winner tag removed");
-    } catch (error) {
-      console.error("Error removing winner tag:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to remove winner tag"
+    // Get current video from sections
+    const currentSection = sections.find((s) => s.id === activeSectionId);
+    let currentVideo: Video | undefined;
+
+    if (context === "section" && currentSection) {
+      currentVideo = currentSection.videos.find((v) => v.id === video.id);
+    } else if (context === "bracket" && currentSection) {
+      const currentBracket = currentSection.brackets.find(
+        (b) => b.id === activeBracketId
       );
-    } finally {
-      setIsProcessingWinner(null);
+      currentVideo = currentBracket?.videos.find((v) => v.id === video.id);
     }
+
+    const currentTaggedUsers =
+      currentVideo?.taggedUsers || video.taggedUsers || [];
+
+    // Update taggedUsers: remove WINNER role entry, but keep Dancer role entry if present
+    const updatedTaggedUsers = currentTaggedUsers.filter((taggedUser) => {
+      // Remove only the WINNER entry for this user, keep DANCER entry
+      if (taggedUser.username === username) {
+        const role = taggedUser.role;
+        const isWinner =
+          role === VIDEO_ROLE_WINNER ||
+          role === "WINNER" ||
+          role?.toUpperCase() === "WINNER";
+        // Filter out WINNER entry, keep everything else (including DANCER entry)
+        return !isWinner;
+      }
+      return true; // Keep all entries for other users
+    });
+
+    // Update form state
+    updateTaggedUsers(updatedTaggedUsers);
+
+    // Update local winners state for display
+    setVideoWinners((prev) => prev.filter((w) => w.username !== username));
   };
 
   const updateTaggedUsers = (users: UserSearchItem[]) => {
@@ -271,66 +368,75 @@ export function VideoForm({
           onSearch={searchUsers}
           placeholder="Search users..."
           getDisplayValue={(item) => `${item.displayName} (${item.username})`}
-          getItemId={(item) => item.id}
+          getItemId={(item) => item.username}
           onChange={updateTaggedUsers}
           value={video.taggedUsers ?? []}
           name="Tagged Users"
         />
 
-        {/* Winners Section - Only show in edit mode */}
-        {eventId && video.taggedUsers && video.taggedUsers.length > 0 && (
+        {/* Video Winners Section - Only show in edit mode */}
+        {eventId && (
           <div className="space-y-2">
-            <FormLabel>Winners</FormLabel>
-            <div className="flex flex-wrap gap-2">
-              {video.taggedUsers.map((user) => {
-                const isWinner = videoWinners.has(user.id);
-                return (
-                  <div
-                    key={user.id}
-                    className="flex items-center gap-2 border rounded-md px-2 py-1"
-                  >
-                    <span className="text-sm">
-                      {user.displayName} ({user.username})
-                    </span>
-                    {isWinner ? (
+            <DebouncedSearchMultiSelect<UserSearchItem>
+              onSearch={searchUsers}
+              placeholder="Search users to mark as video winners..."
+              getDisplayValue={(item) =>
+                `${item.displayName} (${item.username})`
+              }
+              getItemId={(item) => item.username}
+              onChange={(users) => {
+                // When users are selected, mark them as winners
+                // Only process new users that aren't already winners
+                const newUsers = users.filter(
+                  (user) =>
+                    !videoWinners.find((w) => w.username === user.username)
+                );
+
+                // Process each new user
+                for (const user of newUsers) {
+                  handleMarkAsVideoWinner(user);
+                }
+
+                // Remove users that are no longer selected
+                const removedUsers = videoWinners.filter(
+                  (winner) => !users.find((u) => u.username === winner.username)
+                );
+                for (const removedUser of removedUsers) {
+                  handleRemoveVideoWinner(removedUser.username);
+                }
+              }}
+              value={videoWinners}
+              name="Video Winners"
+            />
+            {videoWinners.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {videoWinners
+                  .filter((winner) => winner && winner.username) // Filter out any invalid entries
+                  .map((winner) => {
+                    return (
                       <Badge
+                        key={winner.username}
                         variant="default"
-                        className="bg-yellow-500 hover:bg-yellow-600 cursor-pointer"
+                        className="bg-yellow-500 hover:bg-yellow-600"
                       >
                         <Trophy className="w-3 h-3 mr-1" />
-                        Winner
+                        {winner.displayName}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleRemoveVideoWinner(winner.username)
+                          }
+                          className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
                       </Badge>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        isWinner
-                          ? handleRemoveWinner(user.id)
-                          : handleMarkAsWinner(user.id)
-                      }
-                      disabled={isProcessingWinner === user.id}
-                      className="h-6 px-2"
-                    >
-                      {isProcessingWinner === user.id ? (
-                        "Processing..."
-                      ) : isWinner ? (
-                        <>
-                          <X className="w-3 h-3 mr-1" />
-                          Remove Winner
-                        </>
-                      ) : (
-                        <>
-                          <Trophy className="w-3 h-3 mr-1" />
-                          Mark as Winner
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
         )}
 

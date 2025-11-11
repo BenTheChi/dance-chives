@@ -52,7 +52,7 @@ export function TaggedVideosGrid({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {videos.map((video: TaggedVideo, index: number) => (
           <VideoCard
-            key={`${video.videoId}-${index}`}
+            key={video.videoId}
             video={{
               id: video.videoId,
               title: video.videoTitle,

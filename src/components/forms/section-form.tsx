@@ -24,11 +24,7 @@ import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
-import {
-  markUserAsSectionWinner,
-  removeSectionWinnerTag,
-} from "@/lib/server_actions/request_actions";
-import { toast } from "sonner";
+import { SECTION_ROLE_WINNER } from "@/lib/utils/roles";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
   return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
@@ -79,17 +75,24 @@ export function SectionForm({
     activeSection.brackets.length > 0 ? activeSection.brackets[0].id : ""
   );
   const [sectionWinners, setSectionWinners] = useState<UserSearchItem[]>([]);
-  const [isProcessingWinner, setIsProcessingWinner] = useState<string | null>(
-    null
-  );
 
-  // Load existing section winners (would need to be passed from parent or fetched)
-  // For now, we'll manage it locally
+  // Load existing section winners from activeSection.winners
+  // Use a Map to deduplicate winners by username
   useEffect(() => {
-    // Section winners would need to be loaded from the event data
-    // This is a placeholder - in a real implementation, you'd fetch this
-    setSectionWinners([]);
-  }, [activeSectionId, eventId]);
+    if (activeSection?.winners && Array.isArray(activeSection.winners)) {
+      // Deduplicate winners by username to prevent duplicates
+      const uniqueWinners = Array.from(
+        new Map(
+          activeSection.winners
+            .filter((w) => w && w.username)
+            .map((w) => [w.username, w])
+        ).values()
+      );
+      setSectionWinners(uniqueWinners);
+    } else {
+      setSectionWinners([]);
+    }
+  }, [activeSectionId, activeSection?.winners]);
 
   const addBracket = () => {
     if (!activeSection) return;
@@ -266,50 +269,61 @@ export function SectionForm({
     setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
-  const handleMarkAsSectionWinner = async (user: UserSearchItem) => {
-    if (!eventId) {
-      toast.error("Event ID is required to mark winners");
+  const handleMarkAsSectionWinner = (user: UserSearchItem) => {
+    // Prevent duplicate submissions
+    if (sectionWinners.find((w) => w.username === user.username)) {
       return;
     }
 
-    setIsProcessingWinner(user.id);
-    try {
-      await markUserAsSectionWinner(eventId, activeSection.id, user.id);
-      setSectionWinners((prev) => [...prev, user]);
-      toast.success("User marked as section winner");
-    } catch (error) {
-      console.error("Error marking user as section winner:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to mark user as section winner"
+    // Update section winners in form state
+    const updatedSections = sections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      const currentWinners = section.winners || [];
+      const isAlreadyWinner = currentWinners.some(
+        (w) => w.username === user.username
       );
-    } finally {
-      setIsProcessingWinner(null);
-    }
+
+      if (!isAlreadyWinner) {
+        return {
+          ...section,
+          winners: [...currentWinners, user],
+        };
+      }
+      return section;
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+
+    // Update local winners state for display
+    setSectionWinners((prev) => {
+      if (prev.find((w) => w.username === user.username)) {
+        return prev;
+      }
+      return [...prev, user];
+    });
   };
 
-  const handleRemoveSectionWinner = async (userId: string) => {
-    if (!eventId) {
-      toast.error("Event ID is required to remove winner tags");
+  const handleRemoveSectionWinner = (username: string) => {
+    const winnerToRemove = sectionWinners.find((w) => w.username === username);
+    if (!winnerToRemove) {
       return;
     }
 
-    setIsProcessingWinner(userId);
-    try {
-      await removeSectionWinnerTag(eventId, activeSection.id, userId);
-      setSectionWinners((prev) => prev.filter((w) => w.id !== userId));
-      toast.success("Section winner tag removed");
-    } catch (error) {
-      console.error("Error removing section winner tag:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to remove section winner tag"
-      );
-    } finally {
-      setIsProcessingWinner(null);
-    }
+    // Update section winners in form state
+    const updatedSections = sections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      return {
+        ...section,
+        winners: (section.winners || []).filter((w) => w.username !== username),
+      };
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+
+    // Update local winners state for display
+    setSectionWinners((prev) => prev.filter((w) => w.username !== username));
   };
 
   return (
@@ -394,6 +408,71 @@ export function SectionForm({
           />
         )}
 
+        {/* Section Winners - Only show in edit mode */}
+        {eventId && (
+          <div className="space-y-2">
+            <DebouncedSearchMultiSelect<UserSearchItem>
+              onSearch={searchUsers}
+              placeholder="Search users to mark as section winners..."
+              getDisplayValue={(item) =>
+                `${item.displayName} (${item.username})`
+              }
+              getItemId={(item) => item.username}
+              onChange={(users) => {
+                // When users are selected, mark them as winners
+                // Only process new users that aren't already winners
+                const newUsers = users.filter(
+                  (user) =>
+                    !sectionWinners.find((w) => w.username === user.username)
+                );
+
+                // Process each new user
+                for (const user of newUsers) {
+                  handleMarkAsSectionWinner(user);
+                }
+
+                // Remove users that are no longer selected
+                const removedUsers = sectionWinners.filter(
+                  (winner) => !users.find((u) => u.username === winner.username)
+                );
+                for (const removedUser of removedUsers) {
+                  handleRemoveSectionWinner(removedUser.username);
+                }
+              }}
+              value={sectionWinners}
+              name="Section Winners"
+            />
+            {sectionWinners.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {sectionWinners
+                  .filter((winner) => winner && winner.username) // Filter out any invalid entries
+                  .map((winner) => {
+                    return (
+                      <Badge
+                        key={winner.username}
+                        variant="default"
+                        className="bg-yellow-500 hover:bg-yellow-600"
+                      >
+                        <Trophy className="w-3 h-3 mr-1" />
+                        {winner.displayName}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleRemoveSectionWinner(winner.username)
+                          }
+                          className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
         <FormField
           key={`hasBrackets-${activeSectionId}`}
           control={control}
@@ -403,7 +482,7 @@ export function SectionForm({
               <div className="flex items-center space-x-2">
                 <FormControl>
                   <Switch
-                    checked={field.value}
+                    checked={field.value || false}
                     onCheckedChange={field.onChange}
                   />
                 </FormControl>
@@ -413,56 +492,6 @@ export function SectionForm({
             </FormItem>
           )}
         />
-
-        {/* Section Winners - Only show in edit mode */}
-        {eventId && (
-          <div className="space-y-2">
-            <FormLabel>Section Winners</FormLabel>
-            <DebouncedSearchMultiSelect<UserSearchItem>
-              onSearch={searchUsers}
-              placeholder="Search users to mark as section winners..."
-              getDisplayValue={(item) =>
-                `${item.displayName} (${item.username})`
-              }
-              getItemId={(item) => item.id}
-              onChange={(users) => {
-                // When users are selected, mark them as winners
-                users.forEach((user) => {
-                  if (!sectionWinners.find((w) => w.id === user.id)) {
-                    handleMarkAsSectionWinner(user);
-                  }
-                });
-              }}
-              value={sectionWinners}
-              name="Section Winners"
-            />
-            {sectionWinners.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {sectionWinners.map((winner) => (
-                  <Badge
-                    key={winner.id}
-                    variant="default"
-                    className="bg-yellow-500 hover:bg-yellow-600"
-                  >
-                    <Trophy className="w-3 h-3 mr-1" />
-                    {winner.displayName}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSectionWinner(winner.id)}
-                      disabled={isProcessingWinner === winner.id}
-                      className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Videos Section - Always shown */}
         <div className="space-y-4">
           {activeSection.hasBrackets ? (

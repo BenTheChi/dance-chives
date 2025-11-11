@@ -125,7 +125,7 @@ export function BracketForm({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {bracket.videos.map((video, videoIndex) => (
             <VideoForm
-              key={`${activeBracketId}-${video.id}-${videoIndex}`}
+              key={video.id}
               control={control}
               setValue={setValue}
               video={video}

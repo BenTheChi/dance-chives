@@ -19,7 +19,7 @@ export interface RegisteredUser extends User {
 }
 
 export interface UserSearchItem {
-  id: string;
+  id?: string; // Optional - only present when coming from server data, not from API search
   username: string;
   displayName: string;
   role?: string; // Optional role property (e.g., "DANCER" for video tags)

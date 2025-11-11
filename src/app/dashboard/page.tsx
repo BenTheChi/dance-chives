@@ -43,6 +43,52 @@ export default function DashboardPage() {
     }
   };
 
+  const handleRequestUpdated = (requestId: string, newStatus: string) => {
+    if (!dashboardData) return;
+
+    // Update the request status in the dashboard data
+    const updateRequestInArray = (requests: any[]) => {
+      return requests.map((req: any) => {
+        if (req.id === requestId) {
+          return { ...req, status: newStatus };
+        }
+        return req;
+      });
+    };
+
+    const updatedIncomingRequests = {
+      ...dashboardData.incomingRequests,
+      tagging: updateRequestInArray(
+        dashboardData.incomingRequests?.tagging || []
+      ),
+      teamMember: updateRequestInArray(
+        dashboardData.incomingRequests?.teamMember || []
+      ),
+      authLevelChange: updateRequestInArray(
+        dashboardData.incomingRequests?.authLevelChange || []
+      ),
+    };
+
+    const updatedOutgoingRequests = {
+      ...dashboardData.outgoingRequests,
+      tagging: updateRequestInArray(
+        dashboardData.outgoingRequests?.tagging || []
+      ),
+      teamMember: updateRequestInArray(
+        dashboardData.outgoingRequests?.teamMember || []
+      ),
+      authLevelChange: updateRequestInArray(
+        dashboardData.outgoingRequests?.authLevelChange || []
+      ),
+    };
+
+    setDashboardData({
+      ...dashboardData,
+      incomingRequests: updatedIncomingRequests,
+      outgoingRequests: updatedOutgoingRequests,
+    });
+  };
+
   useEffect(() => {
     loadDashboard();
   }, []);
@@ -203,6 +249,7 @@ export default function DashboardPage() {
                   <IncomingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
+                    onRequestUpdated={handleRequestUpdated}
                   />
                 ))}
               </div>
@@ -225,6 +272,7 @@ export default function DashboardPage() {
                   <OutgoingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
+                    onRequestUpdated={handleRequestUpdated}
                   />
                 ))}
               </div>
@@ -247,6 +295,7 @@ export default function DashboardPage() {
                   <OutgoingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
+                    onRequestUpdated={handleRequestUpdated}
                   />
                 ))}
               </div>
@@ -302,9 +351,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {teamMemberships.map((membership: any, index: number) => (
+                {teamMemberships.map((membership: any) => (
                   <div
-                    key={`team-membership-${membership.eventId}-${index}`}
+                    key={membership.eventId}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>

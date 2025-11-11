@@ -305,7 +305,13 @@ export default async function EventPage({ params }: PageProps) {
                     {section.winners && section.winners.length > 0 && (
                       <div className="flex flex-wrap gap-1 items-center mb-2">
                         <span className="text-lg font-bold">Winner:</span>
-                        {section.winners.map((winner) => (
+                        {Array.from(
+                          new Map(
+                            section.winners
+                              .filter((w) => w && w.id)
+                              .map((w) => [w.id, w])
+                          ).values()
+                        ).map((winner) => (
                           <Badge
                             key={winner.id}
                             variant="secondary"

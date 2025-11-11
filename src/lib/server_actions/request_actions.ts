@@ -30,7 +30,7 @@ import {
   getEventTeamMembers,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
-import { getUser } from "@/db/queries/user";
+import { getUser, getUserByUsername } from "@/db/queries/user";
 import {
   isValidRole,
   AVAILABLE_ROLES,
@@ -1603,7 +1603,12 @@ export async function tagSelfWithRole(eventId: string, role: string) {
       "🔵 [tagSelfWithRole] User doesn't have permission, creating request..."
     );
     try {
-      const result = await createTaggingRequest(eventId, undefined, role);
+      const result = await createTaggingRequest(
+        eventId,
+        undefined,
+        undefined,
+        role
+      );
       console.log(
         "✅ [tagSelfWithRole] Request created successfully:",
         result.request.id
@@ -1996,11 +2001,13 @@ export async function checkUserWinnerOfSection(
 /**
  * Mark a user as winner of a video (for event editors)
  * Requires event editor permissions
+ * Accepts either userId or username - if userId is not provided, looks up by username
  */
 export async function markUserAsVideoWinner(
   eventId: string,
   videoId: string,
-  userId: string
+  userIdOrUsername: string,
+  username?: string
 ): Promise<{ success: true }> {
   const editorId = await requireAuth();
   const session = await auth();
@@ -2029,6 +2036,22 @@ export async function markUserAsVideoWinner(
     throw new Error("Video not found in this event");
   }
 
+  // Get userId - if username is provided, look up user by username
+  // Otherwise, use userIdOrUsername as the userId (backward compatibility)
+  let userId: string;
+  if (username) {
+    const user = await getUserByUsername(username);
+    if (!user || !user.id) {
+      throw new Error(`User not found with username: ${username}`);
+    }
+    userId = user.id;
+  } else if (userIdOrUsername) {
+    // Use provided userId (backward compatibility)
+    userId = userIdOrUsername;
+  } else {
+    throw new Error("Either userId or username must be provided");
+  }
+
   // Apply winner tag
   await applyTag(eventId, videoId, null, userId, VIDEO_ROLE_WINNER);
 
@@ -2052,11 +2075,13 @@ export async function markUserAsVideoWinner(
 /**
  * Mark a user as winner of a section (for event editors)
  * Requires event editor permissions
+ * Accepts either userId or username - if userId is not provided, looks up by username
  */
 export async function markUserAsSectionWinner(
   eventId: string,
   sectionId: string,
-  userId: string
+  userIdOrUsername: string,
+  username?: string
 ): Promise<{ success: true }> {
   const editorId = await requireAuth();
   const session = await auth();
@@ -2083,6 +2108,22 @@ export async function markUserAsSectionWinner(
   const sectionExists = await sectionExistsInEvent(eventId, sectionId);
   if (!sectionExists) {
     throw new Error("Section not found in this event");
+  }
+
+  // Get userId - if username is provided, look up user by username
+  // Otherwise, use userIdOrUsername as the userId (backward compatibility)
+  let userId: string;
+  if (username) {
+    const user = await getUserByUsername(username);
+    if (!user || !user.id) {
+      throw new Error(`User not found with username: ${username}`);
+    }
+    userId = user.id;
+  } else if (userIdOrUsername) {
+    // Use provided userId (backward compatibility)
+    userId = userIdOrUsername;
+  } else {
+    throw new Error("Either userId or username must be provided");
   }
 
   // Apply winner tag
@@ -2116,45 +2157,6 @@ export async function removeVideoWinnerTag(
     );
   }
 
-  await removeTag(eventId, videoId, null, userId, VIDEO_ROLE_WINNER);
-
-  return { success: true };
-}
-
-/**
- * Remove winner tag from video for current user
- * Users can remove their own winner tags directly
- */
-export async function removeSelfWinnerTagFromVideo(
-  eventId: string,
-  videoId: string
-): Promise<{ success: true }> {
-  const userId = await requireAuth();
-
-  // Validate event exists
-  const eventExistsInNeo4j = await eventExists(eventId);
-  if (!eventExistsInNeo4j) {
-    throw new Error("Event not found");
-  }
-
-  // Validate video exists
-  const videoExists = await videoExistsInEvent(eventId, videoId);
-  if (!videoExists) {
-    throw new Error("Video not found in this event");
-  }
-
-  // Check if user has winner role
-  const hasWinnerRole = await isUserTaggedInVideoWithRole(
-    eventId,
-    videoId,
-    userId,
-    VIDEO_ROLE_WINNER
-  );
-  if (!hasWinnerRole) {
-    throw new Error("You are not tagged as a winner in this video");
-  }
-
-  // Remove winner tag
   await removeTag(eventId, videoId, null, userId, VIDEO_ROLE_WINNER);
 
   return { success: true };

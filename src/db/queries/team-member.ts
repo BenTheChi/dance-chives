@@ -330,7 +330,7 @@ export async function applyTag(
         userId,
         neo4jRole
       );
-      await session.run(
+      const result = await session.run(
         `
         MATCH (u:User {id: $userId})
         MATCH (v:Video {id: $videoId})
@@ -339,12 +339,27 @@ export async function applyTag(
         MERGE (u)-[r:IN]->(v)
         ON CREATE SET r.roles = [$role]
         ON MATCH SET r.roles = CASE 
+          WHEN r.roles IS NULL THEN [$role]
           WHEN $role IN r.roles THEN r.roles 
-          ELSE r.roles + $role 
+          ELSE r.roles + [$role]
         END
+        RETURN r.roles as roles
         `,
         { eventId, videoId, userId, role: neo4jRole }
       );
+
+      // Log result for debugging
+      if (result.records.length > 0) {
+        const roles = result.records[0]?.get("roles");
+        console.log(
+          `✅ [applyTag] Relationship created/updated with roles:`,
+          roles
+        );
+      } else {
+        console.warn(
+          `⚠️ [applyTag] No relationship created - WHERE clause may not have matched`
+        );
+      }
     } else if (sectionId) {
       // Validate section exists and belongs to event
       const sectionExists = await sectionExistsInEvent(eventId, sectionId);

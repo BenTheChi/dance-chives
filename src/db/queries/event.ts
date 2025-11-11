@@ -19,6 +19,33 @@ import {
   normalizeStyleNames,
   normalizeStyleName,
 } from "@/lib/utils/style-utils";
+import { getUserByUsername } from "./user";
+
+/**
+ * Helper function to get userId from UserSearchItem.
+ * If id is present, returns it. Otherwise, looks up user by username.
+ * Throws error if user not found.
+ */
+async function getUserIdFromUserSearchItem(
+  user: UserSearchItem
+): Promise<string> {
+  if (user.id) {
+    return user.id;
+  }
+
+  if (!user.username) {
+    throw new Error(
+      `User must have either id or username. Got: ${JSON.stringify(user)}`
+    );
+  }
+
+  const userRecord = await getUserByUsername(user.username);
+  if (!userRecord || !userRecord.id) {
+    throw new Error(`User not found with username: ${user.username}`);
+  }
+
+  return userRecord.id;
+}
 
 // Function to fetch city coordinates from GeoDB API
 async function fetchCityCoordinates(
@@ -695,11 +722,12 @@ const createBracketVideos = async (sections: any[]) => {
 
           // Link tagged users
           for (const user of vid.taggedUsers || []) {
+            const userId = await getUserIdFromUserSearchItem(user);
             await session.run(
               `MATCH (v:Video {id: $videoId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:IN]->(v)`,
-              { videoId: vid.id, userId: user.id }
+              { videoId: vid.id, userId }
             );
           }
 
@@ -752,11 +780,12 @@ const createSectionVideos = async (sections: any[]) => {
 
         // Link tagged users
         for (const user of vid.taggedUsers || []) {
+          const userId = await getUserIdFromUserSearchItem(user);
           await session.run(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:IN]->(v)`,
-            { videoId: vid.id, userId: user.id }
+            { videoId: vid.id, userId }
           );
         }
 
@@ -794,6 +823,27 @@ export const insertEvent = async (event: Event) => {
         );
       }
     }
+
+    // Preprocess roles to ensure all users have ids
+    const processedRoles = await Promise.all(
+      event.roles.map(async (role) => {
+        if (!role.user) {
+          return role;
+        }
+        const userId = await getUserIdFromUserSearchItem(role.user);
+        return {
+          ...role,
+          user: {
+            ...role.user,
+            id: userId,
+          },
+        };
+      })
+    );
+    event = {
+      ...event,
+      roles: processedRoles,
+    };
   }
 
   const session = driver.session();
@@ -1241,6 +1291,27 @@ export const EditEvent = async (event: Event) => {
         );
       }
     }
+
+    // Preprocess roles to ensure all users have ids
+    const processedRoles = await Promise.all(
+      event.roles.map(async (role) => {
+        if (!role.user) {
+          return role;
+        }
+        const userId = await getUserIdFromUserSearchItem(role.user);
+        return {
+          ...role,
+          user: {
+            ...role.user,
+            id: userId,
+          },
+        };
+      })
+    );
+    event = {
+      ...event,
+      roles: processedRoles,
+    };
   }
 
   const session = driver.session();
@@ -1534,11 +1605,12 @@ export const EditEvent = async (event: Event) => {
             for (const bvid of br.videos) {
               if (bvid.taggedUsers && bvid.taggedUsers.length > 0) {
                 for (const user of bvid.taggedUsers) {
+                  const userId = await getUserIdFromUserSearchItem(user);
                   await tx.run(
                     `MATCH (bv:Video {id: $videoId})
                      MERGE (u:User { id: $userId })
                      MERGE (u)-[:IN]->(bv)`,
-                    { videoId: bvid.id, userId: user.id }
+                    { videoId: bvid.id, userId }
                   );
                 }
               }
@@ -1615,11 +1687,12 @@ export const EditEvent = async (event: Event) => {
         for (const vid of sec.videos) {
           if (vid.taggedUsers && vid.taggedUsers.length > 0) {
             for (const user of vid.taggedUsers) {
+              const userId = await getUserIdFromUserSearchItem(user);
               await tx.run(
                 `MATCH (v:Video {id: $videoId})
                  MERGE (u:User { id: $userId })
                  MERGE (u)-[:IN]->(v)`,
-                { videoId: vid.id, userId: user.id }
+                { videoId: vid.id, userId }
               );
             }
           }

@@ -186,9 +186,9 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.eventsWithRoles.map((event: any, index: number) => (
+                {profile.eventsWithRoles.map((event: any) => (
                   <Eventcard
-                    key={`${event.eventId}-${index}`}
+                    key={event.eventId}
                     id={event.eventId}
                     title={event.eventTitle}
                     imageUrl={event.imageUrl}

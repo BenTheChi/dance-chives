@@ -5,7 +5,12 @@ import { Event } from "../src/types/event";
 import { City } from "../src/types/city";
 import { v4 as uuidv4 } from "uuid";
 import driver from "../src/db/driver";
-import { AVAILABLE_ROLES } from "../src/lib/utils/roles";
+import {
+  VIDEO_ROLE_DANCER,
+  VIDEO_ROLE_WINNER,
+  SECTION_ROLE_WINNER,
+} from "../src/lib/utils/roles";
+import { applyTag } from "../src/db/queries/team-member";
 
 const prisma = new PrismaClient();
 
@@ -689,11 +694,12 @@ async function main() {
 
   // Add tagging requests from base user (test-user-0) for one event in each city
   // Event 1 is in New York, Event 2 is in Seattle
-  // Note: General tagging requests (without videoId or role) are no longer supported
-  // Only video tag requests and role tag requests are allowed
+  // Note: Video and section tag requests require a role
+  // Event role requests require a role but no videoId or sectionId
 
   // Add video tag requests from base user (test-user-0) in one event in each city
-  // Video tag requests reference videos from the event sections
+  // Video tag requests require a role (e.g., "Dancer" or "Winner")
+  // Videos can be tagged with: "Dancer", "Winner", or event roles like "Organizer", "DJ", etc.
   console.log("🌱 Creating video tag requests from base user...");
   const videoTagRequests = [
     {
@@ -701,7 +707,8 @@ async function main() {
       senderId: "test-user-0",
       targetUserId: "test-user-0", // Self-tagging
       videoId: "video-1-breaking-1v1-r1", // Video from Breaking 1v1 section
-      role: null,
+      sectionId: null,
+      role: "Dancer", // Required role for video tags
       status: "PENDING" as const,
     },
     {
@@ -709,7 +716,8 @@ async function main() {
       senderId: "test-user-0",
       targetUserId: "test-user-0", // Self-tagging
       videoId: "video-1-waacking-2v2-seattle-r1", // Video from Waacking 2v2 section
-      role: null,
+      sectionId: null,
+      role: "Winner", // Winner role for video tags
       status: "PENDING" as const,
     },
   ];
@@ -720,7 +728,7 @@ async function main() {
         data: requestData,
       });
       console.log(
-        `✅ Created video tag request: ${requestData.eventId} -> video ${requestData.videoId}`
+        `✅ Created video tag request: ${requestData.eventId} -> video ${requestData.videoId} as ${requestData.role}`
       );
     } catch (error) {
       console.log(
@@ -729,16 +737,47 @@ async function main() {
     }
   }
 
-  // Add role requests from base user (test-user-0) in one event in each city
-  // Role requests are tagging requests with a role specified
+  // Add section tag requests from base user (test-user-0)
+  // Section tag requests require a role (currently only "Winner" is supported)
+  console.log("🌱 Creating section tag requests from base user...");
+  const sectionTagRequests = [
+    {
+      eventId: "event-1-new-york-creator",
+      senderId: "test-user-0",
+      targetUserId: "test-user-0", // Self-tagging
+      videoId: null,
+      sectionId: "section-1-breaking-1v1", // Section from event 1
+      role: "Winner", // Required role for section tags (currently only "Winner" is supported)
+      status: "PENDING" as const,
+    },
+  ];
+
+  for (const requestData of sectionTagRequests) {
+    try {
+      await prisma.taggingRequest.create({
+        data: requestData,
+      });
+      console.log(
+        `✅ Created section tag request: ${requestData.eventId} -> section ${requestData.sectionId} as ${requestData.role}`
+      );
+    } catch (error) {
+      console.log(
+        `ℹ️  Section tag request may already exist or event not found, skipping...`
+      );
+    }
+  }
+
+  // Add event role requests from base user (test-user-0) in one event in each city
+  // Event role requests are tagging requests with a role specified but no videoId or sectionId
   // Using valid roles from AVAILABLE_ROLES
-  console.log("🌱 Creating role requests from base user...");
+  console.log("🌱 Creating event role requests from base user...");
   const roleRequests = [
     {
       eventId: "event-1-new-york-creator",
       senderId: "test-user-0",
       targetUserId: "test-user-0", // Self-tagging with role
       videoId: null,
+      sectionId: null,
       role: "Organizer", // Valid role from AVAILABLE_ROLES
       status: "PENDING" as const,
     },
@@ -747,6 +786,7 @@ async function main() {
       senderId: "test-user-0",
       targetUserId: "test-user-0", // Self-tagging with role
       videoId: null,
+      sectionId: null,
       role: "DJ", // Valid role from AVAILABLE_ROLES
       status: "PENDING" as const,
     },
@@ -758,11 +798,11 @@ async function main() {
         data: requestData,
       });
       console.log(
-        `✅ Created role request: ${requestData.eventId} -> ${requestData.targetUserId} (${requestData.role})`
+        `✅ Created event role request: ${requestData.eventId} -> ${requestData.targetUserId} (${requestData.role})`
       );
     } catch (error) {
       console.log(
-        `ℹ️  Role request may already exist or event not found, skipping...`
+        `ℹ️  Event role request may already exist or event not found, skipping...`
       );
     }
   }
@@ -806,6 +846,99 @@ async function main() {
     );
   } catch (error) {
     console.log(`ℹ️  Auth level change request may already exist, skipping...`);
+  }
+
+  // Add direct tags in Neo4j for privileged users (moderators, admins, super admins)
+  // These users can tag directly without creating requests
+  console.log("🌱 Creating direct tags in Neo4j for privileged users...");
+
+  // Moderator (test-user-2) tags themselves as Dancer in a video
+  try {
+    await applyTag(
+      "event-3-new-york-moderator",
+      "video-1-breaking-1v1-moderator-r1",
+      null,
+      "test-user-2",
+      VIDEO_ROLE_DANCER
+    );
+    console.log(
+      `✅ Tagged moderator as Dancer in video: event-3-new-york-moderator -> video-1-breaking-1v1-moderator-r1`
+    );
+  } catch (error) {
+    console.log(
+      `ℹ️  Failed to tag moderator in video, skipping... (${
+        error instanceof Error ? error.message : "unknown error"
+      })`
+    );
+  }
+
+  // Admin (test-user-3) tags themselves as Winner in a video (which also tags as Dancer)
+  try {
+    await applyTag(
+      "event-4-seattle-admin",
+      "video-1-breaking-1v1-admin-r1",
+      null,
+      "test-user-3",
+      VIDEO_ROLE_WINNER
+    );
+    // Note: When tagging as Winner, the system automatically also tags as Dancer if not already tagged
+    // But we need to explicitly tag as Dancer here since applyTag doesn't do that automatically
+    await applyTag(
+      "event-4-seattle-admin",
+      "video-1-breaking-1v1-admin-r1",
+      null,
+      "test-user-3",
+      VIDEO_ROLE_DANCER
+    );
+    console.log(
+      `✅ Tagged admin as Winner and Dancer in video: event-4-seattle-admin -> video-1-breaking-1v1-admin-r1`
+    );
+  } catch (error) {
+    console.log(
+      `ℹ️  Failed to tag admin in video, skipping... (${
+        error instanceof Error ? error.message : "unknown error"
+      })`
+    );
+  }
+
+  // Super Admin (test-user-4) tags themselves as Winner in a section
+  try {
+    await applyTag(
+      "event-5-new-york-super-admin",
+      null,
+      "section-1-breaking-1v1-super-admin",
+      "test-user-4",
+      SECTION_ROLE_WINNER
+    );
+    console.log(
+      `✅ Tagged super admin as Winner in section: event-5-new-york-super-admin -> section-1-breaking-1v1-super-admin`
+    );
+  } catch (error) {
+    console.log(
+      `ℹ️  Failed to tag super admin in section, skipping... (${
+        error instanceof Error ? error.message : "unknown error"
+      })`
+    );
+  }
+
+  // Admin (test-user-3) tags themselves with an event role
+  try {
+    await applyTag(
+      "event-4-seattle-admin",
+      null,
+      null,
+      "test-user-3",
+      "Photographer"
+    );
+    console.log(
+      `✅ Tagged admin with event role: event-4-seattle-admin -> test-user-3 (Photographer)`
+    );
+  } catch (error) {
+    console.log(
+      `ℹ️  Failed to tag admin with event role, skipping... (${
+        error instanceof Error ? error.message : "unknown error"
+      })`
+    );
   }
 
   console.log("🎉 PostgreSQL seeding completed!");

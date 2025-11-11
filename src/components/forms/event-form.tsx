@@ -25,7 +25,7 @@ import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
 
 const userSearchItemSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(), // Optional - only present when coming from server data
   displayName: z.string(),
   username: z.string(),
 });

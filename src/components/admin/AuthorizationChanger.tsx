@@ -129,6 +129,11 @@ export function AuthorizationChanger() {
       return;
     }
 
+    if (!selectedUser.id) {
+      toast.error("User ID is required. Please refresh and try again.");
+      return;
+    }
+
     setIsUpdating(true);
     try {
       const response = await fetch("/api/auth/update-level", {
@@ -205,7 +210,7 @@ export function AuthorizationChanger() {
             <div className="border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto z-50">
               {users.map((user) => (
                 <div
-                  key={user.id}
+                  key={user.username}
                   onClick={() => handleUserSelect(user)}
                   className="px-4 py-2 hover:bg-accent cursor-pointer text-sm"
                 >

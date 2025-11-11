@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { X, Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface SearchItem {
-  id: string;
+  id?: string; // Optional - only present when coming from server data
   displayName: string;
   username: string;
 }
@@ -57,6 +57,20 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
 
   const debouncedValue = useDebounce(inputValue, debounceDelay);
 
+  // Deduplicate value array based on getItemId to prevent duplicate keys
+  // This ensures we never render duplicate items even if parent passes duplicates
+  const deduplicatedValue = useMemo(() => {
+    const seen = new Map<string, T>();
+    value.forEach((item) => {
+      const itemId = getItemId(item);
+      // Only keep the first occurrence of each item
+      if (!seen.has(itemId)) {
+        seen.set(itemId, item);
+      }
+    });
+    return Array.from(seen.values());
+  }, [value, getItemId]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -91,17 +105,23 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
   }, [debouncedValue, onSearch]);
 
   const handleSelect = (item: T) => {
-    const isSelected = value.some((v) => v.id === item.id);
+    const itemId = getItemId(item);
+    const isSelected = deduplicatedValue.some((v) => getItemId(v) === itemId);
     if (isSelected) {
-      onChange(value.filter((v) => v.id !== item.id));
+      onChange(deduplicatedValue.filter((v) => getItemId(v) !== itemId));
     } else {
-      onChange([...value, item]);
+      // Ensure we don't add duplicates - filter out any existing items with same ID
+      const newValue = [...deduplicatedValue, item];
+      const deduplicated = Array.from(
+        new Map(newValue.map((v) => [getItemId(v), v])).values()
+      );
+      onChange(deduplicated);
     }
     setInputValue("");
   };
 
   const removeItem = (itemId: string) => {
-    onChange(value.filter((v) => v.id !== itemId));
+    onChange(deduplicatedValue.filter((v) => getItemId(v) !== itemId));
   };
 
   return (
@@ -117,22 +137,26 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
         </label>
       )}
       <div className="flex flex-wrap gap-1">
-        {value.map((item) => (
-          <Badge
-            key={getItemId(item)}
-            variant="secondary"
-            className="flex items-center gap-1 hover:bg-secondary/80 transition-colors"
-          >
-            {getDisplayValue(item)}
-            <button
-              type="button"
-              onClick={() => removeItem(getItemId(item))}
-              className="ml-1 hover:bg-secondary/90 rounded-full p-0.5"
+        {deduplicatedValue.map((item) => {
+          const itemId = getItemId(item);
+          // itemId is guaranteed to be unique after deduplication
+          return (
+            <Badge
+              key={itemId}
+              variant="secondary"
+              className="flex items-center gap-1 hover:bg-secondary/80 transition-colors"
             >
-              <X className="w-3 h-3" />
-            </button>
-          </Badge>
-        ))}
+              {getDisplayValue(item)}
+              <button
+                type="button"
+                onClick={() => removeItem(itemId)}
+                className="ml-1 hover:bg-secondary/90 rounded-full p-0.5"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          );
+        })}
       </div>
       <div className="relative w-full">
         <div className="flex items-center border rounded-md bg-white">
@@ -164,11 +188,16 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
                   {searchResults.length === 0 && !isLoading ? (
                     <CommandEmpty>No results found.</CommandEmpty>
                   ) : (
-                    searchResults.map((item) => {
-                      const isSelected = value.some((v) => v.id === item.id);
+                    searchResults.map((item, index) => {
+                      const itemId = getItemId(item);
+                      const isSelected = deduplicatedValue.some(
+                        (v) => getItemId(v) === itemId
+                      );
+                      // Use itemId with index for search results since same item might appear in search results
+                      // (though unlikely, index ensures uniqueness)
                       return (
                         <CommandItem
-                          key={item.id}
+                          key={`${itemId}-search-${index}`}
                           onSelect={() => handleSelect(item)}
                         >
                           <Check
@@ -192,7 +221,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
       <input
         type="hidden"
         name={name}
-        value={JSON.stringify(value)}
+        value={JSON.stringify(deduplicatedValue)}
         required={required}
         disabled={disabled}
       />

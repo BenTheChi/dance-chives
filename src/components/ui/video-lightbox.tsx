@@ -9,9 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
 import { Video } from "@/types/event";
 import Link from "next/link";
-import { TagSelfVideoButton } from "@/components/events/TagSelfVideoButton";
-import { TagSelfAsWinnerVideoButton } from "@/components/events/TagSelfAsWinnerVideoButton";
-import { RemoveWinnerTagButton } from "@/components/events/RemoveWinnerTagButton";
+import { TagSelfButton } from "@/components/events/TagSelfButton";
 import {
   fromNeo4jRoleFormat,
   VIDEO_ROLE_DANCER,
@@ -93,25 +91,69 @@ export function VideoLightbox({
 
   const allParticipants = video?.taggedUsers || [];
 
-  // Group participants by role
-  const winners = allParticipants.filter((user) => {
+  // Group participants by role, deduplicating by user ID
+  // A user might appear multiple times with different roles (e.g., both DANCER and WINNER)
+  // First, collect all roles for each user
+  const userRolesMap = new Map<string, Set<string>>();
+  const userDataMap = new Map<string, (typeof allParticipants)[0]>();
+
+  allParticipants.forEach((user) => {
+    if (!user || !user.username) return;
     const role = fromNeo4jRoleFormat(user.role);
-    return role === VIDEO_ROLE_WINNER;
-  });
-  const dancers = allParticipants.filter((user) => {
-    const role = fromNeo4jRoleFormat(user.role);
-    return !role || role === VIDEO_ROLE_DANCER;
-  });
-  const otherParticipants = allParticipants.filter((user) => {
-    const role = fromNeo4jRoleFormat(user.role);
-    return role && role !== VIDEO_ROLE_DANCER && role !== VIDEO_ROLE_WINNER;
+
+    if (!userRolesMap.has(user.username)) {
+      userRolesMap.set(user.username, new Set());
+      userDataMap.set(user.username, user);
+    }
+
+    if (role) {
+      userRolesMap.get(user.username)!.add(role);
+    }
   });
 
+  // Now categorize users based on their roles
+  const winnersMap = new Map<string, (typeof allParticipants)[0]>();
+  const dancersMap = new Map<string, (typeof allParticipants)[0]>();
+  const otherParticipantsMap = new Map<string, (typeof allParticipants)[0]>();
+
+  userRolesMap.forEach((roles, username) => {
+    const user = userDataMap.get(username)!;
+    const hasWinner = roles.has(VIDEO_ROLE_WINNER);
+    const hasDancer = roles.has(VIDEO_ROLE_DANCER) || roles.size === 0; // No role defaults to dancer
+
+    if (hasWinner) {
+      winnersMap.set(username, user);
+    }
+
+    if (hasDancer) {
+      dancersMap.set(username, user);
+    }
+
+    // Other roles (not Winner or Dancer)
+    const otherRoles = Array.from(roles).filter(
+      (role) => role !== VIDEO_ROLE_WINNER && role !== VIDEO_ROLE_DANCER
+    );
+    if (otherRoles.length > 0 && !hasWinner && !hasDancer) {
+      otherParticipantsMap.set(username, user);
+    }
+  });
+
+  const winners = Array.from(winnersMap.values());
+  const dancers = Array.from(dancersMap.values());
+  const otherParticipants = Array.from(otherParticipantsMap.values());
+
+  // For user comparisons, we need to check by username if currentUserId is a username
+  // or by id if currentUserId is an id. Since currentUserId comes from session, it's likely an id.
+  // But we'll check both username and id for compatibility
   const isUserTagged = currentUserId
-    ? allParticipants.some((user) => user.id === currentUserId)
+    ? allParticipants.some(
+        (user) => user.id === currentUserId || user.username === currentUserId
+      )
     : false;
   const isUserWinner = currentUserId
-    ? winners.some((user) => user.id === currentUserId)
+    ? winners.some(
+        (user) => user.id === currentUserId || user.username === currentUserId
+      )
     : false;
 
   // Determine which styles to display: section styles if applyStylesToVideos is true, otherwise video styles
@@ -270,25 +312,43 @@ export function VideoLightbox({
               {/* Tag Self Buttons */}
               {currentUserId && (
                 <div className="space-y-2 sm:space-y-3">
-                  <TagSelfVideoButton
+                  <TagSelfButton
                     eventId={eventId}
-                    videoId={video.id}
+                    target="video"
+                    targetId={video.id}
                     currentUserId={currentUserId}
+                    role={VIDEO_ROLE_DANCER}
                     isUserTagged={isUserTagged}
+                    showRemoveButton={true}
+                    buttonLabel="Tag Self as Dancer"
+                    pendingLabel="Dancer tag request pending"
+                    successLabel="Tagged as Dancer"
                   />
                   {!isUserWinner && (
-                    <TagSelfAsWinnerVideoButton
+                    <TagSelfButton
                       eventId={eventId}
-                      videoId={video.id}
+                      target="video"
+                      targetId={video.id}
                       currentUserId={currentUserId}
-                      isUserWinner={isUserWinner}
+                      role={VIDEO_ROLE_WINNER}
+                      isUserTagged={isUserWinner}
+                      buttonLabel="Tag Self as Winner"
+                      pendingLabel="Winner tag request pending"
+                      successLabel="Tagged as Winner"
                     />
                   )}
                   {isUserWinner && (
-                    <RemoveWinnerTagButton
+                    <TagSelfButton
                       eventId={eventId}
-                      videoId={video.id}
+                      target="video"
+                      targetId={video.id}
                       currentUserId={currentUserId}
+                      role={VIDEO_ROLE_WINNER}
+                      isUserTagged={isUserWinner}
+                      showRemoveButton={true}
+                      buttonLabel="Remove Winner Tag"
+                      pendingLabel="Winner tag request pending"
+                      successLabel="Removed Winner Tag"
                     />
                   )}
                 </div>
@@ -306,9 +366,9 @@ export function VideoLightbox({
                     </h3>
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {winners.map((winner, index) => (
+                    {winners.map((winner) => (
                       <Link
-                        key={index}
+                        key={winner.username}
                         href={`/profile/${winner.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >

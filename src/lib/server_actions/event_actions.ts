@@ -10,6 +10,14 @@ import { Event, EventDetails, Section, SubEvent, Picture } from "@/types/event";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
+import { applyTag, removeTag } from "@/db/queries/team-member";
+import { getUserByUsername } from "@/db/queries/user";
+import { UserSearchItem } from "@/types/user";
+import {
+  VIDEO_ROLE_WINNER,
+  VIDEO_ROLE_DANCER,
+  SECTION_ROLE_WINNER,
+} from "@/lib/utils/roles";
 
 interface addEventProps {
   eventDetails: {
@@ -51,9 +59,10 @@ interface addEventProps {
       src: string;
       styles?: string[];
       taggedUsers?: {
-        id: string;
+        id?: string; // Optional - server can look up by username if not provided
         displayName: string;
         username: string;
+        role?: string; // Role for this user (e.g., "Dancer", "Winner")
       }[];
     }[];
     brackets: {
@@ -65,7 +74,7 @@ interface addEventProps {
         src: string;
         styles?: string[];
         taggedUsers?: {
-          id: string;
+          id?: string; // Optional - server can look up by username if not provided
           displayName: string;
           username: string;
         }[];
@@ -76,7 +85,7 @@ interface addEventProps {
     id: string;
     title: string;
     user: {
-      id: string;
+      id?: string; // Optional - server can look up by username if not provided
       displayName: string;
       username: string;
     } | null;
@@ -275,6 +284,7 @@ export async function editEvent(
   eventId: string,
   editedEvent: addEventProps
 ): Promise<response> {
+  console.log("🟢 [editEvent] Starting editEvent");
   const session = await auth();
 
   // Check for auth level here
@@ -494,7 +504,344 @@ export async function editEvent(
     // Call EditEvent with the properly structured Event object
     const result = await editEventQuery(event);
 
+    console.log("🟢 [editEvent] EditEvent result:", result);
+
     if (result) {
+      // Helper function to get userId from UserSearchItem
+      const getUserId = async (user: UserSearchItem): Promise<string> => {
+        if (user.id) {
+          return user.id;
+        }
+        if (!user.username) {
+          throw new Error(
+            `User must have either id or username. Got: ${JSON.stringify(user)}`
+          );
+        }
+        const userRecord = await getUserByUsername(user.username);
+        if (!userRecord || !userRecord.id) {
+          throw new Error(`User not found with username: ${user.username}`);
+        }
+        return userRecord.id;
+      };
+
+      // Process tag diffs for videos and sections
+      try {
+        console.log("🟢 [editEvent] Starting tag diff processing...");
+        // Process video tag diffs (both section videos and bracket videos)
+        for (const newSection of processedSections) {
+          const oldSection = oldEvent.sections.find(
+            (s) => s.id === newSection.id
+          );
+
+          // Process section videos
+          for (const newVideo of newSection.videos || []) {
+            const oldVideo = oldSection?.videos.find(
+              (v) => v.id === newVideo.id
+            );
+            const oldTaggedUsers = oldVideo?.taggedUsers || [];
+            const newTaggedUsers = newVideo.taggedUsers || [];
+
+            // Collect all roles for each user (payload has multiple entries per user, one per role)
+            const oldUserRolesMap = new Map<string, Set<string>>();
+            const oldUserDataMap = new Map<string, UserSearchItem>();
+            oldTaggedUsers.forEach((user) => {
+              if (user.username) {
+                if (!oldUserRolesMap.has(user.username)) {
+                  oldUserRolesMap.set(user.username, new Set());
+                  oldUserDataMap.set(user.username, user);
+                }
+                if (user.role) {
+                  oldUserRolesMap.get(user.username)!.add(user.role);
+                }
+              }
+            });
+
+            const newUserRolesMap = new Map<string, Set<string>>();
+            const newUserDataMap = new Map<string, UserSearchItem>();
+            newTaggedUsers.forEach((user) => {
+              if (user.username) {
+                if (!newUserRolesMap.has(user.username)) {
+                  newUserRolesMap.set(user.username, new Set());
+                  newUserDataMap.set(user.username, user);
+                }
+                if (user.role) {
+                  newUserRolesMap.get(user.username)!.add(user.role);
+                }
+              }
+            });
+
+            // Process all users in the new set
+            for (const [username, newRoles] of newUserRolesMap) {
+              const oldRoles =
+                oldUserRolesMap.get(username) || new Set<string>();
+              const newUser = newUserDataMap.get(username)!;
+              const userId = await getUserId(newUser);
+
+              // Find roles to add (in new but not in old)
+              const rolesToAdd = Array.from(newRoles).filter(
+                (role) => !oldRoles.has(role)
+              );
+
+              // Find roles to remove (in old but not in new)
+              const rolesToRemove = Array.from(oldRoles).filter(
+                (role) => !newRoles.has(role)
+              );
+
+              try {
+                // Remove roles that are no longer present
+                for (const role of rolesToRemove) {
+                  console.log(
+                    `🟢 [editEvent] Removing role ${role} for user ${username} in video ${newVideo.id}`
+                  );
+                  await removeTag(eventId, newVideo.id, null, userId, role);
+                }
+
+                // Add new roles
+                for (const role of rolesToAdd) {
+                  console.log(
+                    `🟢 [editEvent] Applying role ${role} for user ${username} in video ${newVideo.id}`
+                  );
+                  await applyTag(eventId, newVideo.id, null, userId, role);
+                }
+
+                // If adding WINNER role, also ensure DANCER role is present
+                if (newRoles.has(VIDEO_ROLE_WINNER) || newRoles.has("WINNER")) {
+                  if (
+                    !newRoles.has(VIDEO_ROLE_DANCER) &&
+                    !newRoles.has("DANCER")
+                  ) {
+                    console.log(
+                      `🟢 [editEvent] Also applying DANCER role for winner ${username}`
+                    );
+                    await applyTag(
+                      eventId,
+                      newVideo.id,
+                      null,
+                      userId,
+                      VIDEO_ROLE_DANCER
+                    );
+                  }
+                }
+
+                if (rolesToAdd.length > 0 || rolesToRemove.length > 0) {
+                  console.log(
+                    `✅ [editEvent] Successfully processed tags for user ${username}: added=${rolesToAdd.length}, removed=${rolesToRemove.length}`
+                  );
+                }
+              } catch (userTagError) {
+                console.error(
+                  `❌ [editEvent] Error processing tags for user ${username} in video ${newVideo.id}:`,
+                  userTagError
+                );
+                // Continue with other users even if one fails
+              }
+            }
+
+            // Find users to remove completely
+            for (const [username, oldUser] of oldUserDataMap) {
+              if (!newUserRolesMap.has(username)) {
+                const userId = await getUserId(oldUser);
+                console.log(
+                  `🟢 [editEvent] Removing all tags for user ${username} in video ${newVideo.id}`
+                );
+                // Remove all roles for this user in this video
+                await removeTag(eventId, newVideo.id, null, userId);
+              }
+            }
+          }
+
+          // Process bracket videos
+          for (const newBracket of newSection.brackets || []) {
+            const oldBracket = oldSection?.brackets.find(
+              (b) => b.id === newBracket.id
+            );
+
+            for (const newVideo of newBracket.videos || []) {
+              const oldVideo = oldBracket?.videos.find(
+                (v) => v.id === newVideo.id
+              );
+              const oldTaggedUsers = oldVideo?.taggedUsers || [];
+              const newTaggedUsers = newVideo.taggedUsers || [];
+
+              // Collect all roles for each user (payload has multiple entries per user, one per role)
+              const oldUserRolesMap = new Map<string, Set<string>>();
+              const oldUserDataMap = new Map<string, UserSearchItem>();
+              oldTaggedUsers.forEach((user) => {
+                if (user.username) {
+                  if (!oldUserRolesMap.has(user.username)) {
+                    oldUserRolesMap.set(user.username, new Set());
+                    oldUserDataMap.set(user.username, user);
+                  }
+                  if (user.role) {
+                    oldUserRolesMap.get(user.username)!.add(user.role);
+                  }
+                }
+              });
+
+              const newUserRolesMap = new Map<string, Set<string>>();
+              const newUserDataMap = new Map<string, UserSearchItem>();
+              newTaggedUsers.forEach((user) => {
+                if (user.username) {
+                  if (!newUserRolesMap.has(user.username)) {
+                    newUserRolesMap.set(user.username, new Set());
+                    newUserDataMap.set(user.username, user);
+                  }
+                  if (user.role) {
+                    newUserRolesMap.get(user.username)!.add(user.role);
+                  }
+                }
+              });
+
+              // Process all users in the new set
+              for (const [username, newRoles] of newUserRolesMap) {
+                const oldRoles =
+                  oldUserRolesMap.get(username) || new Set<string>();
+                const newUser = newUserDataMap.get(username)!;
+                const userId = await getUserId(newUser);
+
+                // Find roles to add (in new but not in old)
+                const rolesToAdd = Array.from(newRoles).filter(
+                  (role) => !oldRoles.has(role)
+                );
+
+                // Find roles to remove (in old but not in new)
+                const rolesToRemove = Array.from(oldRoles).filter(
+                  (role) => !newRoles.has(role)
+                );
+
+                try {
+                  // Remove roles that are no longer present
+                  for (const role of rolesToRemove) {
+                    console.log(
+                      `🟢 [editEvent] Removing role ${role} for user ${username} in bracket video ${newVideo.id}`
+                    );
+                    await removeTag(eventId, newVideo.id, null, userId, role);
+                  }
+
+                  // Add new roles
+                  for (const role of rolesToAdd) {
+                    console.log(
+                      `🟢 [editEvent] Applying role ${role} for user ${username} in bracket video ${newVideo.id}`
+                    );
+                    await applyTag(eventId, newVideo.id, null, userId, role);
+                  }
+
+                  // If adding WINNER role, also ensure DANCER role is present
+                  if (
+                    newRoles.has(VIDEO_ROLE_WINNER) ||
+                    newRoles.has("WINNER")
+                  ) {
+                    if (
+                      !newRoles.has(VIDEO_ROLE_DANCER) &&
+                      !newRoles.has("DANCER")
+                    ) {
+                      console.log(
+                        `🟢 [editEvent] Also applying DANCER role for winner ${username}`
+                      );
+                      await applyTag(
+                        eventId,
+                        newVideo.id,
+                        null,
+                        userId,
+                        VIDEO_ROLE_DANCER
+                      );
+                    }
+                  }
+
+                  if (rolesToAdd.length > 0 || rolesToRemove.length > 0) {
+                    console.log(
+                      `✅ [editEvent] Successfully processed tags for user ${username} in bracket video: added=${rolesToAdd.length}, removed=${rolesToRemove.length}`
+                    );
+                  }
+                } catch (userTagError) {
+                  console.error(
+                    `❌ [editEvent] Error processing tags for user ${username} in bracket video ${newVideo.id}:`,
+                    userTagError
+                  );
+                  // Continue with other users even if one fails
+                }
+              }
+
+              // Find users to remove completely
+              for (const [username, oldUser] of oldUserDataMap) {
+                if (!newUserRolesMap.has(username)) {
+                  const userId = await getUserId(oldUser);
+                  console.log(
+                    `🟢 [editEvent] Removing all tags for user ${username} in bracket video ${newVideo.id}`
+                  );
+                  // Remove all roles for this user in this video
+                  await removeTag(eventId, newVideo.id, null, userId);
+                }
+              }
+            }
+          }
+
+          // Process section winners
+          const oldWinners = oldSection?.winners || [];
+          const newWinners = newSection.winners || [];
+
+          const oldWinnersMap = new Map<string, UserSearchItem>();
+          oldWinners.forEach((winner) => {
+            if (winner.username) {
+              oldWinnersMap.set(winner.username, winner);
+            }
+          });
+
+          const newWinnersMap = new Map<string, UserSearchItem>();
+          newWinners.forEach((winner) => {
+            if (winner.username) {
+              newWinnersMap.set(winner.username, winner);
+            }
+          });
+
+          // Add new section winners
+          for (const [username, newWinner] of newWinnersMap) {
+            if (!oldWinnersMap.has(username)) {
+              try {
+                console.log(
+                  `🟢 [editEvent] Adding section winner ${username} to section ${newSection.id}`
+                );
+                const userId = await getUserId(newWinner);
+                console.log(`🟢 [editEvent] Got userId: ${userId}`);
+                await applyTag(
+                  eventId,
+                  null,
+                  newSection.id,
+                  userId,
+                  SECTION_ROLE_WINNER
+                );
+                console.log(
+                  `✅ [editEvent] Successfully added section winner ${username}`
+                );
+              } catch (winnerError) {
+                console.error(
+                  `❌ [editEvent] Error adding section winner ${username}:`,
+                  winnerError
+                );
+                // Continue with other winners even if one fails
+              }
+            }
+          }
+
+          // Remove old section winners that are no longer winners
+          for (const [username, oldWinner] of oldWinnersMap) {
+            if (!newWinnersMap.has(username)) {
+              const userId = await getUserId(oldWinner);
+              await removeTag(eventId, null, newSection.id, userId);
+            }
+          }
+        }
+      } catch (tagError) {
+        console.error("❌ [editEvent] Error processing tag diffs:", tagError);
+        // Re-throw the error so the user knows something went wrong
+        throw new Error(
+          `Failed to process tag changes: ${
+            tagError instanceof Error ? tagError.message : String(tagError)
+          }`
+        );
+      }
+      console.log("✅ [editEvent] Tag diff processing completed");
+
       // Update corresponding PostgreSQL Event record to keep it in sync with Neo4j
       // Use the original creator ID from oldEvent to preserve creator information
       const creatorId = oldEvent.eventDetails.creatorId || session.user.id;

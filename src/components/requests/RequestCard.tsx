@@ -36,6 +36,7 @@ interface RequestCardProps {
     currentLevel?: number;
     message?: string;
   };
+  onRequestUpdated?: (requestId: string, newStatus: string) => void;
 }
 
 // Request type to action handler mapping
@@ -195,8 +196,12 @@ function renderRequestDetails(
   return details;
 }
 
-export function IncomingRequestCard({ request }: RequestCardProps) {
+export function IncomingRequestCard({
+  request,
+  onRequestUpdated,
+}: RequestCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [localStatus, setLocalStatus] = useState(request.status);
 
   /**
    * Generic handler for approve/deny actions
@@ -214,9 +219,14 @@ export function IncomingRequestCard({ request }: RequestCardProps) {
       }
 
       await handler(request.id);
+      const newStatus = action === "approve" ? "APPROVED" : "DENIED";
+      setLocalStatus(newStatus);
       toast.success(`Request ${action === "approve" ? "approved" : "denied"}`);
-      // Refresh the page to update the UI
-      setTimeout(() => window.location.reload(), 1000);
+
+      // Notify parent component to update its state
+      if (onRequestUpdated) {
+        onRequestUpdated(request.id, newStatus);
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : `Failed to ${action} request`
@@ -249,14 +259,15 @@ export function IncomingRequestCard({ request }: RequestCardProps) {
         <div className="text-sm space-y-1">
           {renderRequestDetails(request)}
           <p>
-            <span className="font-medium">Status:</span> {request.status}
+            <span className="font-medium">Status:</span>{" "}
+            <span className={getStatusColor(localStatus)}>{localStatus}</span>
           </p>
           <p>
             <span className="font-medium">Created:</span>{" "}
             {formatDate(request.createdAt)}
           </p>
         </div>
-        {request.status === "PENDING" && (
+        {localStatus === "PENDING" && (
           <div className="flex gap-2">
             <Button
               onClick={() => handleAction("approve")}
@@ -281,8 +292,12 @@ export function IncomingRequestCard({ request }: RequestCardProps) {
   );
 }
 
-export function OutgoingRequestCard({ request }: RequestCardProps) {
+export function OutgoingRequestCard({
+  request,
+  onRequestUpdated,
+}: RequestCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [localStatus, setLocalStatus] = useState(request.status);
 
   /**
    * Handles cancel action for outgoing requests
@@ -297,9 +312,14 @@ export function OutgoingRequestCard({ request }: RequestCardProps) {
       }
 
       await handler(request.id);
+      const newStatus = "CANCELLED";
+      setLocalStatus(newStatus);
       toast.success("Request cancelled");
-      // Refresh the page to update the UI
-      setTimeout(() => window.location.reload(), 1000);
+
+      // Notify parent component to update its state
+      if (onRequestUpdated) {
+        onRequestUpdated(request.id, newStatus);
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to cancel request"
@@ -343,15 +363,15 @@ export function OutgoingRequestCard({ request }: RequestCardProps) {
               <span className="font-medium">Event:</span> {request.eventTitle}
             </p>
           )}
-          <p className={getStatusColor(request.status)}>
-            <span className="font-medium">Status:</span> {request.status}
+          <p className={getStatusColor(localStatus)}>
+            <span className="font-medium">Status:</span> {localStatus}
           </p>
           <p>
             <span className="font-medium">Created:</span>{" "}
             {formatDate(request.createdAt)}
           </p>
         </div>
-        {request.status === "PENDING" && (
+        {localStatus === "PENDING" && (
           <div className="flex gap-2 mt-2">
             <Button
               onClick={handleCancel}

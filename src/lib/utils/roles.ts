@@ -39,12 +39,14 @@ export function isValidEventRole(role: string): role is RoleTitle {
 /**
  * Check if a role is valid for videos
  * Includes both event roles and video-only roles
+ * Case-insensitive comparison for video-only roles
  */
 export function isValidVideoRole(role: string): boolean {
+  const normalizedRole = role?.trim();
   return (
-    isValidRole(role) ||
-    role === VIDEO_ROLE_DANCER ||
-    role === VIDEO_ROLE_WINNER
+    isValidRole(normalizedRole) ||
+    normalizedRole?.toLowerCase() === VIDEO_ROLE_DANCER.toLowerCase() ||
+    normalizedRole?.toLowerCase() === VIDEO_ROLE_WINNER.toLowerCase()
   );
 }
 

@@ -135,7 +135,7 @@ export default function RolesForm({
                 if (!item.displayName || !item.username) return "";
                 return `${item.displayName} (${item.username})`;
               }}
-              getItemId={(item) => item.id}
+              getItemId={(item) => item.username}
               onChange={(value) => {
                 setValue(`roles.${index}.user`, value as UserSearchItem);
               }}
