@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
@@ -67,12 +67,17 @@ function DebouncedSearchSelect<
   } = props;
 
   const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(
-    value ? getDisplayValue(value) : ""
-  );
+  const [inputValue, setInputValue] = useState(() => {
+    if (value) {
+      return getDisplayValue(value);
+    }
+    return "";
+  });
   const [selectedItem, setSelectedItem] = useState<T | null>(null);
   const [items, setItems] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUserTyping, setIsUserTyping] = useState(false);
+  const prevValueRef = useRef(value);
 
   const debouncedValue = useDebounce(inputValue, debounceDelay);
 
@@ -84,13 +89,34 @@ function DebouncedSearchSelect<
     }
   }, [defaultValue, value, selectedItem, getDisplayValue]);
 
-  // Handle controlled component updates
+  // Handle controlled component updates - only when value prop changes externally
   useEffect(() => {
-    if (
-      value !== undefined &&
-      value !== null &&
-      (!selectedItem || getItemId(selectedItem) !== getItemId(value))
-    ) {
+    // Don't update if user is currently typing
+    if (isUserTyping) {
+      return;
+    }
+
+    // Only update if value prop actually changed (not on every render)
+    const valueChanged =
+      prevValueRef.current !== value &&
+      (prevValueRef.current === null ||
+        prevValueRef.current === undefined ||
+        value === null ||
+        value === undefined ||
+        (prevValueRef.current &&
+          value &&
+          getItemId(prevValueRef.current) !== getItemId(value)));
+
+    if (!valueChanged) {
+      prevValueRef.current = value;
+      return;
+    }
+
+    // Value changed externally, update the input
+    if (value === null || value === undefined) {
+      setInputValue("");
+      setSelectedItem(null);
+    } else {
       // If we have items, find the matching one
       const matchingItem = items.find(
         (item) => getItemId(item) === getItemId(value)
@@ -98,9 +124,14 @@ function DebouncedSearchSelect<
       if (matchingItem) {
         setSelectedItem(matchingItem);
         setInputValue(getDisplayValue(matchingItem));
+      } else {
+        // Value changed but item not in list yet, update display value
+        setInputValue(getDisplayValue(value));
       }
     }
-  }, [value, items, selectedItem, getItemId, getDisplayValue]);
+
+    prevValueRef.current = value;
+  }, [value, items, getItemId, getDisplayValue, isUserTyping]);
 
   // Fetch items when debounced value changes
   useEffect(() => {
@@ -155,24 +186,40 @@ function DebouncedSearchSelect<
                       value={inputValue}
                       onChange={(e) => {
                         const newValue = e.target.value;
+                        setIsUserTyping(true);
                         setInputValue(newValue);
                         setOpen(true);
-                        // Update form field when typing
-                        if (!onChange) {
-                          field.onChange(newValue);
-                        }
 
+                        // Clear selected item when user types something different
                         if (
                           selectedItem &&
                           newValue !== getDisplayValue(selectedItem)
                         ) {
                           setSelectedItem(null);
+                        }
+
+                        // Update form field when typing
+                        if (!onChange) {
+                          field.onChange(newValue);
+                        }
+
+                        // If user has cleared selection or changed from selected item, set to null
+                        if (
+                          selectedItem &&
+                          newValue !== getDisplayValue(selectedItem)
+                        ) {
                           // Always call field.onChange to keep react-hook-form in sync
                           field.onChange(null);
                           if (onChange) {
                             onChange(null);
                           }
                         }
+                      }}
+                      onBlur={() => {
+                        // Reset typing flag after a short delay to allow value updates
+                        setTimeout(() => {
+                          setIsUserTyping(false);
+                        }, 100);
                       }}
                       className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
                       disabled={disabled}

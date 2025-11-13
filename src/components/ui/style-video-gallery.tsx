@@ -47,9 +47,7 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
           onClose={() => setSelectedVideoIndex(null)}
           onNext={() =>
             selectedVideoIndex !== null
-              ? setSelectedVideoIndex(
-                  (selectedVideoIndex + 1) % videos.length
-                )
+              ? setSelectedVideoIndex((selectedVideoIndex + 1) % videos.length)
               : null
           }
           onPrev={() =>
@@ -76,4 +74,3 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
     </>
   );
 }
-

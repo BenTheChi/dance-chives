@@ -58,8 +58,6 @@ const videoSchema = z.object({
         message: "Video source must be a valid YouTube URL",
       }
     ),
-  taggedWinners: z.array(userSearchItemSchema).optional(),
-  taggedDancers: z.array(userSearchItemSchema).optional(),
   styles: z.array(z.string()).optional(),
 });
 
@@ -115,6 +113,7 @@ const formSchema = z.object({
   videos: z.array(videoSchema),
   gallery: z.array(pictureSchema),
   associatedEventId: z.string().nullable().optional(),
+  isSubeventEnabled: z.boolean().optional(),
 });
 
 export type WorkshopFormValues = z.infer<typeof formSchema>;
@@ -141,31 +140,41 @@ export default function WorkshopForm({
   const form = useForm<WorkshopFormValues>({
     resolver: zodResolver(formSchema),
     mode: "onSubmit",
-    defaultValues: initialData || {
-      workshopDetails: {
-        creatorId: "",
-        title: "",
-        city: {
-          id: 0,
-          name: "",
-          countryCode: "",
-          region: "",
-          population: 0,
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          isSubeventEnabled: parentEventId
+            ? true
+            : initialData.associatedEventId
+            ? true
+            : false,
+        }
+      : {
+          workshopDetails: {
+            creatorId: "",
+            title: "",
+            city: {
+              id: 0,
+              name: "",
+              countryCode: "",
+              region: "",
+              population: 0,
+            },
+            startDate: "",
+            description: "",
+            schedule: "",
+            address: "",
+            startTime: "",
+            endTime: "",
+            cost: "",
+            poster: null,
+          },
+          roles: [],
+          videos: [],
+          gallery: [],
+          associatedEventId: parentEventId || null,
+          isSubeventEnabled: parentEventId ? true : false,
         },
-        startDate: "",
-        description: "",
-        schedule: "",
-        address: "",
-        startTime: "",
-        endTime: "",
-        cost: "",
-        poster: null,
-      },
-      roles: [],
-      videos: [],
-      gallery: [],
-      associatedEventId: parentEventId || null,
-    },
   });
 
   const { control, handleSubmit, setValue, getValues, register, watch } = form;
@@ -183,7 +192,6 @@ export default function WorkshopForm({
       id: Date.now().toString(),
       title: `Video ${videos.length + 1}`,
       src: "https://example.com/video",
-      taggedDancers: [],
     };
     setValue("videos", [...videos, newVideo]);
   };
@@ -227,6 +235,10 @@ export default function WorkshopForm({
           ...data.workshopDetails,
           creatorId: data.workshopDetails.creatorId || "",
         },
+        // If switch is off, ensure associatedEventId is null
+        associatedEventId: data.isSubeventEnabled
+          ? data.associatedEventId
+          : null,
       };
 
       let response;

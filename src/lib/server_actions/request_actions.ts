@@ -22,6 +22,7 @@ import {
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
+  videoBelongsToWorkshop,
   sectionExistsInEvent,
   isUserTaggedInVideo,
   isUserTaggedInVideoWithRole,
@@ -1661,6 +1662,12 @@ export async function tagSelfInVideo(
   const eventExistsInNeo4j = await eventExists(eventId);
   if (!eventExistsInNeo4j) {
     throw new Error("Event not found");
+  }
+
+  // Check if video belongs to a workshop (workshop videos don't support dancer/winner tags)
+  const isWorkshopVideo = await videoBelongsToWorkshop(videoId);
+  if (isWorkshopVideo) {
+    throw new Error("Dancer and winner tags are not supported for workshop videos");
   }
 
   // Validate video exists

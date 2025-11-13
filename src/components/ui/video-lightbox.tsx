@@ -89,6 +89,9 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
+  // Check if this is a workshop video (workshop videos don't have dancer/winner tags)
+  const isWorkshop = eventLink.startsWith("/workshops/");
+
   const winners = video?.taggedWinners || [];
   const dancers = video?.taggedDancers || [];
 
@@ -130,9 +133,6 @@ export function VideoLightbox({
     return video.styles || [];
   }, [applyStylesToVideos, sectionStyles, video.styles]);
 
-  console.log(allParticipants);
-  console.log(winners);
-  console.log(isUserWinner);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogTitle className="sr-only">{video.title}</DialogTitle>
@@ -275,8 +275,8 @@ export function VideoLightbox({
 
               {displayStyles.length > 0 && <Separator />}
 
-              {/* Tag Self Buttons */}
-              {currentUserId && (
+              {/* Tag Self Buttons - Only show for event videos, not workshop videos */}
+              {!isWorkshop && currentUserId && (
                 <div className="space-y-2 sm:space-y-3">
                   <TagSelfButton
                     eventId={eventId}
@@ -320,10 +320,10 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {(isUserWinner || currentUserId) && <Separator />}
+              {!isWorkshop && (isUserWinner || currentUserId) && <Separator />}
 
-              {/* Winners */}
-              {winners.length > 0 && (
+              {/* Winners - Only show for event videos, not workshop videos */}
+              {!isWorkshop && winners.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-500" />
@@ -351,10 +351,10 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {winners.length > 0 && <Separator />}
+              {!isWorkshop && winners.length > 0 && <Separator />}
 
-              {/* Dancers */}
-              {dancers.length > 0 && (
+              {/* Dancers - Only show for event videos, not workshop videos */}
+              {!isWorkshop && dancers.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
                     <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />

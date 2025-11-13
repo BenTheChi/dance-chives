@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { normalizeStyleName, formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import {
+  normalizeStyleName,
+  formatStyleNameForDisplay,
+} from "@/lib/utils/style-utils";
 
 interface StyleBadgeProps {
   style: string;
@@ -8,7 +11,11 @@ interface StyleBadgeProps {
   className?: string;
 }
 
-export function StyleBadge({ style, asLink = true, className }: StyleBadgeProps) {
+export function StyleBadge({
+  style,
+  asLink = true,
+  className,
+}: StyleBadgeProps) {
   const badgeClasses = cn(
     "bg-green-200 text-green-800 text-xs font-medium px-2 py-0.5 rounded inline-block",
     asLink && "hover:bg-green-300 transition-colors cursor-pointer",
@@ -21,7 +28,10 @@ export function StyleBadge({ style, asLink = true, className }: StyleBadgeProps)
 
   if (asLink) {
     return (
-      <Link href={`/styles/${encodeURIComponent(normalizedStyle)}`} className={badgeClasses}>
+      <Link
+        href={`/styles/${encodeURIComponent(normalizedStyle)}`}
+        className={badgeClasses}
+      >
         {displayStyle}
       </Link>
     );
@@ -29,4 +39,3 @@ export function StyleBadge({ style, asLink = true, className }: StyleBadgeProps)
 
   return <span className={badgeClasses}>{displayStyle}</span>;
 }
-

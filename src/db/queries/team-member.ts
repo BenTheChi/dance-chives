@@ -55,6 +55,28 @@ export async function eventExists(eventId: string): Promise<boolean> {
 }
 
 /**
+ * Check if a video belongs to a workshop
+ */
+export async function videoBelongsToWorkshop(
+  videoId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (v:Video {id: $videoId})-[:IN]->(w:Workshop)
+      RETURN count(v) as count
+      `,
+      { videoId }
+    );
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Check if a video exists in Neo4j and belongs to the event
  */
 export async function videoExistsInEvent(
@@ -578,6 +600,14 @@ export async function applyTag(
     }
 
     if (videoId) {
+      // Check if video belongs to a workshop (workshop videos don't support dancer/winner tags)
+      const isWorkshopVideo = await videoBelongsToWorkshop(videoId);
+      if (isWorkshopVideo) {
+        throw new Error(
+          "Dancer and winner tags are not supported for workshop videos"
+        );
+      }
+
       // Validate video exists and belongs to event
       const videoExists = await videoExistsInEvent(eventId, videoId);
       if (!videoExists) {

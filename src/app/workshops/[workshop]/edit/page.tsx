@@ -1,3 +1,4 @@
+import React from "react";
 import { AppNavbar } from "@/components/AppNavbar";
 import WorkshopFormWrapper from "@/components/WorkshopFormWrapper";
 import { getWorkshop } from "@/db/queries/workshop";

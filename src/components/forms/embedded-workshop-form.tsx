@@ -123,7 +123,6 @@ export function EmbeddedWorkshopForm({
       id: Date.now().toString(),
       title: `Video ${videos.length + 1}`,
       src: "https://example.com/video",
-      taggedDancers: [],
     };
     const currentWorkshops = getValues("workshops") || [];
     const updatedWorkshops = currentWorkshops.map((w) =>

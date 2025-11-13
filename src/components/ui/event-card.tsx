@@ -6,7 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Video } from "@/types/event";
 import { Play } from "lucide-react";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { extractYouTubeVideoId, normalizeYouTubeThumbnailUrl } from "@/lib/utils";
+import {
+  extractYouTubeVideoId,
+  normalizeYouTubeThumbnailUrl,
+} from "@/lib/utils";
 
 interface EventCardProps {
   video: Video;
@@ -27,8 +30,10 @@ export function EventCard({
 }: EventCardProps) {
   // Parse youtube id from src and generate thumbnail URL
   const youtubeId = extractYouTubeVideoId(video.src);
-  const thumbnailUrl = youtubeId 
-    ? normalizeYouTubeThumbnailUrl(`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`)
+  const thumbnailUrl = youtubeId
+    ? normalizeYouTubeThumbnailUrl(
+        `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+      )
     : "/placeholder.svg";
 
   return (

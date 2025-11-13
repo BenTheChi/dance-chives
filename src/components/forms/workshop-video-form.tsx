@@ -17,8 +17,6 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import { Video } from "@/types/workshop";
-import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
-import { UserSearchItem } from "@/types/user";
 import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { useState, useEffect } from "react";
@@ -33,24 +31,6 @@ interface WorkshopVideoFormProps {
   getValues: UseFormGetValues<WorkshopFormValues>;
 }
 
-async function searchUsers(query: string): Promise<UserSearchItem[]> {
-  return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
-    .then((response) => {
-      if (!response.ok) {
-        console.error("Failed to fetch users", response.statusText);
-        return [];
-      }
-      return response.json();
-    })
-    .then((data) => {
-      return data.data;
-    })
-    .catch((error) => {
-      console.error(error);
-      return [];
-    });
-}
-
 export function WorkshopVideoForm({
   video,
   videoIndex,
@@ -59,8 +39,6 @@ export function WorkshopVideoForm({
   setValue,
   getValues,
 }: WorkshopVideoFormProps) {
-  const [videoDancers, setVideoDancers] = useState<UserSearchItem[]>([]);
-
   // Helper to get current form values
   const getFormVideo = (): Video | null => {
     try {
@@ -87,11 +65,6 @@ export function WorkshopVideoForm({
     () => initializeState().title
   );
   const [currentSrc, setCurrentSrc] = useState(() => initializeState().src);
-
-  // Load existing dancers
-  useEffect(() => {
-    setVideoDancers(video.taggedDancers || []);
-  }, [video.taggedDancers, video.id]);
 
   // Sync with form field values when component mounts or when switching back to tab
   useEffect(() => {
@@ -121,18 +94,6 @@ export function WorkshopVideoForm({
       }
     }
   }); // Run on every render to catch form value changes
-
-  const updateTaggedDancers = (dancers: UserSearchItem[]) => {
-    console.log("🟢 [updateTaggedDancers] Updating tagged dancers:", dancers);
-    const currentVideos = getValues("videos") || [];
-
-    const updatedVideos = currentVideos.map((v) =>
-      v.id === video.id ? { ...v, taggedDancers: dancers } : v
-    );
-
-    setValue("videos", updatedVideos);
-    setVideoDancers(dancers);
-  };
 
   const updateVideoStyles = (styles: string[]) => {
     const currentVideos = getValues("videos") || [];
@@ -221,16 +182,6 @@ export function WorkshopVideoForm({
               }}
             />
           )}
-        />
-
-        <DebouncedSearchMultiSelect<UserSearchItem>
-          onSearch={searchUsers}
-          placeholder="Search dancers..."
-          getDisplayValue={(item) => `${item.displayName} (${item.username})`}
-          getItemId={(item) => item.username}
-          onChange={updateTaggedDancers}
-          value={video.taggedDancers ?? []}
-          name="Tagged Dancers"
         />
 
         <FormField

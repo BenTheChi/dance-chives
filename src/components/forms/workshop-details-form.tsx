@@ -1,6 +1,12 @@
 "use client";
 
-import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
+import { useEffect, useState } from "react";
+import {
+  Control,
+  UseFormRegister,
+  UseFormSetValue,
+  useWatch,
+} from "react-hook-form";
 import { WorkshopDetails, Picture } from "@/types/workshop";
 import { City, CitySearchItem } from "@/types/city";
 import {
@@ -14,6 +20,7 @@ import { Input } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
 import DateInput from "../DateInput";
+import { Switch } from "../ui/switch";
 
 interface WorkshopDetailsFormProps {
   control: Control<any>;
@@ -57,9 +64,9 @@ async function getEventSearchItems(
   keyword: string
 ): Promise<Array<{ id: string; title: string }>> {
   return fetch(
-    `${process.env.NEXT_PUBLIC_ORIGIN}/api/events?keyword=${encodeURIComponent(
-      keyword
-    )}`
+    `${
+      process.env.NEXT_PUBLIC_ORIGIN
+    }/api/events/accessible?keyword=${encodeURIComponent(keyword)}`
   )
     .then((response) => {
       if (!response.ok) {
@@ -77,6 +84,29 @@ async function getEventSearchItems(
     });
 }
 
+async function getEventById(
+  eventId: string
+): Promise<{ id: string; title: string } | null> {
+  return fetch(
+    `${process.env.NEXT_PUBLIC_ORIGIN}/api/events/accessible?keyword=`
+  )
+    .then((response) => {
+      if (!response.ok) {
+        console.error("Failed to fetch events", response.statusText);
+        return null;
+      }
+      return response.json();
+    })
+    .then((data) => {
+      const events = data.data || [];
+      return events.find((e: { id: string }) => e.id === eventId) || null;
+    })
+    .catch((error) => {
+      console.error(error);
+      return null;
+    });
+}
+
 export function WorkshopDetailsForm({
   control,
   setValue,
@@ -86,6 +116,39 @@ export function WorkshopDetailsForm({
   associatedEventId,
   onEventChange,
 }: WorkshopDetailsFormProps) {
+  const [preselectedEvent, setPreselectedEvent] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
+  // Watch isSubeventEnabled to conditionally show dropdown
+  const isSubeventEnabled =
+    useWatch({
+      control,
+      name: "isSubeventEnabled",
+      defaultValue: false,
+    }) ?? false;
+
+  // Fetch event title when associatedEventId is provided for preselection
+  useEffect(() => {
+    if (associatedEventId && showEventAssociation && isSubeventEnabled) {
+      getEventById(associatedEventId).then((event) => {
+        if (event) {
+          setPreselectedEvent(event);
+        }
+      });
+    } else {
+      setPreselectedEvent(null);
+    }
+  }, [associatedEventId, showEventAssociation, isSubeventEnabled]);
+
+  // Initialize isSubeventEnabled based on whether there's an associated event
+  useEffect(() => {
+    if (associatedEventId && !isSubeventEnabled) {
+      setValue("isSubeventEnabled", true);
+    }
+  }, [associatedEventId, setValue, isSubeventEnabled]);
+
   return (
     <div className="flex flex-col gap-4">
       <FormField
@@ -265,22 +328,51 @@ export function WorkshopDetailsForm({
         )}
       />
       {showEventAssociation && (
-        <DebouncedSearchSelect<{ id: string; title: string }>
-          control={control}
-          name="associatedEventId"
-          onSearch={getEventSearchItems}
-          placeholder="Search for an event..."
-          getDisplayValue={(item) => item.title}
-          getItemId={(item) => item.id}
-          onChange={(value) => {
-            setValue("associatedEventId", value?.id || null);
-            onEventChange?.(value?.id || null);
-          }}
-          value={
-            associatedEventId ? { id: associatedEventId, title: "" } : null
-          }
-          label="Associate with Event (Optional)"
-        />
+        <div className="flex flex-col gap-2">
+          <FormField
+            control={control}
+            name="isSubeventEnabled"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">
+                    Subevent For Event
+                  </FormLabel>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value ?? false}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      if (!checked) {
+                        // When switch is turned off, clear the associated event
+                        setValue("associatedEventId", null);
+                        onEventChange?.(null);
+                        setPreselectedEvent(null);
+                      }
+                    }}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          {isSubeventEnabled && (
+            <DebouncedSearchSelect<{ id: string; title: string }>
+              control={control}
+              name="associatedEventId"
+              onSearch={getEventSearchItems}
+              placeholder="Search for an event..."
+              getDisplayValue={(item) => item.title}
+              getItemId={(item) => item.id}
+              onChange={(value) => {
+                setValue("associatedEventId", value?.id || null);
+                onEventChange?.(value?.id || null);
+              }}
+              value={preselectedEvent || null}
+              label=""
+            />
+          )}
+        </div>
       )}
       <FormField
         control={control}

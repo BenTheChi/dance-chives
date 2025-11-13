@@ -100,24 +100,15 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
     { id, validRoles: WORKSHOP_ROLES }
   );
 
-  // Get videos (workshops only have dancers, no winners)
+  // Get videos (workshops don't have dancer/winner tags)
   const videosResult = await session.run(
     `
     MATCH (w:Workshop {id: $id})<-[:IN]-(v:Video)
-    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
-    WITH v,
-         collect(DISTINCT {
-           id: dancer.id,
-           displayName: dancer.displayName,
-           username: dancer.username
-         }) as allDancers
-    WITH v,
-         [d in allDancers WHERE d.id IS NOT NULL] as dancers
     RETURN collect({
       id: v.id,
       title: v.title,
       src: v.src,
-      taggedDancers: dancers
+      taggedDancers: []
     }) as videos
   `,
     { id }
@@ -254,19 +245,6 @@ const createWorkshopVideos = async (
           src: vid.src,
         }
       );
-
-      // Link tagged users (only dancers for workshops, no winners)
-      if (vid.taggedDancers && vid.taggedDancers.length > 0) {
-        for (const user of vid.taggedDancers) {
-          const userId = await getUserIdFromUserSearchItem(user);
-          await session.run(
-            `MATCH (v:Video {id: $videoId})
-             MERGE (u:User {id: $userId})
-             MERGE (u)-[:DANCER]->(v)`,
-            { videoId: vid.id, userId }
-          );
-        }
-      }
 
       // Create video style relationships
       const videoStyles = vid.styles || [];
@@ -744,28 +722,8 @@ export const editWorkshop = async (
       );
     }
 
-    // Update video tagged users (workshops only have dancers, no winners)
+    // Update video styles (workshops don't have dancer/winner tags)
     for (const vid of workshop.videos) {
-      // Remove old tagged users (only dancers for workshops)
-      await tx.run(
-        `MATCH (v:Video {id: $videoId})<-[r:DANCER]-(u:User)
-         DELETE r`,
-        { videoId: vid.id }
-      );
-
-      // Add new tagged dancers
-      if (vid.taggedDancers && vid.taggedDancers.length > 0) {
-        for (const user of vid.taggedDancers) {
-          const userId = await getUserIdFromUserSearchItem(user);
-          await tx.run(
-            `MATCH (v:Video {id: $videoId})
-             MERGE (u:User { id: $userId })
-             MERGE (u)-[:DANCER]->(v)`,
-            { videoId: vid.id, userId }
-          );
-        }
-      }
-
       // Update video styles
       await tx.run(
         `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)

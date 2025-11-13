@@ -1,6 +1,12 @@
 "use client";
 
-import { CalendarIcon, SearchIcon, Tag, MapPin, GraduationCap } from "lucide-react";
+import {
+  CalendarIcon,
+  SearchIcon,
+  Tag,
+  MapPin,
+  GraduationCap,
+} from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,

@@ -21,12 +21,9 @@ export function SectionCard({
           <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors mb-2">
             {title}
           </h3>
-          <p className="text-sm text-muted-foreground">
-            {eventTitle}
-          </p>
+          <p className="text-sm text-muted-foreground">{eventTitle}</p>
         </Link>
       </CardContent>
     </Card>
   );
 }
-

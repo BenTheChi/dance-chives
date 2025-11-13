@@ -13,7 +13,8 @@ export default async function StylesPage() {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">Dance Styles</h1>
         <p className="text-muted-foreground mb-8">
-          Browse all available dance styles and explore related events, sections, and videos
+          Browse all available dance styles and explore related events,
+          sections, and videos
         </p>
 
         {styles.length > 0 ? (
@@ -47,4 +48,3 @@ export default async function StylesPage() {
     </>
   );
 }
-

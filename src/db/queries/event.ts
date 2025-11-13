@@ -22,6 +22,7 @@ import {
   normalizeStyleName,
 } from "@/lib/utils/style-utils";
 import { getUserByUsername } from "./user";
+import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
 
 /**
  * Helper function to get userId from UserSearchItem.
@@ -536,24 +537,15 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id, validRoles: WORKSHOP_ROLES }
   );
 
-  // Get workshop videos
+  // Get workshop videos (workshops don't have dancer/winner tags)
   const workshopVideosResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)<-[:IN]-(v:Video)
-    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
-    WITH w, v,
-         collect(DISTINCT {
-           id: dancer.id,
-           displayName: dancer.displayName,
-           username: dancer.username
-         }) as allDancers
-    WITH w, v,
-         [d in allDancers WHERE d.id IS NOT NULL] as dancers
     WITH w.id as workshopId, collect({
       id: v.id,
       title: v.title,
       src: v.src,
-      taggedDancers: dancers
+      taggedDancers: []
     }) as videos
     RETURN workshopId, videos
   `,
@@ -2177,25 +2169,7 @@ export const EditEvent = async (event: Event) => {
             }
           );
 
-          // Update video tagged dancers (workshops only have dancers, no winners)
-          await tx.run(
-            `MATCH (v:Video {id: $videoId})<-[r:DANCER]-(u:User)
-             DELETE r`,
-            { videoId: vid.id }
-          );
-
-          if (vid.taggedDancers && vid.taggedDancers.length > 0) {
-            for (const user of vid.taggedDancers) {
-              const userId = await getUserIdFromUserSearchItem(user);
-              await tx.run(
-                `MATCH (v:Video {id: $videoId})
-                 MERGE (u:User { id: $userId })
-                 MERGE (u)-[:DANCER]->(v)`,
-                { videoId: vid.id, userId }
-              );
-            }
-          }
-
+          // Update video styles (workshops don't have dancer/winner tags)
           // Update video styles
           await tx.run(
             `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)
@@ -2239,11 +2213,11 @@ export const EditEvent = async (event: Event) => {
       }
     }
 
-    // Delete workshops not in the new list
+    // Remove workshop relationships (not delete workshops) for workshops not in the new list
     await tx.run(
-      `MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)
+      `MATCH (e:Event {id: $id})<-[r:IN]-(w:Workshop)
        WHERE NOT w.id IN [workshop IN $workshops | workshop.id]
-       DETACH DELETE w`,
+       DELETE r`,
       { id, workshops: event.workshops || [] }
     );
 
@@ -2322,6 +2296,58 @@ export const searchEvents = async (
     }
 
     query += ` RETURN e.id as id, e.title as title ORDER BY e.title LIMIT 20`;
+
+    const result = await session.run(query, params);
+
+    return result.records.map((record) => ({
+      id: record.get("id"),
+      title: record.get("title"),
+    }));
+  } finally {
+    await session.close();
+  }
+};
+
+/**
+ * Search events that a user has access to (created, team member, moderator, admin, super_admin)
+ */
+export const searchAccessibleEvents = async (
+  userId: string,
+  authLevel: number,
+  keyword?: string
+): Promise<Array<{ id: string; title: string }>> => {
+  const session = driver.session();
+
+  try {
+    let query = ``;
+    const params: any = { userId };
+
+    // If user is moderator, admin, or super_admin, they can see all events
+    if (authLevel >= AUTH_LEVELS.MODERATOR) {
+      query = `MATCH (e:Event)`;
+
+      if (keyword && keyword.trim()) {
+        query += ` WHERE toLower(e.title) CONTAINS toLower($keyword)`;
+        params.keyword = keyword.trim();
+      }
+    } else {
+      // Otherwise, only show events where user is creator or team member
+      query = `
+        MATCH (u:User {id: $userId})
+        OPTIONAL MATCH (u)-[:CREATED]->(e1:Event)
+        OPTIONAL MATCH (u)-[:TEAM_MEMBER]->(e2:Event)
+        WITH collect(DISTINCT e1) + collect(DISTINCT e2) as events
+        UNWIND events as e
+        WHERE e IS NOT NULL
+      `;
+
+      if (keyword && keyword.trim()) {
+        query += ` AND toLower(e.title) CONTAINS toLower($keyword)`;
+        params.keyword = keyword.trim();
+      }
+    }
+
+    query += ` RETURN DISTINCT e.id as id, e.title as title ORDER BY e.title LIMIT 20`;
 
     const result = await session.run(query, params);
 
