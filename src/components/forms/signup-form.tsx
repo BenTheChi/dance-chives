@@ -157,7 +157,7 @@ export default function SignUpForm({
                     // Get username from currentUser to redirect
                     const username = currentUser?.username;
                     if (username) {
-                      router.push(`/profile/${username}`);
+                      router.push(`/profiles/${username}`);
                     } else {
                       router.push("/dashboard");
                     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -10,12 +10,13 @@ import {
   FormLabel,
 } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";
-import { FieldErrors, useForm } from "react-hook-form";
+import { FieldErrors, useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role, SubEvent, Picture } from "@/types/event";
+import { Workshop, WorkshopDetails, WorkshopRole } from "@/types/workshop";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
@@ -23,6 +24,7 @@ import { SubEventForm } from "./subevent-form";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
+import { EmbeddedWorkshopForm } from "./embedded-workshop-form";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -36,9 +38,20 @@ const videoSchema = z.object({
   src: z
     .string()
     .min(1, "Video source is required")
-    .regex(
-      /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)[a-zA-Z0-9_-]{11}(&.*)?$/,
-      "Video source must be a valid YouTube URL"
+    .refine(
+      (url) => {
+        // Use the same patterns as extractYouTubeVideoId utility
+        const patterns = [
+          /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/,
+          /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?&]+)/,
+          /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^?&]+)/,
+          /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([^?&]+)/,
+        ];
+        return patterns.some((pattern) => pattern.test(url));
+      },
+      {
+        message: "Video source must be a valid YouTube URL",
+      }
     ),
   taggedWinners: z.array(userSearchItemSchema).optional(),
   taggedDancers: z.array(userSearchItemSchema).optional(),
@@ -54,7 +67,7 @@ const bracketSchema = z.object({
 const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
-  description: z.string(),
+  description: z.preprocess((val) => val ?? "", z.string()),
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
@@ -89,8 +102,8 @@ const eventDetailsSchema = z.object({
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
       "Event date must be in a valid format"
     ), // switch to min for all non-optional
-  description: z.string(),
-  schedule: z.string(),
+  description: z.preprocess((val) => val ?? "", z.string()),
+  schedule: z.preprocess((val) => val ?? "", z.string()),
   address: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -114,8 +127,8 @@ const roleSchema = z.object({
 const subEventSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Sub-event title is required"), // switch to min for all non-optional
-  description: z.string(),
-  schedule: z.string(),
+  description: z.preprocess((val) => val ?? "", z.string()),
+  schedule: z.preprocess((val) => val ?? "", z.string()),
   startDate: z
     .string()
     .min(1, "Start date is required")
@@ -129,11 +142,78 @@ const subEventSchema = z.object({
   poster: pictureSchema.nullable().optional(),
 });
 
+const workshopDetailsSchema = z.object({
+  creatorId: z.string().nullable().optional(),
+  title: z.string().min(1, "Workshop title is required"),
+  city: z.object({
+    id: z.number(),
+    name: z.string().min(1, "City name is required"),
+    countryCode: z.string().min(1, "Country code is required"),
+    region: z.string().min(1, "Region is required"),
+    population: z.number(),
+  }),
+  startDate: z
+    .string()
+    .min(1, "Start date is required")
+    .regex(
+      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
+      "Workshop date must be in a valid format"
+    ),
+  description: z.preprocess((val) => val ?? "", z.string().optional()),
+  schedule: z.preprocess((val) => val ?? "", z.string().optional()),
+  address: z.preprocess((val) => val ?? "", z.string().optional()),
+  startTime: z.preprocess((val) => val ?? "", z.string().optional()),
+  endTime: z.preprocess((val) => val ?? "", z.string().optional()),
+  cost: z.preprocess((val) => val ?? "", z.string().optional()),
+  poster: pictureSchema.nullable().optional(),
+});
+
+const workshopRoleSchema = z.object({
+  id: z.string(),
+  title: z.enum(["ORGANIZER", "TEACHER"]),
+  user: userSearchItemSchema.nullable(),
+});
+
+const workshopSchema = z.object({
+  id: z.string(),
+  workshopDetails: workshopDetailsSchema,
+  roles: z.preprocess((val) => {
+    if (!val || !Array.isArray(val)) return val;
+    // Normalize roles before validation
+    // Accept users with either id or username (server will look up id from username if needed)
+    return val.map((role: any) => {
+      if (!role || !role.title) return role;
+      return {
+        id: role.id || Math.random().toString(36).substring(2, 9),
+        title:
+          role.title?.toUpperCase() === "ORGANIZER" ||
+          role.title?.toUpperCase() === "TEACHER"
+            ? role.title.toUpperCase()
+            : role.title,
+        user:
+          role.user && role.user.username
+            ? {
+                id: role.user.id, // May be undefined, server will look it up
+                displayName: role.user.displayName || "",
+                username: role.user.username || "",
+              }
+            : null,
+      };
+    });
+  }, z.array(workshopRoleSchema).optional()),
+  videos: z.array(videoSchema),
+  gallery: z.array(pictureSchema),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+  associatedEventId: z.string().optional(),
+});
+
 const formSchema = z.object({
   eventDetails: eventDetailsSchema,
   sections: z.array(sectionSchema),
   roles: z.array(roleSchema).optional(),
   subEvents: z.array(subEventSchema),
+  workshops: z.array(workshopSchema),
   gallery: z.array(pictureSchema),
 });
 
@@ -170,12 +250,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const [activeMainTab, setActiveMainTab] = useState("Event Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
   const [activeSubEventId, setActiveSubEventId] = useState("0");
+  const [activeWorkshopId, setActiveWorkshopId] = useState("0");
+  const [workshopTabs, setWorkshopTabs] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   //TODO: set up logic for next buttons to use the active tab index
 
   // Initialize form with default values or initial data
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as Resolver<FormValues>,
     mode: "onSubmit",
     defaultValues: initialData || {
       eventDetails: {
@@ -201,19 +283,44 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       sections: [],
       roles: [],
       subEvents: [],
+      workshops: [],
       gallery: [],
     },
   });
 
-  const { control, handleSubmit, setValue, getValues, register, watch } = form;
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    register,
+    watch,
+    trigger,
+  } = form;
 
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
   const subEvents = watch("subEvents") ?? [];
+  const workshops = watch("workshops") ?? [];
   const roles = watch("roles") ?? [];
   const gallery = watch("gallery") ?? [];
   const activeSection = sections.find((s) => s.id === activeSectionId);
   const activeSubEvent = subEvents.find((s) => s.id === activeSubEventId);
+  const activeWorkshop = workshops.find((w) => w.id === activeWorkshopId);
+
+  // Initialize workshop tabs and active workshop when workshops are loaded from initial data
+  useEffect(() => {
+    if (workshops.length > 0 && activeWorkshopId === "0") {
+      // Set the first workshop as active
+      setActiveWorkshopId(workshops[0].id);
+      // Initialize all workshop tabs to "Workshop Details"
+      const initialTabs: Record<string, string> = {};
+      workshops.forEach((workshop) => {
+        initialTabs[workshop.id] = "Workshop Details";
+      });
+      setWorkshopTabs(initialTabs);
+    }
+  }, [workshops, activeWorkshopId]);
 
   const mainTabs = [
     "Event Details",
@@ -281,6 +388,67 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   };
 
+  const addWorkshop = () => {
+    const newWorkshop: FormValues["workshops"][0] = {
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      workshopDetails: {
+        creatorId: "",
+        title: `New Workshop ${workshops.length + 1}`,
+        startDate: new Date().toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        }),
+        address: "",
+        startTime: "",
+        endTime: "",
+        description: "",
+        schedule: "",
+        cost: "",
+        poster: null,
+        city: {
+          id: 0,
+          name: "",
+          countryCode: "",
+          region: "",
+          population: 0,
+        },
+      },
+      roles: [],
+      videos: [],
+      gallery: [],
+      associatedEventId: isEditing ? pathname[pathname.length - 2] : undefined,
+    };
+    setValue("workshops", [...workshops, newWorkshop]);
+    setActiveWorkshopId(newWorkshop.id);
+    // Initialize tab state for the new workshop
+    setWorkshopTabs((prev) => ({
+      ...prev,
+      [newWorkshop.id]: "Workshop Details",
+    }));
+  };
+
+  const removeWorkshop = (workshopId: string) => {
+    const updatedWorkshops = workshops.filter((w) => w.id !== workshopId);
+    setValue("workshops", updatedWorkshops);
+
+    // Remove the tab state for the deleted workshop
+    setWorkshopTabs((prev) => {
+      const newTabs = { ...prev };
+      delete newTabs[workshopId];
+      return newTabs;
+    });
+
+    // If we removed the active workshop, switch to the first available workshop
+    if (activeWorkshopId === workshopId && updatedWorkshops.length > 0) {
+      setActiveWorkshopId(updatedWorkshops[0].id);
+    } else if (updatedWorkshops.length === 0) {
+      setActiveWorkshopId("0");
+    }
+  };
+
   // extract field names from validation errors
   const getFieldNamesFromErrors = (errors: FieldErrors): string[] => {
     const fieldNames: string[] = [];
@@ -306,16 +474,42 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   const onSubmit = async (data: FormValues) => {
+    console.log("Submitting Edit Event Form");
+    console.log(data);
     setIsSubmitting(true);
 
     try {
       // Ensure creatorId is a string (will be overridden by session in server action, but needed for type safety)
+      // Also normalize workshop roles to ensure they have proper structure
       const normalizedData = {
         ...data,
         eventDetails: {
           ...data.eventDetails,
           creatorId: data.eventDetails.creatorId || "",
         },
+        workshops: data.workshops?.map((workshop) => ({
+          ...workshop,
+          workshopDetails: {
+            ...workshop.workshopDetails,
+            creatorId: workshop.workshopDetails.creatorId || "",
+          },
+          roles:
+            workshop.roles?.map((role) => ({
+              id: role.id || Math.random().toString(36).substring(2, 9),
+              title: (role.title?.toUpperCase() === "ORGANIZER" ||
+              role.title?.toUpperCase() === "TEACHER"
+                ? role.title.toUpperCase()
+                : "ORGANIZER") as "ORGANIZER" | "TEACHER",
+              user:
+                role.user && role.user.username
+                  ? {
+                      id: role.user.id, // May be undefined, server will look it up
+                      displayName: role.user.displayName || "",
+                      username: role.user.username || "",
+                    }
+                  : null,
+            })) || [],
+        })),
       };
 
       let response;
@@ -345,7 +539,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.status === 200) {
-            router.push(`/event/${pathname[pathname.length - 2]}`);
+            router.push(`/events/${pathname[pathname.length - 2]}`);
           } else {
             toast.error("Failed to update event", {
               description: "Please try again.",
@@ -357,7 +551,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.event) {
-            router.push(`/event/${response.event.id}`);
+            router.push(`/events/${response.event.id}`);
           } else {
             toast.error("Failed to submit event", {
               description: "Please try again.",
@@ -379,12 +573,68 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const onError = (errors: FieldErrors) => {
     console.error("Form validation errors:", errors);
 
+    // ADD THIS: Get all current form values
+    const currentValues = getValues();
+    console.log("Current form values:", currentValues);
+
+    // ADD THIS: Specifically log workshop videos that might be causing issues
+    const workshops = currentValues.workshops || [];
+    console.log("Workshops data:", workshops);
+
+    workshops.forEach((workshop, workshopIndex) => {
+      if (workshop.videos && workshop.videos.length > 0) {
+        console.log(
+          `Workshop ${workshopIndex} (${workshop.id}) videos:`,
+          workshop.videos
+        );
+        workshop.videos.forEach((video, videoIndex) => {
+          console.log(`  Video ${videoIndex}:`, {
+            id: video.id,
+            title: video.title,
+            src: video.src,
+            srcLength: video.src?.length,
+            srcType: typeof video.src,
+            isEmpty: !video.src || video.src.trim() === "",
+          });
+        });
+      }
+    });
+
+    // ADD THIS: Log the specific error paths and their values
     const invalidFields = getFieldNamesFromErrors(errors);
+    console.log("Invalid field paths:", invalidFields);
+
+    invalidFields.forEach((fieldPath) => {
+      if (
+        fieldPath.includes("workshops") &&
+        fieldPath.includes("videos") &&
+        fieldPath.includes("src")
+      ) {
+        // Extract indices from path like "workshops.0.videos.1.src"
+        const match = fieldPath.match(/workshops\.(\d+)\.videos\.(\d+)\.src/);
+        if (match) {
+          const workshopIdx = parseInt(match[1]);
+          const videoIdx = parseInt(match[2]);
+          const value = getValues(
+            `workshops.${workshopIdx}.videos.${videoIdx}.src`
+          );
+          console.log(`Field ${fieldPath} has value:`, {
+            value,
+            valueType: typeof value,
+            isUndefined: value === undefined,
+            isNull: value === null,
+            isEmpty: value === "",
+            length: value?.length,
+          });
+        }
+      }
+    });
 
     const tabMap: { [key: string]: string } = {
       eventDetails: "Event Details",
       sections: "Sections",
       subEvents: "SubEvents",
+      workshops: "Workshops",
       roles: "Roles",
       gallery: "Photo Gallery",
     };
@@ -404,6 +654,15 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       "sections.brackets.videos.src": "Bracket Video Source",
       "subEvents.title": "Title",
       "subEvents.startDate": "Date",
+      "workshops.workshopDetails.title": "Workshop Title",
+      "workshops.workshopDetails.startDate": "Workshop Date",
+      "workshops.workshopDetails.city.name": "City Name",
+      "workshops.workshopDetails.city.countryCode": "Country Code",
+      "workshops.workshopDetails.city.region": "Region",
+      "workshops.videos.title": "Video Title",
+      "workshops.videos.src": "Video Source",
+      "workshops.roles.title": "Role",
+      "workshops.roles.user": "User",
       "roles.title": "Role",
       "roles.user": "User",
     };
@@ -432,6 +691,44 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               displayName = fieldDisplayNames["sections.brackets.videos.src"];
             else if (genericField.endsWith(".title"))
               displayName = fieldDisplayNames["sections.brackets.title"];
+          } else if (
+            genericField.includes("workshops") &&
+            genericField.includes("workshopDetails")
+          ) {
+            // Handle workshop details fields
+            if (genericField.endsWith(".title"))
+              displayName =
+                fieldDisplayNames["workshops.workshopDetails.title"];
+            else if (genericField.endsWith(".startDate"))
+              displayName =
+                fieldDisplayNames["workshops.workshopDetails.startDate"];
+            else if (genericField.includes("city.name"))
+              displayName =
+                fieldDisplayNames["workshops.workshopDetails.city.name"];
+            else if (genericField.includes("city.countryCode"))
+              displayName =
+                fieldDisplayNames["workshops.workshopDetails.city.countryCode"];
+            else if (genericField.includes("city.region"))
+              displayName =
+                fieldDisplayNames["workshops.workshopDetails.city.region"];
+          } else if (
+            genericField.includes("workshops") &&
+            genericField.includes("videos")
+          ) {
+            // Handle workshop video fields
+            if (genericField.endsWith(".title"))
+              displayName = fieldDisplayNames["workshops.videos.title"];
+            else if (genericField.endsWith(".src"))
+              displayName = fieldDisplayNames["workshops.videos.src"];
+          } else if (
+            genericField.includes("workshops") &&
+            genericField.includes("roles")
+          ) {
+            // Handle workshop role fields
+            if (genericField.endsWith(".title"))
+              displayName = fieldDisplayNames["workshops.roles.title"];
+            else if (genericField.endsWith(".user"))
+              displayName = fieldDisplayNames["workshops.roles.user"];
           } else if (genericField.includes("videos")) {
             if (genericField.endsWith(".title"))
               displayName = fieldDisplayNames["sections.videos.title"];
@@ -484,6 +781,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
   const activeSubEventIndex = subEvents.findIndex(
     (s) => s.id === activeSubEventId
+  );
+
+  const activeWorkshopIndex = workshops.findIndex(
+    (w) => w.id === activeWorkshopId
   );
 
   // Find the index of the active tab
@@ -548,46 +849,116 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {activeMainTab === "Subevents" && (
             <div className="space-y-6">
-              <div className="flex gap-2 items-center flex-wrap">
-                {subEvents.map((subEvent) => (
-                  <div key={subEvent.id} className="relative group">
-                    <Button
-                      type="button"
-                      variant={
-                        activeSubEventId === subEvent.id ? "default" : "outline"
-                      }
-                      onClick={() => setActiveSubEventId(subEvent.id)}
-                      className="pr-8"
-                    >
-                      {subEvent.title}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSubEvent(subEvent.id)}
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+              {/* SubEvents Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Sub Events</h3>
+                <div className="flex gap-2 items-center flex-wrap">
+                  {subEvents.map((subEvent) => (
+                    <div key={subEvent.id} className="relative group">
+                      <Button
+                        type="button"
+                        variant={
+                          activeSubEventId === subEvent.id
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => setActiveSubEventId(subEvent.id)}
+                        className="pr-8"
+                      >
+                        {subEvent.title}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSubEvent(subEvent.id)}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" onClick={addSubEvent} variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add SubEvent
+                  </Button>
+                </div>
+
+                {activeSubEvent && (
+                  <div className="mt-4">
+                    <SubEventForm
+                      control={control}
+                      setValue={setValue}
+                      activeSubEventIndex={activeSubEventIndex}
+                      activeSubEvent={activeSubEvent}
+                      activeSubEventId={activeSubEventId}
+                      register={register}
+                    />
                   </div>
-                ))}
-                <Button type="button" onClick={addSubEvent} variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add SubEvent
-                </Button>
+                )}
               </div>
 
-              {activeSubEvent && (
-                <SubEventForm
-                  control={control}
-                  setValue={setValue}
-                  activeSubEventIndex={activeSubEventIndex}
-                  activeSubEvent={activeSubEvent}
-                  activeSubEventId={activeSubEventId}
-                  register={register}
-                />
-              )}
+              {/* Workshops Section */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Workshops</h3>
+                <div className="flex gap-2 items-center flex-wrap">
+                  {workshops.map((workshop) => (
+                    <div key={workshop.id} className="relative group">
+                      <Button
+                        type="button"
+                        variant={
+                          activeWorkshopId === workshop.id
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => setActiveWorkshopId(workshop.id)}
+                        className="pr-8"
+                      >
+                        {workshop.workshopDetails.title}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeWorkshop(workshop.id)}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" onClick={addWorkshop} variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Workshop
+                  </Button>
+                </div>
+
+                {activeWorkshop && (
+                  <div className="mt-4">
+                    <EmbeddedWorkshopForm
+                      control={control}
+                      setValue={setValue}
+                      getValues={getValues}
+                      register={register}
+                      activeWorkshopIndex={activeWorkshopIndex}
+                      activeWorkshop={activeWorkshop}
+                      activeWorkshopId={activeWorkshopId}
+                      activeTab={
+                        workshopTabs[activeWorkshopId] || "Workshop Details"
+                      }
+                      setActiveTab={(tab: string) => {
+                        setWorkshopTabs((prev) => ({
+                          ...prev,
+                          [activeWorkshopId]: tab,
+                        }));
+                      }}
+                      eventId={
+                        isEditing ? pathname[pathname.length - 2] : undefined
+                      }
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

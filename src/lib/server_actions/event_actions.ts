@@ -122,6 +122,64 @@ interface addEventProps {
     type: string;
     file: File | null;
   }[];
+  workshops?: {
+    id: string;
+    workshopDetails: {
+      creatorId: string;
+      title: string;
+      city: {
+        id: number;
+        name: string;
+        countryCode: string;
+        region: string;
+        population: number;
+      };
+      startDate: string;
+      description?: string;
+      schedule?: string;
+      address?: string;
+      startTime?: string;
+      endTime?: string;
+      cost?: string;
+      poster?: {
+        id: string;
+        title: string;
+        url: string;
+        type: string;
+        file: File | null;
+      } | null;
+    };
+    roles?: {
+      id: string;
+      title: string;
+      user: {
+        id?: string;
+        displayName: string;
+        username: string;
+      } | null;
+    }[];
+    videos: {
+      id: string;
+      title: string;
+      src: string;
+      styles?: string[];
+      taggedDancers?: {
+        id?: string;
+        displayName: string;
+        username: string;
+      }[];
+    }[];
+    gallery: {
+      id: string;
+      title: string;
+      url: string;
+      type: string;
+      file: File | null;
+    }[];
+    associatedEventId?: string;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+  }[];
 }
 
 interface response {
@@ -195,6 +253,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       if (hasBrackets) {
         return {
           ...sectionWithoutBrackets,
+          description: section.description ?? "",
           hasBrackets: true,
           brackets: section.brackets,
           videos: [],
@@ -202,6 +261,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       } else {
         return {
           ...sectionWithoutBrackets,
+          description: section.description ?? "",
           hasBrackets: false,
           brackets: [],
           videos: section.videos,
@@ -229,14 +289,14 @@ export async function addEvent(props: addEventProps): Promise<response> {
     const eventDetails: EventDetails = {
       creatorId: session.user.id,
       title: props.eventDetails.title,
-      description: props.eventDetails.description,
+      description: props.eventDetails.description ?? "",
       address: props.eventDetails.address,
       prize: props.eventDetails.prize,
       entryCost: props.eventDetails.entryCost,
       startDate: props.eventDetails.startDate,
       startTime: props.eventDetails.startTime,
       endTime: props.eventDetails.endTime,
-      schedule: props.eventDetails.schedule,
+      schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Picture | null,
       city: {
         ...props.eventDetails.city,
@@ -253,6 +313,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       roles: props.roles || [],
       sections: processedSections,
       subEvents: props.subEvents as SubEvent[],
+      workshops: [],
       gallery: props.gallery as Picture[],
     };
 
@@ -436,6 +497,57 @@ export async function editEvent(
       }
     }
 
+    // Upload workshop posters
+    if (editedEvent.workshops) {
+      for (const workshop of editedEvent.workshops) {
+        const oldWorkshop = oldEvent.workshops?.find(
+          (w) => w.id === workshop.id
+        );
+
+        if (!workshop.workshopDetails.poster) {
+          // Delete old poster if it exists
+          if (oldWorkshop?.workshopDetails.poster) {
+            await deleteFromGCloudStorage(
+              oldWorkshop.workshopDetails.poster.url
+            );
+          }
+        }
+
+        if (workshop.workshopDetails.poster?.file) {
+          // Delete old poster if it exists
+          if (oldWorkshop?.workshopDetails.poster) {
+            await deleteFromGCloudStorage(
+              oldWorkshop.workshopDetails.poster.url
+            );
+          }
+
+          const posterResults = await uploadToGCloudStorage([
+            workshop.workshopDetails.poster.file,
+          ]);
+          if (posterResults[0].success) {
+            workshop.workshopDetails.poster = {
+              ...workshop.workshopDetails.poster,
+              id: posterResults[0].id!,
+              url: posterResults[0].url!,
+              file: null,
+            };
+          }
+        }
+      }
+    }
+
+    // Delete workshop posters where the entire workshop has been deleted
+    if (oldEvent.workshops) {
+      for (const workshop of oldEvent.workshops) {
+        if (
+          !editedEvent.workshops?.find((w) => w.id === workshop.id) &&
+          workshop.workshopDetails.poster
+        ) {
+          await deleteFromGCloudStorage(workshop.workshopDetails.poster.url);
+        }
+      }
+    }
+
     // Process sections to handle brackets/videos based on hasBrackets
     const processedSections: Section[] = editedEvent.sections.map((section) => {
       const { hasBrackets, ...sectionWithoutBrackets } = section;
@@ -443,6 +555,7 @@ export async function editEvent(
       if (hasBrackets) {
         return {
           ...sectionWithoutBrackets,
+          description: section.description ?? "",
           hasBrackets: true,
           brackets: section.brackets,
           videos: [],
@@ -450,6 +563,7 @@ export async function editEvent(
       } else {
         return {
           ...sectionWithoutBrackets,
+          description: section.description ?? "",
           hasBrackets: false,
           brackets: [],
           videos: section.videos,
@@ -482,20 +596,39 @@ export async function editEvent(
     const eventDetails: EventDetails = {
       creatorId: session.user.id,
       title: editedEvent.eventDetails.title,
-      description: editedEvent.eventDetails.description,
+      description: editedEvent.eventDetails.description ?? "",
       address: editedEvent.eventDetails.address,
       prize: editedEvent.eventDetails.prize,
       entryCost: editedEvent.eventDetails.entryCost,
       startDate: editedEvent.eventDetails.startDate,
       startTime: editedEvent.eventDetails.startTime,
       endTime: editedEvent.eventDetails.endTime,
-      schedule: editedEvent.eventDetails.schedule,
+      schedule: editedEvent.eventDetails.schedule ?? "",
       poster: editedEvent.eventDetails.poster as Picture | null,
       city: {
         ...editedEvent.eventDetails.city,
         timezone: timezone,
       },
     };
+
+    // Process workshops to ensure they have required fields
+    const processedWorkshops = (editedEvent.workshops || []).map(
+      (workshop) => ({
+        ...workshop,
+        createdAt: workshop.createdAt
+          ? new Date(workshop.createdAt)
+          : new Date(),
+        updatedAt: new Date(),
+        workshopDetails: {
+          ...workshop.workshopDetails,
+          creatorId: workshop.workshopDetails.creatorId || session.user.id,
+        },
+        roles: (workshop.roles || []).map((role) => ({
+          ...role,
+          title: role.title as "ORGANIZER" | "TEACHER",
+        })),
+      })
+    );
 
     // Create the Event object that matches the EditEvent query structure
     const event: Event = {
@@ -506,6 +639,7 @@ export async function editEvent(
       roles: editedEvent.roles || [],
       sections: processedSections,
       subEvents: editedEvent.subEvents as SubEvent[],
+      workshops: processedWorkshops,
       gallery: editedEvent.gallery as Picture[],
     };
 

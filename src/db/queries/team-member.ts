@@ -200,6 +200,59 @@ export async function addTeamMember(
 }
 
 /**
+ * Check if a user is a team member of a workshop
+ * Team members have edit access, separate from roles
+ * NOTE: Creators are NOT team members - use isWorkshopCreator() to check for creators
+ */
+export async function isWorkshopTeamMember(
+  workshopId: string,
+  userId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    // Check if user has TEAM_MEMBER relationship (creators are excluded)
+    const result = await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
+      RETURN count(rel) as count
+      `,
+      { workshopId, userId }
+    );
+
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get team members (users with edit access) for a workshop from Neo4j
+ * Team members are separate from roles - they grant edit access
+ * NOTE: Creators are NOT included as team members - they have separate permissions
+ * Returns array of user IDs
+ */
+export async function getWorkshopTeamMembers(
+  workshopId: string
+): Promise<string[]> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User)
+      RETURN DISTINCT user.id as userId
+      `,
+      { workshopId }
+    );
+
+    const teamMemberIds = result.records.map((record) => record.get("userId"));
+    return teamMemberIds;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Get all events where a user is a team member (from Neo4j)
  * Team members have edit access, separate from roles
  * NOTE: Creators are NOT included - they should appear in "Your Events" instead

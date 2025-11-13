@@ -22,7 +22,7 @@ export function UserCard({
   return (
     <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
       <CardContent className="p-4 sm:p-6">
-        <Link href={`/profile/${username}`}>
+        <Link href={`/profiles/${username}`}>
           <div className="flex items-start gap-4">
             {image ? (
               <Image

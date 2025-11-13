@@ -21,7 +21,7 @@ export function StyleBadge({ style, asLink = true, className }: StyleBadgeProps)
 
   if (asLink) {
     return (
-      <Link href={`/style/${encodeURIComponent(normalizedStyle)}`} className={badgeClasses}>
+      <Link href={`/styles/${encodeURIComponent(normalizedStyle)}`} className={badgeClasses}>
         {displayStyle}
       </Link>
     );

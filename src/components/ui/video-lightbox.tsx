@@ -335,7 +335,7 @@ export function VideoLightbox({
                     {winners.map((winner) => (
                       <Link
                         key={winner.username}
-                        href={`/profile/${winner.username}`}
+                        href={`/profiles/${winner.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >
                         <Badge
@@ -366,7 +366,7 @@ export function VideoLightbox({
                     {dancers.map((participant, index) => (
                       <Link
                         key={index}
-                        href={`/profile/${participant.username}`}
+                        href={`/profiles/${participant.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >
                         <Badge
@@ -394,7 +394,7 @@ export function VideoLightbox({
                     {otherParticipants.map((participant, index) => (
                       <Link
                         key={index}
-                        href={`/profile/${participant.username}`}
+                        href={`/profiles/${participant.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >
                         <Badge

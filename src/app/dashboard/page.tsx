@@ -153,20 +153,25 @@ export default function DashboardPage() {
                 <div className="flex gap-2 mt-4">
                   {user?.auth !== undefined &&
                     user.auth >= AUTH_LEVELS.CREATOR && (
-                      <Button asChild>
-                        <Link href="/add-event">Add Event</Link>
-                      </Button>
+                      <>
+                        <Button asChild>
+                          <Link href="/add-event">Add Event</Link>
+                        </Button>
+                        <Button asChild>
+                          <Link href="/add-workshop">Add Workshop</Link>
+                        </Button>
+                      </>
                     )}
                   {user?.username && (
                     <>
                       <Button variant="outline" asChild>
-                        <Link href={`/profile/${user.username}`}>
+                        <Link href={`/profiles/${user.username}`}>
                           <UserIcon className="mr-2 h-4 w-4" />
                           Go To Profile
                         </Link>
                       </Button>
                       <Button variant="outline" asChild>
-                        <Link href={`/profile/${user.username}/edit`}>
+                        <Link href={`/profiles/${user.username}/edit`}>
                           <UserIcon className="mr-2 h-4 w-4" />
                           Edit Profile
                         </Link>
@@ -331,7 +336,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/event/${event.eventId}`}>View</a>
+                      <a href={`/events/${event.eventId}`}>View</a>
                     </Button>
                   </div>
                 ))}
@@ -366,7 +371,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/event/${membership.eventId}`}>View</a>
+                      <a href={`/events/${membership.eventId}`}>View</a>
                     </Button>
                   </div>
                 ))}

@@ -78,7 +78,7 @@ export function TaggedVideosGrid({
               src: video.videoSrc || "",
               styles: video.styles || [],
             }}
-            eventLink={`/event/${video.eventId}`}
+            eventLink={`/events/${video.eventId}`}
             eventTitle={video.eventTitle}
             onClick={() => handleVideoSelect(index)}
             isWinner={isWinner}
@@ -107,7 +107,7 @@ export function TaggedVideosGrid({
           hasPrev={videos.length > 1}
           currentIndex={selectedVideoIndex}
           totalVideos={videos.length}
-          eventLink={`/event/${videos[selectedVideoIndex].eventId}`}
+          eventLink={`/events/${videos[selectedVideoIndex].eventId}`}
           eventTitle={videos[selectedVideoIndex].eventTitle}
           eventId={videos[selectedVideoIndex].eventId}
           sectionTitle={videos[selectedVideoIndex].sectionTitle}

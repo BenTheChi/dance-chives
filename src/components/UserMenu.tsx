@@ -72,7 +72,7 @@ export function UserMenu({ session }: UserMenuProps) {
               <Button
                 variant="ghost"
                 className="justify-start"
-                onClick={() => router.push(`/profile/${session.user.username}`)}
+                onClick={() => router.push(`/profiles/${session.user.username}`)}
               >
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile

@@ -241,3 +241,77 @@ export function canDeleteEvent(
 
   return false;
 }
+
+// Workshop Permissions
+export function canCreateWorkshops(authLevel: number): boolean {
+  return authLevel >= AUTH_LEVELS.CREATOR;
+}
+
+export interface WorkshopPermissionContext {
+  workshopId: string;
+  workshopCreatorId: string;
+  isTeamMember?: boolean;
+  isEventTeamMember?: boolean; // If workshop is associated with event, check event team members
+}
+
+export function canUpdateWorkshop(
+  authLevel: number,
+  context: WorkshopPermissionContext,
+  userId: string
+): boolean {
+  // Admins can update any workshops
+  if (canUpdateAnyEvents(authLevel)) {
+    return true;
+  }
+
+  // Moderators can update any workshops
+  if (canUpdateAnyEventsInCity(authLevel)) {
+    return true;
+  }
+
+  // Creators can update their own workshops
+  if (
+    authLevel >= AUTH_LEVELS.CREATOR &&
+    context.workshopCreatorId === userId
+  ) {
+    return true;
+  }
+
+  // Workshop team members can update
+  if (context.isTeamMember) {
+    return true;
+  }
+
+  // Event team members can update if workshop is associated with event
+  if (context.isEventTeamMember) {
+    return true;
+  }
+
+  return false;
+}
+
+export function canDeleteWorkshop(
+  authLevel: number,
+  context: WorkshopPermissionContext,
+  userId: string
+): boolean {
+  // Admins can delete any workshops
+  if (canDeleteAnyEvents(authLevel)) {
+    return true;
+  }
+
+  // Moderators can delete any workshops
+  if (canDeleteAnyEventsInCity(authLevel)) {
+    return true;
+  }
+
+  // Creators can delete their own workshops
+  if (
+    authLevel >= AUTH_LEVELS.CREATOR &&
+    context.workshopCreatorId === userId
+  ) {
+    return true;
+  }
+
+  return false;
+}

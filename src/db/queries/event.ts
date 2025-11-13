@@ -7,6 +7,7 @@ import {
   SubEvent,
   EventCard,
 } from "../../types/event";
+import { Workshop } from "../../types/workshop";
 import { UserSearchItem } from "../../types/user";
 import { City } from "../../types/city";
 import {
@@ -14,6 +15,7 @@ import {
   toNeo4jRoleFormat,
   isValidRole,
   AVAILABLE_ROLES,
+  WORKSHOP_ROLES,
 } from "@/lib/utils/roles";
 import {
   normalizeStyleNames,
@@ -476,23 +478,194 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
+  // Get workshops basic info
+  const workshopsResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)
+    OPTIONAL MATCH (wPoster:Picture)-[:POSTER]->(w)
+    OPTIONAL MATCH (w)-[:IN]->(c:City)
+    OPTIONAL MATCH (creator:User)-[:CREATED]->(w)
+    
+    RETURN collect({
+      id: w.id,
+      createdAt: w.createdAt,
+      updatedAt: w.updatedAt,
+      title: w.title,
+      description: w.description,
+      schedule: w.schedule,
+      startDate: w.startDate,
+      address: w.address,
+      startTime: w.startTime,
+      endTime: w.endTime,
+      cost: w.cost,
+      creatorId: creator.id,
+      poster: wPoster {
+        id: wPoster.id,
+        title: wPoster.title,
+        url: wPoster.url,
+        type: wPoster.type
+      },
+      city: c {
+        id: c.id,
+        name: c.name,
+        countryCode: c.countryCode,
+        region: c.region,
+        population: c.population,
+        timezone: c.timezone
+      }
+    }) as workshops
+  `,
+    { id }
+  );
+
+  // Get workshop roles
+  const workshopRolesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)<-[roleRel]-(user:User)
+    WHERE type(roleRel) IN $validRoles
+    RETURN w.id as workshopId, collect({
+      id: type(roleRel),
+      title: type(roleRel),
+      user: user {
+        id: user.id,
+        displayName: user.displayName,
+        username: user.username
+      }
+    }) as roles
+  `,
+    { id, validRoles: WORKSHOP_ROLES }
+  );
+
+  // Get workshop videos
+  const workshopVideosResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+    WITH w, v,
+         collect(DISTINCT {
+           id: dancer.id,
+           displayName: dancer.displayName,
+           username: dancer.username
+         }) as allDancers
+    WITH w, v,
+         [d in allDancers WHERE d.id IS NOT NULL] as dancers
+    WITH w.id as workshopId, collect({
+      id: v.id,
+      title: v.title,
+      src: v.src,
+      taggedDancers: dancers
+    }) as videos
+    RETURN workshopId, videos
+  `,
+    { id }
+  );
+
+  // Get workshop video styles
+  const workshopVideoStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    RETURN w.id as workshopId, v.id as videoId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
+  // Get workshop gallery
+  const workshopGalleryResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)<-[:PHOTO]-(galleryPic:Picture)
+    RETURN w.id as workshopId, collect(galleryPic {
+      id: galleryPic.id,
+      title: galleryPic.title,
+      url: galleryPic.url,
+      type: galleryPic.type
+    }) as gallery
+  `,
+    { id }
+  );
+
   session.close();
 
   const event = eventResult.records[0]?.get("event");
   const roles = rolesResult.records[0]?.get("roles") || [];
   const subEvents = subEventsResult.records[0]?.get("subEvents") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
+  const workshops = workshopsResult.records[0]?.get("workshops") || [];
 
   // Check if event exists
   if (!event) {
     throw new Error(`Event with id ${id} not found`);
   }
 
+  // Create maps for workshop data
+  const workshopRolesMap = new Map<string, any[]>();
+  workshopRolesResult.records.forEach((record) => {
+    workshopRolesMap.set(record.get("workshopId"), record.get("roles") || []);
+  });
+
+  const workshopVideosMap = new Map<string, any[]>();
+  workshopVideosResult.records.forEach((record) => {
+    workshopVideosMap.set(record.get("workshopId"), record.get("videos") || []);
+  });
+
+  const workshopVideoStylesMap = new Map<string, string[]>();
+  workshopVideoStylesResult.records.forEach((record) => {
+    const key = `${record.get("workshopId")}:${record.get("videoId")}`;
+    workshopVideoStylesMap.set(key, record.get("styles") || []);
+  });
+
+  const workshopGalleryMap = new Map<string, any[]>();
+  workshopGalleryResult.records.forEach((record) => {
+    workshopGalleryMap.set(
+      record.get("workshopId"),
+      record.get("gallery") || []
+    );
+  });
+
   // Convert subEvent dates to MM/DD/YYYY format
   const formattedSubEvents = subEvents.map((subEvent: SubEvent) => ({
     ...subEvent,
     startDate: subEvent.startDate,
   }));
+
+  // Format workshops with all data
+  const formattedWorkshops: Workshop[] = workshops.map((w: any) => {
+    const workshopId = w.id;
+    const roles = workshopRolesMap.get(workshopId) || [];
+    const videos = (workshopVideosMap.get(workshopId) || []).map(
+      (video: Video) => {
+        const styleKey = `${workshopId}:${video.id}`;
+        return {
+          ...video,
+          styles: workshopVideoStylesMap.get(styleKey) || [],
+          taggedWinners: [], // Workshops don't have winners
+        };
+      }
+    );
+    const gallery = workshopGalleryMap.get(workshopId) || [];
+
+    return {
+      id: workshopId,
+      createdAt: w.createdAt ? new Date(w.createdAt) : new Date(),
+      updatedAt: w.updatedAt ? new Date(w.updatedAt) : new Date(),
+      workshopDetails: {
+        title: w.title,
+        description: w.description,
+        schedule: w.schedule,
+        startDate: w.startDate,
+        address: w.address,
+        startTime: w.startTime,
+        endTime: w.endTime,
+        cost: w.cost,
+        creatorId: w.creatorId || "",
+        poster: w.poster,
+        city: w.city,
+      },
+      roles,
+      videos,
+      gallery,
+      associatedEventId: id,
+    };
+  });
 
   return {
     ...event,
@@ -513,6 +686,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     roles,
     sections,
     subEvents: formattedSubEvents,
+    workshops: formattedWorkshops,
     gallery,
   };
 };
@@ -1611,8 +1785,12 @@ export const EditEvent = async (event: Event) => {
         for (const br of sec.brackets) {
           if (br.videos) {
             for (const bvid of br.videos) {
-              if (bvid.taggedUsers && bvid.taggedUsers.length > 0) {
-                for (const user of bvid.taggedUsers) {
+              const taggedUsers = [
+                ...(bvid.taggedWinners || []),
+                ...(bvid.taggedDancers || []),
+              ];
+              if (taggedUsers.length > 0) {
+                for (const user of taggedUsers) {
                   const userId = await getUserIdFromUserSearchItem(user);
                   await tx.run(
                     `MATCH (bv:Video {id: $videoId})
@@ -1693,8 +1871,12 @@ export const EditEvent = async (event: Event) => {
     for (const sec of event.sections) {
       if (!sec.hasBrackets && sec.videos) {
         for (const vid of sec.videos) {
-          if (vid.taggedUsers && vid.taggedUsers.length > 0) {
-            for (const user of vid.taggedUsers) {
+          const taggedUsers = [
+            ...(vid.taggedWinners || []),
+            ...(vid.taggedDancers || []),
+          ];
+          if (taggedUsers.length > 0) {
+            for (const user of taggedUsers) {
               const userId = await getUserIdFromUserSearchItem(user);
               await tx.run(
                 `MATCH (v:Video {id: $videoId})
@@ -1765,6 +1947,306 @@ export const EditEvent = async (event: Event) => {
       { id, sections: event.sections }
     );
 
+    // Update workshops
+    if (event.workshops && event.workshops.length > 0) {
+      for (const workshop of event.workshops) {
+        // Get timezone for city if needed
+        let timezone = workshop.workshopDetails.city.timezone;
+        if (!timezone) {
+          // Try to get it from an existing city node
+          const cityResult = await tx.run(
+            `MATCH (c:City {id: $cityId}) RETURN c.timezone as timezone`,
+            { cityId: workshop.workshopDetails.city.id }
+          );
+          if (cityResult.records.length > 0) {
+            timezone = cityResult.records[0].get("timezone");
+          }
+        }
+
+        // Get or create dates
+        const now = new Date();
+        const createdAt = workshop.createdAt
+          ? new Date(workshop.createdAt).toISOString()
+          : now.toISOString();
+        const updatedAt = now.toISOString();
+
+        // Create or update workshop
+        await tx.run(
+          `MATCH (e:Event {id: $eventId})
+           MERGE (w:Workshop {id: $workshopId})
+           ON CREATE SET
+             w.title = $title,
+             w.description = $description,
+             w.address = $address,
+             w.cost = $cost,
+             w.startDate = $startDate,
+             w.startTime = $startTime,
+             w.endTime = $endTime,
+             w.schedule = $schedule,
+             w.createdAt = $createdAt,
+             w.updatedAt = $updatedAt
+           ON MATCH SET
+             w.title = $title,
+             w.description = $description,
+             w.address = $address,
+             w.cost = $cost,
+             w.startDate = $startDate,
+             w.startTime = $startTime,
+             w.endTime = $endTime,
+             w.schedule = $schedule,
+             w.updatedAt = $updatedAt
+           MERGE (w)-[:IN]->(e)`,
+          {
+            eventId: id,
+            workshopId: workshop.id,
+            title: workshop.workshopDetails.title,
+            description: workshop.workshopDetails.description || null,
+            address: workshop.workshopDetails.address || null,
+            cost: workshop.workshopDetails.cost || null,
+            startDate: workshop.workshopDetails.startDate,
+            startTime: workshop.workshopDetails.startTime || null,
+            endTime: workshop.workshopDetails.endTime || null,
+            schedule: workshop.workshopDetails.schedule || null,
+            createdAt,
+            updatedAt,
+          }
+        );
+
+        // Ensure creator relationship exists (only on create, preserve on update)
+        if (workshop.workshopDetails.creatorId) {
+          await tx.run(
+            `MATCH (w:Workshop {id: $workshopId})
+             MATCH (creator:User {id: $creatorId})
+             MERGE (creator)-[:CREATED]->(w)`,
+            {
+              workshopId: workshop.id,
+              creatorId: workshop.workshopDetails.creatorId,
+            }
+          );
+        }
+
+        // Update city relationship
+        await tx.run(
+          `MATCH (w:Workshop {id: $workshopId})
+           OPTIONAL MATCH (w)-[oldCityRel:IN]->(:City)
+           DELETE oldCityRel
+           WITH w
+           MERGE (c:City {id: $city.id})
+           ON CREATE SET 
+             c.name = $city.name,
+             c.countryCode = $city.countryCode,
+             c.region = $city.region,
+             c.population = $city.population,
+             c.timezone = $city.timezone
+           ON MATCH SET
+             c.population = $city.population
+           MERGE (w)-[:IN]->(c)`,
+          {
+            workshopId: workshop.id,
+            city: {
+              ...workshop.workshopDetails.city,
+              timezone: timezone || workshop.workshopDetails.city.timezone,
+            },
+          }
+        );
+
+        // Update poster
+        await tx.run(
+          `MATCH (w:Workshop {id: $workshopId})
+           OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(w)
+           DELETE r
+           WITH w
+           FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
+             MERGE (newPoster:Picture {id: poster.id})
+             ON CREATE SET
+               newPoster.title = poster.title,
+               newPoster.url = poster.url,
+               newPoster.type = 'poster'
+             ON MATCH SET
+               newPoster.title = poster.title,
+               newPoster.url = poster.url
+             MERGE (newPoster)-[:POSTER]->(w)
+           )`,
+          {
+            workshopId: workshop.id,
+            poster: workshop.workshopDetails.poster,
+          }
+        );
+
+        // Update roles
+        if (workshop.roles && workshop.roles.length > 0) {
+          // Preprocess roles to ensure all users have ids
+          const processedRoles = await Promise.all(
+            workshop.roles.map(async (role) => {
+              if (!role.user) {
+                return null; // Filter out roles without users
+              }
+              try {
+                const userId = await getUserIdFromUserSearchItem(role.user);
+                if (!userId) {
+                  return null; // Filter out roles where userId lookup failed
+                }
+                return {
+                  ...role,
+                  user: {
+                    ...role.user,
+                    id: userId,
+                  },
+                };
+              } catch (error) {
+                console.error(`Failed to get userId for role:`, error);
+                return null; // Filter out roles where userId lookup failed
+              }
+            })
+          );
+
+          // Filter out null roles (roles without valid users)
+          const validRoles = processedRoles.filter(
+            (role) => role !== null && role.user && role.user.id
+          );
+
+          if (validRoles.length > 0) {
+            await tx.run(
+              `MATCH (w:Workshop {id: $workshopId})
+               UNWIND $roles AS roleData
+               WITH w, roleData
+               WHERE roleData.user.id IS NOT NULL
+               MERGE (u:User { id: roleData.user.id })
+               WITH u, w, roleData
+               CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, w)
+               YIELD rel
+               RETURN w, u`,
+              { workshopId: workshop.id, roles: validRoles }
+            );
+
+            // Delete roles not in the new list
+            await tx.run(
+              `MATCH (w:Workshop {id: $workshopId})
+               MATCH (u:User)-[r]->(w)
+               WHERE type(r) IN ['ORGANIZER', 'TEACHER'] AND NOT u.id IN [role IN $roles WHERE role.user.id IS NOT NULL | role.user.id]
+               DELETE r`,
+              { workshopId: workshop.id, roles: validRoles }
+            );
+          } else {
+            // If no valid roles, remove all existing roles
+            await tx.run(
+              `MATCH (w:Workshop {id: $workshopId})
+               MATCH (u:User)-[r]->(w)
+               WHERE type(r) IN ['ORGANIZER', 'TEACHER']
+               DELETE r`,
+              { workshopId: workshop.id }
+            );
+          }
+        } else {
+          // Remove all roles if none provided
+          await tx.run(
+            `MATCH (w:Workshop {id: $workshopId})
+             MATCH (u:User)-[r]->(w)
+             WHERE type(r) IN ['ORGANIZER', 'TEACHER']
+             DELETE r`,
+            { workshopId: workshop.id }
+          );
+        }
+
+        // Delete videos not in the new list
+        await tx.run(
+          `MATCH (w:Workshop {id: $workshopId})
+           MATCH (v:Video)-[:IN]->(w)
+           WHERE NOT v.id IN [vid IN $videos | vid.id]
+           DETACH DELETE v`,
+          { workshopId: workshop.id, videos: workshop.videos }
+        );
+
+        // Update videos
+        for (const vid of workshop.videos) {
+          await tx.run(
+            `MATCH (w:Workshop {id: $workshopId})
+             MERGE (v:Video { id: $videoId })
+             ON CREATE SET
+               v.title = $title,
+               v.src = $src
+             ON MATCH SET
+               v.title = $title,
+               v.src = $src
+             MERGE (v)-[:IN]->(w)`,
+            {
+              workshopId: workshop.id,
+              videoId: vid.id,
+              title: vid.title,
+              src: vid.src,
+            }
+          );
+
+          // Update video tagged dancers (workshops only have dancers, no winners)
+          await tx.run(
+            `MATCH (v:Video {id: $videoId})<-[r:DANCER]-(u:User)
+             DELETE r`,
+            { videoId: vid.id }
+          );
+
+          if (vid.taggedDancers && vid.taggedDancers.length > 0) {
+            for (const user of vid.taggedDancers) {
+              const userId = await getUserIdFromUserSearchItem(user);
+              await tx.run(
+                `MATCH (v:Video {id: $videoId})
+                 MERGE (u:User { id: $userId })
+                 MERGE (u)-[:DANCER]->(v)`,
+                { videoId: vid.id, userId }
+              );
+            }
+          }
+
+          // Update video styles
+          await tx.run(
+            `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)
+             DELETE r`,
+            { videoId: vid.id }
+          );
+
+          if (vid.styles && vid.styles.length > 0) {
+            const normalizedStyles = normalizeStyleNames(vid.styles);
+            await tx.run(
+              `
+              MATCH (v:Video {id: $videoId})
+              WITH v, $styles AS styles
+              UNWIND styles AS styleName
+              MERGE (style:Style {name: styleName})
+              MERGE (v)-[:STYLE]->(style)
+              `,
+              { videoId: vid.id, styles: normalizedStyles }
+            );
+          }
+        }
+
+        // Update gallery
+        await tx.run(
+          `MATCH (w:Workshop {id: $workshopId})
+           FOREACH (pic IN $gallery |
+             MERGE (g:Picture { id: pic.id, title: pic.title, url: pic.url, type: pic.type })
+             MERGE (g)-[:PHOTO]->(w)
+           )`,
+          { workshopId: workshop.id, gallery: workshop.gallery }
+        );
+
+        // Delete gallery items not in the new list
+        await tx.run(
+          `MATCH (w:Workshop {id: $workshopId})
+           MATCH (g:Picture)-[:PHOTO]->(w)
+           WHERE NOT g.id IN [pic IN $gallery | pic.id]
+           DETACH DELETE g`,
+          { workshopId: workshop.id, gallery: workshop.gallery }
+        );
+      }
+    }
+
+    // Delete workshops not in the new list
+    await tx.run(
+      `MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)
+       WHERE NOT w.id IN [workshop IN $workshops | workshop.id]
+       DETACH DELETE w`,
+      { id, workshops: event.workshops || [] }
+    );
+
     // Update gallery
     await tx.run(
       `MATCH (e:Event {id: $id})
@@ -1822,6 +2304,33 @@ export const deleteEvent = async (eventId: string) => {
   } catch (error) {
     console.error("Error deleting event:", error);
     return false;
+  }
+};
+
+export const searchEvents = async (
+  keyword?: string
+): Promise<Array<{ id: string; title: string }>> => {
+  const session = driver.session();
+
+  try {
+    let query = `MATCH (e:Event)`;
+    const params: any = {};
+
+    if (keyword && keyword.trim()) {
+      query += ` WHERE toLower(e.title) CONTAINS toLower($keyword)`;
+      params.keyword = keyword.trim();
+    }
+
+    query += ` RETURN e.id as id, e.title as title ORDER BY e.title LIMIT 20`;
+
+    const result = await session.run(query, params);
+
+    return result.records.map((record) => ({
+      id: record.get("id"),
+      title: record.get("title"),
+    }));
+  } finally {
+    await session.close();
   }
 };
 

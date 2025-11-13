@@ -15,17 +15,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { UserSearchItem } from "@/types/user";
 import { CitySearchItem } from "@/types/city";
-import { Control, FieldPath } from "react-hook-form";
+import { Control, FieldPath, FieldValues } from "react-hook-form";
 import { FormField } from "./ui/form";
 import { FormLabel } from "./ui/form";
 import { FormControl } from "./ui/form";
 import { FormItem } from "./ui/form";
-import { FormValues } from "./forms/event-form";
+type SearchItem =
+  | CitySearchItem
+  | UserSearchItem
+  | { id: string; title: string };
 
-type SearchItem = CitySearchItem | UserSearchItem;
-
-interface DebouncedSearchSelectProps<T extends SearchItem> {
-  control: Control<FormValues>;
+interface DebouncedSearchSelectProps<
+  T extends SearchItem,
+  TFormValues extends FieldValues = FieldValues
+> {
+  control: Control<TFormValues>;
   label: string;
   value?: T | null;
   defaultValue?: T;
@@ -33,7 +37,7 @@ interface DebouncedSearchSelectProps<T extends SearchItem> {
   onSearch: (keyword: string) => Promise<T[]>;
   placeholder?: string;
   debounceDelay?: number;
-  name: FieldPath<FormValues>;
+  name: FieldPath<TFormValues>;
   disabled?: boolean;
   required?: boolean;
   className?: string;
@@ -41,9 +45,10 @@ interface DebouncedSearchSelectProps<T extends SearchItem> {
   getItemId: (item: T) => string | number;
 }
 
-function DebouncedSearchSelect<T extends SearchItem>(
-  props: DebouncedSearchSelectProps<T>
-) {
+function DebouncedSearchSelect<
+  T extends SearchItem,
+  TFormValues extends FieldValues = FieldValues
+>(props: DebouncedSearchSelectProps<T, TFormValues>) {
   const {
     control,
     value,
@@ -119,103 +124,114 @@ function DebouncedSearchSelect<T extends SearchItem>(
     fetchItems();
   }, [debouncedValue, onSearch]);
 
-  const handleSelect = (item: T) => {
-    setSelectedItem(item);
-    setInputValue(getDisplayValue(item));
-    setOpen(false);
-    if (onChange) {
-      onChange(item);
-    }
-  };
-
   return (
     <div className={cn("relative w-full", className)}>
       <FormField
         control={control}
         name={name}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{label}</FormLabel>
-            <FormControl>
-              <div className="flex items-center border rounded-md bg-white">
-                <div className="flex items-center w-full">
-                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  <Input
-                    {...field}
-                    placeholder={placeholder}
-                    value={inputValue}
-                    onChange={(e) => {
-                      const newValue = e.target.value;
-                      setInputValue(newValue);
-                      setOpen(true);
-                      field.onChange(newValue);
+        render={({ field }) => {
+          const handleSelect = (item: T) => {
+            setSelectedItem(item);
+            setInputValue(getDisplayValue(item));
+            setOpen(false);
+            // Always call field.onChange to keep react-hook-form in sync
+            field.onChange(item);
+            // Also call onChange prop if provided for additional parent logic
+            if (onChange) {
+              onChange(item);
+            }
+          };
 
-                      if (
-                        selectedItem &&
-                        newValue !== getDisplayValue(selectedItem)
-                      ) {
-                        setSelectedItem(null);
-                        if (onChange) onChange(null);
-                      }
-                    }}
-                    className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
-                    disabled={disabled}
-                  />
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
-                  ) : (
-                    <ChevronsUpDown
-                      className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer"
-                      onClick={() => setOpen(!open)}
+          return (
+            <FormItem>
+              <FormLabel>{label}</FormLabel>
+              <FormControl>
+                <div className="flex items-center border rounded-md bg-white">
+                  <div className="flex items-center w-full">
+                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <Input
+                      {...field}
+                      placeholder={placeholder}
+                      value={inputValue}
+                      onChange={(e) => {
+                        const newValue = e.target.value;
+                        setInputValue(newValue);
+                        setOpen(true);
+                        // Update form field when typing
+                        if (!onChange) {
+                          field.onChange(newValue);
+                        }
+
+                        if (
+                          selectedItem &&
+                          newValue !== getDisplayValue(selectedItem)
+                        ) {
+                          setSelectedItem(null);
+                          // Always call field.onChange to keep react-hook-form in sync
+                          field.onChange(null);
+                          if (onChange) {
+                            onChange(null);
+                          }
+                        }
+                      }}
+                      className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
+                      disabled={disabled}
                     />
-                  )}
-                  {open && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-50">
-                      <Command className="bg-white">
-                        <CommandList>
-                          <CommandGroup>
-                            {items.length === 0 && !isLoading ? (
-                              <CommandEmpty>No results found.</CommandEmpty>
-                            ) : (
-                              items.map((item) => (
-                                <CommandItem
-                                  key={getItemId(item)}
-                                  onSelect={() => {
-                                    handleSelect(item);
-                                    field.onChange(item);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      selectedItem &&
-                                        getItemId(selectedItem) ===
-                                          getItemId(item)
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {getDisplayValue(item)}
-                                </CommandItem>
-                              ))
-                            )}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </div>
-                  )}
-                  {/* Hidden input for form submission */}
-                  <input
-                    type="hidden"
-                    value={selectedItem ? JSON.stringify(selectedItem) : ""}
-                    required={required}
-                    disabled={disabled}
-                  />
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
+                    ) : (
+                      <ChevronsUpDown
+                        className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer"
+                        onClick={() => setOpen(!open)}
+                      />
+                    )}
+                    {open && (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-50">
+                        <Command className="bg-white">
+                          <CommandList>
+                            <CommandGroup>
+                              {items.length === 0 && !isLoading ? (
+                                <CommandEmpty>No results found.</CommandEmpty>
+                              ) : (
+                                items.map((item) => (
+                                  <CommandItem
+                                    key={getItemId(item)}
+                                    onSelect={() => {
+                                      handleSelect(item);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedItem &&
+                                          getItemId(selectedItem) ===
+                                            getItemId(item)
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {getDisplayValue(item)}
+                                  </CommandItem>
+                                ))
+                              )}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </div>
+                    )}
+                    {/* Hidden input for form submission */}
+                    <input
+                      type="hidden"
+                      value={selectedItem ? JSON.stringify(selectedItem) : ""}
+                      required={required}
+                      disabled={disabled}
+                    />
+                  </div>
                 </div>
-              </div>
-            </FormControl>
-          </FormItem>
-        )}
+              </FormControl>
+            </FormItem>
+          );
+        }}
       />
     </div>
   );

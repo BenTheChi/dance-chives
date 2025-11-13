@@ -30,6 +30,31 @@ export const VIDEO_ROLE_WINNER = "Winner";
 export const SECTION_ROLE_WINNER = "Winner";
 
 /**
+ * Available roles for workshops
+ * These are the only roles that can be assigned to users in workshops
+ */
+export const WORKSHOP_ROLES = ["ORGANIZER", "TEACHER"] as const;
+
+/**
+ * Type for a valid workshop role title
+ */
+export type WorkshopRoleTitle = (typeof WORKSHOP_ROLES)[number];
+
+/**
+ * Check if a role is valid for workshops
+ */
+export function isValidWorkshopRole(role: string): role is WorkshopRoleTitle {
+  return WORKSHOP_ROLES.includes(role as WorkshopRoleTitle);
+}
+
+/**
+ * Get all available workshop roles as an array
+ */
+export function getAvailableWorkshopRoles(): readonly string[] {
+  return WORKSHOP_ROLES;
+}
+
+/**
  * Check if a role is valid for events (excludes video-only and section-only roles)
  */
 export function isValidEventRole(role: string): role is RoleTitle {

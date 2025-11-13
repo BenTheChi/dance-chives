@@ -48,7 +48,7 @@ export default function DateInput({ control, name, label }: DateInputProps) {
               placeholder="MM/DD/YYYY"
               maxLength={10}
               className="font-mono"
-              value={field.value as string}
+              value={(field.value as string) ?? ""}
               onChange={(e) => {
                 const formattedValue = formatDateInput(e.target.value);
                 field.onChange(formattedValue);

@@ -1,5 +1,6 @@
 import { City } from "./city";
 import { UserSearchItem } from "./user";
+import { Workshop } from "./workshop";
 
 export interface EventDetails {
   title: string;
@@ -24,6 +25,7 @@ export interface Event {
   roles: Role[];
   sections: Section[];
   subEvents: SubEvent[];
+  workshops: Workshop[];
   gallery: Picture[];
 }
 

@@ -93,7 +93,7 @@ export default function SectionBracketTabSelector({
   return (
     <div className="p-5">
       <Button
-        onClick={() => router.push(`/event/${eventId}`)}
+        onClick={() => router.push(`/events/${eventId}`)}
         className="ml-5 mb-5 hover:bg-gray-300 hover:shadow-none hover:cursor-pointer shadow-md "
         variant="secondary"
       >
@@ -134,7 +134,7 @@ export default function SectionBracketTabSelector({
                   asChild
                 >
                   {winner.username ? (
-                    <Link href={`/profile/${winner.username}`}>
+                    <Link href={`/profiles/${winner.username}`}>
                       {winner.displayName}
                     </Link>
                   ) : (
@@ -192,7 +192,7 @@ export default function SectionBracketTabSelector({
                     (bracket) => bracket.id === activeBracket
                   )?.videos || []
                 }
-                eventLink={`/event/${eventId}`}
+                eventLink={`/events/${eventId}`}
                 eventTitle={eventTitle}
                 eventId={eventId}
                 sectionTitle={sections[activeSection]?.title}
@@ -214,7 +214,7 @@ export default function SectionBracketTabSelector({
         <div className="p-5 border-2 rounded-lg">
           <VideoGallery
             videos={sections[activeSection]?.videos}
-            eventLink={`/event/${eventId}`}
+            eventLink={`/events/${eventId}`}
             eventTitle={eventTitle}
             eventId={eventId}
             sectionTitle={sections[activeSection]?.title}
