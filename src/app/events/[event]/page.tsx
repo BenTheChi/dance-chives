@@ -289,9 +289,10 @@ export default async function EventPage({ params }: PageProps) {
 
               <div className="flex flex-col gap-4">
                 {event.sections.map((section) => (
-                  <div
+                  <Link
                     key={section.id}
-                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                    href={`/events/${event.id}/sections/${section.id}`}
+                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow block"
                   >
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="text-xl font-semibold text-gray-800">
@@ -320,7 +321,10 @@ export default async function EventPage({ params }: PageProps) {
                             asChild
                           >
                             {winner.username ? (
-                              <Link href={`/profiles/${winner.username}`}>
+                              <Link
+                                href={`/profiles/${winner.username}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {winner.displayName}
                               </Link>
                             ) : (
@@ -336,7 +340,11 @@ export default async function EventPage({ params }: PageProps) {
                       section.styles.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-2">
                           {section.styles.map((style) => (
-                            <StyleBadge key={style} style={style} />
+                            <StyleBadge
+                              key={style}
+                              style={style}
+                              asLink={false}
+                            />
                           ))}
                         </div>
                       )}
@@ -364,7 +372,11 @@ export default async function EventPage({ params }: PageProps) {
                         return stylesArray.length > 0 ? (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {stylesArray.map((style) => (
-                              <StyleBadge key={style} style={style} />
+                              <StyleBadge
+                                key={style}
+                                style={style}
+                                asLink={false}
+                              />
                             ))}
                           </div>
                         ) : null;
@@ -395,7 +407,7 @@ export default async function EventPage({ params }: PageProps) {
                         No brackets - direct video collection
                       </div>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

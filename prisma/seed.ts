@@ -1,15 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { insertEvent } from "../src/db/queries/event";
+import { insertWorkshop } from "../src/db/queries/workshop";
 import { signupUser } from "../src/db/queries/user";
 import { Event } from "../src/types/event";
+import { Workshop } from "../src/types/workshop";
 import { City } from "../src/types/city";
 import { v4 as uuidv4 } from "uuid";
 import driver from "../src/db/driver";
-import {
-  VIDEO_ROLE_DANCER,
-  VIDEO_ROLE_WINNER,
-  SECTION_ROLE_WINNER,
-} from "../src/lib/utils/roles";
+import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "../src/lib/utils/roles";
 import {
   setVideoRoles,
   setSectionWinner,
@@ -124,7 +122,6 @@ async function main() {
 
   // Create users
   for (const userData of users) {
-    const { id, ...dataWithoutId } = userData;
     await prisma.user.create({
       data: userData,
     });
@@ -300,6 +297,20 @@ async function main() {
     timezone: "America/Los_Angeles",
   };
 
+  // Generate UUIDs for all section IDs
+  const sectionIds = {
+    "section-1-breaking-1v1": uuidv4(),
+    "section-2-popping-2v2": uuidv4(),
+    "section-1-breaking-1v1-seattle": uuidv4(),
+    "section-2-waacking-2v2-seattle": uuidv4(),
+    "section-1-breaking-1v1-moderator": uuidv4(),
+    "section-2-locking-2v2-moderator": uuidv4(),
+    "section-1-breaking-1v1-admin": uuidv4(),
+    "section-2-hip-hop-2v2-admin": uuidv4(),
+    "section-1-breaking-1v1-super-admin": uuidv4(),
+    "section-2-popping-2v2-super-admin": uuidv4(),
+  };
+
   // Helper function to create sections with brackets and videos
   const createSectionWithVideos = (
     sectionId: string,
@@ -353,7 +364,7 @@ async function main() {
       roles: [],
       sections: [
         createSectionWithVideos(
-          "section-1-breaking-1v1",
+          sectionIds["section-1-breaking-1v1"],
           "Breaking 1v1",
           "bracket-1-breaking-1v1",
           "Round 1",
@@ -371,7 +382,7 @@ async function main() {
           ]
         ),
         createSectionWithVideos(
-          "section-2-popping-2v2",
+          sectionIds["section-2-popping-2v2"],
           "Popping 2v2",
           "bracket-1-popping-2v2",
           "Round 1",
@@ -390,6 +401,7 @@ async function main() {
         ),
       ],
       subEvents: [],
+      workshops: [],
       gallery: [],
     },
     {
@@ -419,7 +431,7 @@ async function main() {
       roles: [],
       sections: [
         createSectionWithVideos(
-          "section-1-breaking-1v1-seattle",
+          sectionIds["section-1-breaking-1v1-seattle"],
           "Breaking 1v1",
           "bracket-1-breaking-1v1-seattle",
           "Round 1",
@@ -437,7 +449,7 @@ async function main() {
           ]
         ),
         createSectionWithVideos(
-          "section-2-waacking-2v2-seattle",
+          sectionIds["section-2-waacking-2v2-seattle"],
           "Waacking 2v2",
           "bracket-1-waacking-2v2-seattle",
           "Round 1",
@@ -456,6 +468,7 @@ async function main() {
         ),
       ],
       subEvents: [],
+      workshops: [],
       gallery: [],
     },
     {
@@ -485,7 +498,7 @@ async function main() {
       roles: [],
       sections: [
         createSectionWithVideos(
-          "section-1-breaking-1v1-moderator",
+          sectionIds["section-1-breaking-1v1-moderator"],
           "Breaking 1v1",
           "bracket-1-breaking-1v1-moderator",
           "Round 1",
@@ -503,7 +516,7 @@ async function main() {
           ]
         ),
         createSectionWithVideos(
-          "section-2-locking-2v2-moderator",
+          sectionIds["section-2-locking-2v2-moderator"],
           "Locking 2v2",
           "bracket-1-locking-2v2-moderator",
           "Round 1",
@@ -522,6 +535,7 @@ async function main() {
         ),
       ],
       subEvents: [],
+      workshops: [],
       gallery: [],
     },
     {
@@ -551,7 +565,7 @@ async function main() {
       roles: [],
       sections: [
         createSectionWithVideos(
-          "section-1-breaking-1v1-admin",
+          sectionIds["section-1-breaking-1v1-admin"],
           "Breaking 1v1",
           "bracket-1-breaking-1v1-admin",
           "Round 1",
@@ -569,7 +583,7 @@ async function main() {
           ]
         ),
         createSectionWithVideos(
-          "section-2-hip-hop-2v2-admin",
+          sectionIds["section-2-hip-hop-2v2-admin"],
           "Hip Hop 2v2",
           "bracket-1-hip-hop-2v2-admin",
           "Round 1",
@@ -588,6 +602,7 @@ async function main() {
         ),
       ],
       subEvents: [],
+      workshops: [],
       gallery: [],
     },
     {
@@ -617,7 +632,7 @@ async function main() {
       roles: [],
       sections: [
         createSectionWithVideos(
-          "section-1-breaking-1v1-super-admin",
+          sectionIds["section-1-breaking-1v1-super-admin"],
           "Breaking 1v1",
           "bracket-1-breaking-1v1-super-admin",
           "Round 1",
@@ -635,7 +650,7 @@ async function main() {
           ]
         ),
         createSectionWithVideos(
-          "section-2-popping-2v2-super-admin",
+          sectionIds["section-2-popping-2v2-super-admin"],
           "Popping 2v2",
           "bracket-1-popping-2v2-super-admin",
           "Round 1",
@@ -654,6 +669,7 @@ async function main() {
         ),
       ],
       subEvents: [],
+      workshops: [],
       gallery: [],
     },
   ];
@@ -691,6 +707,199 @@ async function main() {
       }
     } catch (error) {
       console.error(`❌ Failed to create event ${event.id}:`, error);
+      // Don't silently continue - log the actual error
+      throw error;
+    }
+  }
+
+  // Create 2 workshops with most fields filled out
+  console.log("🌱 Creating 2 workshops...");
+  const workshops: Workshop[] = [
+    {
+      id: "workshop-1-new-york-with-event",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      workshopDetails: {
+        title: "Advanced Breaking Workshop - New York",
+        description:
+          "An intensive breaking workshop covering advanced footwork, power moves, and freestyle techniques. Perfect for dancers looking to take their skills to the next level. We'll cover everything from foundational concepts to competition-level moves.",
+        schedule:
+          "10:00 AM - Registration and warm-up\n10:30 AM - Footwork fundamentals\n12:00 PM - Power moves session\n1:30 PM - Lunch break\n2:30 PM - Freestyle and battle techniques\n4:00 PM - Q&A and individual feedback\n5:00 PM - Workshop concludes",
+        address: "789 Dance Studio, 5th Avenue, New York, NY 10002",
+        startDate: "01/10/2025",
+        startTime: "10:00",
+        endTime: "17:00",
+        cost: "$75",
+        creatorId: "test-user-1", // Creator
+        poster: {
+          id: uuidv4(),
+          title: "Workshop Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: newYorkCity,
+      },
+      roles: [
+        {
+          id: "role-organizer-1",
+          title: "ORGANIZER",
+          user: {
+            id: "test-user-1",
+            displayName: "Creator",
+            username: "creator",
+          },
+        },
+        {
+          id: "role-teacher-1",
+          title: "TEACHER",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "workshop-video-1",
+          title: "Breaking Workshop Highlights",
+          src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+          styles: ["Breaking", "Hip Hop"],
+        },
+        {
+          id: "workshop-video-2",
+          title: "Advanced Footwork Techniques",
+          src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+          styles: ["Breaking"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Workshop Photo 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Workshop Photo 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+      associatedEventId: "event-1-new-york-creator", // Connected to event
+    },
+    {
+      id: "workshop-2-seattle-standalone",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      workshopDetails: {
+        title: "Popping & Animation Workshop - Seattle",
+        description:
+          "Master the art of popping and animation in this comprehensive workshop. Learn techniques from basic hits and waves to advanced animation concepts. This workshop is designed for all skill levels, with personalized instruction to help you develop your unique style. We'll explore musicality, isolations, and how to create smooth transitions between moves.",
+        schedule:
+          "9:00 AM - Check-in and introductions\n9:30 AM - Warm-up and stretching\n10:00 AM - Basic popping techniques\n11:30 AM - Animation fundamentals\n1:00 PM - Lunch break\n2:00 PM - Advanced concepts and combinations\n3:30 PM - Freestyle session\n4:30 PM - Performance tips and stage presence\n5:30 PM - Final showcase and feedback",
+        address: "456 Dance Academy, Pike Street, Seattle, WA 98101",
+        startDate: "01/15/2025",
+        startTime: "09:00",
+        endTime: "17:30",
+        cost: "$85",
+        creatorId: "test-user-3", // Admin
+        poster: {
+          id: uuidv4(),
+          title: "Workshop Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: seattleCity,
+      },
+      roles: [
+        {
+          id: "role-organizer-2",
+          title: "ORGANIZER",
+          user: {
+            id: "test-user-3",
+            displayName: "Admin",
+            username: "admin",
+          },
+        },
+        {
+          id: "role-teacher-2",
+          title: "TEACHER",
+          user: {
+            id: "test-user-4",
+            displayName: "Super Admin",
+            username: "superadmin",
+          },
+        },
+        {
+          id: "role-teacher-3",
+          title: "TEACHER",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "workshop-video-3",
+          title: "Popping Workshop Introduction",
+          src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+          styles: ["Popping", "Animation"],
+        },
+        {
+          id: "workshop-video-4",
+          title: "Animation Techniques Explained",
+          src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
+          styles: ["Animation", "Popping"],
+        },
+        {
+          id: "workshop-video-5",
+          title: "Musicality in Popping",
+          src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
+          styles: ["Popping"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Workshop Gallery Photo 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Workshop Gallery Photo 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Workshop Gallery Photo 3",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+      // No associatedEventId - standalone workshop
+    },
+  ];
+
+  // Create workshops in Neo4j
+  for (const workshop of workshops) {
+    try {
+      await insertWorkshop(workshop);
+      console.log(`✅ Created Neo4j workshop: ${workshop.id}`);
+    } catch (error) {
+      console.error(`❌ Failed to create workshop ${workshop.id}:`, error);
       // Don't silently continue - log the actual error
       throw error;
     }
@@ -750,7 +959,7 @@ async function main() {
       senderId: "test-user-0",
       targetUserId: "test-user-0", // Self-tagging
       videoId: null,
-      sectionId: "section-1-breaking-1v1", // Section from event 1
+      sectionId: sectionIds["section-1-breaking-1v1"], // Section from event 1
       role: "Winner", // Required role for section tags (currently only "Winner" is supported)
       status: "PENDING" as const,
     },
@@ -898,11 +1107,11 @@ async function main() {
   try {
     await setSectionWinner(
       "event-5-new-york-super-admin",
-      "section-1-breaking-1v1-super-admin",
+      sectionIds["section-1-breaking-1v1-super-admin"],
       "test-user-4"
     );
     console.log(
-      `✅ Tagged super admin as Winner in section: event-5-new-york-super-admin -> section-1-breaking-1v1-super-admin`
+      `✅ Tagged super admin as Winner in section: event-5-new-york-super-admin -> ${sectionIds["section-1-breaking-1v1-super-admin"]}`
     );
   } catch (error) {
     console.log(

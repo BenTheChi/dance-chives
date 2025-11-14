@@ -210,7 +210,16 @@ const workshopSchema = z.object({
 
 const formSchema = z.object({
   eventDetails: eventDetailsSchema,
-  sections: z.array(sectionSchema),
+  sections: z.array(sectionSchema).refine(
+    (sections) => {
+      const titles = sections.map((s) => s.title.toLowerCase().trim());
+      const uniqueTitles = new Set(titles);
+      return uniqueTitles.size === titles.length;
+    },
+    {
+      message: "Section titles must be unique within an event",
+    }
+  ),
   roles: z.array(roleSchema).optional(),
   subEvents: z.array(subEventSchema),
   workshops: z.array(workshopSchema),

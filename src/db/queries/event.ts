@@ -797,6 +797,28 @@ const createSections = async (eventId: string, sections: any[]) => {
   if (sections.length === 0) return;
   const session = driver.session();
   try {
+    // Check for duplicate section titles within this event
+    const existingSections = await session.run(
+      `MATCH (e:Event {id: $eventId})<-[:IN]-(s:Section)
+       RETURN s.title as title`,
+      { eventId }
+    );
+
+    const existingTitles = new Set(
+      existingSections.records.map((r) => r.get("title").toLowerCase().trim())
+    );
+
+    // Validate uniqueness before creating
+    for (const sec of sections) {
+      const normalizedTitle = sec.title.toLowerCase().trim();
+      if (existingTitles.has(normalizedTitle)) {
+        throw new Error(
+          `Section title "${sec.title}" already exists in this event. Section titles must be unique within an event.`
+        );
+      }
+      existingTitles.add(normalizedTitle);
+    }
+
     for (const sec of sections) {
       // Create section
       await session.run(
@@ -1449,6 +1471,425 @@ export const getEventSections = async (id: string) => {
   });
 
   return { title, sections };
+};
+
+export const getSection = async (sectionId: string, eventId: string) => {
+  const session = driver.session();
+
+  console.log(sectionId, eventId);
+
+  try {
+    // Get section by UUID directly, optionally verify it belongs to the event
+    const sectionResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})-[:IN]->(e:Event {id: $eventId})
+      OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+      OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+      
+      WITH s, e, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets
+      
+      RETURN {
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        hasBrackets: size(brackets) > 0,
+        videos: [v in videos | {
+          id: v.id,
+          title: v.title,
+          src: v.src
+        }],
+        brackets: [b in brackets | {
+          id: b.id,
+          title: b.title,
+          videos: []
+        }]
+      } as section,
+      e.id as eventId,
+      e.title as eventTitle
+    `,
+      { sectionId, eventId }
+    );
+
+    if (sectionResult.records.length === 0) {
+      await session.close();
+      return null;
+    }
+
+    const sectionData = sectionResult.records[0].get("section") as any;
+    const resultEventId = sectionResult.records[0].get("eventId");
+    const eventTitle = sectionResult.records[0].get("eventTitle");
+
+    // Get bracket videos separately
+    const bracketVideosResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+      RETURN s.id as sectionId, b.id as bracketId, collect({
+        id: v.id,
+        title: v.title,
+        src: v.src
+      }) as videos
+    `,
+      { sectionId }
+    );
+
+    // Get tagged users for direct section videos
+    const sectionVideoUsersResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[:IN]-(v:Video)
+      OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+      OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+      WITH s, v, 
+           collect(DISTINCT {
+             id: winner.id,
+             displayName: winner.displayName,
+             username: winner.username
+           }) as allWinners,
+           collect(DISTINCT {
+             id: dancer.id,
+             displayName: dancer.displayName,
+             username: dancer.username
+           }) as allDancers
+      WITH s, v,
+           [w in allWinners WHERE w.id IS NOT NULL] as winners,
+           [d in allDancers WHERE d.id IS NOT NULL] as dancers
+      WHERE size(winners) > 0 OR size(dancers) > 0
+      RETURN s.id as sectionId, v.id as videoId, 
+             winners as taggedWinners,
+             dancers as taggedDancers
+    `,
+      { sectionId }
+    );
+
+    // Get tagged users for bracket videos
+    const bracketVideoUsersResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+      OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+      OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+      WITH s, b, v, 
+           collect(DISTINCT {
+             id: winner.id,
+             displayName: winner.displayName,
+             username: winner.username
+           }) as allWinners,
+           collect(DISTINCT {
+             id: dancer.id,
+             displayName: dancer.displayName,
+             username: dancer.username
+           }) as allDancers
+      WITH s, b, v,
+           [w in allWinners WHERE w.id IS NOT NULL] as winners,
+           [d in allDancers WHERE d.id IS NOT NULL] as dancers
+      WHERE size(winners) > 0 OR size(dancers) > 0
+      RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, 
+             winners as taggedWinners,
+             dancers as taggedDancers
+    `,
+      { sectionId }
+    );
+
+    // Get section styles
+    const sectionStylesResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})-[:STYLE]->(style:Style)
+      RETURN s.id as sectionId, collect(style.name) as styles
+    `,
+      { sectionId }
+    );
+
+    // Get video styles (direct section videos)
+    const sectionVideoStylesResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+      RETURN s.id as sectionId, v.id as videoId, collect(style.name) as styles
+    `,
+      { sectionId }
+    );
+
+    // Get video styles (bracket videos)
+    const bracketVideoStylesResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+      RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect(style.name) as styles
+    `,
+      { sectionId }
+    );
+
+    // Get section applyStylesToVideos property
+    const sectionApplyStylesResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})
+      RETURN s.id as sectionId, s.applyStylesToVideos as applyStylesToVideos
+    `,
+      { sectionId }
+    );
+
+    // Get section winners
+    const sectionWinnersResult = await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[r:WINNER]-(u:User)
+      RETURN s.id as sectionId, collect({
+        id: u.id,
+        displayName: u.displayName,
+        username: u.username
+      }) as winners
+    `,
+      { sectionId }
+    );
+
+    await session.close();
+
+    const section: Section = sectionData;
+    const bracketVideos = bracketVideosResult.records.map(
+      (record): BracketVideoRecord => ({
+        sectionId: record.get("sectionId"),
+        bracketId: record.get("bracketId"),
+        videos: record.get("videos"),
+      })
+    );
+
+    // Get all bracket video IDs to filter them out from section videos
+    const bracketVideoIdsSet = new Set(
+      bracketVideosResult.records.flatMap((record) =>
+        (record.get("videos") || []).map((v: any) => v.id)
+      )
+    );
+
+    // Filter out bracket videos from section video users
+    const sectionVideoUsers = sectionVideoUsersResult.records
+      .filter((record) => {
+        const videoId = record.get("videoId");
+        return videoId && !bracketVideoIdsSet.has(videoId);
+      })
+      .map(
+        (record): SectionVideoUserRecord => ({
+          sectionId: record.get("sectionId"),
+          videoId: record.get("videoId"),
+          taggedWinners: record.get("taggedWinners") || [],
+          taggedDancers: record.get("taggedDancers") || [],
+        })
+      );
+
+    const bracketVideoUsers = bracketVideoUsersResult.records.map(
+      (record): BracketVideoUserRecord => ({
+        sectionId: record.get("sectionId"),
+        bracketId: record.get("bracketId"),
+        videoId: record.get("videoId"),
+        taggedWinners: record.get("taggedWinners") || [],
+        taggedDancers: record.get("taggedDancers") || [],
+      })
+    );
+
+    // Create maps for styles
+    const sectionStylesMap = new Map<string, string[]>();
+    sectionStylesResult.records.forEach((record) => {
+      sectionStylesMap.set(record.get("sectionId"), record.get("styles") || []);
+    });
+
+    const sectionVideoStylesMap = new Map<string, string[]>();
+    sectionVideoStylesResult.records.forEach((record) => {
+      const key = `${record.get("sectionId")}:${record.get("videoId")}`;
+      sectionVideoStylesMap.set(key, record.get("styles") || []);
+    });
+
+    const bracketVideoStylesMap = new Map<string, string[]>();
+    bracketVideoStylesResult.records.forEach((record) => {
+      const key = `${record.get("sectionId")}:${record.get(
+        "bracketId"
+      )}:${record.get("videoId")}`;
+      bracketVideoStylesMap.set(key, record.get("styles") || []);
+    });
+
+    const sectionApplyStylesMap = new Map<string, boolean>();
+    sectionApplyStylesResult.records.forEach((record) => {
+      sectionApplyStylesMap.set(
+        record.get("sectionId"),
+        record.get("applyStylesToVideos") || false
+      );
+    });
+
+    // Create map of section winners
+    const sectionWinnersMap = new Map<string, any[]>();
+    sectionWinnersResult.records.forEach((record) => {
+      const sectionId = record.get("sectionId");
+      const winners = (record.get("winners") || []).filter(
+        (w: any) => w.id !== null && w.id !== undefined
+      );
+      sectionWinnersMap.set(sectionId, winners);
+    });
+
+    // Update section with bracket videos, styles, and winners
+    section.styles = sectionStylesMap.get(section.id) || [];
+    section.applyStylesToVideos =
+      sectionApplyStylesMap.get(section.id) || false;
+    section.winners = sectionWinnersMap.get(section.id) || [];
+
+    // Add tagged users and styles to direct section videos
+    section.videos = section.videos.map((video: Video) => {
+      const userData = sectionVideoUsers.find(
+        (svu) => svu.sectionId === section.id && svu.videoId === video.id
+      );
+      const styleKey = `${section.id}:${video.id}`;
+      return {
+        ...video,
+        taggedWinners: userData?.taggedWinners || [],
+        taggedDancers: userData?.taggedDancers || [],
+        styles: sectionVideoStylesMap.get(styleKey) || [],
+      };
+    });
+
+    // Add videos and tagged users to brackets
+    section.brackets.forEach((bracket: Bracket) => {
+      const bracketVideoData = bracketVideos.find(
+        (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id
+      );
+      if (bracketVideoData) {
+        bracket.videos = bracketVideoData.videos.map((video: Video) => {
+          const userData = bracketVideoUsers.find(
+            (bvu) =>
+              bvu.sectionId === section.id &&
+              bvu.bracketId === bracket.id &&
+              bvu.videoId === video.id
+          );
+          const styleKey = `${section.id}:${bracket.id}:${video.id}`;
+          return {
+            ...video,
+            taggedWinners: userData?.taggedWinners || [],
+            taggedDancers: userData?.taggedDancers || [],
+            styles: bracketVideoStylesMap.get(styleKey) || [],
+          };
+        });
+      } else {
+        bracket.videos = [];
+      }
+    });
+
+    return {
+      section,
+      eventId: resultEventId,
+      eventTitle,
+    };
+  } catch (error) {
+    console.error("Error fetching section:", error);
+    await session.close();
+    throw error;
+  }
+};
+
+export const getAllSections = async () => {
+  const session = driver.session();
+
+  try {
+    // Get all sections with event information
+    const sectionsResult = await session.run(
+      `
+      MATCH (s:Section)-[:IN]->(e:Event)
+      OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+      OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+      
+      WITH s, e, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets
+      
+      RETURN {
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        hasBrackets: size(brackets) > 0,
+        videoCount: size(videos),
+        bracketCount: size(brackets)
+      } as section,
+      e.id as eventId,
+      e.title as eventTitle
+    `,
+      {}
+    );
+
+    // Get section styles
+    const sectionStylesResult = await session.run(
+      `
+      MATCH (s:Section)-[:STYLE]->(style:Style)
+      RETURN s.id as sectionId, collect(style.name) as styles
+    `,
+      {}
+    );
+
+    // Get section winners
+    const sectionWinnersResult = await session.run(
+      `
+      MATCH (s:Section)<-[r:WINNER]-(u:User)
+      RETURN s.id as sectionId, collect({
+        id: u.id,
+        displayName: u.displayName,
+        username: u.username
+      }) as winners
+    `,
+      {}
+    );
+
+    // Get bracket video counts
+    const bracketVideoCountsResult = await session.run(
+      `
+      MATCH (s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+      RETURN s.id as sectionId, b.id as bracketId, count(v) as videoCount
+    `,
+      {}
+    );
+
+    await session.close();
+
+    // Create maps for styles and winners
+    const sectionStylesMap = new Map<string, string[]>();
+    sectionStylesResult.records.forEach((record) => {
+      sectionStylesMap.set(record.get("sectionId"), record.get("styles") || []);
+    });
+
+    const sectionWinnersMap = new Map<string, any[]>();
+    sectionWinnersResult.records.forEach((record) => {
+      const sectionId = record.get("sectionId");
+      const winners = (record.get("winners") || []).filter(
+        (w: any) => w.id !== null && w.id !== undefined
+      );
+      sectionWinnersMap.set(sectionId, winners);
+    });
+
+    // Calculate total video counts including bracket videos
+    const bracketVideoCountsMap = new Map<string, number>();
+    bracketVideoCountsResult.records.forEach((record) => {
+      const sectionId = record.get("sectionId");
+      const currentCount = bracketVideoCountsMap.get(sectionId) || 0;
+      bracketVideoCountsMap.set(
+        sectionId,
+        currentCount + (record.get("videoCount") as number)
+      );
+    });
+
+    // Build sections array with event context
+    const sections = sectionsResult.records.map((record) => {
+      const sectionData = record.get("section");
+      const sectionId = sectionData.id;
+      const directVideoCount = sectionData.videoCount || 0;
+      const bracketVideoCount = bracketVideoCountsMap.get(sectionId) || 0;
+      const totalVideoCount = directVideoCount + bracketVideoCount;
+
+      return {
+        id: sectionId,
+        title: sectionData.title,
+        description: sectionData.description,
+        hasBrackets: sectionData.hasBrackets,
+        videoCount: totalVideoCount,
+        bracketCount: sectionData.bracketCount || 0,
+        styles: sectionStylesMap.get(sectionId) || [],
+        winners: sectionWinnersMap.get(sectionId) || [],
+        eventId: record.get("eventId"),
+        eventTitle: record.get("eventTitle"),
+      };
+    });
+
+    return sections;
+  } catch (error) {
+    console.error("Error fetching all sections:", error);
+    await session.close();
+    return [];
+  }
 };
 
 export const EditEvent = async (event: Event) => {
