@@ -18,7 +18,7 @@ import {
   setSectionWinner,
   setSectionWinners,
   getSectionWinnerIds,
-  applyTag, // Still needed for event roles (not part of this refactor)
+  setEventRoles, // Still needed for event roles (not part of this refactor)
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
@@ -640,7 +640,7 @@ export async function approveTaggingRequest(
       request.targetUserId
     );
   } else if (request.role) {
-    // Event role - still use applyTag for event roles (not part of this refactor)
+    // Event role - still use setEventRoles for event roles (not part of this refactor)
     // This would need to be handled separately if event roles also need refactoring
     throw new Error(
       "Event role tagging not yet refactored to use declarative approach"
@@ -1601,7 +1601,7 @@ export async function tagSelfWithRole(eventId: string, role: string) {
   if (canTagDirectly) {
     // User has permission - tag directly
     try {
-      await applyTag(eventId, null, null, userId, role);
+      await setEventRoles(eventId, userId, role);
       return { success: true, directTag: true };
     } catch (error) {
       console.error("Error tagging self with role:", error);
@@ -1667,7 +1667,9 @@ export async function tagSelfInVideo(
   // Check if video belongs to a workshop (workshop videos don't support dancer/winner tags)
   const isWorkshopVideo = await videoBelongsToWorkshop(videoId);
   if (isWorkshopVideo) {
-    throw new Error("Dancer and winner tags are not supported for workshop videos");
+    throw new Error(
+      "Dancer and winner tags are not supported for workshop videos"
+    );
   }
 
   // Validate video exists

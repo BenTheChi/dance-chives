@@ -559,17 +559,14 @@ export async function setSectionWinners(
 }
 
 /**
- * Apply a tag to a user in Neo4j (for videos, sections, or event roles)
- * Throws error if event, video, or section doesn't exist
- * Role is required for videos and sections
- * @deprecated Use setVideoRoles or setSectionWinner instead
+ * Set event role for a user in Neo4j
+ * Creates a relationship between the user and event with the specified role
+ * Throws error if event doesn't exist or role is invalid
  */
-export async function applyTag(
+export async function setEventRoles(
   eventId: string,
-  videoId: string | null,
-  sectionId: string | null,
   userId: string,
-  role?: string
+  role: string
 ): Promise<void> {
   const session = driver.session();
   try {
@@ -579,165 +576,29 @@ export async function applyTag(
       throw new Error(`Event ${eventId} does not exist`);
     }
 
-    // Validate parameter combinations:
-    // - videoId + role: video tagging with role (e.g., "Dancer", "Winner")
-    // - sectionId + role: section tagging with role (e.g., "Winner")
-    // - role only: event role tagging (e.g., "Organizer", "DJ")
-    // Invalid: videoId + sectionId, videoId without role, sectionId without role
-    if (videoId && sectionId) {
-      throw new Error("Cannot provide both videoId and sectionId");
-    }
-    if (videoId && !role) {
-      throw new Error("Role is required when videoId is provided");
-    }
-    if (sectionId && !role) {
-      throw new Error("Role is required when sectionId is provided");
-    }
-    if (!videoId && !sectionId && !role) {
+    // Validate role
+    if (!isValidRole(role)) {
       throw new Error(
-        "At least one of videoId, sectionId, or role must be provided"
+        `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
       );
     }
 
-    if (videoId) {
-      // Check if video belongs to a workshop (workshop videos don't support dancer/winner tags)
-      const isWorkshopVideo = await videoBelongsToWorkshop(videoId);
-      if (isWorkshopVideo) {
-        throw new Error(
-          "Dancer and winner tags are not supported for workshop videos"
-        );
-      }
-
-      // Validate video exists and belongs to event
-      const videoExists = await videoExistsInEvent(eventId, videoId);
-      if (!videoExists) {
-        throw new Error(`Video ${videoId} does not exist in event ${eventId}`);
-      }
-
-      // Role is required for video tags
-      if (!role) {
-        throw new Error("Role is required for video tags");
-      }
-
-      // Validate video role (allows both event roles and video-only roles like Dancer, Winner)
-      if (!isValidVideoRole(role)) {
-        throw new Error(
-          `Invalid video role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(
-            ", "
-          )}, ${VIDEO_ROLE_DANCER}, or ${VIDEO_ROLE_WINNER}`
-        );
-      }
-
-      // Tag user in specific video with role property on the relationship
-      // Support multiple roles by storing roles in an array
-      // Handle both videos directly in sections and videos in brackets
-      const neo4jRole = toNeo4jRoleFormat(role);
-      console.log(
-        "✅ [applyTag] Neo4j role:",
-        eventId,
-        videoId,
-        userId,
-        neo4jRole
-      );
-      const result = await session.run(
-        `
-        MATCH (u:User {id: $userId})
-        MATCH (v:Video {id: $videoId})
-        WHERE (v)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
-           OR (v)-[:IN]->(:Bracket)-[:IN]->(:Section)-[:IN]->(:Event {id: $eventId})
-        MERGE (u)-[r:IN]->(v)
-        ON CREATE SET r.roles = [$role]
-        ON MATCH SET r.roles = CASE 
-          WHEN r.roles IS NULL THEN [$role]
-          WHEN $role IN r.roles THEN r.roles 
-          ELSE r.roles + [$role]
-        END
-        RETURN r.roles as roles
-        `,
-        { eventId, videoId, userId, role: neo4jRole }
-      );
-
-      // Log result for debugging
-      if (result.records.length > 0) {
-        const roles = result.records[0]?.get("roles");
-        console.log(
-          `✅ [applyTag] Relationship created/updated with roles:`,
-          roles
-        );
-      } else {
-        console.warn(
-          `⚠️ [applyTag] No relationship created - WHERE clause may not have matched`
-        );
-      }
-    } else if (sectionId) {
-      // Validate section exists and belongs to event
-      const sectionExists = await sectionExistsInEvent(eventId, sectionId);
-      if (!sectionExists) {
-        throw new Error(
-          `Section ${sectionId} does not exist in event ${eventId}`
-        );
-      }
-
-      // Role is required for section tags
-      if (!role) {
-        throw new Error("Role is required for section tags");
-      }
-
-      // Validate section role (currently only Winner is supported)
-      if (!isValidSectionRole(role)) {
-        throw new Error(
-          `Invalid section role: ${role}. Must be: ${SECTION_ROLE_WINNER}`
-        );
-      }
-
-      // Tag user in specific section with role property on the relationship
-      const neo4jRole = toNeo4jRoleFormat(role);
-      console.log(
-        "✅ [applyTag] Section tag:",
-        eventId,
-        sectionId,
-        userId,
-        neo4jRole
-      );
-      await session.run(
-        `
-        MATCH (u:User {id: $userId})
-        MATCH (s:Section {id: $sectionId})
-        WHERE (s)-[:IN]->(:Event {id: $eventId})
-        MERGE (u)-[r:IN]->(s)
-        SET r.role = $role
-        `,
-        { eventId, sectionId, userId, role: neo4jRole }
-      );
-    } else if (role) {
-      // Validate role
-      if (!isValidRole(role)) {
-        throw new Error(
-          `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
-        );
-      }
-
-      // Tag user in event with specific role (converted to Neo4j format)
-      const neo4jRole = toNeo4jRoleFormat(role);
-      await session.run(
-        `
-        MATCH (u:User {id: $userId})
-        MATCH (e:Event {id: $eventId})
-        MERGE (u)-[r:${neo4jRole}]->(e)
-        `,
-        { eventId, userId, role: neo4jRole }
-      );
-    } else {
-      // Default tagging relationship (no role specified)
-      await session.run(
-        `
-        MATCH (u:User {id: $userId})
-        MATCH (e:Event {id: $eventId})
-        MERGE (u)-[:TAGGED]->(e)
-        `,
-        { eventId, userId }
-      );
-    }
+    // Tag user in event with specific role (converted to Neo4j format)
+    const neo4jRole = toNeo4jRoleFormat(role);
+    console.log(
+      "✅ [setEventRoles] Setting event role:",
+      eventId,
+      userId,
+      neo4jRole
+    );
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      MATCH (e:Event {id: $eventId})
+      MERGE (u)-[r:${neo4jRole}]->(e)
+      `,
+      { eventId, userId, role: neo4jRole }
+    );
   } finally {
     await session.close();
   }

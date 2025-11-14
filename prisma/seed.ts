@@ -11,7 +11,7 @@ import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "../src/lib/utils/roles";
 import {
   setVideoRoles,
   setSectionWinner,
-  applyTag,
+  setEventRoles,
 } from "../src/db/queries/team-member";
 
 const prisma = new PrismaClient();
@@ -1123,13 +1123,7 @@ async function main() {
 
   // Admin (test-user-3) tags themselves with an event role
   try {
-    await applyTag(
-      "event-4-seattle-admin",
-      null,
-      null,
-      "test-user-3",
-      "Photographer"
-    );
+    await setEventRoles("event-4-seattle-admin", "test-user-3", "Photographer");
     console.log(
       `✅ Tagged admin with event role: event-4-seattle-admin -> test-user-3 (Photographer)`
     );
