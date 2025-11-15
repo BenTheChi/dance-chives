@@ -110,13 +110,21 @@ export default async function WorkshopPage({ params }: PageProps) {
     .map((role) => fromNeo4jRoleFormat(role.title))
     .filter((role): role is string => role !== null);
 
-  // Aggregate all unique styles from videos
+  // Aggregate all unique styles from workshop and videos
   const allStyles = new Set<string>();
+
+  // Add workshop-level styles
+  if (workshop.workshopDetails.styles) {
+    workshop.workshopDetails.styles.forEach((style) => allStyles.add(style));
+  }
+
+  // Add video-level styles
   workshop.videos.forEach((video) => {
     if (video.styles) {
       video.styles.forEach((style) => allStyles.add(style));
     }
   });
+
   const workshopStyles = Array.from(allStyles);
 
   // Group roles by title (exclude TEAM_MEMBER - team members are shown separately)

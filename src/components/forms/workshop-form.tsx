@@ -93,6 +93,7 @@ const workshopDetailsSchema = z.object({
   endTime: z.string(),
   cost: z.string(),
   poster: pictureSchema.nullable().optional(),
+  styles: z.array(z.string()).optional(),
 });
 
 const workshopRoleSchema = z.object({
@@ -168,6 +169,7 @@ export default function WorkshopForm({
             endTime: "",
             cost: "",
             poster: null,
+            styles: [],
           },
           roles: [],
           videos: [],

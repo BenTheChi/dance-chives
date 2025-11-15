@@ -566,6 +566,15 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
+  // Get workshop styles
+  const workshopStylesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)-[:STYLE]->(style:Style)
+    RETURN w.id as workshopId, collect(style.name) as styles
+  `,
+    { id }
+  );
+
   // Get workshop gallery
   const workshopGalleryResult = await session.run(
     `
@@ -608,6 +617,11 @@ export const getEvent = async (id: string): Promise<Event> => {
   workshopVideoStylesResult.records.forEach((record) => {
     const key = `${record.get("workshopId")}:${record.get("videoId")}`;
     workshopVideoStylesMap.set(key, record.get("styles") || []);
+  });
+
+  const workshopStylesMap = new Map<string, string[]>();
+  workshopStylesResult.records.forEach((record) => {
+    workshopStylesMap.set(record.get("workshopId"), record.get("styles") || []);
   });
 
   const workshopGalleryMap = new Map<string, any[]>();
@@ -656,6 +670,7 @@ export const getEvent = async (id: string): Promise<Event> => {
         creatorId: w.creatorId || "",
         poster: w.poster,
         city: w.city,
+        styles: workshopStylesMap.get(workshopId) || [],
       },
       roles,
       videos,
@@ -2768,6 +2783,32 @@ export const EditEvent = async (event: Event) => {
            DETACH DELETE g`,
           { workshopId: workshop.id, gallery: workshop.gallery }
         );
+
+        // Update workshop styles
+        await tx.run(
+          `MATCH (w:Workshop {id: $workshopId})-[r:STYLE]->(:Style)
+           DELETE r`,
+          { workshopId: workshop.id }
+        );
+
+        if (
+          workshop.workshopDetails.styles &&
+          workshop.workshopDetails.styles.length > 0
+        ) {
+          const normalizedStyles = normalizeStyleNames(
+            workshop.workshopDetails.styles
+          );
+          await tx.run(
+            `
+            MATCH (w:Workshop {id: $workshopId})
+            WITH w, $styles AS styles
+            UNWIND styles AS styleName
+            MERGE (style:Style {name: styleName})
+            MERGE (w)-[:STYLE]->(style)
+            `,
+            { workshopId: workshop.id, styles: normalizedStyles }
+          );
+        }
       }
     }
 

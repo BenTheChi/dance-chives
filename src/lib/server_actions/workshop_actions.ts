@@ -46,6 +46,7 @@ interface addWorkshopProps {
       type: string;
       file: File | null;
     } | null;
+    styles?: string[];
   };
   roles?: {
     id: string;
@@ -155,6 +156,7 @@ export async function addWorkshop(props: addWorkshopProps): Promise<response> {
         creatorId: session.user.id,
         description: props.workshopDetails.description ?? "",
         schedule: props.workshopDetails.schedule ?? "",
+        styles: props.workshopDetails.styles || [],
       },
       roles: (props.roles || []).map((role) => ({
         ...role,
@@ -320,6 +322,7 @@ export async function editWorkshop(
         creatorId: workshopCreatorId,
         description: editedWorkshop.workshopDetails.description ?? "",
         schedule: editedWorkshop.workshopDetails.schedule ?? "",
+        styles: editedWorkshop.workshopDetails.styles || [],
       },
       roles: (editedWorkshop.roles || []).map((role) => ({
         ...role,

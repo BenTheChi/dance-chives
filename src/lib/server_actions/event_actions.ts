@@ -149,6 +149,7 @@ interface addEventProps {
         type: string;
         file: File | null;
       } | null;
+      styles?: string[];
     };
     roles?: {
       id: string;

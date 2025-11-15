@@ -124,6 +124,15 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
     { id }
   );
 
+  // Get workshop styles
+  const workshopStylesResult = await session.run(
+    `
+    MATCH (w:Workshop {id: $id})-[:STYLE]->(style:Style)
+    RETURN collect(style.name) as styles
+  `,
+    { id }
+  );
+
   // Get gallery
   const galleryResult = await session.run(
     `
@@ -144,6 +153,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   const roles = rolesResult.records[0]?.get("roles") || [];
   const videos = videosResult.records[0]?.get("videos") || [];
   const videoStyles = videoStylesResult.records;
+  const workshopStyles = workshopStylesResult.records[0]?.get("styles") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
 
   // Check if workshop exists
@@ -176,6 +186,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
       creatorId: workshop.creatorId,
       poster: workshop.poster,
       city: workshop.city,
+      styles: workshopStyles,
     },
     roles,
     videos: videosWithStyles,
@@ -205,18 +216,57 @@ export const getWorkshops = async (): Promise<WorkshopCard[]> => {
     {}
   );
 
+  // Get workshop styles
+  const workshopStylesResult = await session.run(
+    `
+    MATCH (w:Workshop)-[:STYLE]->(style:Style)
+    RETURN w.id as workshopId, collect(style.name) as styles
+  `,
+    {}
+  );
+
+  // Get video styles for workshops
+  const videoStylesResult = await session.run(
+    `
+    MATCH (w:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    WITH w.id as workshopId, collect(DISTINCT style.name) as styles
+    RETURN workshopId, styles
+  `,
+    {}
+  );
+
   session.close();
 
   const workshops = result.records[0]?.get("workshops") || [];
-  return workshops.map((w: any) => ({
-    id: w.id,
-    title: w.title,
-    date: w.startDate,
-    cost: w.cost,
-    city: w.city || "",
-    cityId: w.cityId,
-    imageUrl: w.imageUrl,
-  }));
+
+  // Create maps for styles
+  const workshopStylesMap = new Map<string, string[]>();
+  workshopStylesResult.records.forEach((record) => {
+    workshopStylesMap.set(record.get("workshopId"), record.get("styles") || []);
+  });
+
+  const videoStylesMap = new Map<string, string[]>();
+  videoStylesResult.records.forEach((record) => {
+    videoStylesMap.set(record.get("workshopId"), record.get("styles") || []);
+  });
+
+  return workshops.map((w: any) => {
+    // Combine workshop styles and video styles, dedupe
+    const workshopStyles = workshopStylesMap.get(w.id) || [];
+    const videoStyles = videoStylesMap.get(w.id) || [];
+    const allStyles = Array.from(new Set([...workshopStyles, ...videoStyles]));
+
+    return {
+      id: w.id,
+      title: w.title,
+      date: w.startDate,
+      cost: w.cost,
+      city: w.city || "",
+      cityId: w.cityId,
+      imageUrl: w.imageUrl,
+      styles: allStyles,
+    };
+  });
 };
 
 // Helper function to create workshop videos
@@ -332,6 +382,31 @@ const createWorkshopGalleryPhotos = async (
         }
       );
     }
+  } finally {
+    await session.close();
+  }
+};
+
+// Helper function to create workshop styles
+const createWorkshopStyles = async (
+  workshopId: string,
+  styles: string[] | undefined
+): Promise<void> => {
+  if (!styles || styles.length === 0) return;
+
+  const session = driver.session();
+  try {
+    const normalizedStyles = normalizeStyleNames(styles);
+    await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})
+      WITH w, $styles AS styles
+      UNWIND styles AS styleName
+      MERGE (style:Style {name: styleName})
+      MERGE (w)-[:STYLE]->(style)
+      `,
+      { workshopId, styles: normalizedStyles }
+    );
   } finally {
     await session.close();
   }
@@ -509,13 +584,14 @@ export const insertWorkshop = async (workshop: Workshop): Promise<any> => {
 
   await session.close();
 
-  // Create videos, gallery, and poster in separate queries
+  // Create videos, gallery, poster, and styles in separate queries
   await createWorkshopVideos(workshop.id, workshop.videos);
   await createWorkshopPoster(
     workshop.id,
     workshop.workshopDetails.poster || null
   );
   await createWorkshopGalleryPhotos(workshop.id, workshop.gallery);
+  await createWorkshopStyles(workshop.id, workshop.workshopDetails.styles);
 
   return workshopNode.properties;
 };
@@ -697,6 +773,32 @@ export const editWorkshop = async (
     `,
       { id: workshopId, eventId: workshop.associatedEventId || null }
     );
+
+    // Update workshop styles
+    await tx.run(
+      `MATCH (w:Workshop {id: $id})-[r:STYLE]->(:Style)
+       DELETE r`,
+      { id: workshopId }
+    );
+
+    if (
+      workshop.workshopDetails.styles &&
+      workshop.workshopDetails.styles.length > 0
+    ) {
+      const normalizedStyles = normalizeStyleNames(
+        workshop.workshopDetails.styles
+      );
+      await tx.run(
+        `
+        MATCH (w:Workshop {id: $id})
+        WITH w, $styles AS styles
+        UNWIND styles AS styleName
+        MERGE (style:Style {name: styleName})
+        MERGE (w)-[:STYLE]->(style)
+        `,
+        { id: workshopId, styles: normalizedStyles }
+      );
+    }
 
     // Delete videos not in the new list
     await tx.run(

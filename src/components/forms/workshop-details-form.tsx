@@ -21,6 +21,7 @@ import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
 import DateInput from "../DateInput";
 import { Switch } from "../ui/switch";
+import { StyleMultiSelect } from "../ui/style-multi-select";
 
 interface WorkshopDetailsFormProps {
   control: Control<any>;
@@ -319,6 +320,30 @@ export function WorkshopDetailsForm({
                 value={field.value ?? ""}
                 className="bg-white"
                 placeholder="e.g., $50"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
+        name="workshopDetails.styles"
+        render={({ field }) => (
+          <FormItem className="w-full">
+            <FormLabel>Styles</FormLabel>
+            <FormControl>
+              <StyleMultiSelect
+                value={field.value ?? []}
+                onChange={(styles) => {
+                  field.onChange(styles);
+                  setValue("workshopDetails.styles", styles, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  });
+                }}
+                placeholder="Select styles..."
               />
             </FormControl>
             <FormMessage />

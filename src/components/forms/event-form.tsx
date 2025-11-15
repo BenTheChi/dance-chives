@@ -166,6 +166,7 @@ const workshopDetailsSchema = z.object({
   endTime: z.preprocess((val) => val ?? "", z.string().optional()),
   cost: z.preprocess((val) => val ?? "", z.string().optional()),
   poster: pictureSchema.nullable().optional(),
+  styles: z.array(z.string()).optional(),
 });
 
 const workshopRoleSchema = z.object({
@@ -417,6 +418,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         schedule: "",
         cost: "",
         poster: null,
+        styles: [],
         city: {
           id: 0,
           name: "",

@@ -97,6 +97,7 @@ export default async function EditWorkshopPage({
     startTime: currWorkshop.workshopDetails.startTime || "",
     endTime: currWorkshop.workshopDetails.endTime || "",
     cost: currWorkshop.workshopDetails.cost || "",
+    styles: currWorkshop.workshopDetails.styles || [],
     poster: currWorkshop.workshopDetails.poster
       ? {
           ...currWorkshop.workshopDetails.poster,

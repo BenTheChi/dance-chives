@@ -17,6 +17,7 @@ export interface WorkshopDetails {
   cost?: string;
   poster?: Picture | null;
   city: City;
+  styles?: string[];
 }
 
 export interface Workshop {
@@ -44,4 +45,5 @@ export interface WorkshopCard {
   city: string;
   cityId?: number;
   cost?: string;
+  styles?: string[];
 }
