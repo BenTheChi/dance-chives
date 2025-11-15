@@ -9,23 +9,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { AVAILABLE_ROLES } from "@/lib/utils/roles";
+import { WORKSHOP_ROLES, fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import {
-  tagSelfWithRole,
-  getPendingTagRequest,
+  tagSelfWithRoleForWorkshop,
+  getPendingTagRequestForWorkshop,
 } from "@/lib/server_actions/request_actions";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 interface TagSelfDropdownProps {
-  eventId: string;
+  workshopId: string;
   currentUserRoles: string[]; // Roles already assigned to the current user
   isTeamMember?: boolean; // Whether the user is already a team member
 }
 
 export function TagSelfDropdown({
-  eventId,
+  workshopId,
   currentUserRoles,
   isTeamMember = false,
 }: TagSelfDropdownProps) {
@@ -36,11 +36,12 @@ export function TagSelfDropdown({
   const router = useRouter();
 
   // Filter out roles already assigned to the current user
-  // Also filter out "Team Member" if user is already a team member
-  const availableRoles = AVAILABLE_ROLES.filter(
+  // Convert WORKSHOP_ROLES to display format for comparison
+  // Also filter out "TEAM_MEMBER" if user is already a team member
+  const availableRoles = WORKSHOP_ROLES.filter(
     (role) =>
-      !currentUserRoles.includes(role) &&
-      !(role === "Team Member" && isTeamMember)
+      !currentUserRoles.includes(fromNeo4jRoleFormat(role) || role) &&
+      !(role === "TEAM_MEMBER" && isTeamMember)
   );
 
   // Check for pending requests for each available role
@@ -54,18 +55,17 @@ export function TagSelfDropdown({
       await Promise.all(
         availableRoles.map(async (role) => {
           try {
-            // Note: Role is stored in database as-is (e.g., "Organizer", not "ORGANIZER"), so we search for it as-is
-            const request = await getPendingTagRequest(
-              eventId,
-              undefined,
+            // Note: Workshop roles are stored in uppercase (e.g., "TEAM_MEMBER")
+            const request = await getPendingTagRequestForWorkshop(
+              workshopId,
               session.user.id,
-              undefined,
               role
             );
             if (request) {
               pendingSet.add(role);
             }
           } catch (error) {
+            // Silently handle errors - workshop requests may not be fully supported yet
             console.error(`Error checking pending request for ${role}:`, error);
           }
         })
@@ -74,7 +74,7 @@ export function TagSelfDropdown({
     };
 
     checkPendingRequests();
-  }, [eventId, session?.user?.id, availableRoles.join(",")]);
+  }, [workshopId, session?.user?.id, availableRoles.join(",")]);
 
   // Don't show the dropdown if user is not logged in or all roles are taken
   if (!session?.user?.id || availableRoles.length === 0) {
@@ -91,22 +91,28 @@ export function TagSelfDropdown({
 
     startTransition(async () => {
       try {
-        const result = await tagSelfWithRole(eventId, role);
+        const result = await tagSelfWithRoleForWorkshop(workshopId, role);
 
         if (result.directTag) {
-          toast.success(`Successfully tagged yourself as ${role}`);
+          toast.success(
+            `Successfully tagged yourself as ${
+              fromNeo4jRoleFormat(role) || role
+            }`
+          );
           setSelectedRole(""); // Reset selection
           router.refresh(); // Refresh the page to show the updated roles
         } else {
-          toast.success(`Request to tag yourself as ${role} has been created`);
+          toast.success(
+            `Request to tag yourself as ${
+              fromNeo4jRoleFormat(role) || role
+            } has been created`
+          );
           setSelectedRole(""); // Reset selection
           // Refresh to get pending request status
           try {
-            const request = await getPendingTagRequest(
-              eventId,
-              undefined,
+            const request = await getPendingTagRequestForWorkshop(
+              workshopId,
               session?.user?.id,
-              undefined,
               role
             );
             if (request) {
@@ -125,16 +131,16 @@ export function TagSelfDropdown({
           error.message.includes("already exists")
         ) {
           try {
-            const request = await getPendingTagRequest(
-              eventId,
-              undefined,
+            const request = await getPendingTagRequestForWorkshop(
+              workshopId,
               session?.user?.id,
-              undefined,
               role
             );
             if (request) {
               setPendingRoles((prev) => new Set(prev).add(role));
-              toast.info(`${role} tag request pending`);
+              toast.info(
+                `${fromNeo4jRoleFormat(role) || role} tag request pending`
+              );
               return;
             }
           } catch (fetchError) {
@@ -158,7 +164,7 @@ export function TagSelfDropdown({
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (
             <Badge key={role} variant="outline" className="w-fit">
-              {role} tag request pending
+              {fromNeo4jRoleFormat(role) || role} tag request pending
             </Badge>
           ))}
         </div>
@@ -180,7 +186,7 @@ export function TagSelfDropdown({
         <SelectContent>
           {selectableRoles.map((role) => (
             <SelectItem key={role} value={role}>
-              {role}
+              {fromNeo4jRoleFormat(role) || role}
             </SelectItem>
           ))}
         </SelectContent>
@@ -189,7 +195,7 @@ export function TagSelfDropdown({
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (
             <Badge key={role} variant="outline" className="w-fit">
-              {role} tag request pending
+              {fromNeo4jRoleFormat(role) || role} tag request pending
             </Badge>
           ))}
         </div>

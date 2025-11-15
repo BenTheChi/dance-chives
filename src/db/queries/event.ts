@@ -151,8 +151,10 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-  // Get roles
-  const validRoleFormats = getNeo4jRoleFormats();
+  // Get roles (exclude TEAM_MEMBER - team members are shown separately)
+  const validRoleFormats = getNeo4jRoleFormats().filter(
+    (role) => role !== "TEAM_MEMBER"
+  );
   const rolesResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[roleRel]-(user:User)
@@ -519,7 +521,10 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-  // Get workshop roles
+  // Get workshop roles (exclude TEAM_MEMBER - team members are shown separately)
+  const validWorkshopRoles = WORKSHOP_ROLES.filter(
+    (role) => role !== "TEAM_MEMBER"
+  );
   const workshopRolesResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[:IN]-(w:Workshop)<-[roleRel]-(user:User)
@@ -534,7 +539,7 @@ export const getEvent = async (id: string): Promise<Event> => {
       }
     }) as roles
   `,
-    { id, validRoles: WORKSHOP_ROLES }
+    { id, validRoles: validWorkshopRoles }
   );
 
   // Get workshop videos (workshops don't have dancer/winner tags)
@@ -1115,7 +1120,12 @@ CALL {
   WITH e, $roles AS roles
   UNWIND roles AS roleData
   MATCH (u:User { id: roleData.user.id })
-  CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e) YIELD rel
+  WITH u, e, roleData,
+    CASE 
+      WHEN roleData.title = 'Team Member' THEN 'TEAM_MEMBER'
+      ELSE toUpper(roleData.title)
+    END AS relationshipType
+  CALL apoc.merge.relationship(u, relationshipType, {}, {}, e) YIELD rel
   RETURN count(rel) AS roleCount
 }
 
@@ -1993,26 +2003,93 @@ export const EditEvent = async (event: Event) => {
     );
 
     // Update roles
-    await tx.run(
-      `MATCH (e:Event {id: $id})
-       UNWIND $roles AS roleData
-       MERGE (u:User { id: roleData.user.id })
-       WITH u, e, roleData
-       CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e)
-       YIELD rel
-       RETURN e, u
-       `,
-      { id, roles: event.roles }
-    );
+    const validRoleFormats = getNeo4jRoleFormats();
+    // Separate regular roles from Team Member roles
+    const regularRoles =
+      event.roles?.filter((role) => role.title !== "Team Member") || [];
+    const teamMemberRoles =
+      event.roles?.filter((role) => role.title === "Team Member") || [];
 
-    // Delete roles not in the new list
-    await tx.run(
-      `MATCH (e:Event {id: $id})
-       MATCH (u:User)-[r]->(e)
-       WHERE NOT u.id IN [role IN $roles | role.user.id]
-       DELETE r`,
-      { id, roles: event.roles }
+    // Handle regular roles
+    if (regularRoles.length > 0) {
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         UNWIND $roles AS roleData
+         MERGE (u:User { id: roleData.user.id })
+         WITH u, e, roleData
+         CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e)
+         YIELD rel
+         RETURN e, u
+         `,
+        { id, roles: regularRoles }
+      );
+    }
+
+    // Handle Team Member roles (create TEAM_MEMBER relationships)
+    if (teamMemberRoles.length > 0) {
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         UNWIND $roles AS roleData
+         MERGE (u:User { id: roleData.user.id })
+         MERGE (u)-[:TEAM_MEMBER]->(e)
+         RETURN e, u
+         `,
+        { id, roles: teamMemberRoles }
+      );
+    }
+
+    // Delete roles not in the new list (but preserve CREATED and TEAM_MEMBER relationships)
+    // First, delete regular role relationships (exclude TEAM_MEMBER from deletion)
+    const regularRoleFormats = validRoleFormats.filter(
+      (r) => r !== "TEAM_MEMBER"
     );
+    if (regularRoles.length > 0) {
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         MATCH (u:User)-[r]->(e)
+         WHERE type(r) IN $validRoles AND NOT u.id IN [role IN $roles | role.user.id]
+         DELETE r`,
+        { id, roles: regularRoles, validRoles: regularRoleFormats }
+      );
+    } else {
+      // If no regular roles, delete all role relationships except CREATED and TEAM_MEMBER
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         MATCH (u:User)-[r]->(e)
+         WHERE type(r) IN $validRoles
+         DELETE r`,
+        { id, validRoles: regularRoleFormats }
+      );
+    }
+
+    // Delete Team Member relationships not in the new list
+    if (teamMemberRoles.length > 0) {
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         MATCH (u:User)-[r:TEAM_MEMBER]->(e)
+         WHERE NOT u.id IN [role IN $roles | role.user.id]
+         DELETE r`,
+        { id, roles: teamMemberRoles }
+      );
+    } else {
+      // If no team member roles, delete all TEAM_MEMBER relationships (but preserve CREATED)
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         MATCH (u:User)-[r:TEAM_MEMBER]->(e)
+         DELETE r`,
+        { id }
+      );
+    }
+
+    // Ensure creator relationship is preserved/recreated
+    if (eventDetails.creatorId) {
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         MATCH (creator:User {id: $creatorId})
+         MERGE (creator)-[:CREATED]->(e)`,
+        { id, creatorId: eventDetails.creatorId }
+      );
+    }
 
     // Update sub events
     await tx.run(
@@ -2538,7 +2615,16 @@ export const EditEvent = async (event: Event) => {
             (role) => role !== null && role.user && role.user.id
           );
 
-          if (validRoles.length > 0) {
+          // Separate regular roles from TEAM_MEMBER roles
+          const regularRoles = validRoles.filter(
+            (role) => role && role.title && role.title !== "TEAM_MEMBER"
+          );
+          const teamMemberRoles = validRoles.filter(
+            (role) => role && role.title === "TEAM_MEMBER"
+          );
+
+          // Handle regular roles
+          if (regularRoles.length > 0) {
             await tx.run(
               `MATCH (w:Workshop {id: $workshopId})
                UNWIND $roles AS roleData
@@ -2549,23 +2635,56 @@ export const EditEvent = async (event: Event) => {
                CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, w)
                YIELD rel
                RETURN w, u`,
-              { workshopId: workshop.id, roles: validRoles }
+              { workshopId: workshop.id, roles: regularRoles }
             );
+          }
 
-            // Delete roles not in the new list
+          // Handle TEAM_MEMBER roles (create TEAM_MEMBER relationships)
+          if (teamMemberRoles.length > 0) {
+            await tx.run(
+              `MATCH (w:Workshop {id: $workshopId})
+               UNWIND $roles AS roleData
+               MERGE (u:User { id: roleData.user.id })
+               MERGE (u)-[:TEAM_MEMBER]->(w)
+               RETURN w, u`,
+              { workshopId: workshop.id, roles: teamMemberRoles }
+            );
+          }
+
+          // Delete regular roles not in the new list
+          if (regularRoles.length > 0) {
             await tx.run(
               `MATCH (w:Workshop {id: $workshopId})
                MATCH (u:User)-[r]->(w)
                WHERE type(r) IN ['ORGANIZER', 'TEACHER'] AND NOT u.id IN [role IN $roles WHERE role.user.id IS NOT NULL | role.user.id]
                DELETE r`,
-              { workshopId: workshop.id, roles: validRoles }
+              { workshopId: workshop.id, roles: regularRoles }
             );
           } else {
-            // If no valid roles, remove all existing roles
+            // If no regular roles, remove all regular role relationships
             await tx.run(
               `MATCH (w:Workshop {id: $workshopId})
                MATCH (u:User)-[r]->(w)
                WHERE type(r) IN ['ORGANIZER', 'TEACHER']
+               DELETE r`,
+              { workshopId: workshop.id }
+            );
+          }
+
+          // Delete TEAM_MEMBER relationships not in the new list
+          if (teamMemberRoles.length > 0) {
+            await tx.run(
+              `MATCH (w:Workshop {id: $workshopId})
+               MATCH (u:User)-[r:TEAM_MEMBER]->(w)
+               WHERE NOT u.id IN [role IN $roles WHERE role.user.id IS NOT NULL | role.user.id]
+               DELETE r`,
+              { workshopId: workshop.id, roles: teamMemberRoles }
+            );
+          } else {
+            // If no team member roles, remove all TEAM_MEMBER relationships
+            await tx.run(
+              `MATCH (w:Workshop {id: $workshopId})
+               MATCH (u:User)-[r:TEAM_MEMBER]->(w)
                DELETE r`,
               { workshopId: workshop.id }
             );
@@ -2575,7 +2694,7 @@ export const EditEvent = async (event: Event) => {
           await tx.run(
             `MATCH (w:Workshop {id: $workshopId})
              MATCH (u:User)-[r]->(w)
-             WHERE type(r) IN ['ORGANIZER', 'TEACHER']
+             WHERE type(r) IN ['ORGANIZER', 'TEACHER', 'TEAM_MEMBER']
              DELETE r`,
             { workshopId: workshop.id }
           );

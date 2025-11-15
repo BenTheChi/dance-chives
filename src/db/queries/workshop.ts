@@ -82,7 +82,8 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
     { id }
   );
 
-  // Get roles
+  // Get roles (exclude TEAM_MEMBER - team members are shown separately)
+  const validRoles = WORKSHOP_ROLES.filter((role) => role !== "TEAM_MEMBER");
   const rolesResult = await session.run(
     `
     MATCH (w:Workshop {id: $id})<-[roleRel]-(user:User)
@@ -97,7 +98,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
       }
     }) as roles
   `,
-    { id, validRoles: WORKSHOP_ROLES }
+    { id, validRoles }
   );
 
   // Get videos (workshops don't have dancer/winner tags)
@@ -452,7 +453,12 @@ export const insertWorkshop = async (workshop: Workshop): Promise<any> => {
       WITH w, roleData
       WHERE roleData.user.id IS NOT NULL
       MATCH (u:User { id: roleData.user.id })
-      CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, w) YIELD rel
+      WITH u, w, roleData,
+        CASE 
+          WHEN roleData.title = 'TEAM_MEMBER' THEN 'TEAM_MEMBER'
+          ELSE toUpper(roleData.title)
+        END AS relationshipType
+      CALL apoc.merge.relationship(u, relationshipType, {}, {}, w) YIELD rel
       RETURN count(rel) AS roleCount
     }
 

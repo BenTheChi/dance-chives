@@ -9,6 +9,7 @@ export const AVAILABLE_ROLES = [
   "Videographer",
   "Designer",
   "MC",
+  "Team Member",
 ] as const;
 
 /**
@@ -33,7 +34,7 @@ export const SECTION_ROLE_WINNER = "Winner";
  * Available roles for workshops
  * These are the only roles that can be assigned to users in workshops
  */
-export const WORKSHOP_ROLES = ["ORGANIZER", "TEACHER"] as const;
+export const WORKSHOP_ROLES = ["ORGANIZER", "TEACHER", "TEAM_MEMBER"] as const;
 
 /**
  * Type for a valid workshop role title
@@ -113,15 +114,19 @@ export function isValidRole(role: string): role is RoleTitle {
 /**
  * Convert role to Neo4j format (uppercase)
  * Used when saving roles to Neo4j
+ * Special case: "Team Member" becomes "TEAM_MEMBER"
  */
 export function toNeo4jRoleFormat(role: string): string {
+  if (role === "Team Member") {
+    return "TEAM_MEMBER";
+  }
   return role.toUpperCase();
 }
 
 /**
  * Convert role from Neo4j format to display format
  * Neo4j stores roles in uppercase, but we want to display them with proper capitalization
- * Special cases: DJ and MC stay as-is
+ * Special cases: DJ and MC stay as-is, TEAM_MEMBER becomes "Team Member"
  */
 export function fromNeo4jRoleFormat(
   role: string | null | undefined
@@ -131,6 +136,9 @@ export function fromNeo4jRoleFormat(
   }
   if (role === "DJ" || role === "MC") {
     return role;
+  }
+  if (role === "TEAM_MEMBER") {
+    return "Team Member";
   }
   return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 }

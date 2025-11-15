@@ -599,7 +599,7 @@ export async function editEvent(
 
     // Create the EventDetails object
     const eventDetails: EventDetails = {
-      creatorId: session.user.id,
+      creatorId: oldEvent.eventDetails.creatorId,
       title: editedEvent.eventDetails.title,
       description: editedEvent.eventDetails.description ?? "",
       address: editedEvent.eventDetails.address,

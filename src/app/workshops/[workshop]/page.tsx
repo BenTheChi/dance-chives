@@ -24,7 +24,9 @@ import {
   isWorkshopTeamMember,
 } from "@/db/queries/workshop";
 import { getEventTeamMembers } from "@/db/queries/team-member";
+import { getUser } from "@/db/queries/user";
 import VideoGallery from "@/components/VideoGallery";
+import { TagSelfDropdown } from "@/components/workshops/TagSelfDropdown";
 
 type PageProps = {
   params: Promise<{ workshop: string }>;
@@ -99,8 +101,12 @@ export default async function WorkshopPage({ params }: PageProps) {
       : false;
 
   // Get current user's roles for this workshop
+  // Exclude TEAM_MEMBER - team members are shown separately
   const currentUserRoles = workshop.roles
-    .filter((role) => role.user?.id === session?.user?.id)
+    .filter(
+      (role) =>
+        role.user?.id === session?.user?.id && role.title !== "TEAM_MEMBER"
+    )
     .map((role) => fromNeo4jRoleFormat(role.title))
     .filter((role): role is string => role !== null);
 
@@ -113,10 +119,10 @@ export default async function WorkshopPage({ params }: PageProps) {
   });
   const workshopStyles = Array.from(allStyles);
 
-  // Group roles by title
+  // Group roles by title (exclude TEAM_MEMBER - team members are shown separately)
   const rolesByTitle = new Map<string, Array<(typeof workshop.roles)[0]>>();
   workshop.roles.forEach((role) => {
-    if (role.user) {
+    if (role.user && role.title !== "TEAM_MEMBER") {
       const title = role.title;
       if (!rolesByTitle.has(title)) {
         rolesByTitle.set(title, []);
@@ -124,6 +130,29 @@ export default async function WorkshopPage({ params }: PageProps) {
       rolesByTitle.get(title)!.push(role);
     }
   });
+
+  // Fetch creator and team members for Team Members section
+  const creator = workshop.workshopDetails.creatorId
+    ? await getUser(workshop.workshopDetails.creatorId)
+    : null;
+  const teamMemberIds = await getWorkshopTeamMembers(workshop.id);
+  const teamMembers = await Promise.all(teamMemberIds.map((id) => getUser(id)));
+  const validTeamMembers = teamMembers.filter(
+    (member): member is NonNullable<typeof member> => member !== null
+  );
+
+  // Fetch event team members separately if workshop is associated with an event
+  let eventTeamMemberIds: string[] = [];
+  let eventTeamMembers: NonNullable<Awaited<ReturnType<typeof getUser>>>[] = [];
+  if (workshop.associatedEventId) {
+    eventTeamMemberIds = await getEventTeamMembers(workshop.associatedEventId);
+    const eventTeamMembersData = await Promise.all(
+      eventTeamMemberIds.map((id) => getUser(id))
+    );
+    eventTeamMembers = eventTeamMembersData.filter(
+      (member): member is NonNullable<typeof member> => member !== null
+    );
+  }
 
   return (
     <>
@@ -240,9 +269,14 @@ export default async function WorkshopPage({ params }: PageProps) {
             </section>
 
             {/* Roles Section */}
-            {rolesByTitle.size > 0 && (
-              <section className="bg-green-100 p-4 rounded-md">
-                <h2 className="text-xl font-bold mb-2">Roles</h2>
+            <section className="bg-green-100 p-4 rounded-md">
+              <h2 className="text-xl font-bold mb-2">Roles</h2>
+              <TagSelfDropdown
+                workshopId={workshop.id}
+                currentUserRoles={currentUserRoles}
+                isTeamMember={isTeamMember}
+              />
+              {rolesByTitle.size > 0 && (
                 <div className="flex flex-col gap-2">
                   {Array.from(rolesByTitle.entries()).map(
                     ([roleTitle, roles]) => (
@@ -250,33 +284,99 @@ export default async function WorkshopPage({ params }: PageProps) {
                         key={roleTitle}
                         className="flex flex-row gap-2 items-center flex-wrap"
                       >
-                        <Badge variant="secondary">
-                          {fromNeo4jRoleFormat(roleTitle) || roleTitle}
-                        </Badge>
-                        <div className="flex flex-row gap-1 items-center flex-wrap">
-                          {roles.map((role, index) => (
-                            <span key={`${role.id}-${index}`}>
-                              {role.user?.username ? (
-                                <Link
-                                  href={`/profiles/${role.user.username}`}
-                                  className="text-blue-500 hover:text-blue-700 hover:underline"
-                                >
-                                  {role.user.displayName || role.user.username}
-                                </Link>
-                              ) : (
-                                <span className="text-blue-500">
-                                  {role.user?.displayName ||
-                                    role.user?.username}
-                                </span>
-                              )}
-                              {index < roles.length - 1 && (
-                                <span className="text-gray-500">, </span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
+                        <span>
+                          {fromNeo4jRoleFormat(roleTitle) || roleTitle}:{" "}
+                        </span>
+                        {roles.map((role, index) => (
+                          <Badge
+                            key={`${role.id}-${index}`}
+                            variant="secondary"
+                            asChild
+                          >
+                            {role.user?.username ? (
+                              <Link href={`/profiles/${role.user.username}`}>
+                                {role.user.displayName || role.user.username}
+                              </Link>
+                            ) : (
+                              <span>
+                                {role.user?.displayName || role.user?.username}
+                              </span>
+                            )}
+                          </Badge>
+                        ))}
                       </div>
                     )
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Team Members Section */}
+            {(creator ||
+              validTeamMembers.length > 0 ||
+              eventTeamMembers.length > 0) && (
+              <section className="bg-green-100 p-4 rounded-md">
+                <h2 className="text-xl font-bold mb-2">Team Members</h2>
+                <div className="flex flex-col gap-2">
+                  {creator && (
+                    <div className="flex flex-row gap-2 items-center flex-wrap">
+                      <span>Creator: </span>
+                      <Badge variant="secondary" asChild>
+                        {creator.username ? (
+                          <Link href={`/profiles/${creator.username}`}>
+                            {creator.displayName || creator.username}
+                          </Link>
+                        ) : (
+                          <span>{creator.displayName || creator.username}</span>
+                        )}
+                      </Badge>
+                    </div>
+                  )}
+                  {validTeamMembers.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-row gap-2 items-center flex-wrap">
+                        {validTeamMembers.map((member) => (
+                          <Badge key={member.id} variant="secondary" asChild>
+                            {member.username ? (
+                              <Link href={`/profiles/${member.username}`}>
+                                {member.displayName || member.username}
+                              </Link>
+                            ) : (
+                              <span>
+                                {member.displayName || member.username}
+                              </span>
+                            )}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {eventTeamMembers.length > 0 && (
+                    <div className="flex flex-col gap-2 mt-2">
+                      <div className="text-sm font-semibold text-gray-600">
+                        Team Members (from Event):
+                      </div>
+                      <div className="flex flex-row gap-2 items-center flex-wrap">
+                        {eventTeamMembers.map((member) => (
+                          <Badge
+                            key={member.id}
+                            variant="outline"
+                            className="border-blue-300 text-blue-700"
+                            asChild
+                          >
+                            {member.username ? (
+                              <Link href={`/profiles/${member.username}`}>
+                                {member.displayName || member.username}
+                              </Link>
+                            ) : (
+                              <span>
+                                {member.displayName || member.username}
+                              </span>
+                            )}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </section>

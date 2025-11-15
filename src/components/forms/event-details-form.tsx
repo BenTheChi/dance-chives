@@ -24,9 +24,7 @@ interface EventDetailsFormProps {
 }
 
 async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
-  return fetch(
-    `http://geodb-free-service.wirefreethought.com/v1/geo/places?limit=10&sort=population&types=CITY&namePrefix=${keyword}`
-  )
+  return fetch(`/api/geodb/places?keyword=${encodeURIComponent(keyword)}`)
     .then((response) => {
       if (!response.ok) {
         console.error("Failed to fetch cities", response.statusText);
@@ -81,7 +79,7 @@ export function EventDetailsForm({
         {/* City Field */}
 
         <div className="w-1/2">
-          <DebouncedSearchSelect<CitySearchItem>
+          <DebouncedSearchSelect<CitySearchItem, FormValues>
             control={control}
             name="eventDetails.city"
             onSearch={getCitySearchItems}

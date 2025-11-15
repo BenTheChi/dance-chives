@@ -14,11 +14,13 @@ import {
 import {
   isTeamMember,
   addTeamMember,
+  addWorkshopTeamMember,
   setVideoRoles,
   setSectionWinner,
   setSectionWinners,
   getSectionWinnerIds,
   setEventRoles, // Still needed for event roles (not part of this refactor)
+  setWorkshopRoles,
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
@@ -32,6 +34,7 @@ import {
   getEventCreator,
   isEventCreator,
   getEventTeamMembers,
+  isWorkshopTeamMember,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
 import { getUser, getUserByUsername } from "@/db/queries/user";
@@ -40,6 +43,8 @@ import {
   AVAILABLE_ROLES,
   isValidVideoRole,
   isValidSectionRole,
+  isValidWorkshopRole,
+  WORKSHOP_ROLES,
   VIDEO_ROLE_DANCER,
   VIDEO_ROLE_WINNER,
   SECTION_ROLE_WINNER,
@@ -1573,6 +1578,7 @@ export async function getDashboardData() {
  * Tag self with a role in an event
  * If user has permission (admin, super admin, moderator, event creator, or team member), tags directly
  * Otherwise, creates a tagging request
+ * Special handling: "Team Member" role creates a TEAM_MEMBER relationship/request instead of a role relationship
  */
 export async function tagSelfWithRole(eventId: string, role: string) {
   const userId = await requireAuth();
@@ -1591,6 +1597,46 @@ export async function tagSelfWithRole(eventId: string, role: string) {
     throw new Error("Event not found");
   }
 
+  // Special handling for "Team Member" role
+  if (role === "Team Member") {
+    // Check if user has permission to add team member directly
+    const authLevel = session?.user?.auth || 0;
+    const canAddDirectly =
+      authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+      (await isEventCreator(eventId, userId));
+
+    if (canAddDirectly) {
+      // User has permission - add team member directly
+      try {
+        await addTeamMember(eventId, userId);
+        return { success: true, directTag: true };
+      } catch (error) {
+        console.error("Error adding team member:", error);
+        throw error;
+      }
+    } else {
+      // User doesn't have permission - create a team member request
+      console.log(
+        "🔵 [tagSelfWithRole] User doesn't have permission, creating team member request..."
+      );
+      try {
+        const result = await createTeamMemberRequest(eventId);
+        console.log(
+          "✅ [tagSelfWithRole] Team member request created successfully:",
+          result.request.id
+        );
+        return { success: true, directTag: false, request: result.request };
+      } catch (error) {
+        console.error(
+          "❌ [tagSelfWithRole] Error creating team member request:",
+          error
+        );
+        throw error;
+      }
+    }
+  }
+
+  // Regular role handling (non-Team Member roles)
   // Check if user has permission to tag directly
   const authLevel = session?.user?.auth || 0;
   const canTagDirectly =
@@ -1631,6 +1677,109 @@ export async function tagSelfWithRole(eventId: string, role: string) {
       );
       throw error;
     }
+  }
+}
+
+/**
+ * Tag self with a role in a workshop
+ * If user has permission (admin, super admin, moderator, or workshop creator), tags directly
+ * Otherwise, creates a tagging request (note: workshop team member requests not yet supported in DB)
+ * Special handling: "TEAM_MEMBER" role creates a TEAM_MEMBER relationship instead of a role relationship
+ */
+export async function tagSelfWithRoleForWorkshop(
+  workshopId: string,
+  role: string
+) {
+  const userId = await requireAuth();
+  const session = await auth();
+
+  // Import workshop creator check
+  const { isWorkshopCreator } = await import("@/db/queries/workshop");
+
+  // Validate role
+  if (!isValidWorkshopRole(role)) {
+    throw new Error(
+      `Invalid role: ${role}. Must be one of: ${WORKSHOP_ROLES.join(", ")}`
+    );
+  }
+
+  // Validate workshop exists and get associated event ID
+  const workshopSession = driver.session();
+  let associatedEventId: string | null = null;
+  try {
+    const workshopCheck = await workshopSession.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})
+      OPTIONAL MATCH (w)-[:IN]->(e:Event)
+      RETURN w, e.id as eventId
+      `,
+      { workshopId }
+    );
+    if (workshopCheck.records.length === 0) {
+      throw new Error("Workshop not found");
+    }
+    associatedEventId = workshopCheck.records[0]?.get("eventId") || null;
+  } finally {
+    await workshopSession.close();
+  }
+
+  // Check if user is event team member (if workshop has associated event)
+  let isEventTeamMember = false;
+  if (associatedEventId) {
+    isEventTeamMember = await isTeamMember(associatedEventId, userId);
+  }
+
+  // Special handling for "TEAM_MEMBER" role
+  if (role === "TEAM_MEMBER") {
+    // Check if user has permission to add team member directly
+    const authLevel = session?.user?.auth || 0;
+    const canAddDirectly =
+      authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+      (await isWorkshopCreator(workshopId, userId)) ||
+      isEventTeamMember; // Event team members can add themselves as workshop team members
+
+    if (canAddDirectly) {
+      // User has permission - add team member directly
+      try {
+        await addWorkshopTeamMember(workshopId, userId);
+        return { success: true, directTag: true };
+      } catch (error) {
+        console.error("Error adding workshop team member:", error);
+        throw error;
+      }
+    } else {
+      // User doesn't have permission - for now, throw error since workshop team member requests aren't supported
+      // TODO: Add workshop team member request support when database schema is updated
+      throw new Error(
+        "You do not have permission to add yourself as a team member. Workshop team member requests are not yet supported."
+      );
+    }
+  }
+
+  // Regular role handling (non-TEAM_MEMBER roles)
+  // Check if user has permission to tag directly
+  const authLevel = session?.user?.auth || 0;
+  const canTagDirectly =
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isWorkshopTeamMember(workshopId, userId)) || // This now also checks event team membership
+    (await isWorkshopCreator(workshopId, userId)) ||
+    isEventTeamMember; // Event team members can tag themselves in workshops
+
+  if (canTagDirectly) {
+    // User has permission - tag directly
+    try {
+      await setWorkshopRoles(workshopId, userId, role);
+      return { success: true, directTag: true };
+    } catch (error) {
+      console.error("Error tagging self with workshop role:", error);
+      throw error;
+    }
+  } else {
+    // User doesn't have permission - for workshops, we don't have tagging requests yet
+    // TODO: Add workshop tagging request support when needed
+    throw new Error(
+      "You do not have permission to tag yourself with this role. Workshop tagging requests are not yet supported."
+    );
   }
 }
 
@@ -2294,4 +2443,28 @@ export async function getPendingTagRequest(
   });
 
   return request;
+}
+
+/**
+ * Get pending tagging request for a workshop
+ * Note: Workshop tagging requests may not be fully supported in the database schema yet
+ * This function will return null if workshop requests are not supported
+ */
+export async function getPendingTagRequestForWorkshop(
+  workshopId: string,
+  userId?: string,
+  role?: string
+): Promise<{
+  id: string;
+  status: string;
+  createdAt: Date;
+} | null> {
+  // If userId is not provided, use the authenticated user
+  const targetUserId = userId || (await requireAuth());
+
+  // Note: Workshop tagging requests may not be supported in the database schema yet
+  // The TaggingRequest model only has eventId, not workshopId
+  // For now, return null - this can be updated when the schema supports workshop requests
+  // TODO: Update when workshop tagging requests are added to the database schema
+  return null;
 }

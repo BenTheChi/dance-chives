@@ -32,7 +32,7 @@ export interface Workshop {
 
 export interface WorkshopRole {
   id: string;
-  title: "ORGANIZER" | "TEACHER";
+  title: "ORGANIZER" | "TEACHER" | "TEAM_MEMBER";
   user: UserSearchItem | null;
 }
 

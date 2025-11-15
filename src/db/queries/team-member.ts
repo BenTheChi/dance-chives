@@ -222,9 +222,42 @@ export async function addTeamMember(
 }
 
 /**
+ * Add a user as a team member of a workshop in Neo4j
+ * Creates a TEAM_MEMBER relationship between the user and workshop
+ */
+export async function addWorkshopTeamMember(
+  workshopId: string,
+  userId: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate workshop exists (basic check - you may want to add a workshopExists function)
+    await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})
+      RETURN w
+      `,
+      { workshopId }
+    );
+
+    await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})
+      MATCH (u:User {id: $userId})
+      MERGE (u)-[:TEAM_MEMBER]->(w)
+      `,
+      { workshopId, userId }
+    );
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Check if a user is a team member of a workshop
  * Team members have edit access, separate from roles
  * NOTE: Creators are NOT team members - use isWorkshopCreator() to check for creators
+ * Also checks if user is a team member of the associated event (if workshop has one)
  */
 export async function isWorkshopTeamMember(
   workshopId: string,
@@ -232,8 +265,8 @@ export async function isWorkshopTeamMember(
 ): Promise<boolean> {
   const session = driver.session();
   try {
-    // Check if user has TEAM_MEMBER relationship (creators are excluded)
-    const result = await session.run(
+    // Check if user has TEAM_MEMBER relationship with workshop (creators are excluded)
+    const workshopResult = await session.run(
       `
       MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
       RETURN count(rel) as count
@@ -241,8 +274,24 @@ export async function isWorkshopTeamMember(
       { workshopId, userId }
     );
 
-    const count = result.records[0]?.get("count")?.toNumber() || 0;
-    return count > 0;
+    const workshopCount =
+      workshopResult.records[0]?.get("count")?.toNumber() || 0;
+    if (workshopCount > 0) {
+      return true;
+    }
+
+    // If not a workshop team member, check if workshop has associated event and user is event team member
+    const eventResult = await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})-[:IN]->(e:Event)
+      MATCH (e:Event)<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
+      RETURN count(rel) as count
+      `,
+      { workshopId, userId }
+    );
+
+    const eventCount = eventResult.records[0]?.get("count")?.toNumber() || 0;
+    return eventCount > 0;
   } finally {
     await session.close();
   }
@@ -598,6 +647,64 @@ export async function setEventRoles(
       MERGE (u)-[r:${neo4jRole}]->(e)
       `,
       { eventId, userId, role: neo4jRole }
+    );
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Set workshop role for a user in Neo4j
+ * Creates a relationship between the user and workshop with the specified role
+ * Throws error if workshop doesn't exist or role is invalid
+ */
+export async function setWorkshopRoles(
+  workshopId: string,
+  userId: string,
+  role: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate workshop exists
+    const workshopCheck = await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})
+      RETURN w
+      `,
+      { workshopId }
+    );
+    if (workshopCheck.records.length === 0) {
+      throw new Error(`Workshop ${workshopId} does not exist`);
+    }
+
+    // Import here to avoid circular dependency
+    const { isValidWorkshopRole, WORKSHOP_ROLES } = await import(
+      "@/lib/utils/roles"
+    );
+
+    // Validate role
+    if (!isValidWorkshopRole(role)) {
+      throw new Error(
+        `Invalid role: ${role}. Must be one of: ${WORKSHOP_ROLES.join(", ")}`
+      );
+    }
+
+    // Tag user in workshop with specific role
+    // Workshop roles are already in uppercase format
+    const neo4jRole = role.toUpperCase();
+    console.log(
+      "✅ [setWorkshopRoles] Setting workshop role:",
+      workshopId,
+      userId,
+      neo4jRole
+    );
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      MATCH (w:Workshop {id: $workshopId})
+      MERGE (u)-[r:${neo4jRole}]->(w)
+      `,
+      { workshopId, userId, role: neo4jRole }
     );
   } finally {
     await session.close();

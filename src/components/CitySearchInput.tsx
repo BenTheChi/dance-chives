@@ -29,9 +29,7 @@ interface CitySearchInputProps<T extends FieldValues> {
 }
 
 async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
-  return fetch(
-    `http://geodb-free-service.wirefreethought.com/v1/geo/places?limit=10&sort=population&types=CITY&namePrefix=${keyword}`
-  )
+  return fetch(`/api/geodb/places?keyword=${encodeURIComponent(keyword)}`)
     .then((response) => {
       if (!response.ok) {
         console.error("Failed to fetch cities", response.statusText);
@@ -193,7 +191,8 @@ export function CitySearchInput<T extends FieldValues>({
                                   <Check
                                     className={cn(
                                       "mr-2 h-4 w-4",
-                                      selectedCity && selectedCity.id === item.id
+                                      selectedCity &&
+                                        selectedCity.id === item.id
                                         ? "opacity-100"
                                         : "opacity-0"
                                     )}
@@ -224,4 +223,3 @@ export function CitySearchInput<T extends FieldValues>({
     </div>
   );
 }
-
