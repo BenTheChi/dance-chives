@@ -29,16 +29,13 @@ export default async function EditEventPage({
     notFound();
   }
 
-  // Check authorization
-  if (!session.user.auth) {
-    redirect(`/events/${event}`);
-  }
-
   // Check if user is a team member
   const isEventTeamMember = await isTeamMember(event, session.user.id);
 
+  // Check authorization - allow team members even without auth level
+  const authLevel = session.user.auth ?? 0;
   const hasPermission = canUpdateEvent(
-    session.user.auth,
+    authLevel,
     {
       eventId: event,
       eventCreatorId: currEvent.eventDetails.creatorId,

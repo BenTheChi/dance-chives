@@ -213,15 +213,6 @@ export async function editWorkshop(
 
   const oldWorkshop = response as Workshop;
 
-  // Check authorization
-  if (!session.user.auth) {
-    return {
-      error: "User authorization level not found",
-      status: 403,
-      workshop: null,
-    };
-  }
-
   // Check if user is workshop creator
   const workshopCreatorId = await getWorkshopCreator(workshopId);
   if (!workshopCreatorId) {
@@ -244,8 +235,10 @@ export async function editWorkshop(
     isEventTeamMember = eventTeamMembers.includes(session.user.id);
   }
 
+  // Check authorization - allow team members even without auth level
+  const authLevel = session.user.auth ?? 0;
   const hasPermission = canUpdateWorkshop(
-    session.user.auth,
+    authLevel,
     {
       workshopId: workshopId,
       workshopCreatorId: workshopCreatorId,

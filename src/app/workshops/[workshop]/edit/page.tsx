@@ -37,11 +37,6 @@ export default async function EditWorkshopPage({
     notFound();
   }
 
-  // Check authorization
-  if (!session.user.auth) {
-    redirect(`/workshops/${workshop}`);
-  }
-
   const workshopCreatorId = await getWorkshopCreator(workshop);
   if (!workshopCreatorId) {
     redirect(`/workshops/${workshop}`);
@@ -59,8 +54,10 @@ export default async function EditWorkshopPage({
     isEventTeamMember = eventTeamMembers.includes(session.user.id);
   }
 
+  // Check authorization - allow team members even without auth level
+  const authLevel = session.user.auth ?? 0;
   const hasPermission = canUpdateWorkshop(
-    session.user.auth,
+    authLevel,
     {
       workshopId: workshop,
       workshopCreatorId: workshopCreatorId,

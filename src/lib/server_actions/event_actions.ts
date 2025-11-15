@@ -379,20 +379,13 @@ export async function editEvent(
 
   const oldEvent = response.event as Event;
 
-  // Check authorization
-  if (!session.user.auth) {
-    return {
-      error: "User authorization level not found",
-      status: 403,
-      event: null,
-    };
-  }
-
   // Check if user is a team member
   const isEventTeamMember = await isTeamMember(eventId, session.user.id);
 
+  // Check authorization - allow team members even without auth level
+  const authLevel = session.user.auth ?? 0;
   const hasPermission = canUpdateEvent(
-    session.user.auth,
+    authLevel,
     {
       eventId: eventId,
       eventCreatorId: oldEvent.eventDetails.creatorId,
