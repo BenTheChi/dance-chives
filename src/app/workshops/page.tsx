@@ -60,11 +60,7 @@ export default async function WorkshopsPage() {
                     {workshop.styles && workshop.styles.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
                         {workshop.styles.slice(0, 3).map((style) => (
-                          <StyleBadge
-                            key={style}
-                            style={style}
-                            asLink={false}
-                          />
+                          <StyleBadge key={style} style={style} />
                         ))}
                         {workshop.styles.length > 3 && (
                           <span className="text-xs text-muted-foreground">

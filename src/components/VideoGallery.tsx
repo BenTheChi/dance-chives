@@ -37,9 +37,17 @@ export default function VideoGallery({
     setSelectedVideoIndex(index);
   };
 
+  // Check if this is a workshop or session (don't show winner badges for these)
+  const isWorkshopOrSession =
+    eventLink.startsWith("/workshops/") || eventLink.startsWith("/sessions/");
+
   // Check if current user is a winner for each video
   const videosWithWinnerStatus = useMemo(() => {
     return videos.map((video) => {
+      // Don't show winner badges for workshop/session videos
+      if (isWorkshopOrSession) {
+        return { video, isWinner: false };
+      }
       if (!currentUserId || !video.taggedWinners) {
         return { video, isWinner: false };
       }
@@ -48,7 +56,7 @@ export default function VideoGallery({
       });
       return { video, isWinner };
     });
-  }, [videos, currentUserId]);
+  }, [videos, currentUserId, isWorkshopOrSession]);
 
   return (
     <div className="container mx-auto px-4 py-8">

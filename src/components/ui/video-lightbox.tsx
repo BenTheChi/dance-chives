@@ -90,8 +90,9 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
-  // Check if this is a workshop video (workshop videos don't have dancer/winner tags)
-  const isWorkshop = eventLink.startsWith("/workshops/");
+  // Check if this is a workshop or session video (workshop/session videos don't have dancer/winner tags)
+  const isWorkshopOrSession =
+    eventLink.startsWith("/workshops/") || eventLink.startsWith("/sessions/");
 
   const winners = video?.taggedWinners || [];
   const dancers = video?.taggedDancers || [];
@@ -238,22 +239,26 @@ export function VideoLightbox({
                     {eventTitle}
                   </Link>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-sm sm:text-base">
-                    Section
-                  </h3>
-                  <div>{sectionTitle}</div>
-                </div>
-                <div>
-                  {bracketTitle && (
-                    <>
+                {!isWorkshopOrSession && (
+                  <>
+                    <div>
                       <h3 className="font-semibold text-sm sm:text-base">
-                        Bracket
+                        Section
                       </h3>
-                      <div>{bracketTitle}</div>
-                    </>
-                  )}
-                </div>
+                      <div>{sectionTitle}</div>
+                    </div>
+                    <div>
+                      {bracketTitle && (
+                        <>
+                          <h3 className="font-semibold text-sm sm:text-base">
+                            Bracket
+                          </h3>
+                          <div>{bracketTitle}</div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
               {/* <div className="space-y-2 sm:space-y-3">
                 <Button
@@ -286,8 +291,8 @@ export function VideoLightbox({
 
               {displayStyles.length > 0 && <Separator />}
 
-              {/* Tag Self Buttons - Only show for event videos, not workshop videos */}
-              {!isWorkshop && currentUserId && (
+              {/* Tag Self Buttons - Only show for event videos, not workshop/session videos */}
+              {!isWorkshopOrSession && currentUserId && (
                 <div className="space-y-2 sm:space-y-3">
                   <TagSelfButton
                     eventId={eventId}
@@ -331,10 +336,12 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {!isWorkshop && (isUserWinner || currentUserId) && <Separator />}
+              {!isWorkshopOrSession && (isUserWinner || currentUserId) && (
+                <Separator />
+              )}
 
-              {/* Winners - Only show for event videos, not workshop videos */}
-              {!isWorkshop && winners.length > 0 && (
+              {/* Winners - Only show for event videos, not workshop/session videos */}
+              {!isWorkshopOrSession && winners.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-500" />
@@ -362,10 +369,10 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {!isWorkshop && winners.length > 0 && <Separator />}
+              {!isWorkshopOrSession && winners.length > 0 && <Separator />}
 
-              {/* Dancers - Only show for event videos, not workshop videos */}
-              {!isWorkshop && dancers.length > 0 && (
+              {/* Dancers - Only show for event videos, not workshop/session videos */}
+              {!isWorkshopOrSession && dancers.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
                     <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
