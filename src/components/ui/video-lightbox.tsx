@@ -16,6 +16,7 @@ import {
   VIDEO_ROLE_WINNER,
 } from "@/lib/utils/roles";
 import { Trophy } from "lucide-react";
+import { extractYouTubeVideoId } from "@/lib/utils";
 
 interface VideoLightboxProps {
   video: Video;
@@ -199,15 +200,25 @@ export function VideoLightbox({
 
             {/* Video Player */}
             <div className="flex-1 relative min-h-[200px] sm:min-h-[300px]">
-              <iframe
-                src={`https://www.youtube.com/embed/${
-                  video.src.split("v=")[1].split("&")[0]
-                }?autoplay=1&rel=0`}
-                title={video.title}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {(() => {
+                const youtubeId = extractYouTubeVideoId(video.src);
+                if (!youtubeId) {
+                  return (
+                    <div className="flex items-center justify-center h-full bg-black text-white">
+                      <p className="text-sm">Invalid YouTube URL</p>
+                    </div>
+                  );
+                }
+                return (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                    title={video.title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                );
+              })()}
             </div>
           </div>
 

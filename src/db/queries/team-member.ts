@@ -324,6 +324,112 @@ export async function getWorkshopTeamMembers(
 }
 
 /**
+ * Add a user as a team member of a session in Neo4j
+ * Creates a TEAM_MEMBER relationship between the user and session
+ */
+export async function addSessionTeamMember(
+  sessionId: string,
+  userId: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate session exists
+    await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})
+      RETURN s
+      `,
+      { sessionId }
+    );
+
+    await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})
+      MATCH (u:User {id: $userId})
+      MERGE (u)-[:TEAM_MEMBER]->(s)
+      `,
+      { sessionId, userId }
+    );
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Remove a user as a team member of a session in Neo4j
+ */
+export async function removeSessionTeamMember(
+  sessionId: string,
+  userId: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})<-[rel:TEAM_MEMBER]-(u:User {id: $userId})
+      DELETE rel
+      `,
+      { sessionId, userId }
+    );
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Check if a user is a team member of a session
+ * Team members have edit access, separate from roles
+ * NOTE: Creators are NOT team members - use isSessionCreator() to check for creators
+ * Sessions don't check event team membership (unlike workshops)
+ */
+export async function isSessionTeamMember(
+  sessionId: string,
+  userId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
+      RETURN count(rel) as count
+      `,
+      { sessionId, userId }
+    );
+
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get team members (users with edit access) for a session from Neo4j
+ * Team members are separate from roles - they grant edit access
+ * NOTE: Creators are NOT included as team members - they have separate permissions
+ * Returns array of user IDs
+ */
+export async function getSessionTeamMembers(
+  sessionId: string
+): Promise<string[]> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})<-[rel:TEAM_MEMBER]-(user:User)
+      RETURN DISTINCT user.id as userId
+      `,
+      { sessionId }
+    );
+
+    const teamMemberIds = result.records.map((record) => record.get("userId"));
+    return teamMemberIds;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Get all events where a user is a team member (from Neo4j)
  * Team members have edit access, separate from roles
  * NOTE: Creators are NOT included - they should appear in "Your Events" instead
@@ -705,6 +811,58 @@ export async function setWorkshopRoles(
       MERGE (u)-[r:${neo4jRole}]->(w)
       `,
       { workshopId, userId, role: neo4jRole }
+    );
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Set session role for a user in Neo4j
+ * Creates a relationship between the user and session with the specified role
+ * Throws error if session doesn't exist or role is invalid
+ */
+export async function setSessionRoles(
+  sessionId: string,
+  userId: string,
+  role: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate session exists
+    const sessionCheck = await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})
+      RETURN s
+      `,
+      { sessionId }
+    );
+    if (sessionCheck.records.length === 0) {
+      throw new Error(`Session ${sessionId} does not exist`);
+    }
+
+    // Validate role (sessions use Event roles)
+    if (!isValidRole(role)) {
+      throw new Error(
+        `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+      );
+    }
+
+    // Tag user in session with specific role (converted to Neo4j format)
+    const neo4jRole = toNeo4jRoleFormat(role);
+    console.log(
+      "✅ [setSessionRoles] Setting session role:",
+      sessionId,
+      userId,
+      neo4jRole
+    );
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      MATCH (s:Session {id: $sessionId})
+      MERGE (u)-[r:${neo4jRole}]->(s)
+      `,
+      { sessionId, userId, role: neo4jRole }
     );
   } finally {
     await session.close();

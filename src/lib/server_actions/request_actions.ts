@@ -15,12 +15,14 @@ import {
   isTeamMember,
   addTeamMember,
   addWorkshopTeamMember,
+  addSessionTeamMember,
   setVideoRoles,
   setSectionWinner,
   setSectionWinners,
   getSectionWinnerIds,
   setEventRoles, // Still needed for event roles (not part of this refactor)
   setWorkshopRoles,
+  setSessionRoles,
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
@@ -35,6 +37,8 @@ import {
   isEventCreator,
   getEventTeamMembers,
   isWorkshopTeamMember,
+  isSessionTeamMember,
+  getSessionTeamMembers,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
 import { getUser, getUserByUsername } from "@/db/queries/user";
@@ -2466,5 +2470,121 @@ export async function getPendingTagRequestForWorkshop(
   // The TaggingRequest model only has eventId, not workshopId
   // For now, return null - this can be updated when the schema supports workshop requests
   // TODO: Update when workshop tagging requests are added to the database schema
+  return null;
+}
+
+/**
+ * Tag self with a role in a session
+ * If user has permission (admin, super admin, moderator, or session creator), tags directly
+ * Otherwise, creates a tagging request (note: session team member requests not yet supported in DB)
+ * Special handling: "Team Member" role creates a TEAM_MEMBER relationship instead of a role relationship
+ */
+export async function tagSelfWithRoleForSession(
+  sessionId: string,
+  role: string
+) {
+  const userId = await requireAuth();
+  const session = await auth();
+
+  // Import session creator check
+  const { isSessionCreator } = await import("@/db/queries/session");
+
+  // Validate role (sessions use Event roles)
+  if (!isValidRole(role)) {
+    throw new Error(
+      `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+    );
+  }
+
+  // Validate session exists
+  const sessionDriver = driver.session();
+  try {
+    const sessionCheck = await sessionDriver.run(
+      `
+      MATCH (s:Session {id: $sessionId})
+      RETURN s
+      `,
+      { sessionId }
+    );
+    if (sessionCheck.records.length === 0) {
+      throw new Error("Session not found");
+    }
+  } finally {
+    await sessionDriver.close();
+  }
+
+  // Special handling for "Team Member" role
+  if (role === "Team Member") {
+    // Check if user has permission to add team member directly
+    const authLevel = session?.user?.auth || 0;
+    const canAddDirectly =
+      authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+      (await isSessionCreator(sessionId, userId));
+
+    if (canAddDirectly) {
+      // User has permission - add team member directly
+      try {
+        await addSessionTeamMember(sessionId, userId);
+        return { success: true, directTag: true };
+      } catch (error) {
+        console.error("Error adding session team member:", error);
+        throw error;
+      }
+    } else {
+      // User doesn't have permission - for now, throw error since session team member requests aren't supported
+      // TODO: Add session team member request support when database schema is updated
+      throw new Error(
+        "You do not have permission to add yourself as a team member. Session team member requests are not yet supported."
+      );
+    }
+  }
+
+  // Regular role handling (non-Team Member roles)
+  // Check if user has permission to tag directly
+  const authLevel = session?.user?.auth || 0;
+  const canTagDirectly =
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isSessionTeamMember(sessionId, userId)) ||
+    (await isSessionCreator(sessionId, userId));
+
+  if (canTagDirectly) {
+    // User has permission - tag directly
+    try {
+      await setSessionRoles(sessionId, userId, role);
+      return { success: true, directTag: true };
+    } catch (error) {
+      console.error("Error tagging self with session role:", error);
+      throw error;
+    }
+  } else {
+    // User doesn't have permission - for sessions, we don't have tagging requests yet
+    // TODO: Add session tagging request support when needed
+    throw new Error(
+      "You do not have permission to tag yourself with this role. Session tagging requests are not yet supported."
+    );
+  }
+}
+
+/**
+ * Get pending tagging request for a session
+ * Note: Session tagging requests may not be fully supported in the database schema yet
+ * This function will return null if session requests are not supported
+ */
+export async function getPendingTagRequestForSession(
+  sessionId: string,
+  userId?: string,
+  role?: string
+): Promise<{
+  id: string;
+  status: string;
+  createdAt: Date;
+} | null> {
+  // If userId is not provided, use the authenticated user
+  const targetUserId = userId || (await requireAuth());
+
+  // Note: Session tagging requests may not be supported in the database schema yet
+  // The TaggingRequest model only has eventId, not sessionId
+  // For now, return null - this can be updated when the schema supports session requests
+  // TODO: Update when session tagging requests are added to the database schema
   return null;
 }

@@ -321,3 +321,67 @@ export function canDeleteWorkshop(
 
   return false;
 }
+
+// Session Permissions
+export interface SessionPermissionContext {
+  sessionId: string;
+  sessionCreatorId: string;
+  isTeamMember?: boolean;
+}
+
+export function canUpdateSession(
+  authLevel: number,
+  context: SessionPermissionContext,
+  userId: string
+): boolean {
+  // Admins can update any sessions
+  if (canUpdateAnyEvents(authLevel)) {
+    return true;
+  }
+
+  // Moderators can update any sessions
+  if (canUpdateAnyEventsInCity(authLevel)) {
+    return true;
+  }
+
+  // Creators can update their own sessions
+  if (
+    authLevel >= AUTH_LEVELS.CREATOR &&
+    context.sessionCreatorId === userId
+  ) {
+    return true;
+  }
+
+  // Session team members can update
+  if (context.isTeamMember) {
+    return true;
+  }
+
+  return false;
+}
+
+export function canDeleteSession(
+  authLevel: number,
+  context: SessionPermissionContext,
+  userId: string
+): boolean {
+  // Admins can delete any sessions
+  if (canDeleteAnyEvents(authLevel)) {
+    return true;
+  }
+
+  // Moderators can delete any sessions
+  if (canDeleteAnyEventsInCity(authLevel)) {
+    return true;
+  }
+
+  // Creators can delete their own sessions
+  if (
+    authLevel >= AUTH_LEVELS.CREATOR &&
+    context.sessionCreatorId === userId
+  ) {
+    return true;
+  }
+
+  return false;
+}

@@ -6,6 +6,7 @@ import {
   Tag,
   MapPin,
   GraduationCap,
+  Clock,
 } from "lucide-react";
 import {
   SidebarContent,
@@ -28,6 +29,7 @@ const menuItems = [
   { title: "Styles", url: "/styles", icon: Tag },
   { title: "Events", url: "/events", icon: CalendarIcon },
   { title: "Workshops", url: "/workshops", icon: GraduationCap },
+  { title: "Sessions", url: "/sessions", icon: Clock },
   { title: "Cities", url: "/cities", icon: MapPin },
 ];
 

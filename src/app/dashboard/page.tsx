@@ -160,6 +160,9 @@ export default function DashboardPage() {
                         <Button asChild>
                           <Link href="/add-workshop">Add Workshop</Link>
                         </Button>
+                        <Button asChild>
+                          <Link href="/add-session">Add Session</Link>
+                        </Button>
                       </>
                     )}
                   {user?.username && (

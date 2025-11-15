@@ -44,6 +44,7 @@ export function AppNavbar() {
               <SelectItem value="series">Series</SelectItem>
               <SelectItem value="members">Members</SelectItem>
               <SelectItem value="workshops">Workshops/Classes</SelectItem>
+              <SelectItem value="sessions">Sessions</SelectItem>
             </SelectContent>
           </Select>
         </div>
