@@ -23,7 +23,7 @@ import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { DeleteEventButton } from "@/components/DeleteEventButton";
 import { auth } from "@/auth";
-import { isEventCreator } from "@/db/queries/team-member";
+import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -62,6 +62,11 @@ export default async function EventPage({ params }: PageProps) {
     ? await isEventCreator(event.id, session.user.id)
     : false;
 
+  // Check if user is a team member
+  const isEventTeamMember = session?.user?.id
+    ? await isTeamMember(event.id, session.user.id)
+    : false;
+
   // Check if user can edit the event
   const canEdit =
     session?.user?.id && session?.user?.auth !== undefined
@@ -70,6 +75,7 @@ export default async function EventPage({ params }: PageProps) {
           {
             eventId: event.id,
             eventCreatorId: event.eventDetails.creatorId,
+            isTeamMember: isEventTeamMember,
           },
           session.user.id
         )

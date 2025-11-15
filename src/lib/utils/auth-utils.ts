@@ -194,6 +194,7 @@ export function cannotBeDeletedOrBanned(authLevel: number): boolean {
 export interface EventPermissionContext {
   eventId: string;
   eventCreatorId: string;
+  isTeamMember?: boolean;
 }
 
 export function canUpdateEvent(
@@ -213,6 +214,11 @@ export function canUpdateEvent(
 
   // Creators can update their own events
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
+    return true;
+  }
+
+  // Team members can update events
+  if (context.isTeamMember) {
     return true;
   }
 

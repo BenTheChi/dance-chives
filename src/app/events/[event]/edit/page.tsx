@@ -7,6 +7,7 @@ import { FormValues } from "@/components/forms/event-form";
 import { auth } from "@/auth";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
+import { isTeamMember } from "@/db/queries/team-member";
 
 export default async function EditEventPage({
   params,
@@ -33,11 +34,15 @@ export default async function EditEventPage({
     redirect(`/events/${event}`);
   }
 
+  // Check if user is a team member
+  const isEventTeamMember = await isTeamMember(event, session.user.id);
+
   const hasPermission = canUpdateEvent(
     session.user.auth,
     {
       eventId: event,
       eventCreatorId: currEvent.eventDetails.creatorId,
+      isTeamMember: isEventTeamMember,
     },
     session.user.id
   );

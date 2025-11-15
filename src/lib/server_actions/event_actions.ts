@@ -14,6 +14,7 @@ import {
   setVideoRoles,
   setSectionWinner,
   setSectionWinners,
+  isTeamMember,
 } from "@/db/queries/team-member";
 import { getUserByUsername } from "@/db/queries/user";
 import { UserSearchItem } from "@/types/user";
@@ -387,11 +388,15 @@ export async function editEvent(
     };
   }
 
+  // Check if user is a team member
+  const isEventTeamMember = await isTeamMember(eventId, session.user.id);
+
   const hasPermission = canUpdateEvent(
     session.user.auth,
     {
       eventId: eventId,
       eventCreatorId: oldEvent.eventDetails.creatorId,
+      isTeamMember: isEventTeamMember,
     },
     session.user.id
   );
