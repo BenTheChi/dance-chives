@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -64,8 +65,8 @@ export function AccountVerificationGuard({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => router.push("/login")} className="w-full">
-              Sign In
+            <Button asChild className="w-full">
+              <Link href="/login">Sign In</Link>
             </Button>
           </CardContent>
         </Card>
@@ -92,8 +93,8 @@ export function AccountVerificationGuard({
                 complete your registration to access all features.
               </p>
             </div>
-            <Button onClick={() => router.push("/signup")} className="w-full">
-              Complete Registration
+            <Button asChild className="w-full">
+              <Link href="/signup">Complete Registration</Link>
             </Button>
           </CardContent>
         </Card>

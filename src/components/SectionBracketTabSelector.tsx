@@ -5,7 +5,6 @@ import { useEffect, useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "./ui/button";
 import { StyleBadge } from "./ui/style-badge";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import VideoGallery from "./VideoGallery";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
@@ -28,7 +27,6 @@ export default function SectionBracketTabSelector({
     section?.brackets[0]?.id || ""
   );
   const [isUserWinner, setIsUserWinner] = useState(false);
-  const router = useRouter();
 
   // Check if current user is winner of section
   useEffect(() => {
@@ -91,11 +89,13 @@ export default function SectionBracketTabSelector({
   return (
     <div className="p-5">
       <Button
-        onClick={() => router.push(`/event/${eventId}`)}
+        asChild
         className="ml-5 mb-5 hover:bg-gray-300 hover:shadow-none hover:cursor-pointer shadow-md "
         variant="secondary"
       >
-        Back to {eventTitle}
+        <Link href={`/events/${eventId}`}>
+          Back to {eventTitle}
+        </Link>
       </Button>
 
       <div className="flex flex-col gap-1 items-center p-5">
@@ -174,7 +174,7 @@ export default function SectionBracketTabSelector({
                     (bracket) => bracket.id === activeBracket
                   )?.videos || []
                 }
-                eventLink={`/event/${eventId}`}
+                eventLink={`/events/${eventId}`}
                 eventTitle={eventTitle}
                 eventId={eventId}
                 sectionTitle={section?.title}
@@ -194,7 +194,7 @@ export default function SectionBracketTabSelector({
         <div className="p-5 border-2 rounded-lg">
           <VideoGallery
             videos={section?.videos}
-            eventLink={`/event/${eventId}`}
+            eventLink={`/events/${eventId}`}
             eventTitle={eventTitle}
             eventId={eventId}
             sectionTitle={section?.title}

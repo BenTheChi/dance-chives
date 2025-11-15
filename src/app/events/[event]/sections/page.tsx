@@ -57,15 +57,17 @@ export default async function SectionsPage({ params }: PageProps) {
             const totalVideoCount = directVideoCount + bracketVideoCount;
 
             return (
-              <Link
+              <div
                 key={section.id}
-                href={`/events/${paramResult.event}/sections/${section.id}`}
-                className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow block"
+                className="bg-white rounded-lg p-4 shadow-sm"
               >
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-xl font-semibold text-gray-800">
+                  <Link
+                    href={`/events/${paramResult.event}/sections/${section.id}`}
+                    className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+                  >
                     {section.title}
-                  </h3>
+                  </Link>
                   <span className="text-sm text-gray-500">
                     {totalVideoCount}{" "}
                     {totalVideoCount === 1 ? "video" : "videos"}
@@ -89,10 +91,7 @@ export default async function SectionsPage({ params }: PageProps) {
                         asChild
                       >
                         {winner.username ? (
-                          <Link
-                            href={`/profiles/${winner.username}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <Link href={`/profiles/${winner.username}`}>
                             {winner.displayName}
                           </Link>
                         ) : (
@@ -174,7 +173,7 @@ export default async function SectionsPage({ params }: PageProps) {
                     {section.description}
                   </p>
                 )}
-              </Link>
+              </div>
             );
           })}
         </div>

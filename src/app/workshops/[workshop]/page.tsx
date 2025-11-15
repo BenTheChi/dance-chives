@@ -113,6 +113,18 @@ export default async function WorkshopPage({ params }: PageProps) {
   });
   const workshopStyles = Array.from(allStyles);
 
+  // Group roles by title
+  const rolesByTitle = new Map<string, Array<(typeof workshop.roles)[0]>>();
+  workshop.roles.forEach((role) => {
+    if (role.user) {
+      const title = role.title;
+      if (!rolesByTitle.has(title)) {
+        rolesByTitle.set(title, []);
+      }
+      rolesByTitle.get(title)!.push(role);
+    }
+  });
+
   return (
     <>
       <AppNavbar />
@@ -228,25 +240,44 @@ export default async function WorkshopPage({ params }: PageProps) {
             </section>
 
             {/* Roles Section */}
-            {workshop.roles.length > 0 && (
+            {rolesByTitle.size > 0 && (
               <section className="bg-green-100 p-4 rounded-md">
                 <h2 className="text-xl font-bold mb-2">Roles</h2>
                 <div className="flex flex-col gap-2">
-                  {workshop.roles.map((role) => (
-                    <div key={role.id} className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        {fromNeo4jRoleFormat(role.title)}
-                      </Badge>
-                      {role.user && (
-                        <Link
-                          href={`/profiles/${role.user.username}`}
-                          className="hover:underline"
-                        >
-                          {role.user.displayName || role.user.username}
-                        </Link>
-                      )}
-                    </div>
-                  ))}
+                  {Array.from(rolesByTitle.entries()).map(
+                    ([roleTitle, roles]) => (
+                      <div
+                        key={roleTitle}
+                        className="flex flex-row gap-2 items-center flex-wrap"
+                      >
+                        <Badge variant="secondary">
+                          {fromNeo4jRoleFormat(roleTitle) || roleTitle}
+                        </Badge>
+                        <div className="flex flex-row gap-1 items-center flex-wrap">
+                          {roles.map((role, index) => (
+                            <span key={`${role.id}-${index}`}>
+                              {role.user?.username ? (
+                                <Link
+                                  href={`/profiles/${role.user.username}`}
+                                  className="text-blue-500 hover:text-blue-700 hover:underline"
+                                >
+                                  {role.user.displayName || role.user.username}
+                                </Link>
+                              ) : (
+                                <span className="text-blue-500">
+                                  {role.user?.displayName ||
+                                    role.user?.username}
+                                </span>
+                              )}
+                              {index < roles.length - 1 && (
+                                <span className="text-gray-500">, </span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
               </section>
             )}

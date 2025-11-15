@@ -9,20 +9,14 @@ import {
 } from "@/components/ui/popover";
 import Image from "next/image";
 import { Session } from "next-auth";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 
 interface UserMenuProps {
   session: Session | null;
 }
 
 export function UserMenu({ session }: UserMenuProps) {
-  const router = useRouter();
-
-  const navigateToDashboard = () => {
-    router.push("/dashboard");
-  };
-
   const handleSignOut = async () => {
     // Sign out without automatic redirect
     await signOut({ redirect: false, callbackUrl: "/" });
@@ -59,25 +53,19 @@ export function UserMenu({ session }: UserMenuProps) {
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="flex flex-col gap-2">
-          <Button
-            variant="ghost"
-            className="justify-start"
-            onClick={navigateToDashboard}
-          >
-            <HomeIcon className="mr-2 h-4 w-4" />
-            Dashboard
+          <Button variant="ghost" className="justify-start" asChild>
+            <Link href="/dashboard">
+              <HomeIcon className="mr-2 h-4 w-4" />
+              Dashboard
+            </Link>
           </Button>
           {session?.user?.username && (
             <>
-              <Button
-                variant="ghost"
-                className="justify-start"
-                onClick={() =>
-                  router.push(`/profiles/${session.user.username}`)
-                }
-              >
-                <UserIcon className="mr-2 h-4 w-4" />
-                Profile
+              <Button variant="ghost" className="justify-start" asChild>
+                <Link href={`/profiles/${session.user.username}`}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
               </Button>
             </>
           )}

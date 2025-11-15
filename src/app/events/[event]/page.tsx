@@ -118,6 +118,18 @@ export default async function EventPage({ params }: PageProps) {
   });
   const eventStyles = Array.from(allStyles);
 
+  // Group roles by title
+  const rolesByTitle = new Map<string, Array<(typeof event.roles)[0]>>();
+  event.roles.forEach((role) => {
+    if (role.user) {
+      const title = role.title;
+      if (!rolesByTitle.has(title)) {
+        rolesByTitle.set(title, []);
+      }
+      rolesByTitle.get(title)!.push(role);
+    }
+  });
+
   return (
     <>
       <AppNavbar />
@@ -227,26 +239,35 @@ export default async function EventPage({ params }: PageProps) {
                 eventId={event.id}
                 currentUserRoles={currentUserRoles}
               />
-              {event.roles.map((role) => (
-                <div key={role.id} className="flex flex-col gap-2">
-                  {role.user && (
-                    <div className="flex flex-row gap-1 items-center">
-                      <span className="text-lg font-bold">
-                        {fromNeo4jRoleFormat(role.title) || role.title}:
-                      </span>
-                      {role.user.username ? (
-                        <Link href={`/profiles/${role.user.username}`}>
-                          <span className="text-blue-500 hover:text-blue-700 hover:underline">
+              {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
+                <div
+                  key={roleTitle}
+                  className="flex flex-row gap-2 items-center flex-wrap"
+                >
+                  <Badge variant="secondary">
+                    {fromNeo4jRoleFormat(roleTitle) || roleTitle}
+                  </Badge>
+                  <div className="flex flex-row gap-1 items-center flex-wrap">
+                    {roles.map((role, index) => (
+                      <span key={`${role.id}-${index}`}>
+                        {role.user?.username ? (
+                          <Link
+                            href={`/profiles/${role.user.username}`}
+                            className="text-blue-500 hover:text-blue-700 hover:underline"
+                          >
                             {role.user.displayName}
+                          </Link>
+                        ) : (
+                          <span className="text-blue-500">
+                            {role.user?.displayName}
                           </span>
-                        </Link>
-                      ) : (
-                        <span className="text-blue-500">
-                          {role.user.displayName}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                        )}
+                        {index < roles.length - 1 && (
+                          <span className="text-gray-500">, </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </section>
@@ -289,15 +310,17 @@ export default async function EventPage({ params }: PageProps) {
 
               <div className="flex flex-col gap-4">
                 {event.sections.map((section) => (
-                  <Link
+                  <div
                     key={section.id}
-                    href={`/events/${event.id}/sections/${section.id}`}
-                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow block"
+                    className="bg-white rounded-lg p-4 shadow-sm"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-xl font-semibold text-gray-800">
+                      <Link
+                        href={`/events/${event.id}/sections/${section.id}`}
+                        className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+                      >
                         {section.title}
-                      </h3>
+                      </Link>
                       <span className="text-sm text-gray-500">
                         {section.videos.length}{" "}
                         {section.videos.length === 1 ? "video" : "videos"}
@@ -321,10 +344,7 @@ export default async function EventPage({ params }: PageProps) {
                             asChild
                           >
                             {winner.username ? (
-                              <Link
-                                href={`/profiles/${winner.username}`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
+                              <Link href={`/profiles/${winner.username}`}>
                                 {winner.displayName}
                               </Link>
                             ) : (
@@ -407,7 +427,7 @@ export default async function EventPage({ params }: PageProps) {
                         No brackets - direct video collection
                       </div>
                     )}
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>
