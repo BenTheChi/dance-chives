@@ -142,14 +142,12 @@ export default async function EventPage({ params }: PageProps) {
     }
   });
 
-  console.log(event.eventDetails);
   // Fetch creator and team members for Team Members section
   const creator = event.eventDetails.creatorId
     ? await getUser(event.eventDetails.creatorId)
     : null;
   const teamMemberIds = await getEventTeamMembers(event.id);
   const teamMembers = await Promise.all(teamMemberIds.map((id) => getUser(id)));
-  console.log(teamMembers);
   const validTeamMembers = teamMembers.filter(
     (member): member is NonNullable<typeof member> => member !== null
   );

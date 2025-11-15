@@ -110,7 +110,6 @@ function renderRequestDetails(
   request: RequestCardProps["request"]
 ): ReactElement[] {
   const details: ReactElement[] = [];
-  console.log(request);
 
   // Common: sender information
   if (request.sender) {

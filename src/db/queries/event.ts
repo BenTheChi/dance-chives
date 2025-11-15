@@ -1486,8 +1486,6 @@ export const getEventSections = async (id: string) => {
 export const getSection = async (sectionId: string, eventId: string) => {
   const session = driver.session();
 
-  console.log(sectionId, eventId);
-
   try {
     // Get section by UUID directly, optionally verify it belongs to the event
     const sectionResult = await session.run(
