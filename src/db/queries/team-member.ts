@@ -941,6 +941,60 @@ export async function getVideoTitle(videoId: string): Promise<string | null> {
 }
 
 /**
+ * Get session title from Neo4j
+ */
+export async function getSessionTitle(
+  sessionId: string
+): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (s:Session {id: $sessionId})
+      RETURN s.title as title
+      LIMIT 1
+      `,
+      { sessionId }
+    );
+
+    if (result.records.length === 0) {
+      return null;
+    }
+
+    return result.records[0].get("title");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get workshop title from Neo4j
+ */
+export async function getWorkshopTitle(
+  workshopId: string
+): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (w:Workshop {id: $workshopId})
+      RETURN w.title as title
+      LIMIT 1
+      `,
+      { workshopId }
+    );
+
+    if (result.records.length === 0) {
+      return null;
+    }
+
+    return result.records[0].get("title");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Check if a user is tagged in a video
  * Returns true if user has any role relationship (:DANCER or :WINNER) with the video
  */

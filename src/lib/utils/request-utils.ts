@@ -3,7 +3,9 @@ import { AUTH_LEVELS } from "./auth-utils";
 import {
   getEventTeamMembers,
   getEventCreator,
+  getSessionTeamMembers,
 } from "@/db/queries/team-member";
+import { getSessionCreator } from "@/db/queries/session";
 
 export const REQUEST_TYPES = {
   TAGGING: "TAGGING",
@@ -70,6 +72,52 @@ export async function getTeamMemberRequestApprovers(
   eventCityId?: string
 ): Promise<string[]> {
   return getTaggingRequestApprovers(eventId, eventCityId); // Same approvers
+}
+
+/**
+ * Get users who can approve tagging requests for a session
+ * Returns: session creator, team members, moderators, admins
+ */
+export async function getTaggingRequestApproversForSession(
+  sessionId: string
+): Promise<string[]> {
+  const approverIds: Set<string> = new Set();
+
+  // Get session creator from Neo4j
+  const creatorId = await getSessionCreator(sessionId);
+  if (creatorId) {
+    approverIds.add(creatorId);
+  }
+
+  // Get team members for this session from Neo4j
+  const teamMembers = await getSessionTeamMembers(sessionId);
+  teamMembers.forEach((userId) => approverIds.add(userId));
+
+  // Get all moderators (auth level 2+)
+  const moderators = await prisma.user.findMany({
+    where: {
+      auth: {
+        gte: AUTH_LEVELS.MODERATOR,
+      },
+    },
+    select: { id: true },
+  });
+
+  moderators.forEach((user) => approverIds.add(user.id));
+
+  // Get all admins (auth level 3+)
+  const admins = await prisma.user.findMany({
+    where: {
+      auth: {
+        gte: AUTH_LEVELS.ADMIN,
+      },
+    },
+    select: { id: true },
+  });
+
+  admins.forEach((user) => approverIds.add(user.id));
+
+  return Array.from(approverIds);
 }
 
 /**

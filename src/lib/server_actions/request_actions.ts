@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import {
   getTaggingRequestApprovers,
+  getTaggingRequestApproversForSession,
   getTeamMemberRequestApprovers,
   getAuthLevelChangeRequestApprovers,
   canUserApproveRequest,
@@ -33,6 +34,7 @@ import {
   isUserWinnerOfSection,
   getEventTitle,
   getVideoTitle,
+  getSessionTitle,
   getEventCreator,
   isEventCreator,
   getEventTeamMembers,
@@ -481,6 +483,200 @@ export async function createTaggingRequest(
   return { success: true, request, isExisting: false };
 }
 
+export async function createTaggingRequestForSession(
+  sessionId: string,
+  role?: string
+) {
+  console.log("🔵 [createTaggingRequestForSession] Starting", {
+    sessionId,
+    role,
+  });
+  const senderId = await requireAuth();
+  console.log(
+    "🔵 [createTaggingRequestForSession] Authenticated user:",
+    senderId
+  );
+
+  // Validate role is provided for session-level tagging
+  if (!role) {
+    throw new Error("Role is required for session tagging requests");
+  }
+
+  // Users can only tag themselves
+  const targetUserId = senderId;
+
+  // Validate session exists in Neo4j
+  console.log(
+    "🔵 [createTaggingRequestForSession] Checking if session exists..."
+  );
+  const sessionDriver = driver.session();
+  try {
+    const sessionCheck = await sessionDriver.run(
+      `
+      MATCH (s:Session {id: $sessionId})
+      RETURN s
+      `,
+      { sessionId }
+    );
+    if (sessionCheck.records.length === 0) {
+      throw new Error("Session not found");
+    }
+  } finally {
+    await sessionDriver.close();
+  }
+  console.log("✅ [createTaggingRequestForSession] Session exists");
+
+  // Validate role
+  if (!isValidRole(role)) {
+    console.error("❌ [createTaggingRequestForSession] Invalid role:", role);
+    throw new Error(
+      `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+    );
+  }
+
+  // Check if user already has this role in the session
+  console.log(
+    "🔵 [createTaggingRequestForSession] Checking if user already has this role..."
+  );
+  const sessionDriver2 = driver.session();
+  try {
+    const neo4jRole =
+      role === "Team Member" ? "TEAM_MEMBER" : role.toUpperCase();
+    const roleCheck = await sessionDriver2.run(
+      `
+      MATCH (u:User {id: $userId})-[r]->(s:Session {id: $sessionId})
+      WHERE type(r) = $role
+      RETURN count(r) as count
+      `,
+      { userId: targetUserId, sessionId, role: neo4jRole }
+    );
+    const count = roleCheck.records[0]?.get("count")?.toNumber() || 0;
+    if (count > 0) {
+      throw new Error(`You are already tagged as ${role} in this session`);
+    }
+  } finally {
+    await sessionDriver2.close();
+  }
+  console.log(
+    "✅ [createTaggingRequestForSession] User does not have this role yet"
+  );
+
+  // Check if a pending request already exists for this specific role
+  console.log(
+    "🔵 [createTaggingRequestForSession] Checking for existing requests..."
+  );
+  const existingRequest = await prisma.taggingRequest.findFirst({
+    where: {
+      sessionId,
+      senderId,
+      targetUserId,
+      role,
+      status: "PENDING",
+    },
+  });
+
+  if (existingRequest) {
+    console.log(
+      "⚠️ [createTaggingRequestForSession] Pending request already exists for this role:",
+      existingRequest.id
+    );
+    return { success: true, request: existingRequest, isExisting: true };
+  }
+  console.log("✅ [createTaggingRequestForSession] No existing request found");
+
+  // Create the request
+  console.log(
+    "🔵 [createTaggingRequestForSession] Creating request in database..."
+  );
+  let request;
+  try {
+    request = await prisma.taggingRequest.create({
+      data: {
+        sessionId,
+        senderId,
+        targetUserId,
+        role,
+        status: "PENDING",
+      },
+      include: {
+        sender: {
+          select: { id: true, name: true, email: true },
+        },
+        targetUser: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+    console.log(
+      "✅ [createTaggingRequestForSession] Request created:",
+      request.id
+    );
+  } catch (error) {
+    console.error(
+      "❌ [createTaggingRequestForSession] Failed to create request:",
+      error
+    );
+    throw error;
+  }
+
+  // Get approvers and create notifications
+  console.log("🔵 [createTaggingRequestForSession] Getting approvers...");
+  let approvers: string[] = [];
+  try {
+    approvers = await getTaggingRequestApproversForSession(sessionId);
+    console.log(
+      "✅ [createTaggingRequestForSession] Approvers found:",
+      approvers.length
+    );
+  } catch (error) {
+    console.error(
+      "❌ [createTaggingRequestForSession] Error getting approvers:",
+      error
+    );
+    approvers = [];
+  }
+
+  // Create notifications for approvers
+  console.log("🔵 [createTaggingRequestForSession] Creating notifications...");
+  try {
+    const sessionTitle = await getSessionTitle(sessionId);
+    const sessionDisplayName = sessionTitle || sessionId;
+    const username = request.sender.name || request.sender.email;
+    const notificationMessage = `${username} requesting tag for role ${role} in session ${sessionDisplayName}`;
+
+    for (const approverId of approvers) {
+      try {
+        await createNotification(
+          approverId,
+          "INCOMING_REQUEST",
+          "New Tagging Request",
+          notificationMessage,
+          REQUEST_TYPES.TAGGING,
+          request.id
+        );
+        console.log(
+          "✅ [createTaggingRequestForSession] Notification created for:",
+          approverId
+        );
+      } catch (error) {
+        console.error(
+          `⚠️ [createTaggingRequestForSession] Failed to create notification for ${approverId}:`,
+          error
+        );
+      }
+    }
+    console.log("✅ [createTaggingRequestForSession] Notifications completed");
+  } catch (error) {
+    console.error(
+      "⚠️ [createTaggingRequestForSession] Error creating notifications (request still created):",
+      error
+    );
+  }
+
+  console.log("✅ [createTaggingRequestForSession] Successfully completed");
+  return { success: true, request, isExisting: false };
+}
+
 export async function approveTaggingRequest(
   requestId: string,
   message?: string
@@ -500,10 +696,25 @@ export async function approveTaggingRequest(
     throw new Error("Request not found");
   }
 
+  // Determine if this is a session request or event request
+  const isSessionRequest = !!request.sessionId;
+  const isEventRequest = !!request.eventId;
+
+  if (!isSessionRequest && !isEventRequest) {
+    throw new Error(
+      "Invalid tagging request: must have either eventId or sessionId"
+    );
+  }
+  if (isSessionRequest && isEventRequest) {
+    throw new Error(
+      "Invalid tagging request: cannot have both eventId and sessionId"
+    );
+  }
+
   // Validate parameter combinations:
   // - videoId + role: video tagging with role (e.g., "Dancer", "Winner")
   // - sectionId + role: section tagging with role (e.g., "Winner")
-  // - role only: event role tagging (e.g., "Organizer", "DJ")
+  // - role only: event/session role tagging (e.g., "Organizer", "DJ")
   // Invalid: videoId + sectionId, videoId without role, sectionId without role
   if (request.videoId && request.sectionId) {
     throw new Error(
@@ -526,20 +737,46 @@ export async function approveTaggingRequest(
     );
   }
 
+  // Session requests can only have role (no videos or sections)
+  if (isSessionRequest && (request.videoId || request.sectionId)) {
+    throw new Error(
+      "Session tagging requests can only have roles, not videos or sections"
+    );
+  }
+
   if (request.status !== "PENDING") {
     throw new Error("Request is not pending");
   }
 
-  // Validate event still exists in Neo4j before approving
-  const eventStillExists = await eventExists(request.eventId);
-  if (!eventStillExists) {
-    throw new Error("Event no longer exists");
+  // Validate event/session still exists in Neo4j before approving
+  if (isEventRequest) {
+    const eventStillExists = await eventExists(request.eventId!);
+    if (!eventStillExists) {
+      throw new Error("Event no longer exists");
+    }
+  } else {
+    // Validate session exists
+    const sessionDriver = driver.session();
+    try {
+      const sessionCheck = await sessionDriver.run(
+        `
+        MATCH (s:Session {id: $sessionId})
+        RETURN s
+        `,
+        { sessionId: request.sessionId! }
+      );
+      if (sessionCheck.records.length === 0) {
+        throw new Error("Session no longer exists");
+      }
+    } finally {
+      await sessionDriver.close();
+    }
   }
 
-  // Validate video still exists if videoId is provided
-  if (request.videoId) {
+  // Validate video still exists if videoId is provided (only for event requests)
+  if (request.videoId && isEventRequest) {
     const videoStillExists = await videoExistsInEvent(
-      request.eventId,
+      request.eventId!,
       request.videoId
     );
     if (!videoStillExists) {
@@ -551,10 +788,10 @@ export async function approveTaggingRequest(
     }
   }
 
-  // Validate section still exists if sectionId is provided
-  if (request.sectionId) {
+  // Validate section still exists if sectionId is provided (only for event requests)
+  if (request.sectionId && isEventRequest) {
     const sectionStillExists = await sectionExistsInEvent(
-      request.eventId,
+      request.eventId!,
       request.sectionId
     );
     if (!sectionStillExists) {
@@ -567,13 +804,25 @@ export async function approveTaggingRequest(
   }
 
   // Check if user can approve
-  const canApprove = await canUserApproveRequest(
-    approverId,
-    REQUEST_TYPES.TAGGING,
-    {
-      eventId: request.eventId,
-    }
-  );
+  let canApprove = false;
+  if (isEventRequest) {
+    canApprove = await canUserApproveRequest(
+      approverId,
+      REQUEST_TYPES.TAGGING,
+      {
+        eventId: request.eventId!,
+      }
+    );
+  } else {
+    // For session requests, check if user is session creator, team member, moderator, or admin
+    const { isSessionCreator } = await import("@/db/queries/session");
+    const session = await auth();
+    const authLevel = session?.user?.auth || 0;
+    canApprove =
+      authLevel >= AUTH_LEVELS.MODERATOR ||
+      (await isSessionCreator(request.sessionId!, approverId)) ||
+      (await isSessionTeamMember(request.sessionId!, approverId));
+  }
 
   if (!canApprove) {
     throw new Error("You do not have permission to approve this request");
@@ -597,15 +846,21 @@ export async function approveTaggingRequest(
   await updateRequestStatus(REQUEST_TYPES.TAGGING, requestId, "APPROVED");
 
   // Create notification for sender
-  const eventTitle = await getEventTitle(request.eventId);
-  const eventDisplayName = eventTitle || request.eventId;
   let notificationMessage: string;
-  if (request.videoId) {
-    notificationMessage = `Your request to tag yourself in a video with role ${request.role} in event "${eventDisplayName}" has been approved`;
-  } else if (request.sectionId) {
-    notificationMessage = `Your request to tag yourself in a section with role ${request.role} in event "${eventDisplayName}" has been approved`;
+  if (isEventRequest) {
+    const eventTitle = await getEventTitle(request.eventId!);
+    const eventDisplayName = eventTitle || request.eventId!;
+    if (request.videoId) {
+      notificationMessage = `Your request to tag yourself in a video with role ${request.role} in event "${eventDisplayName}" has been approved`;
+    } else if (request.sectionId) {
+      notificationMessage = `Your request to tag yourself in a section with role ${request.role} in event "${eventDisplayName}" has been approved`;
+    } else {
+      notificationMessage = `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been approved`;
+    }
   } else {
-    notificationMessage = `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been approved`;
+    const sessionTitle = await getSessionTitle(request.sessionId!);
+    const sessionDisplayName = sessionTitle || request.sessionId!;
+    notificationMessage = `Your request to tag yourself as ${request.role} in session "${sessionDisplayName}" has been approved`;
   }
 
   await createNotification(
@@ -618,42 +873,50 @@ export async function approveTaggingRequest(
   );
 
   // Apply the tag in Neo4j using declarative functions
-  if (request.videoId && request.role) {
-    // Get existing roles for this user in this video
-    const existingRoles: string[] = [];
-    for (const roleToCheck of [VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER]) {
-      const hasRole = await isUserTaggedInVideoWithRole(
-        request.eventId,
+  if (isEventRequest) {
+    if (request.videoId && request.role) {
+      // Get existing roles for this user in this video
+      const existingRoles: string[] = [];
+      for (const roleToCheck of [VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER]) {
+        const hasRole = await isUserTaggedInVideoWithRole(
+          request.eventId!,
+          request.videoId,
+          request.targetUserId,
+          roleToCheck
+        );
+        if (hasRole) {
+          existingRoles.push(roleToCheck);
+        }
+      }
+
+      // Combine existing roles with new role to set
+      const rolesToSet = Array.from(new Set([...existingRoles, request.role]));
+      await setVideoRoles(
+        request.eventId!,
         request.videoId,
         request.targetUserId,
-        roleToCheck
+        rolesToSet
       );
-      if (hasRole) {
-        existingRoles.push(roleToCheck);
-      }
+    } else if (request.sectionId && request.role) {
+      // Set section winner
+      await setSectionWinner(
+        request.eventId!,
+        request.sectionId,
+        request.targetUserId
+      );
+    } else if (request.role) {
+      // Event role
+      await setEventRoles(request.eventId!, request.targetUserId, request.role);
     }
-
-    // Combine existing roles with new role to set
-    const rolesToSet = Array.from(new Set([...existingRoles, request.role]));
-    await setVideoRoles(
-      request.eventId,
-      request.videoId,
-      request.targetUserId,
-      rolesToSet
-    );
-  } else if (request.sectionId && request.role) {
-    // Set section winner
-    await setSectionWinner(
-      request.eventId,
-      request.sectionId,
-      request.targetUserId
-    );
-  } else if (request.role) {
-    // Event role - still use setEventRoles for event roles (not part of this refactor)
-    // This would need to be handled separately if event roles also need refactoring
-    throw new Error(
-      "Event role tagging not yet refactored to use declarative approach"
-    );
+  } else {
+    // Session role
+    if (request.role) {
+      await setSessionRoles(
+        request.sessionId!,
+        request.targetUserId,
+        request.role
+      );
+    }
   }
 
   return { success: true };
@@ -672,6 +935,21 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
 
   if (!request) {
     throw new Error("Request not found");
+  }
+
+  // Determine if this is a session request or event request
+  const isSessionRequest = !!request.sessionId;
+  const isEventRequest = !!request.eventId;
+
+  if (!isSessionRequest && !isEventRequest) {
+    throw new Error(
+      "Invalid tagging request: must have either eventId or sessionId"
+    );
+  }
+  if (isSessionRequest && isEventRequest) {
+    throw new Error(
+      "Invalid tagging request: cannot have both eventId and sessionId"
+    );
   }
 
   // Validate parameter combinations (same as approveTaggingRequest)
@@ -700,13 +978,26 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
     throw new Error("Request is not pending");
   }
 
-  const canApprove = await canUserApproveRequest(
-    approverId,
-    REQUEST_TYPES.TAGGING,
-    {
-      eventId: request.eventId,
-    }
-  );
+  // Check if user can approve/deny
+  let canApprove = false;
+  if (isEventRequest) {
+    canApprove = await canUserApproveRequest(
+      approverId,
+      REQUEST_TYPES.TAGGING,
+      {
+        eventId: request.eventId!,
+      }
+    );
+  } else {
+    // For session requests, check if user is session creator, team member, moderator, or admin
+    const { isSessionCreator } = await import("@/db/queries/session");
+    const session = await auth();
+    const authLevel = session?.user?.auth || 0;
+    canApprove =
+      authLevel >= AUTH_LEVELS.MODERATOR ||
+      (await isSessionCreator(request.sessionId!, approverId)) ||
+      (await isSessionTeamMember(request.sessionId!, approverId));
+  }
 
   if (!canApprove) {
     throw new Error("You do not have permission to deny this request");
@@ -726,11 +1017,18 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
 
   await updateRequestStatus(REQUEST_TYPES.TAGGING, requestId, "DENIED");
 
-  const eventTitle = await getEventTitle(request.eventId);
-  const eventDisplayName = eventTitle || request.eventId;
-  const notificationMessage = request.videoId
-    ? `Your request to tag yourself in a video in event "${eventDisplayName}" has been denied`
-    : `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been denied`;
+  let notificationMessage: string;
+  if (isEventRequest) {
+    const eventTitle = await getEventTitle(request.eventId!);
+    const eventDisplayName = eventTitle || request.eventId!;
+    notificationMessage = request.videoId
+      ? `Your request to tag yourself in a video in event "${eventDisplayName}" has been denied`
+      : `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been denied`;
+  } else {
+    const sessionTitle = await getSessionTitle(request.sessionId!);
+    const sessionDisplayName = sessionTitle || request.sessionId!;
+    notificationMessage = `Your request to tag yourself as ${request.role} in session "${sessionDisplayName}" has been denied`;
+  }
 
   await createNotification(
     request.senderId,
@@ -1262,19 +1560,40 @@ export async function getIncomingRequests() {
     },
   });
 
-  // Filter requests user can approve and enrich with event/video info
+  // Filter requests user can approve and enrich with event/video/session info
   const canApproveTagging = await Promise.all(
     taggingRequests.map(async (req) => {
-      const canApprove = await canUserApproveRequest(
-        userId,
-        REQUEST_TYPES.TAGGING,
-        {
-          eventId: req.eventId,
-        }
-      );
+      const isSessionRequest = !!req.sessionId;
+      const isEventRequest = !!req.eventId;
 
-      // Fetch event, video, and section titles
-      const eventTitle = await getEventTitle(req.eventId);
+      let canApprove = false;
+      if (isEventRequest) {
+        canApprove = await canUserApproveRequest(
+          userId,
+          REQUEST_TYPES.TAGGING,
+          {
+            eventId: req.eventId!,
+          }
+        );
+      } else if (isSessionRequest) {
+        // For session requests, check if user is session creator, team member, moderator, or admin
+        const { isSessionCreator } = await import("@/db/queries/session");
+        const session = await auth();
+        const authLevel = session?.user?.auth || 0;
+        canApprove =
+          authLevel >= AUTH_LEVELS.MODERATOR ||
+          (await isSessionCreator(req.sessionId!, userId)) ||
+          (await isSessionTeamMember(req.sessionId!, userId));
+      }
+
+      // Fetch event/session, video, and section titles
+      let eventTitle: string | null = null;
+      let sessionTitle: string | null = null;
+      if (isEventRequest && req.eventId) {
+        eventTitle = await getEventTitle(req.eventId);
+      } else if (isSessionRequest && req.sessionId) {
+        sessionTitle = await getSessionTitle(req.sessionId);
+      }
       const videoTitle = req.videoId ? await getVideoTitle(req.videoId) : null;
 
       // Fetch section title from Neo4j if sectionId exists
@@ -1301,7 +1620,8 @@ export async function getIncomingRequests() {
       return {
         request: {
           ...req,
-          eventTitle: eventTitle || req.eventId,
+          eventTitle: eventTitle || req.eventId || null,
+          sessionTitle: sessionTitle || req.sessionId || null,
           videoTitle: videoTitle || null,
           sectionTitle: sectionTitle || null,
           role: req.role
@@ -1384,10 +1704,19 @@ export async function getOutgoingRequests() {
       }),
     ]);
 
-  // Enrich tagging requests with event and video titles
+  // Enrich tagging requests with event/session and video titles
   const enrichedTaggingRequests = await Promise.all(
     taggingRequests.map(async (req) => {
-      const eventTitle = await getEventTitle(req.eventId);
+      const isSessionRequest = !!req.sessionId;
+      const isEventRequest = !!req.eventId;
+
+      let eventTitle: string | null = null;
+      let sessionTitle: string | null = null;
+      if (isEventRequest && req.eventId) {
+        eventTitle = await getEventTitle(req.eventId);
+      } else if (isSessionRequest && req.sessionId) {
+        sessionTitle = await getSessionTitle(req.sessionId);
+      }
       const videoTitle = req.videoId ? await getVideoTitle(req.videoId) : null;
 
       // Fetch section title from Neo4j if sectionId exists
@@ -1415,7 +1744,8 @@ export async function getOutgoingRequests() {
         ...req,
         type: "TAGGING",
         sectionTitle: sectionTitle || null,
-        eventTitle: eventTitle || req.eventId,
+        eventTitle: eventTitle || req.eventId || null,
+        sessionTitle: sessionTitle || req.sessionId || null,
         videoTitle: videoTitle || null,
         role: req.role ? fromNeo4jRoleFormat(req.role) || req.role : undefined,
       };
@@ -2557,18 +2887,29 @@ export async function tagSelfWithRoleForSession(
       throw error;
     }
   } else {
-    // User doesn't have permission - for sessions, we don't have tagging requests yet
-    // TODO: Add session tagging request support when needed
-    throw new Error(
-      "You do not have permission to tag yourself with this role. Session tagging requests are not yet supported."
+    // User doesn't have permission - create a tagging request
+    console.log(
+      "🔵 [tagSelfWithRoleForSession] User doesn't have permission, creating request..."
     );
+    try {
+      const result = await createTaggingRequestForSession(sessionId, role);
+      console.log(
+        "✅ [tagSelfWithRoleForSession] Request created successfully:",
+        result.request.id
+      );
+      return { success: true, directTag: false, request: result.request };
+    } catch (error) {
+      console.error(
+        "❌ [tagSelfWithRoleForSession] Error creating tagging request:",
+        error
+      );
+      throw error;
+    }
   }
 }
 
 /**
  * Get pending tagging request for a session
- * Note: Session tagging requests may not be fully supported in the database schema yet
- * This function will return null if session requests are not supported
  */
 export async function getPendingTagRequestForSession(
   sessionId: string,
@@ -2582,9 +2923,26 @@ export async function getPendingTagRequestForSession(
   // If userId is not provided, use the authenticated user
   const targetUserId = userId || (await requireAuth());
 
-  // Note: Session tagging requests may not be supported in the database schema yet
-  // The TaggingRequest model only has eventId, not sessionId
-  // For now, return null - this can be updated when the schema supports session requests
-  // TODO: Update when session tagging requests are added to the database schema
-  return null;
+  const whereClause: any = {
+    sessionId,
+    senderId: targetUserId,
+    targetUserId: targetUserId,
+    status: "PENDING",
+  };
+
+  // Add role to the where clause if provided
+  if (role !== undefined) {
+    whereClause.role = role || null;
+  }
+
+  const request = await prisma.taggingRequest.findFirst({
+    where: whereClause,
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return request;
 }
