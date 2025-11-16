@@ -30,7 +30,7 @@ export default async function EditProfilePage({ params }: PageProps) {
 
   // Users can only edit their own profile (unless admin)
   const userAuthLevel = session.user.auth || 0;
-  const isOwnProfile = session.user.id === profile.id;
+  const isOwnProfile = session.user.username === profile.username;
   const isAdmin = userAuthLevel >= AUTH_LEVELS.ADMIN;
 
   if (!isOwnProfile && !isAdmin) {

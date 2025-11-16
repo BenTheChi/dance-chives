@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { CitySearchItem, City } from "@/types/city";
 import { Control, FieldPath, FieldValues } from "react-hook-form";
-import { FormField, FormItem, FormLabel, FormControl } from "./ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "./ui/form";
 
 interface CitySearchInputProps<T extends FieldValues> {
   control: Control<T>;
@@ -217,6 +217,7 @@ export function CitySearchInput<T extends FieldValues>({
                 </div>
               </div>
             </FormControl>
+            <FormMessage />
           </FormItem>
         )}
       />

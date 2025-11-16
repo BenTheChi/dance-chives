@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Eventcard from "@/components/cards";
 import { UserCard } from "@/components/user-card";
 import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
+import { CityCalendarSection } from "@/components/CityCalendarSection";
 import {
   Card,
   CardContent,
@@ -34,8 +35,8 @@ export default async function CityPage({ params }: PageProps) {
     cityData.city.region && cityData.city.countryCode
       ? `${cityData.city.name}, ${cityData.city.region}, ${cityData.city.countryCode}`
       : cityData.city.region
-        ? `${cityData.city.name}, ${cityData.city.region}`
-        : cityData.city.name;
+      ? `${cityData.city.name}, ${cityData.city.region}`
+      : cityData.city.name;
 
   return (
     <>
@@ -69,6 +70,11 @@ export default async function CityPage({ params }: PageProps) {
             </Card>
           </section>
         )}
+
+        {/* Calendar Section */}
+        <section className="mb-12">
+          <CityCalendarSection cityId={cityData.city.id} />
+        </section>
 
         {/* Events Section */}
         {cityData.events.length > 0 && (
@@ -140,4 +146,3 @@ export default async function CityPage({ params }: PageProps) {
     </>
   );
 }
-

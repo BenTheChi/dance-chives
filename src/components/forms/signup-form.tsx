@@ -30,14 +30,27 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
+import { CitySearchInput } from "@/components/CitySearchInput";
+import { City } from "@/types/city";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
+const citySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  region: z.string(),
+  countryCode: z.string(),
+  population: z.number(),
+  timezone: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+});
+
 const signupSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
   username: z.string().min(1, "Username is required"),
   date: z.string().min(1, "Date of birth is required"),
-  city: z.string().min(1, "City is required"),
+  city: citySchema,
   styles: z.array(z.string()).optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
@@ -47,7 +60,7 @@ const signupSchema = z.object({
 const editSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
   date: z.string().optional(),
-  city: z.string().min(1, "City is required"),
+  city: citySchema,
   styles: z.array(z.string()).optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
@@ -62,7 +75,7 @@ interface SignUpFormProps {
     bio?: string;
     instagram?: string;
     website?: string;
-    city?: string;
+    city?: City | string | null;
     date?: string;
     styles?: string[];
     image?: string;
@@ -86,13 +99,28 @@ export default function SignUpForm({
   >(currentUser?.image || null);
 
   const schema = isEditMode ? editSchema : signupSchema;
+
+  // Parse city from currentUser - handle both City object and string
+  const parseCity = (city: City | string | null | undefined): City | null => {
+    if (!city) return null;
+    if (typeof city === "string") {
+      try {
+        return JSON.parse(city);
+      } catch {
+        return null;
+      }
+    }
+    return city;
+  };
+
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
+    mode: "onSubmit",
     defaultValues: isEditMode
       ? {
           displayName: currentUser?.displayName || "",
           date: currentUser?.date || "",
-          city: currentUser?.city || "",
+          city: parseCity(currentUser?.city) || undefined,
           styles: currentUser?.styles || [],
           bio: currentUser?.bio || "",
           instagram: currentUser?.instagram || "",
@@ -102,7 +130,7 @@ export default function SignUpForm({
           displayName: "",
           username: "",
           date: "",
-          city: "",
+          city: undefined as any, // Required field, will be validated on submit
           styles: [],
         },
   });
@@ -135,6 +163,14 @@ export default function SignUpForm({
           <form
             className="space-y-4"
             action={async (formData: FormData) => {
+              // Validate form before submission
+              const isValid = await form.trigger();
+              if (!isValid) {
+                setIsSubmitting(false);
+                toast.error("Please fill in all required fields");
+                return;
+              }
+
               setIsSubmitting(true);
               try {
                 if (isEditMode) {
@@ -298,21 +334,18 @@ export default function SignUpForm({
                 </FormItem>
               )}
             />
-            <FormField
+            <CitySearchInput
               control={form.control}
               name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Your primary city (e.g., Seattle, New York)"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="City"
+              placeholder="Search for a city..."
+              required
+              value={form.watch("city")}
+              onChange={(city) => {
+                if (city !== null && city !== undefined) {
+                  form.setValue("city", city);
+                }
+              }}
             />
             <FormField
               control={form.control}

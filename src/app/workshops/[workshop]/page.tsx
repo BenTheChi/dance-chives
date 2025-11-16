@@ -27,6 +27,7 @@ import { getEventTeamMembers } from "@/db/queries/team-member";
 import { getUser } from "@/db/queries/user";
 import VideoGallery from "@/components/VideoGallery";
 import { TagSelfDropdown } from "@/components/workshops/TagSelfDropdown";
+import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 
 type PageProps = {
   params: Promise<{ workshop: string }>;
@@ -243,8 +244,9 @@ export default async function WorkshopPage({ params }: PageProps) {
                 workshop.workshopDetails.endTime && (
                   <div className="flex flex-row gap-2">
                     <Clock />
-                    <b>Time:</b> {workshop.workshopDetails.startTime} -{" "}
-                    {workshop.workshopDetails.endTime}
+                    <b>Time:</b>{" "}
+                    {formatTimeToAMPM(workshop.workshopDetails.startTime)} -{" "}
+                    {formatTimeToAMPM(workshop.workshopDetails.endTime)}
                   </div>
                 )}
               {workshop.workshopDetails.cost && (

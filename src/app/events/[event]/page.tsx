@@ -32,6 +32,7 @@ import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUser } from "@/db/queries/user";
 import { getEventTeamMembers } from "@/db/queries/team-member";
+import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -226,8 +227,8 @@ export default async function EventPage({ params }: PageProps) {
               {event.eventDetails.startTime && event.eventDetails.endTime && (
                 <div className="flex flex-row gap-2">
                   <Clock />
-                  <b>Time:</b> {event.eventDetails.startTime} -{" "}
-                  {event.eventDetails.endTime}
+                  <b>Time:</b> {formatTimeToAMPM(event.eventDetails.startTime)}{" "}
+                  - {formatTimeToAMPM(event.eventDetails.endTime)}
                 </div>
               )}
               {event.eventDetails.prize && (
@@ -524,8 +525,9 @@ export default async function EventPage({ params }: PageProps) {
                         </div>
                         {subEvent.startTime && subEvent.endTime && (
                           <div className="flex flex-row gap-2">
-                            <Clock /> <b>Time:</b> {subEvent.startTime} -{" "}
-                            {subEvent.endTime}
+                            <Clock /> <b>Time:</b>{" "}
+                            {formatTimeToAMPM(subEvent.startTime)} -{" "}
+                            {formatTimeToAMPM(subEvent.endTime)}
                           </div>
                         )}
                         {subEvent.address && (

@@ -27,6 +27,7 @@ import { getUser } from "@/db/queries/user";
 import VideoGallery from "@/components/VideoGallery";
 import { TagSelfDropdown } from "@/components/sessions/TagSelfDropdown";
 import { DeleteSessionButton } from "@/components/DeleteSessionButton";
+import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 
 type PageProps = {
   params: Promise<{ session: string }>;
@@ -195,7 +196,7 @@ export default async function SessionPage({ params }: PageProps) {
                         <div className="flex flex-row gap-2 ml-4">
                           <Clock className="w-4 h-4" />
                           <span>
-                            {date.startTime} - {date.endTime}
+                            {formatTimeToAMPM(date.startTime)} - {formatTimeToAMPM(date.endTime)}
                           </span>
                         </div>
                       )}

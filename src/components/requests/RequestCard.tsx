@@ -253,7 +253,11 @@ export function IncomingRequestCard({
 
   const formatDate = (date: Date) => {
     const d = new Date(date);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })}`;
   };
 
   return (
@@ -346,7 +350,11 @@ export function OutgoingRequestCard({
 
   const formatDate = (date: Date) => {
     const d = new Date(date);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })}`;
   };
 
   return (
