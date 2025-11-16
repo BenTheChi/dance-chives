@@ -228,6 +228,7 @@ export default function WorkshopForm({
   };
 
   const onSubmit: SubmitHandler<WorkshopFormValues> = async (data) => {
+    console.log(data.workshopDetails.city);
     setIsSubmitting(true);
 
     try {

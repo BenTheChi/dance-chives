@@ -200,6 +200,25 @@ async function main() {
     console.log(`✅ Created OAuth account for user: ${accountData.userId}`);
   }
 
+  // City definitions (for events and users in Neo4j)
+  const newYorkCity: City = {
+    id: 123214,
+    name: "New York City",
+    countryCode: "US",
+    region: "New York",
+    population: 8804190,
+    timezone: "America/New_York",
+  };
+
+  const seattleCity: City = {
+    id: 128526,
+    name: "Seattle",
+    countryCode: "US",
+    region: "Washington",
+    population: 737015,
+    timezone: "America/Los_Angeles",
+  };
+
   // Create Neo4j user profiles for all users (needed for events and requests)
   console.log("🌱 Creating Neo4j user profiles...");
   const neo4jUserProfiles = [
@@ -207,7 +226,7 @@ async function main() {
       userId: "test-user-0",
       displayName: "Base User",
       username: "baseuser",
-      city: "Seattle",
+      city: seattleCity,
       date: "01/01/1990",
       bio: "Dance enthusiast from Seattle",
       instagram: "@baseuser",
@@ -218,7 +237,7 @@ async function main() {
       userId: "test-user-1",
       displayName: "Creator",
       username: "creator",
-      city: "New York",
+      city: newYorkCity,
       date: "01/01/1990",
       bio: "Event creator and organizer",
       instagram: "@creator",
@@ -229,7 +248,7 @@ async function main() {
       userId: "test-user-2",
       displayName: "Moderator",
       username: "moderator",
-      city: "New York",
+      city: newYorkCity,
       date: "01/01/1990",
       bio: "Community moderator",
       instagram: "",
@@ -240,7 +259,7 @@ async function main() {
       userId: "test-user-3",
       displayName: "Admin",
       username: "admin",
-      city: "Seattle",
+      city: seattleCity,
       date: "01/01/1990",
       bio: "Platform administrator",
       instagram: "@admin",
@@ -251,7 +270,7 @@ async function main() {
       userId: "test-user-4",
       displayName: "Super Admin",
       username: "superadmin",
-      city: "New York",
+      city: newYorkCity,
       date: "01/01/1990",
       bio: "Super administrator with full access",
       instagram: "@superadmin",
@@ -277,25 +296,6 @@ async function main() {
       console.log(`ℹ️  Neo4j profile for ${profile.userId} may already exist`);
     }
   }
-
-  // City definitions (for events in Neo4j, not user authorization)
-  const newYorkCity: City = {
-    id: 1,
-    name: "New York",
-    countryCode: "US",
-    region: "New York",
-    population: 8336817,
-    timezone: "America/New_York",
-  };
-
-  const seattleCity: City = {
-    id: 5,
-    name: "Seattle",
-    countryCode: "US",
-    region: "Washington",
-    population: 753675,
-    timezone: "America/Los_Angeles",
-  };
 
   // Generate UUIDs for all section IDs
   const sectionIds = {
