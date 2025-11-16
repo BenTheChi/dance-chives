@@ -7,8 +7,9 @@ import {
   SubEvent,
   EventCard,
 } from "../../types/event";
-import { Workshop } from "../../types/workshop";
+import { Workshop, WorkshopCard } from "../../types/workshop";
 import { UserSearchItem } from "../../types/user";
+import { SessionCard } from "../../types/session";
 import { City } from "../../types/city";
 import {
   getNeo4jRoleFormats,
@@ -3038,6 +3039,15 @@ export interface StyleData {
     sectionId: string;
     sectionTitle: string;
   }>;
+  users: Array<{
+    id: string;
+    displayName: string;
+    username: string;
+    image?: string;
+    styles: string[];
+  }>;
+  workshops: WorkshopCard[];
+  sessions: SessionCard[];
 }
 
 export const getStyleData = async (
@@ -3183,6 +3193,114 @@ export const getStyleData = async (
       videoUsersMap.set(videoId, taggedUsers);
     });
 
+    // Get users with this style (users who have STYLE relationship)
+    const usersResult = await session.run(
+      `MATCH (style:Style {name: $styleName})<-[:STYLE]-(u:User)
+       OPTIONAL MATCH (u)-[:STYLE]->(s:Style)
+       RETURN u.id as id, u.displayName as displayName, u.username as username,
+              u.image as image, collect(DISTINCT s.name) as styles
+       ORDER BY u.displayName ASC, u.username ASC`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Get workshops with this style (from workshop STYLE relationship or videos)
+    const workshopsResult = await session.run(
+      `MATCH (style:Style {name: $styleName})
+       OPTIONAL MATCH (style)<-[:STYLE]-(w:Workshop)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(w2:Workshop)
+       WITH collect(DISTINCT w) as workshops1, collect(DISTINCT w2) as workshops2
+       WITH [w IN workshops1 + workshops2 WHERE w IS NOT NULL] as allWorkshops
+       UNWIND allWorkshops as workshop
+       WITH DISTINCT workshop
+       OPTIONAL MATCH (workshop)-[:IN]->(c:City)
+       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(workshop)
+       RETURN workshop.id as id, workshop.title as title, workshop.startDate as startDate,
+              workshop.cost as cost, c.name as city, c.id as cityId, poster.url as imageUrl`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Get workshop styles
+    const workshopStylesResult = await session.run(
+      `MATCH (style:Style {name: $styleName})
+       OPTIONAL MATCH (style)<-[:STYLE]-(w:Workshop)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(w2:Workshop)
+       WITH collect(DISTINCT w) as workshops1, collect(DISTINCT w2) as workshops2
+       WITH [w IN workshops1 + workshops2 WHERE w IS NOT NULL] as allWorkshops
+       UNWIND allWorkshops as workshop
+       WITH DISTINCT workshop
+       OPTIONAL MATCH (workshop)-[:STYLE]->(ws:Style)
+       OPTIONAL MATCH (workshop)<-[:IN]-(v:Video)-[:STYLE]->(vs:Style)
+       WITH workshop.id as workshopId,
+            collect(DISTINCT ws.name) as workshopStyles,
+            collect(DISTINCT vs.name) as videoStyles
+       RETURN workshopId,
+              [s IN workshopStyles WHERE s IS NOT NULL] + [s IN videoStyles WHERE s IS NOT NULL] as allStyles`,
+      { styleName: normalizedStyleName }
+    );
+
+    const workshopStylesMap = new Map<string, string[]>();
+    workshopStylesResult.records.forEach((record) => {
+      const workshopId = record.get("workshopId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      workshopStylesMap.set(workshopId, uniqueStyles);
+    });
+
+    // Get sessions with this style (from session STYLE relationship or videos)
+    const sessionsResult = await session.run(
+      `MATCH (style:Style {name: $styleName})
+       OPTIONAL MATCH (style)<-[:STYLE]-(s:Session)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Session)
+       WITH collect(DISTINCT s) as sessions1, collect(DISTINCT s2) as sessions2
+       WITH [s IN sessions1 + sessions2 WHERE s IS NOT NULL] as allSessions
+       UNWIND allSessions as session
+       WITH DISTINCT session
+       OPTIONAL MATCH (session)-[:IN]->(c:City)
+       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(session)
+       RETURN session.id as id, session.title as title, session.dates as dates,
+              session.cost as cost, c.name as city, c.id as cityId, poster.url as imageUrl`,
+      { styleName: normalizedStyleName }
+    );
+
+    // Get session styles
+    const sessionStylesResult = await session.run(
+      `MATCH (style:Style {name: $styleName})
+       OPTIONAL MATCH (style)<-[:STYLE]-(s:Session)
+       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Session)
+       WITH collect(DISTINCT s) as sessions1, collect(DISTINCT s2) as sessions2
+       WITH [s IN sessions1 + sessions2 WHERE s IS NOT NULL] as allSessions
+       UNWIND allSessions as session
+       WITH DISTINCT session
+       OPTIONAL MATCH (session)-[:STYLE]->(ss:Style)
+       OPTIONAL MATCH (session)<-[:IN]-(v:Video)-[:STYLE]->(vs:Style)
+       WITH session.id as sessionId,
+            collect(DISTINCT ss.name) as sessionStyles,
+            collect(DISTINCT vs.name) as videoStyles
+       RETURN sessionId,
+              [s IN sessionStyles WHERE s IS NOT NULL] + [s IN videoStyles WHERE s IS NOT NULL] as allStyles`,
+      { styleName: normalizedStyleName }
+    );
+
+    const sessionStylesMap = new Map<string, string[]>();
+    sessionStylesResult.records.forEach((record) => {
+      const sessionId = record.get("sessionId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      sessionStylesMap.set(sessionId, uniqueStyles);
+    });
+
     await session.close();
 
     // Build events array
@@ -3223,11 +3341,66 @@ export const getStyleData = async (
       sectionTitle: record.get("sectionTitle"),
     }));
 
+    // Build users array
+    const users = usersResult.records.map((record) => ({
+      id: record.get("id"),
+      displayName: record.get("displayName") || "",
+      username: record.get("username") || "",
+      image: record.get("image"),
+      styles: (record.get("styles") || []).filter(
+        (s: any) => s !== null && s !== undefined
+      ) as string[],
+    }));
+
+    // Build workshops array
+    const workshops: WorkshopCard[] = workshopsResult.records.map((record) => ({
+      id: record.get("id"),
+      title: record.get("title"),
+      date: record.get("startDate"),
+      cost: record.get("cost"),
+      city: record.get("city") || "",
+      cityId: record.get("cityId"),
+      imageUrl: record.get("imageUrl"),
+      styles: workshopStylesMap.get(record.get("id")) || [],
+    }));
+
+    // Build sessions array
+    const sessions: SessionCard[] = sessionsResult.records.map((record) => {
+      // Parse dates array and extract first date
+      let firstDate = "";
+      const dates = record.get("dates");
+      if (dates) {
+        try {
+          const parsedDates =
+            typeof dates === "string" ? JSON.parse(dates) : dates;
+          if (Array.isArray(parsedDates) && parsedDates.length > 0) {
+            firstDate = parsedDates[0].date || "";
+          }
+        } catch (error) {
+          console.error("Error parsing dates array:", error);
+        }
+      }
+
+      return {
+        id: record.get("id"),
+        title: record.get("title"),
+        date: firstDate,
+        cost: record.get("cost"),
+        city: record.get("city") || "",
+        cityId: record.get("cityId"),
+        imageUrl: record.get("imageUrl"),
+        styles: sessionStylesMap.get(record.get("id")) || [],
+      };
+    });
+
     return {
       styleName: normalizedStyleName,
       events,
       sections,
       videos,
+      users,
+      workshops,
+      sessions,
     };
   } catch (error) {
     console.error("Error fetching style data:", error);

@@ -7,6 +7,7 @@ import {
   MapPin,
   GraduationCap,
   Clock,
+  Users,
 } from "lucide-react";
 import {
   SidebarContent,
@@ -31,6 +32,7 @@ const menuItems = [
   { title: "Workshops", url: "/workshops", icon: GraduationCap },
   { title: "Sessions", url: "/sessions", icon: Clock },
   { title: "Cities", url: "/cities", icon: MapPin },
+  { title: "Profiles", url: "/profiles", icon: Users },
 ];
 
 export function AppSidebar() {

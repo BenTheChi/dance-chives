@@ -1,9 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { insertEvent } from "../src/db/queries/event";
 import { insertWorkshop } from "../src/db/queries/workshop";
+import { insertSession } from "../src/db/queries/session";
 import { signupUser } from "../src/db/queries/user";
 import { Event } from "../src/types/event";
 import { Workshop } from "../src/types/workshop";
+import { Session } from "../src/types/session";
 import { City } from "../src/types/city";
 import { v4 as uuidv4 } from "uuid";
 import driver from "../src/db/driver";
@@ -317,13 +319,22 @@ async function main() {
     sectionTitle: string,
     bracketId: string,
     bracketTitle: string,
-    videos: Array<{ id: string; title: string; src: string }>
+    videos: Array<{
+      id: string;
+      title: string;
+      src: string;
+      styles?: string[];
+    }>,
+    sectionStyles?: string[],
+    applyStylesToVideos?: boolean
   ) => ({
     id: sectionId,
     title: sectionTitle,
     description: "",
     hasBrackets: true,
     videos: [],
+    styles: sectionStyles,
+    applyStylesToVideos: applyStylesToVideos || false,
     brackets: [
       {
         id: bracketId,
@@ -373,13 +384,17 @@ async function main() {
               id: "video-1-breaking-1v1-r1",
               title: "Breaking 1v1 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking", "Hip Hop"],
             },
             {
               id: "video-2-breaking-1v1-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking"],
             },
-          ]
+          ],
+          ["Breaking"],
+          true
         ),
         createSectionWithVideos(
           sectionIds["section-2-popping-2v2"],
@@ -391,13 +406,17 @@ async function main() {
               id: "video-1-popping-2v2-r1",
               title: "Popping 2v2 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+              styles: ["Popping", "Animation"],
             },
             {
               id: "video-2-popping-2v2-r1",
               title: "Popping 2v2 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+              styles: ["Popping"],
             },
-          ]
+          ],
+          ["Popping"],
+          true
         ),
       ],
       subEvents: [],
@@ -440,13 +459,17 @@ async function main() {
               id: "video-1-breaking-1v1-seattle-r1",
               title: "Breaking 1v1 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking"],
             },
             {
               id: "video-2-breaking-1v1-seattle-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking", "Hip Hop"],
             },
-          ]
+          ],
+          ["Breaking"],
+          false
         ),
         createSectionWithVideos(
           sectionIds["section-2-waacking-2v2-seattle"],
@@ -458,13 +481,17 @@ async function main() {
               id: "video-1-waacking-2v2-seattle-r1",
               title: "Waacking 2v2 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
+              styles: ["Waacking", "Voguing"],
             },
             {
               id: "video-2-waacking-2v2-seattle-r1",
               title: "Waacking 2v2 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
+              styles: ["Waacking"],
             },
-          ]
+          ],
+          ["Waacking", "Voguing"],
+          true
         ),
       ],
       subEvents: [],
@@ -507,13 +534,16 @@ async function main() {
               id: "video-1-breaking-1v1-moderator-r1",
               title: "Breaking 1v1 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking"],
             },
             {
               id: "video-2-breaking-1v1-moderator-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
-          ]
+          ],
+          ["Breaking", "Hip Hop"],
+          true
         ),
         createSectionWithVideos(
           sectionIds["section-2-locking-2v2-moderator"],
@@ -525,13 +555,17 @@ async function main() {
               id: "video-1-locking-2v2-moderator-r1",
               title: "Locking 2v2 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
+              styles: ["Locking", "Funk"],
             },
             {
               id: "video-2-locking-2v2-moderator-r1",
               title: "Locking 2v2 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
+              styles: ["Locking"],
             },
-          ]
+          ],
+          ["Locking"],
+          false
         ),
       ],
       subEvents: [],
@@ -574,13 +608,17 @@ async function main() {
               id: "video-1-breaking-1v1-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking"],
             },
             {
               id: "video-2-breaking-1v1-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking", "Hip Hop"],
             },
-          ]
+          ],
+          ["Breaking"],
+          false
         ),
         createSectionWithVideos(
           sectionIds["section-2-hip-hop-2v2-admin"],
@@ -592,13 +630,17 @@ async function main() {
               id: "video-1-hip-hop-2v2-admin-r1",
               title: "Hip Hop 2v2 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=YzHOD9t1fKM",
+              styles: ["Hip Hop", "Freestyle"],
             },
             {
               id: "video-2-hip-hop-2v2-admin-r1",
               title: "Hip Hop 2v2 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=YzHOD9t1fKM",
+              styles: ["Hip Hop"],
             },
-          ]
+          ],
+          ["Hip Hop"],
+          true
         ),
       ],
       subEvents: [],
@@ -641,13 +683,16 @@ async function main() {
               id: "video-1-breaking-1v1-super-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+              styles: ["Breaking"],
             },
             {
               id: "video-2-breaking-1v1-super-admin-r1",
               title: "Breaking 1v1 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
             },
-          ]
+          ],
+          ["Breaking", "Hip Hop"],
+          true
         ),
         createSectionWithVideos(
           sectionIds["section-2-popping-2v2-super-admin"],
@@ -659,13 +704,17 @@ async function main() {
               id: "video-1-popping-2v2-super-admin-r1",
               title: "Popping 2v2 - Round 1 Battle",
               src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+              styles: ["Popping", "Animation"],
             },
             {
               id: "video-2-popping-2v2-super-admin-r1",
               title: "Popping 2v2 - Round 1 Battle 2",
               src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+              styles: ["Popping"],
             },
-          ]
+          ],
+          ["Popping"],
+          false
         ),
       ],
       subEvents: [],
@@ -900,6 +949,690 @@ async function main() {
       console.log(`✅ Created Neo4j workshop: ${workshop.id}`);
     } catch (error) {
       console.error(`❌ Failed to create workshop ${workshop.id}:`, error);
+      // Don't silently continue - log the actual error
+      throw error;
+    }
+  }
+
+  // Create 6 sessions with videos, images, users, style tags, different cities, and dates in November 2025
+  console.log("🌱 Creating 6 sessions...");
+  const sessions: Session[] = [
+    {
+      id: "session-1-breaking-new-york",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sessionDetails: {
+        title: "Breaking Practice Session - New York",
+        description:
+          "Weekly breaking practice session for all skill levels. Focus on footwork, power moves, and freestyle. Open to everyone looking to improve their breaking skills.",
+        dates: [
+          {
+            date: "11/05/2025",
+            startTime: "19:00",
+            endTime: "21:00",
+          },
+          {
+            date: "11/12/2025",
+            startTime: "19:00",
+            endTime: "21:00",
+          },
+          {
+            date: "11/19/2025",
+            startTime: "19:00",
+            endTime: "21:00",
+          },
+        ],
+        schedule:
+          "7:00 PM - Warm-up and stretching\n7:15 PM - Footwork drills\n7:45 PM - Power moves practice\n8:15 PM - Freestyle cypher\n8:45 PM - Cool down and feedback",
+        address: "123 Dance Studio, Broadway, New York, NY 10001",
+        cost: "$15",
+        creatorId: "test-user-1", // Creator
+        poster: {
+          id: uuidv4(),
+          title: "Session Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: newYorkCity,
+        styles: ["Breaking", "Hip Hop"],
+      },
+      roles: [
+        {
+          id: "session-role-organizer-1",
+          title: "Organizer",
+          user: {
+            id: "test-user-1",
+            displayName: "Creator",
+            username: "creator",
+          },
+        },
+        {
+          id: "session-role-dj-1",
+          title: "DJ",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "session-video-1-breaking",
+          title: "Breaking Session Highlights - Week 1",
+          src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+          styles: ["Breaking"],
+        },
+        {
+          id: "session-video-2-breaking",
+          title: "Footwork Practice Session",
+          src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+          styles: ["Breaking", "Hip Hop"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Session Photo 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Session Photo 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+    },
+    {
+      id: "session-2-popping-seattle",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sessionDetails: {
+        title: "Popping & Animation Workshop Session - Seattle",
+        description:
+          "Intensive popping and animation session. Learn techniques from basic hits to advanced animation concepts. Perfect for dancers wanting to develop their popping style.",
+        dates: [
+          {
+            date: "11/08/2025",
+            startTime: "18:00",
+            endTime: "20:30",
+          },
+          {
+            date: "11/15/2025",
+            startTime: "18:00",
+            endTime: "20:30",
+          },
+        ],
+        schedule:
+          "6:00 PM - Check-in and warm-up\n6:15 PM - Basic popping techniques\n7:00 PM - Animation fundamentals\n7:45 PM - Freestyle session\n8:15 PM - Performance tips and feedback",
+        address: "456 Dance Academy, Pike Street, Seattle, WA 98101",
+        cost: "$20",
+        creatorId: "test-user-3", // Admin
+        poster: {
+          id: uuidv4(),
+          title: "Session Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: seattleCity,
+        styles: ["Popping", "Animation"],
+      },
+      roles: [
+        {
+          id: "session-role-organizer-2",
+          title: "Organizer",
+          user: {
+            id: "test-user-3",
+            displayName: "Admin",
+            username: "admin",
+          },
+        },
+        {
+          id: "session-role-teacher-1",
+          title: "Team Member",
+          user: {
+            id: "test-user-4",
+            displayName: "Super Admin",
+            username: "superadmin",
+          },
+        },
+        {
+          id: "session-role-photographer-1",
+          title: "Photographer",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "session-video-3-popping",
+          title: "Popping Session Introduction",
+          src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+          styles: ["Popping"],
+        },
+        {
+          id: "session-video-4-animation",
+          title: "Animation Techniques Explained",
+          src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
+          styles: ["Animation", "Popping"],
+        },
+        {
+          id: "session-video-5-musicality",
+          title: "Musicality in Popping",
+          src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
+          styles: ["Popping"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Popping Session Gallery 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Popping Session Gallery 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Popping Session Gallery 3",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+    },
+    {
+      id: "session-3-waacking-new-york",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sessionDetails: {
+        title: "Waacking & Voguing Session - New York",
+        description:
+          "Explore the art of waacking and voguing. Learn the history, techniques, and expression of these iconic dance styles. All levels welcome.",
+        dates: [
+          {
+            date: "11/03/2025",
+            startTime: "20:00",
+            endTime: "22:00",
+          },
+          {
+            date: "11/10/2025",
+            startTime: "20:00",
+            endTime: "22:00",
+          },
+          {
+            date: "11/17/2025",
+            startTime: "20:00",
+            endTime: "22:00",
+          },
+          {
+            date: "11/24/2025",
+            startTime: "20:00",
+            endTime: "22:00",
+          },
+        ],
+        schedule:
+          "8:00 PM - History and introduction\n8:15 PM - Basic waacking techniques\n8:45 PM - Voguing elements\n9:15 PM - Freestyle and expression\n9:45 PM - Group practice and feedback",
+        address: "789 5th Avenue, New York, NY 10002",
+        cost: "$18",
+        creatorId: "test-user-2", // Moderator
+        poster: {
+          id: uuidv4(),
+          title: "Session Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: newYorkCity,
+        styles: ["Waacking", "Voguing"],
+      },
+      roles: [
+        {
+          id: "session-role-organizer-3",
+          title: "Organizer",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+        {
+          id: "session-role-mc-1",
+          title: "MC",
+          user: {
+            id: "test-user-1",
+            displayName: "Creator",
+            username: "creator",
+          },
+        },
+        {
+          id: "session-role-videographer-1",
+          title: "Videographer",
+          user: {
+            id: "test-user-4",
+            displayName: "Super Admin",
+            username: "superadmin",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "session-video-6-waacking",
+          title: "Waacking Session Highlights",
+          src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
+          styles: ["Waacking"],
+        },
+        {
+          id: "session-video-7-voguing",
+          title: "Voguing Techniques",
+          src: "https://www.youtube.com/watch?v=YzHOD9t1fKM",
+          styles: ["Voguing", "Waacking"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Waacking Session Photo 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Waacking Session Photo 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+    },
+    {
+      id: "session-4-locking-seattle",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sessionDetails: {
+        title: "Locking Fundamentals Session - Seattle",
+        description:
+          "Master the fundamentals of locking. Learn classic moves, timing, and funk style. Perfect for beginners and intermediate dancers.",
+        dates: [
+          {
+            date: "11/07/2025",
+            startTime: "19:30",
+            endTime: "21:30",
+          },
+          {
+            date: "11/14/2025",
+            startTime: "19:30",
+            endTime: "21:30",
+          },
+          {
+            date: "11/21/2025",
+            startTime: "19:30",
+            endTime: "21:30",
+          },
+        ],
+        schedule:
+          "7:30 PM - Warm-up and funk history\n7:45 PM - Classic locking moves\n8:30 PM - Timing and musicality\n9:00 PM - Combinations and routines\n9:15 PM - Freestyle practice",
+        address: "321 University Street, Seattle, WA 98102",
+        cost: "$16",
+        creatorId: "test-user-4", // Super Admin
+        poster: {
+          id: uuidv4(),
+          title: "Session Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: seattleCity,
+        styles: ["Locking", "Funk"],
+      },
+      roles: [
+        {
+          id: "session-role-organizer-4",
+          title: "Organizer",
+          user: {
+            id: "test-user-4",
+            displayName: "Super Admin",
+            username: "superadmin",
+          },
+        },
+        {
+          id: "session-role-dj-2",
+          title: "DJ",
+          user: {
+            id: "test-user-1",
+            displayName: "Creator",
+            username: "creator",
+          },
+        },
+        {
+          id: "session-role-photographer-2",
+          title: "Photographer",
+          user: {
+            id: "test-user-3",
+            displayName: "Admin",
+            username: "admin",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "session-video-8-locking",
+          title: "Locking Session Practice",
+          src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
+          styles: ["Locking"],
+        },
+        {
+          id: "session-video-9-funk",
+          title: "Funk Style Fundamentals",
+          src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+          styles: ["Locking", "Funk"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Locking Session Gallery 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Locking Session Gallery 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+    },
+    {
+      id: "session-5-hip-hop-new-york",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sessionDetails: {
+        title: "Hip Hop Freestyle Session - New York",
+        description:
+          "Open freestyle session for hip hop dancers. Practice your moves, battle with others, and improve your freestyle skills in a supportive environment.",
+        dates: [
+          {
+            date: "11/01/2025",
+            startTime: "18:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/08/2025",
+            startTime: "18:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/15/2025",
+            startTime: "18:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/22/2025",
+            startTime: "18:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/29/2025",
+            startTime: "18:00",
+            endTime: "20:00",
+          },
+        ],
+        schedule:
+          "6:00 PM - Open cypher begins\n6:30 PM - Structured freestyle practice\n7:00 PM - Battle rounds\n7:30 PM - Open freestyle continues\n8:00 PM - Session ends",
+        address: "999 Madison Avenue, New York, NY 10003",
+        cost: "$12",
+        creatorId: "test-user-1", // Creator
+        poster: {
+          id: uuidv4(),
+          title: "Session Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: newYorkCity,
+        styles: ["Hip Hop", "Freestyle"],
+      },
+      roles: [
+        {
+          id: "session-role-organizer-5",
+          title: "Organizer",
+          user: {
+            id: "test-user-1",
+            displayName: "Creator",
+            username: "creator",
+          },
+        },
+        {
+          id: "session-role-mc-2",
+          title: "MC",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+        {
+          id: "session-role-videographer-2",
+          title: "Videographer",
+          user: {
+            id: "test-user-3",
+            displayName: "Admin",
+            username: "admin",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "session-video-10-hip-hop",
+          title: "Hip Hop Freestyle Cypher",
+          src: "https://www.youtube.com/watch?v=YzHOD9t1fKM",
+          styles: ["Hip Hop"],
+        },
+        {
+          id: "session-video-11-battle",
+          title: "Battle Highlights",
+          src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+          styles: ["Hip Hop", "Freestyle"],
+        },
+        {
+          id: "session-video-12-freestyle",
+          title: "Freestyle Practice Session",
+          src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+          styles: ["Freestyle", "Hip Hop"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "Hip Hop Session Photo 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Hip Hop Session Photo 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "Hip Hop Session Photo 3",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+    },
+    {
+      id: "session-6-all-styles-seattle",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sessionDetails: {
+        title: "All Styles Open Session - Seattle",
+        description:
+          "Open session for all dance styles. Practice any style you want, meet other dancers, and share knowledge. Breaking, Popping, Locking, Waacking, Hip Hop - all welcome!",
+        dates: [
+          {
+            date: "11/06/2025",
+            startTime: "17:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/13/2025",
+            startTime: "17:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/20/2025",
+            startTime: "17:00",
+            endTime: "20:00",
+          },
+          {
+            date: "11/27/2025",
+            startTime: "17:00",
+            endTime: "20:00",
+          },
+        ],
+        schedule:
+          "5:00 PM - Open practice begins\n5:30 PM - Style-specific areas open\n6:00 PM - Group warm-up\n6:30 PM - Open cypher and practice\n7:30 PM - Style showcases\n8:00 PM - Session ends",
+        address: "456 Dance Academy, Pike Street, Seattle, WA 98101",
+        cost: "$14",
+        creatorId: "test-user-3", // Admin
+        poster: {
+          id: uuidv4(),
+          title: "Session Poster",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "poster",
+          file: null,
+        },
+        city: seattleCity,
+        styles: ["Breaking", "Popping", "Locking", "Waacking", "Hip Hop"],
+      },
+      roles: [
+        {
+          id: "session-role-organizer-6",
+          title: "Organizer",
+          user: {
+            id: "test-user-3",
+            displayName: "Admin",
+            username: "admin",
+          },
+        },
+        {
+          id: "session-role-dj-3",
+          title: "DJ",
+          user: {
+            id: "test-user-4",
+            displayName: "Super Admin",
+            username: "superadmin",
+          },
+        },
+        {
+          id: "session-role-photographer-3",
+          title: "Photographer",
+          user: {
+            id: "test-user-1",
+            displayName: "Creator",
+            username: "creator",
+          },
+        },
+        {
+          id: "session-role-videographer-3",
+          title: "Videographer",
+          user: {
+            id: "test-user-2",
+            displayName: "Moderator",
+            username: "moderator",
+          },
+        },
+      ],
+      videos: [
+        {
+          id: "session-video-13-all-styles",
+          title: "All Styles Session Highlights",
+          src: "https://www.youtube.com/watch?v=-kT0HJhm5ck",
+          styles: ["Breaking", "Hip Hop"],
+        },
+        {
+          id: "session-video-14-showcase",
+          title: "Style Showcase Highlights",
+          src: "https://www.youtube.com/watch?v=4ESPNEKl4yM",
+          styles: ["Popping", "Locking"],
+        },
+        {
+          id: "session-video-15-cypher",
+          title: "Open Cypher Session",
+          src: "https://www.youtube.com/watch?v=_E7SMkgHcsM",
+          styles: ["Waacking", "Hip Hop"],
+        },
+        {
+          id: "session-video-16-practice",
+          title: "Practice Session Footage",
+          src: "https://www.youtube.com/watch?v=z-plXrkvhTg",
+          styles: ["Breaking", "Popping", "Locking"],
+        },
+      ],
+      gallery: [
+        {
+          id: uuidv4(),
+          title: "All Styles Session Photo 1",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "All Styles Session Photo 2",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "All Styles Session Photo 3",
+          url: "https://storage.googleapis.com/dance-chives-posters/85acb25a-b3ae-444a-9989-b5138bab5648-jensine_alien.jpg",
+          type: "photo",
+          file: null,
+        },
+        {
+          id: uuidv4(),
+          title: "All Styles Session Photo 4",
+          url: "https://storage.googleapis.com/dance-chives-posters/82b8285d-2b11-4f8c-af3c-341ecd419c3a-this_is_fine.jpg",
+          type: "photo",
+          file: null,
+        },
+      ],
+    },
+  ];
+
+  // Create sessions in Neo4j
+  for (const session of sessions) {
+    try {
+      await insertSession(session);
+      console.log(`✅ Created Neo4j session: ${session.id}`);
+    } catch (error) {
+      console.error(`❌ Failed to create session ${session.id}:`, error);
       // Don't silently continue - log the actual error
       throw error;
     }

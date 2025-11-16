@@ -5,6 +5,12 @@ import Eventcard from "@/components/cards";
 import { SectionCard } from "@/components/ui/section-card";
 import { StyleVideoGallery } from "@/components/ui/style-video-gallery";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import { UserCard } from "@/components/user-card";
+import Link from "next/link";
+import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
+import { normalizeYouTubeThumbnailUrl } from "@/lib/utils";
+import { StyleBadge } from "@/components/ui/style-badge";
 
 type PageProps = {
   params: Promise<{ style: string }>;
@@ -29,7 +35,7 @@ export default async function StylePage({ params }: PageProps) {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">{displayStyleName}</h1>
         <p className="text-muted-foreground mb-8">
-          Explore events, sections, and videos tagged with this dance style
+          Explore events, sections, videos, users, workshops, and sessions tagged with this dance style
         </p>
 
         {/* Events Section */}
@@ -80,12 +86,166 @@ export default async function StylePage({ params }: PageProps) {
           </section>
         )}
 
+        {/* Users Section */}
+        {styleData.users.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6">Users</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {styleData.users.map((user) => (
+                <UserCard
+                  key={user.id}
+                  id={user.id}
+                  displayName={user.displayName}
+                  username={user.username}
+                  image={user.image}
+                  styles={user.styles}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Workshops Section */}
+        {styleData.workshops.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6">Workshops</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {styleData.workshops.map((workshop) => (
+                <Card
+                  key={workshop.id}
+                  className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+                >
+                  <CardContent className="p-0">
+                    <div className="relative aspect-video overflow-hidden rounded-t-lg">
+                      <Link href={`/workshops/${workshop.id}`}>
+                        <Image
+                          src={normalizeYouTubeThumbnailUrl(workshop.imageUrl)}
+                          alt={workshop.title}
+                          fill
+                          className="object-cover transition-transform duration-200 group-hover:scale-105"
+                        />
+                      </Link>
+                    </div>
+
+                    <div className="sm:p-4 space-y-2 sm:space-y-3">
+                      <Link href={`/workshops/${workshop.id}`}>
+                        <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
+                          {workshop.title}
+                        </h3>
+                      </Link>
+                      <p className="text-sm text-muted-foreground">
+                        {workshop.date}
+                      </p>
+                      {workshop.cityId ? (
+                        <Link
+                          href={`/cities/${workshop.cityId}`}
+                          className="text-sm text-muted-foreground hover:text-blue-600 hover:underline transition-colors"
+                        >
+                          {workshop.city}
+                        </Link>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {workshop.city}
+                        </p>
+                      )}
+                      {workshop.cost && (
+                        <p className="text-sm font-medium">{workshop.cost}</p>
+                      )}
+                      {workshop.styles && workshop.styles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {workshop.styles.slice(0, 3).map((style) => (
+                            <StyleBadge key={style} style={style} />
+                          ))}
+                          {workshop.styles.length > 3 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{workshop.styles.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Sessions Section */}
+        {styleData.sessions.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6">Sessions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {styleData.sessions.map((session) => (
+                <Card
+                  key={session.id}
+                  className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+                >
+                  <CardContent className="p-0">
+                    <div className="relative aspect-video overflow-hidden rounded-t-lg">
+                      <Link href={`/sessions/${session.id}`}>
+                        <Image
+                          src={normalizeYouTubeThumbnailUrl(session.imageUrl)}
+                          alt={session.title}
+                          fill
+                          className="object-cover transition-transform duration-200 group-hover:scale-105"
+                        />
+                      </Link>
+                    </div>
+
+                    <div className="sm:p-4 space-y-2 sm:space-y-3">
+                      <Link href={`/sessions/${session.id}`}>
+                        <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
+                          {session.title}
+                        </h3>
+                      </Link>
+                      <p className="text-sm text-muted-foreground">
+                        {session.date}
+                      </p>
+                      {session.cityId ? (
+                        <Link
+                          href={`/cities/${session.cityId}`}
+                          className="text-sm text-muted-foreground hover:text-blue-600 hover:underline transition-colors"
+                        >
+                          {session.city}
+                        </Link>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {session.city}
+                        </p>
+                      )}
+                      {session.cost && (
+                        <p className="text-sm font-medium">{session.cost}</p>
+                      )}
+                      {session.styles && session.styles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {session.styles.slice(0, 3).map((style) => (
+                            <StyleBadge key={style} style={style} />
+                          ))}
+                          {session.styles.length > 3 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{session.styles.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
         {styleData.events.length === 0 &&
           styleData.sections.length === 0 &&
-          styleData.videos.length === 0 && (
+          styleData.videos.length === 0 &&
+          styleData.users.length === 0 &&
+          styleData.workshops.length === 0 &&
+          styleData.sessions.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                No events, sections, or videos found for this style.
+                No events, sections, videos, users, workshops, or sessions found for this style.
               </p>
             </div>
           )}

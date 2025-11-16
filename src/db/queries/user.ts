@@ -355,4 +355,39 @@ export const getUserEvents = async (id: string) => {
   }
 };
 
+export const getAllUsers = async () => {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User)
+      OPTIONAL MATCH (u)-[:LOCATED_IN]->(c:City)
+      OPTIONAL MATCH (u)-[:STYLE]->(s:Style)
+      RETURN u.id as id, u.displayName as displayName, u.username as username,
+             u.image as image, c.name as cityName, c.id as cityId,
+             collect(DISTINCT s.name) as styles
+      ORDER BY u.displayName ASC, u.username ASC
+      `
+    );
+
+    await session.close();
+
+    return result.records.map((record) => ({
+      id: record.get("id"),
+      displayName: record.get("displayName") || "",
+      username: record.get("username") || "",
+      image: record.get("image"),
+      city: record.get("cityName") || null,
+      cityId: record.get("cityId") || null,
+      styles: (record.get("styles") || []).filter(
+        (s: any) => s !== null && s !== undefined
+      ) as string[],
+    }));
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    await session.close();
+    return [];
+  }
+};
+
 //OTHER QUERIES HERE
