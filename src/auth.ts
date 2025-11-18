@@ -108,12 +108,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.accountVerified = dbUser?.accountVerified ?? undefined;
         session.user.username = neo4jUser?.username ?? undefined;
         session.user.displayName = neo4jUser?.displayName ?? undefined;
-        // Use Neo4j profile image if available
-        // If user has Neo4j profile but no image (empty string or null), set to empty string to show placeholder
+        // Use Neo4j profile image if available and set
+        // If user has Neo4j profile with an image, use it
+        // If user has Neo4j profile but no image, keep OAuth image (don't override)
         // If no Neo4j profile exists yet, keep OAuth image
-        if (neo4jUser) {
-          session.user.image = neo4jUser.image || "";
+        if (neo4jUser?.image && neo4jUser.image.trim() !== "") {
+          session.user.image = neo4jUser.image;
         }
+        // If neo4jUser exists but has no image, session.user.image keeps the OAuth image
       }
       return session;
     },
