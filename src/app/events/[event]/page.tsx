@@ -28,6 +28,8 @@ import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
+import { PhotoGallery } from "@/components/PhotoGallery";
+import { PosterImage } from "@/components/PosterImage";
 import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUser } from "@/db/queries/user";
@@ -170,19 +172,10 @@ export default async function EventPage({ params }: PageProps) {
             {canDelete && <DeleteEventButton eventId={event.id} />}
           </div>
 
-          {event.eventDetails.poster ? (
-            <Image
-              src={event.eventDetails.poster.url}
-              alt={event.eventDetails.poster.title}
-              width={500}
-              height={500}
-              className="object-contain rounded-md w-full md:col-span-1 xl:col-span-1"
-            />
-          ) : (
-            <div className="w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center md:col-span-1 xl:col-span-1">
-              No poster
-            </div>
-          )}
+          <PosterImage
+            poster={event.eventDetails.poster}
+            className="md:col-span-1 xl:col-span-1"
+          />
 
           <div className="flex flex-col gap-4 md:col-span-1 xl:col-span-1">
             {/* Event Details */}
@@ -618,23 +611,14 @@ export default async function EventPage({ params }: PageProps) {
           </section>
 
           {/* Photo Gallery */}
-          <section className="flex flex-col bg-red-100 rounded-md p-4 w-full md:col-span-2 xl:col-span-4">
-            <h2 className="text-2xl font-bold mb-2 text-center">
-              Photo Gallery
-            </h2>
-            <div className="flex flex-row gap-5 flex-wrap justify-center">
-              {event.gallery.map((image) => (
-                <Image
-                  key={image.id}
-                  src={image.url}
-                  alt={image.title}
-                  width={100}
-                  height={100}
-                  className="object-contain w-full max-w-[200px] h-auto"
-                />
-              ))}
-            </div>
-          </section>
+          {event.gallery.length > 0 && (
+            <section className="flex flex-col bg-red-100 rounded-md p-4 w-full md:col-span-2 xl:col-span-4">
+              <h2 className="text-2xl font-bold mb-2 text-center">
+                Photo Gallery
+              </h2>
+              <PhotoGallery images={event.gallery} />
+            </section>
+          )}
         </div>
       </div>
     </>

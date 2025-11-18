@@ -1,6 +1,10 @@
 "use server";
 import { auth } from "@/auth";
-import { deleteFromGCloudStorage, uploadToGCloudStorage } from "../GCloud";
+import {
+  deleteFromR2,
+  uploadWorkshopPosterToR2,
+  uploadWorkshopGalleryToR2,
+} from "../R2";
 import {
   insertWorkshop,
   editWorkshop as editWorkshopQuery,
@@ -111,40 +115,39 @@ export async function addWorkshop(props: addWorkshopProps): Promise<response> {
   }
 
   try {
+    // Generate workshopId first (needed for R2 path generation)
+    const workshopId = generateSlugId(props.workshopDetails.title);
+
     // Upload workshopDetails poster if exists
     if (props.workshopDetails.poster?.file) {
-      const posterResults = await uploadToGCloudStorage([
+      const posterResult = await uploadWorkshopPosterToR2(
         props.workshopDetails.poster.file,
-      ]);
-      if (
-        posterResults.length > 0 &&
-        posterResults[0].url &&
-        posterResults[0].id
-      ) {
-        props.workshopDetails.poster.url = posterResults[0].url;
-        props.workshopDetails.poster.id = posterResults[0].id;
+        workshopId
+      );
+      if (posterResult.success && posterResult.url && posterResult.id) {
+        props.workshopDetails.poster.url = posterResult.url;
+        props.workshopDetails.poster.id = posterResult.id;
       }
     }
 
     // Upload gallery photos if they have files
     const galleryFiles = props.gallery.filter((pic) => pic.file);
     if (galleryFiles.length > 0) {
-      const galleryResults = await uploadToGCloudStorage(
-        galleryFiles.map((pic) => pic.file!)
+      const galleryResults = await uploadWorkshopGalleryToR2(
+        galleryFiles.map((pic) => pic.file!),
+        workshopId
       );
       galleryResults.forEach((result, index) => {
         const originalPic = galleryFiles[index];
         const galleryIndex = props.gallery.findIndex(
           (p) => p.id === originalPic.id
         );
-        if (galleryIndex !== -1 && result.url && result.id) {
+        if (galleryIndex !== -1 && result.success && result.url && result.id) {
           props.gallery[galleryIndex].url = result.url;
           props.gallery[galleryIndex].id = result.id;
         }
       });
     }
-
-    const workshopId = generateSlugId(props.workshopDetails.title);
     const now = new Date();
 
     const workshop: Workshop = {
@@ -264,21 +267,18 @@ export async function editWorkshop(
       editedWorkshop.workshopDetails.poster?.file &&
       oldWorkshop.workshopDetails.poster?.url
     ) {
-      await deleteFromGCloudStorage(oldWorkshop.workshopDetails.poster.url);
+      await deleteFromR2(oldWorkshop.workshopDetails.poster.url);
     }
 
     // Upload new poster if exists
     if (editedWorkshop.workshopDetails.poster?.file) {
-      const posterResults = await uploadToGCloudStorage([
+      const posterResult = await uploadWorkshopPosterToR2(
         editedWorkshop.workshopDetails.poster.file,
-      ]);
-      if (
-        posterResults.length > 0 &&
-        posterResults[0].url &&
-        posterResults[0].id
-      ) {
-        editedWorkshop.workshopDetails.poster.url = posterResults[0].url;
-        editedWorkshop.workshopDetails.poster.id = posterResults[0].id;
+        workshopId
+      );
+      if (posterResult.success && posterResult.url && posterResult.id) {
+        editedWorkshop.workshopDetails.poster.url = posterResult.url;
+        editedWorkshop.workshopDetails.poster.id = posterResult.id;
       }
     }
 
@@ -290,21 +290,22 @@ export async function editWorkshop(
     );
 
     for (const url of deletedGalleryUrls) {
-      await deleteFromGCloudStorage(url);
+      await deleteFromR2(url);
     }
 
     // Upload new gallery photos
     const galleryFiles = editedWorkshop.gallery.filter((pic) => pic.file);
     if (galleryFiles.length > 0) {
-      const galleryResults = await uploadToGCloudStorage(
-        galleryFiles.map((pic) => pic.file!)
+      const galleryResults = await uploadWorkshopGalleryToR2(
+        galleryFiles.map((pic) => pic.file!),
+        workshopId
       );
       galleryResults.forEach((result, index) => {
         const originalPic = galleryFiles[index];
         const galleryIndex = editedWorkshop.gallery.findIndex(
           (p) => p.id === originalPic.id
         );
-        if (galleryIndex !== -1 && result.url && result.id) {
+        if (galleryIndex !== -1 && result.success && result.url && result.id) {
           editedWorkshop.gallery[galleryIndex].url = result.url;
           editedWorkshop.gallery[galleryIndex].id = result.id;
         }
@@ -422,7 +423,7 @@ export async function deleteWorkshop(workshopId: string): Promise<response> {
     });
 
     for (const url of urlsToDelete) {
-      await deleteFromGCloudStorage(url);
+      await deleteFromR2(url);
     }
 
     await deleteWorkshopQuery(workshopId);

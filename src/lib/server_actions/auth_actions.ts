@@ -10,7 +10,7 @@ import {
   getUserEvents,
   updateUser,
 } from "@/db/queries/user";
-import { uploadProfilePictureToGCloudStorage } from "@/lib/GCloud";
+import { uploadProfilePictureToR2, deleteFromR2 } from "@/lib/R2";
 import { getNeo4jRoleFormats } from "@/lib/utils/roles";
 import driver from "@/db/driver";
 import { auth } from "@/auth";
@@ -91,8 +91,9 @@ export async function signup(formData: FormData) {
     let imageUrl: string | null = null;
     const profilePicture = formData.get("profilePicture") as File | null;
     if (profilePicture && profilePicture.size > 0) {
-      const uploadResult = await uploadProfilePictureToGCloudStorage(
-        profilePicture
+      const uploadResult = await uploadProfilePictureToR2(
+        profilePicture,
+        session.user.id
       );
       if (uploadResult.success && uploadResult.url) {
         imageUrl = uploadResult.url;
@@ -767,8 +768,14 @@ export async function updateUserProfile(userId: string, formData: FormData) {
     let imageUrl = currentUser.image;
     const profilePicture = formData.get("profilePicture") as File | null;
     if (profilePicture && profilePicture.size > 0) {
-      const uploadResult = await uploadProfilePictureToGCloudStorage(
-        profilePicture
+      // Delete old profile picture if it exists
+      if (currentUser.image) {
+        await deleteFromR2(currentUser.image);
+      }
+
+      const uploadResult = await uploadProfilePictureToR2(
+        profilePicture,
+        userId
       );
       if (uploadResult.success && uploadResult.url) {
         imageUrl = uploadResult.url;

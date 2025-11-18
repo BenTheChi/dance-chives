@@ -28,6 +28,8 @@ import VideoGallery from "@/components/VideoGallery";
 import { TagSelfDropdown } from "@/components/sessions/TagSelfDropdown";
 import { DeleteSessionButton } from "@/components/DeleteSessionButton";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
+import { PhotoGallery } from "@/components/PhotoGallery";
+import { PosterImage } from "@/components/PosterImage";
 
 type PageProps = {
   params: Promise<{ session: string }>;
@@ -160,19 +162,10 @@ export default async function SessionPage({ params }: PageProps) {
             )}
           </div>
 
-          {session.sessionDetails.poster ? (
-            <Image
-              src={session.sessionDetails.poster.url}
-              alt={session.sessionDetails.poster.title}
-              width={500}
-              height={500}
-              className="object-contain rounded-md w-full md:col-span-1 xl:col-span-1"
-            />
-          ) : (
-            <div className="w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center md:col-span-1 xl:col-span-1">
-              No poster
-            </div>
-          )}
+          <PosterImage
+            poster={session.sessionDetails.poster}
+            className="md:col-span-1 xl:col-span-1"
+          />
 
           <div className="flex flex-col gap-4 md:col-span-1 xl:col-span-1">
             {/* Session Details */}
@@ -389,18 +382,7 @@ export default async function SessionPage({ params }: PageProps) {
               <h2 className="text-2xl font-bold mb-2 text-center">
                 Photo Gallery
               </h2>
-              <div className="flex flex-row gap-5 flex-wrap justify-center">
-                {session.gallery.map((image) => (
-                  <Image
-                    key={image.id}
-                    src={image.url}
-                    alt={image.title}
-                    width={100}
-                    height={100}
-                    className="object-contain w-full max-w-[200px] h-auto"
-                  />
-                ))}
-              </div>
+              <PhotoGallery images={session.gallery} />
             </section>
           )}
         </div>

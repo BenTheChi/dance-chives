@@ -1,6 +1,10 @@
 "use server";
 import { auth } from "@/auth";
-import { deleteFromGCloudStorage, uploadToGCloudStorage } from "../GCloud";
+import {
+  deleteFromR2,
+  uploadSessionPosterToR2,
+  uploadSessionGalleryToR2,
+} from "../R2";
 import {
   insertSession,
   editSession as editSessionQuery,
@@ -112,40 +116,39 @@ export async function addSession(props: addSessionProps): Promise<response> {
   }
 
   try {
+    // Generate sessionId first (needed for R2 path generation)
+    const sessionId = generateSlugId(props.sessionDetails.title);
+
     // Upload sessionDetails poster if exists
     if (props.sessionDetails.poster?.file) {
-      const posterResults = await uploadToGCloudStorage([
+      const posterResult = await uploadSessionPosterToR2(
         props.sessionDetails.poster.file,
-      ]);
-      if (
-        posterResults.length > 0 &&
-        posterResults[0].url &&
-        posterResults[0].id
-      ) {
-        props.sessionDetails.poster.url = posterResults[0].url;
-        props.sessionDetails.poster.id = posterResults[0].id;
+        sessionId
+      );
+      if (posterResult.success && posterResult.url && posterResult.id) {
+        props.sessionDetails.poster.url = posterResult.url;
+        props.sessionDetails.poster.id = posterResult.id;
       }
     }
 
     // Upload gallery photos if they have files
     const galleryFiles = props.gallery.filter((pic) => pic.file);
     if (galleryFiles.length > 0) {
-      const galleryResults = await uploadToGCloudStorage(
-        galleryFiles.map((pic) => pic.file!)
+      const galleryResults = await uploadSessionGalleryToR2(
+        galleryFiles.map((pic) => pic.file!),
+        sessionId
       );
       galleryResults.forEach((result, index) => {
         const originalPic = galleryFiles[index];
         const galleryIndex = props.gallery.findIndex(
           (p) => p.id === originalPic.id
         );
-        if (galleryIndex !== -1 && result.url && result.id) {
+        if (galleryIndex !== -1 && result.success && result.url && result.id) {
           props.gallery[galleryIndex].url = result.url;
           props.gallery[galleryIndex].id = result.id;
         }
       });
     }
-
-    const sessionId = generateSlugId(props.sessionDetails.title);
     const now = new Date();
 
     const sessionData: Session = {
@@ -251,21 +254,18 @@ export async function editSession(
       editedSession.sessionDetails.poster?.file &&
       oldSession.sessionDetails.poster?.url
     ) {
-      await deleteFromGCloudStorage(oldSession.sessionDetails.poster.url);
+      await deleteFromR2(oldSession.sessionDetails.poster.url);
     }
 
     // Upload new poster if exists
     if (editedSession.sessionDetails.poster?.file) {
-      const posterResults = await uploadToGCloudStorage([
+      const posterResult = await uploadSessionPosterToR2(
         editedSession.sessionDetails.poster.file,
-      ]);
-      if (
-        posterResults.length > 0 &&
-        posterResults[0].url &&
-        posterResults[0].id
-      ) {
-        editedSession.sessionDetails.poster.url = posterResults[0].url;
-        editedSession.sessionDetails.poster.id = posterResults[0].id;
+        sessionId
+      );
+      if (posterResult.success && posterResult.url && posterResult.id) {
+        editedSession.sessionDetails.poster.url = posterResult.url;
+        editedSession.sessionDetails.poster.id = posterResult.id;
       }
     }
 
@@ -277,21 +277,22 @@ export async function editSession(
     );
 
     for (const url of deletedGalleryUrls) {
-      await deleteFromGCloudStorage(url);
+      await deleteFromR2(url);
     }
 
     // Upload new gallery photos
     const galleryFiles = editedSession.gallery.filter((pic) => pic.file);
     if (galleryFiles.length > 0) {
-      const galleryResults = await uploadToGCloudStorage(
-        galleryFiles.map((pic) => pic.file!)
+      const galleryResults = await uploadSessionGalleryToR2(
+        galleryFiles.map((pic) => pic.file!),
+        sessionId
       );
       galleryResults.forEach((result, index) => {
         const originalPic = galleryFiles[index];
         const galleryIndex = editedSession.gallery.findIndex(
           (p) => p.id === originalPic.id
         );
-        if (galleryIndex !== -1 && result.url && result.id) {
+        if (galleryIndex !== -1 && result.success && result.url && result.id) {
           editedSession.gallery[galleryIndex].url = result.url;
           editedSession.gallery[galleryIndex].id = result.id;
         }
@@ -400,7 +401,7 @@ export async function deleteSession(sessionId: string): Promise<response> {
     const pictures = await getSessionPictures(sessionId);
 
     for (const url of pictures) {
-      await deleteFromGCloudStorage(url);
+      await deleteFromR2(url);
     }
 
     await deleteSessionQuery(sessionId);
@@ -420,4 +421,3 @@ export async function deleteSession(sessionId: string): Promise<response> {
     };
   }
 }
-

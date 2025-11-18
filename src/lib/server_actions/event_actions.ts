@@ -1,6 +1,12 @@
 "use server";
 import { auth } from "@/auth";
-import { deleteFromGCloudStorage, uploadToGCloudStorage } from "../GCloud";
+import {
+  deleteFromR2,
+  uploadEventPosterToR2,
+  uploadEventGalleryToR2,
+  uploadSubEventPosterToR2,
+  uploadWorkshopPosterToR2,
+} from "../R2";
 import {
   insertEvent,
   EditEvent as editEventQuery,
@@ -204,16 +210,20 @@ export async function addEvent(props: addEventProps): Promise<response> {
   }
 
   try {
+    // Generate eventId first (needed for R2 path generation)
+    const eventId = generateSlugId(props.eventDetails.title);
+
     // Upload eventDetails poster if exists
     if (props.eventDetails.poster?.file) {
-      const posterResults = await uploadToGCloudStorage([
+      const posterResult = await uploadEventPosterToR2(
         props.eventDetails.poster.file,
-      ]);
-      if (posterResults[0].success) {
+        eventId
+      );
+      if (posterResult.success) {
         props.eventDetails.poster = {
           ...props.eventDetails.poster,
-          id: posterResults[0].id!,
-          url: posterResults[0].url!,
+          id: posterResult.id!,
+          url: posterResult.url!,
           file: null,
         };
       }
@@ -222,14 +232,16 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Upload subEvent posters
     for (const subEvent of props.subEvents) {
       if (subEvent.poster?.file) {
-        const posterResults = await uploadToGCloudStorage([
+        const posterResult = await uploadSubEventPosterToR2(
           subEvent.poster.file,
-        ]);
-        if (posterResults[0].success) {
+          eventId,
+          subEvent.id
+        );
+        if (posterResult.success) {
           subEvent.poster = {
             ...subEvent.poster,
-            id: posterResults[0].id!,
-            url: posterResults[0].url!,
+            id: posterResult.id!,
+            url: posterResult.url!,
             file: null,
           };
         }
@@ -237,15 +249,23 @@ export async function addEvent(props: addEventProps): Promise<response> {
     }
 
     // Upload gallery files
-    for (const item of props.gallery) {
-      if (item.file) {
-        const galleryResults = await uploadToGCloudStorage([item.file]);
-        if (galleryResults[0].success) {
-          item.id = galleryResults[0].id!;
-          item.url = galleryResults[0].url!;
-          item.file = null;
+    const galleryFiles = props.gallery.filter((item) => item.file);
+    if (galleryFiles.length > 0) {
+      const galleryResults = await uploadEventGalleryToR2(
+        galleryFiles.map((item) => item.file!),
+        eventId
+      );
+      galleryResults.forEach((result, index) => {
+        const originalItem = galleryFiles[index];
+        const galleryIndex = props.gallery.findIndex(
+          (g) => g.id === originalItem.id
+        );
+        if (galleryIndex !== -1 && result.success && result.url && result.id) {
+          props.gallery[galleryIndex].id = result.id;
+          props.gallery[galleryIndex].url = result.url;
+          props.gallery[galleryIndex].file = null;
         }
-      }
+      });
     }
 
     // Process sections to handle brackets/videos based on hasBrackets
@@ -308,7 +328,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     // Create the Event object that matches the insertEvent query structure
     const event: Event = {
-      id: generateSlugId(props.eventDetails.title),
+      id: eventId,
       createdAt: new Date(),
       updatedAt: new Date(),
       eventDetails: eventDetails,
@@ -406,23 +426,24 @@ export async function editEvent(
   try {
     //Delete pictures that have a file and a url
     if (oldEvent.eventDetails.poster && !editedEvent.eventDetails.poster) {
-      await deleteFromGCloudStorage(oldEvent.eventDetails.poster.url);
+      await deleteFromR2(oldEvent.eventDetails.poster.url);
     }
 
     // Upload eventDetails poster if exists.  Delete old poster if it exists.
     if (editedEvent.eventDetails.poster?.file) {
       if (oldEvent.eventDetails.poster) {
-        await deleteFromGCloudStorage(oldEvent.eventDetails.poster.url);
+        await deleteFromR2(oldEvent.eventDetails.poster.url);
       }
 
-      const posterResults = await uploadToGCloudStorage([
+      const posterResult = await uploadEventPosterToR2(
         editedEvent.eventDetails.poster.file,
-      ]);
-      if (posterResults[0].success) {
+        eventId
+      );
+      if (posterResult.success) {
         editedEvent.eventDetails.poster = {
           ...editedEvent.eventDetails.poster,
-          id: posterResults[0].id!,
-          url: posterResults[0].url!,
+          id: posterResult.id!,
+          url: posterResult.url!,
           file: null,
         };
       }
@@ -430,7 +451,7 @@ export async function editEvent(
       !editedEvent.eventDetails.poster &&
       oldEvent.eventDetails.poster
     ) {
-      await deleteFromGCloudStorage(oldEvent.eventDetails.poster.url);
+      await deleteFromR2(oldEvent.eventDetails.poster.url);
     }
 
     // Upload subEvent posters
@@ -441,7 +462,7 @@ export async function editEvent(
           (s) => s.id === subEvent.id
         );
         if (oldSubEvent && oldSubEvent.poster) {
-          await deleteFromGCloudStorage(oldSubEvent.poster.url);
+          await deleteFromR2(oldSubEvent.poster.url);
         }
       }
 
@@ -451,17 +472,19 @@ export async function editEvent(
           (s) => s.id === subEvent.id
         );
         if (oldSubEvent && oldSubEvent.poster) {
-          await deleteFromGCloudStorage(oldSubEvent.poster.url);
+          await deleteFromR2(oldSubEvent.poster.url);
         }
 
-        const posterResults = await uploadToGCloudStorage([
+        const posterResult = await uploadSubEventPosterToR2(
           subEvent.poster.file,
-        ]);
-        if (posterResults[0].success) {
+          eventId,
+          subEvent.id
+        );
+        if (posterResult.success) {
           subEvent.poster = {
             ...subEvent.poster,
-            id: posterResults[0].id!,
-            url: posterResults[0].url!,
+            id: posterResult.id!,
+            url: posterResult.url!,
             file: null,
           };
         }
@@ -472,27 +495,35 @@ export async function editEvent(
     for (const subEvent of oldEvent.subEvents) {
       if (!editedEvent.subEvents.find((s) => s.id === subEvent.id)) {
         if (subEvent.poster) {
-          await deleteFromGCloudStorage(subEvent.poster.url);
+          await deleteFromR2(subEvent.poster.url);
         }
       }
     }
 
     // Upload gallery files
-    for (const item of editedEvent.gallery) {
-      if (item.file) {
-        const galleryResults = await uploadToGCloudStorage([item.file]);
-        if (galleryResults[0].success) {
-          item.id = galleryResults[0].id!;
-          item.url = galleryResults[0].url!;
-          item.file = null;
+    const galleryFiles = editedEvent.gallery.filter((item) => item.file);
+    if (galleryFiles.length > 0) {
+      const galleryResults = await uploadEventGalleryToR2(
+        galleryFiles.map((item) => item.file!),
+        eventId
+      );
+      galleryResults.forEach((result, index) => {
+        const originalItem = galleryFiles[index];
+        const galleryIndex = editedEvent.gallery.findIndex(
+          (g) => g.id === originalItem.id
+        );
+        if (galleryIndex !== -1 && result.success && result.url && result.id) {
+          editedEvent.gallery[galleryIndex].id = result.id;
+          editedEvent.gallery[galleryIndex].url = result.url;
+          editedEvent.gallery[galleryIndex].file = null;
         }
-      }
+      });
     }
 
     // Delete gallery items that don't exist in editedEvent
     for (const item of oldEvent.gallery) {
       if (!editedEvent.gallery.find((g) => g.id === item.id)) {
-        await deleteFromGCloudStorage(item.url);
+        await deleteFromR2(item.url);
       }
     }
 
@@ -506,28 +537,25 @@ export async function editEvent(
         if (!workshop.workshopDetails.poster) {
           // Delete old poster if it exists
           if (oldWorkshop?.workshopDetails.poster) {
-            await deleteFromGCloudStorage(
-              oldWorkshop.workshopDetails.poster.url
-            );
+            await deleteFromR2(oldWorkshop.workshopDetails.poster.url);
           }
         }
 
         if (workshop.workshopDetails.poster?.file) {
           // Delete old poster if it exists
           if (oldWorkshop?.workshopDetails.poster) {
-            await deleteFromGCloudStorage(
-              oldWorkshop.workshopDetails.poster.url
-            );
+            await deleteFromR2(oldWorkshop.workshopDetails.poster.url);
           }
 
-          const posterResults = await uploadToGCloudStorage([
+          const posterResult = await uploadWorkshopPosterToR2(
             workshop.workshopDetails.poster.file,
-          ]);
-          if (posterResults[0].success) {
+            workshop.id
+          );
+          if (posterResult.success) {
             workshop.workshopDetails.poster = {
               ...workshop.workshopDetails.poster,
-              id: posterResults[0].id!,
-              url: posterResults[0].url!,
+              id: posterResult.id!,
+              url: posterResult.url!,
               file: null,
             };
           }
@@ -542,7 +570,7 @@ export async function editEvent(
           !editedEvent.workshops?.find((w) => w.id === workshop.id) &&
           workshop.workshopDetails.poster
         ) {
-          await deleteFromGCloudStorage(workshop.workshopDetails.poster.url);
+          await deleteFromR2(workshop.workshopDetails.poster.url);
         }
       }
     }

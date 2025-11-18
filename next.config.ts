@@ -16,8 +16,18 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "storage.googleapis.com",
-        pathname: "/dance-chives-posters/**",
+        pathname: "/dance-chives-profile-pics/**",
       },
+      // Add R2 pattern
+      ...(process.env.CLOUDFLARE_R2_PUBLIC_URL
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: new URL(process.env.CLOUDFLARE_R2_PUBLIC_URL).hostname,
+              pathname: "/**",
+            },
+          ]
+        : []),
       {
         protocol: "https",
         hostname: "img.youtube.com",

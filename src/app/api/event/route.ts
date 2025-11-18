@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteEvent, getEventPictures, getEvent as getEventQuery } from "@/db/queries/event";
 import { auth } from "@/auth";
-import { deleteFromGCloudStorage } from "@/lib/GCloud";
+import { deleteFromR2 } from "@/lib/R2";
 import { prisma } from "@/lib/primsa";
 import { canDeleteEvent } from "@/lib/utils/auth-utils";
 
@@ -58,7 +58,7 @@ export async function DELETE(request: NextRequest) {
 
     await Promise.all(
       pictures.map(async (url) => {
-        return deleteFromGCloudStorage(url);
+        return deleteFromR2(url);
       })
     );
 

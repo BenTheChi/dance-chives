@@ -8,7 +8,7 @@ import {
   getSessionCreator,
 } from "@/db/queries/session";
 import { auth } from "@/auth";
-import { deleteFromGCloudStorage } from "@/lib/GCloud";
+import { deleteFromR2 } from "@/lib/R2";
 import { canDeleteSession } from "@/lib/utils/auth-utils";
 import { isSessionTeamMember } from "@/db/queries/team-member";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
@@ -77,7 +77,7 @@ export async function DELETE(request: NextRequest) {
 
     await Promise.all(
       pictures.map(async (url) => {
-        return deleteFromGCloudStorage(url);
+        return deleteFromR2(url);
       })
     );
 
