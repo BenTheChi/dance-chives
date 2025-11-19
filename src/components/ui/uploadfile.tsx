@@ -10,6 +10,7 @@ import {
 import { UseFormRegister, FieldValues, Path } from "react-hook-form";
 import Image from "next/image";
 import { Picture } from "@/types/event";
+import { toast } from "sonner";
 
 interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
@@ -29,9 +30,26 @@ export default function UploadFile<T extends FieldValues>({
 }: UploadFileProps<T>) {
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
+    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB in bytes
+
+    // Check file sizes before processing
+    const fileArray = Array.from(selectedFiles || []);
+    const oversizedFiles = fileArray.filter(
+      (file) => file.size > MAX_FILE_SIZE
+    );
+
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map((f) => f.name).join(", ");
+      toast.error(
+        `File(s) too large: ${fileNames}. Maximum file size is 8MB. Please select smaller files.`
+      );
+      // Reset input value so user can try again
+      e.target.value = "";
+      return;
+    }
 
     //convert File to Picture
-    const newPictures = Array.from(selectedFiles || []).map((file) => ({
+    const newPictures = fileArray.map((file) => ({
       id: crypto.randomUUID(),
       title: file.name,
       url: "",
@@ -40,10 +58,29 @@ export default function UploadFile<T extends FieldValues>({
     }));
 
     if (maxFiles > 1) {
-      onFileChange(newPictures as Picture[]);
+      // For galleries: merge with existing files
+      const currentFiles = Array.isArray(files) ? files : [];
+      const totalFiles = currentFiles.length + newPictures.length;
+
+      // Validate limit - reject entire selection if it would exceed limit
+      if (totalFiles > maxFiles) {
+        toast.error(
+          `Cannot add ${newPictures.length} file(s). Maximum of ${maxFiles} photos allowed. You currently have ${currentFiles.length} photo(s).`
+        );
+        // Reset input value so user can try again
+        e.target.value = "";
+        return;
+      }
+
+      // Merge new files with existing
+      onFileChange([...currentFiles, ...newPictures] as Picture[]);
     } else {
+      // For single file uploads (posters): replace
       onFileChange(newPictures[0] as Picture);
     }
+
+    // Reset input value to allow selecting the same file again
+    e.target.value = "";
   };
 
   const removeFile = (fileToRemove: Picture) => {
@@ -54,18 +91,25 @@ export default function UploadFile<T extends FieldValues>({
 
     if (files && Array.isArray(files)) {
       const updatedFiles = files.filter((file) => file !== fileToRemove);
-      onFileChange(updatedFiles);
+      onFileChange(updatedFiles.length > 0 ? updatedFiles : []);
     } else {
       onFileChange(null);
     }
   };
+
+  // Calculate current file count and check if at limit
+  const currentFileCount = Array.isArray(files) ? files.length : files ? 1 : 0;
+  const isAtLimit = currentFileCount >= maxFiles;
+  const isGallery = maxFiles > 1;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Upload a File</CardTitle>
         <CardDescription>
-          Select a file to upload and click the submit button.
+          {isGallery
+            ? `Select files to upload. ${currentFileCount}/${maxFiles} photos.`
+            : "Select a file to upload and click the submit button."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -161,19 +205,42 @@ export default function UploadFile<T extends FieldValues>({
           <div className="flex items-center justify-center w-full">
             <label
               htmlFor="dropzone-file"
-              className="flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+              className={`flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-lg ${
+                isAtLimit
+                  ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-60 dark:bg-gray-800 dark:border-gray-700"
+                  : "border-gray-300 cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+              }`}
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <UploadIcon className="w-10 h-10 text-gray-400" />
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span className="font-semibold">Click to upload</span> or drag
-                  and drop
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {maxFiles > 1
-                    ? `SVG, PNG, JPG or GIF (MAX. 800x400px) (MAX. ${maxFiles} files)`
-                    : "SVG, PNG, JPG or GIF (MAX. 800x400px) (MAX. 1 file)"}
-                </p>
+                <UploadIcon
+                  className={`w-10 h-10 ${
+                    isAtLimit ? "text-gray-300" : "text-gray-400"
+                  }`}
+                />
+                {isAtLimit ? (
+                  <>
+                    <p className="mb-2 text-sm text-gray-400 dark:text-gray-500">
+                      <span className="font-semibold">
+                        Maximum of {maxFiles} photos reached
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      Remove photos to add more
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                      <span className="font-semibold">Click to upload</span> or
+                      drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {maxFiles > 1
+                        ? `SVG, PNG, JPG or GIF (MAX. 800x400px) (MAX. ${maxFiles} files)`
+                        : "SVG, PNG, JPG or GIF (MAX. 800x400px) (MAX. 1 file)"}
+                    </p>
+                  </>
+                )}
               </div>
               <input
                 id="dropzone-file"
@@ -182,6 +249,13 @@ export default function UploadFile<T extends FieldValues>({
                 {...register(name)}
                 onChange={handleFilesChange}
                 multiple={maxFiles > 1 ? true : false}
+                disabled={isAtLimit}
+                onClick={(e) => {
+                  if (isAtLimit) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                }}
               />
             </label>
           </div>

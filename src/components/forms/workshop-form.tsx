@@ -484,7 +484,7 @@ export default function WorkshopForm({
                         }
                       }}
                       className="bg-[#E8E7E7]"
-                      maxFiles={3}
+                      maxFiles={10}
                       files={gallery || null}
                     />
                   </FormControl>

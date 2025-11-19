@@ -6,6 +6,7 @@ import {
   uploadEventGalleryToR2,
   uploadSubEventPosterToR2,
   uploadWorkshopPosterToR2,
+  uploadWorkshopGalleryToR2,
 } from "../R2";
 import {
   insertEvent,
@@ -268,6 +269,37 @@ export async function addEvent(props: addEventProps): Promise<response> {
       });
     }
 
+    // Upload workshop gallery files
+    if (props.workshops) {
+      for (const workshop of props.workshops) {
+        const workshopId =
+          workshop.id || generateSlugId(workshop.workshopDetails.title);
+        const galleryFiles = workshop.gallery.filter((pic) => pic.file);
+        if (galleryFiles.length > 0) {
+          const galleryResults = await uploadWorkshopGalleryToR2(
+            galleryFiles.map((pic) => pic.file!),
+            workshopId
+          );
+          galleryResults.forEach((result, index) => {
+            const originalPic = galleryFiles[index];
+            const galleryIndex = workshop.gallery.findIndex(
+              (p) => p.id === originalPic.id
+            );
+            if (
+              galleryIndex !== -1 &&
+              result.success &&
+              result.url &&
+              result.id
+            ) {
+              workshop.gallery[galleryIndex].url = result.url;
+              workshop.gallery[galleryIndex].id = result.id;
+              workshop.gallery[galleryIndex].file = null;
+            }
+          });
+        }
+      }
+    }
+
     // Process sections to handle brackets/videos based on hasBrackets
     const processedSections: Section[] = props.sections.map((section) => {
       const { hasBrackets, ...sectionWithoutBrackets } = section;
@@ -326,6 +358,21 @@ export async function addEvent(props: addEventProps): Promise<response> {
       },
     };
 
+    // Process workshops to ensure they have required fields
+    const processedWorkshops = (props.workshops || []).map((workshop) => ({
+      ...workshop,
+      createdAt: workshop.createdAt ? new Date(workshop.createdAt) : new Date(),
+      updatedAt: new Date(),
+      workshopDetails: {
+        ...workshop.workshopDetails,
+        creatorId: workshop.workshopDetails.creatorId || session.user.id,
+      },
+      roles: (workshop.roles || []).map((role) => ({
+        ...role,
+        title: role.title as "ORGANIZER" | "TEACHER",
+      })),
+    }));
+
     // Create the Event object that matches the insertEvent query structure
     const event: Event = {
       id: eventId,
@@ -335,7 +382,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       roles: props.roles || [],
       sections: processedSections,
       subEvents: props.subEvents as SubEvent[],
-      workshops: [],
+      workshops: processedWorkshops,
       gallery: props.gallery as Picture[],
     };
 
@@ -527,7 +574,7 @@ export async function editEvent(
       }
     }
 
-    // Upload workshop posters
+    // Upload workshop posters and gallery files
     if (editedEvent.workshops) {
       for (const workshop of editedEvent.workshops) {
         const oldWorkshop = oldEvent.workshops?.find(
@@ -560,17 +607,55 @@ export async function editEvent(
             };
           }
         }
+
+        // Upload workshop gallery files
+        const galleryFiles = workshop.gallery.filter((pic) => pic.file);
+        if (galleryFiles.length > 0) {
+          const galleryResults = await uploadWorkshopGalleryToR2(
+            galleryFiles.map((pic) => pic.file!),
+            workshop.id
+          );
+          galleryResults.forEach((result, index) => {
+            const originalPic = galleryFiles[index];
+            const galleryIndex = workshop.gallery.findIndex(
+              (p) => p.id === originalPic.id
+            );
+            if (
+              galleryIndex !== -1 &&
+              result.success &&
+              result.url &&
+              result.id
+            ) {
+              workshop.gallery[galleryIndex].url = result.url;
+              workshop.gallery[galleryIndex].id = result.id;
+              workshop.gallery[galleryIndex].file = null;
+            }
+          });
+        }
+
+        // Delete gallery items that don't exist in edited workshop
+        if (oldWorkshop) {
+          for (const item of oldWorkshop.gallery || []) {
+            if (!workshop.gallery.find((g) => g.id === item.id)) {
+              await deleteFromR2(item.url);
+            }
+          }
+        }
       }
     }
 
-    // Delete workshop posters where the entire workshop has been deleted
+    // Delete workshop posters and gallery where the entire workshop has been deleted
     if (oldEvent.workshops) {
       for (const workshop of oldEvent.workshops) {
-        if (
-          !editedEvent.workshops?.find((w) => w.id === workshop.id) &&
-          workshop.workshopDetails.poster
-        ) {
-          await deleteFromR2(workshop.workshopDetails.poster.url);
+        if (!editedEvent.workshops?.find((w) => w.id === workshop.id)) {
+          // Delete poster if it exists
+          if (workshop.workshopDetails.poster) {
+            await deleteFromR2(workshop.workshopDetails.poster.url);
+          }
+          // Delete gallery items if they exist
+          for (const item of workshop.gallery || []) {
+            await deleteFromR2(item.url);
+          }
         }
       }
     }

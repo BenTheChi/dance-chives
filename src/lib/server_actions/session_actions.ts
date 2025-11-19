@@ -146,6 +146,7 @@ export async function addSession(props: addSessionProps): Promise<response> {
         if (galleryIndex !== -1 && result.success && result.url && result.id) {
           props.gallery[galleryIndex].url = result.url;
           props.gallery[galleryIndex].id = result.id;
+          props.gallery[galleryIndex].file = null;
         }
       });
     }
@@ -295,6 +296,7 @@ export async function editSession(
         if (galleryIndex !== -1 && result.success && result.url && result.id) {
           editedSession.gallery[galleryIndex].url = result.url;
           editedSession.gallery[galleryIndex].id = result.id;
+          editedSession.gallery[galleryIndex].file = null;
         }
       });
     }

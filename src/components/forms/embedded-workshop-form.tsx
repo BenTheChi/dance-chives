@@ -143,23 +143,6 @@ export function EmbeddedWorkshopForm({
     setValue("workshops", updatedWorkshops);
   };
 
-  const addGalleryImage = () => {
-    const newImage: Picture = {
-      id: Date.now().toString(),
-      title: `Image ${gallery.length + 1}`,
-      url: "",
-      type: "image",
-      file: null,
-    };
-    const currentWorkshops = getValues("workshops") || [];
-    const updatedWorkshops = currentWorkshops.map((w) =>
-      w.id === activeWorkshopId
-        ? { ...w, gallery: [...(w.gallery || []), newImage] }
-        : w
-    );
-    setValue("workshops", updatedWorkshops);
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -577,59 +560,36 @@ export function EmbeddedWorkshopForm({
         )}
 
         {activeTab === "Photo Gallery" && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Photo Gallery</h3>
-              <Button
-                type="button"
-                onClick={addGalleryImage}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Image
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {gallery.map((image, imageIndex) => (
-                <FormField
-                  key={image.id}
-                  control={control}
-                  name={`workshops.${activeWorkshopIndex}.gallery.${imageIndex}`}
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Image {imageIndex + 1}</FormLabel>
-                      <FormControl>
-                        <UploadFile
-                          register={register}
-                          name={`workshops.${activeWorkshopIndex}.gallery.${imageIndex}`}
-                          onFileChange={(file) => {
-                            const currentWorkshops =
-                              getValues("workshops") || [];
-                            const updatedWorkshops = currentWorkshops.map((w) =>
-                              w.id === activeWorkshopId
-                                ? {
-                                    ...w,
-                                    gallery: (w.gallery || []).map((g, idx) =>
-                                      idx === imageIndex ? (file as Picture) : g
-                                    ),
-                                  }
-                                : w
-                            );
-                            setValue("workshops", updatedWorkshops);
-                          }}
-                          className="bg-[#E8E7E7]"
-                          maxFiles={1}
-                          files={image || null}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </div>
-          </div>
+          <FormField
+            control={control}
+            name={`workshops.${activeWorkshopIndex}.gallery`}
+            render={() => (
+              <FormItem className="w-full">
+                <FormLabel>Photo Gallery</FormLabel>
+                <FormControl>
+                  <UploadFile
+                    register={register}
+                    name={`workshops.${activeWorkshopIndex}.gallery`}
+                    onFileChange={(files) => {
+                      const currentWorkshops = getValues("workshops") || [];
+                      const updatedWorkshops = currentWorkshops.map((w) =>
+                        w.id === activeWorkshopId
+                          ? {
+                              ...w,
+                              gallery: files ? (files as Picture[]) : [],
+                            }
+                          : w
+                      );
+                      setValue("workshops", updatedWorkshops);
+                    }}
+                    className="bg-[#E8E7E7]"
+                    maxFiles={10}
+                    files={gallery || null}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
         )}
       </CardContent>
     </Card>
