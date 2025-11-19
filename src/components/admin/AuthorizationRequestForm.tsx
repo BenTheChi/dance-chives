@@ -1,13 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,7 +11,18 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Send } from "lucide-react";
+import {
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { Loader2, Send, Info } from "lucide-react";
 import { AUTH_LEVELS, getAuthLevelName } from "@/lib/utils/auth-utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
@@ -116,89 +120,102 @@ export function AuthorizationRequestForm({
   const availableLevels = getAvailableLevels();
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Request Authorization Level Change</CardTitle>
-        <CardDescription>
-          Submit a request to change your authorization level
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Current Auth Level Display */}
-          <div className="p-3 bg-muted rounded-md">
-            <div className="text-sm font-medium">
-              Your Current Authorization Level
-            </div>
-            <div className="text-sm text-muted-foreground mt-1">
-              <span className="font-medium">
-                {getAuthLevelName(currentUserAuthLevel)} ({currentUserAuthLevel}
-                )
-              </span>
-            </div>
-          </div>
-
-          {/* Requested Level Selector */}
-          <div className="space-y-2">
-            <Label htmlFor="requested-level">
-              Requested Authorization Level
-            </Label>
-            <Select
-              value={requestedLevel !== null ? requestedLevel.toString() : ""}
-              onValueChange={(value) => setRequestedLevel(parseInt(value))}
-            >
-              <SelectTrigger id="requested-level">
-                <SelectValue placeholder="Select authorization level" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLevels.length > 0 ? (
-                  availableLevels.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value.toString()}
-                    >
-                      {option.name} ({option.value})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No higher levels available
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-            {availableLevels.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                You have reached the highest authorization level available for
-                requests.
+    <>
+      <DialogHeader>
+        <div className="flex items-center gap-2">
+          <DialogTitle>Request Access Upgrade</DialogTitle>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>
+                Request a higher authorization level to access additional
+                features. Your request will be reviewed by administrators.
+                Higher levels provide increased permissions for managing events,
+                workshops, and content.
               </p>
-            )}
-          </div>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <DialogDescription>
+          Submit a request to upgrade your authorization level. Admins will
+          review your request.
+        </DialogDescription>
+      </DialogHeader>
 
-          {/* Message Field */}
-          <div className="space-y-2">
-            <Label htmlFor="message">
-              Explanation Message <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="message"
-              placeholder="Explain why you need this authorization level change..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-              required
-            />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Current Auth Level Display */}
+        <div className="p-3 bg-muted rounded-md">
+          <div className="text-sm font-medium">
+            Your Current Authorization Level
+          </div>
+          <div className="text-sm text-muted-foreground mt-1">
+            <span className="font-medium">
+              {getAuthLevelName(currentUserAuthLevel)} ({currentUserAuthLevel})
+            </span>
+          </div>
+        </div>
+
+        {/* Requested Level Selector */}
+        <div className="space-y-2">
+          <Label htmlFor="requested-level">Requested Authorization Level</Label>
+          <Select
+            value={requestedLevel !== null ? requestedLevel.toString() : ""}
+            onValueChange={(value) => setRequestedLevel(parseInt(value))}
+          >
+            <SelectTrigger id="requested-level">
+              <SelectValue placeholder="Select authorization level" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableLevels.length > 0 ? (
+                availableLevels.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value.toString()}
+                  >
+                    {option.name} ({option.value})
+                  </SelectItem>
+                ))
+              ) : (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  No higher levels available
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {availableLevels.length === 0 && (
             <p className="text-xs text-muted-foreground">
-              A message is required to explain the reason for this authorization
-              level change request.
+              You have reached the highest authorization level available for
+              requests.
             </p>
-          </div>
+          )}
+        </div>
 
-          {/* Submit Button */}
+        {/* Message Field */}
+        <div className="space-y-2">
+          <Label htmlFor="message">
+            Explanation Message <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="message"
+            placeholder="Explain why you need this authorization level change..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            required
+          />
+          <p className="text-xs text-muted-foreground">
+            A message is required to explain the reason for this authorization
+            level change request.
+          </p>
+        </div>
+
+        <DialogFooter>
           {requestedLevel !== null &&
             requestedLevel > currentUserAuthLevel &&
             message.trim() && (
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -220,8 +237,8 @@ export function AuthorizationRequestForm({
                 {getAuthLevelName(currentUserAuthLevel)})
               </p>
             )}
-        </form>
-      </CardContent>
-    </Card>
+        </DialogFooter>
+      </form>
+    </>
   );
 }

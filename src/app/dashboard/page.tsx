@@ -24,11 +24,13 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
 import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
 
   const loadDashboard = async () => {
     try {
@@ -141,12 +143,11 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <CardTitle className="text-2xl font-semibold">
-                  Welcome Back {user?.name || user?.email || "User"}
-                  {user?.displayName && ` (${user.displayName})`}!
+                  Welcome back, {user?.name || user?.email || "User"}!
                 </CardTitle>
                 <CardDescription className="space-y-1">
                   <div>
-                    Authorization Level: {getAuthLevelName(user?.auth ?? 0)} (
+                    Role Level: {getAuthLevelName(user?.auth ?? 0)} (
                     {user?.auth ?? 0})
                   </div>
                 </CardDescription>
@@ -181,6 +182,15 @@ export default function DashboardPage() {
                       </Button>
                     </>
                   )}
+                  {user?.auth !== undefined &&
+                    user.auth < AUTH_LEVELS.ADMIN && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsUpgradeDialogOpen(true)}
+                      >
+                        Request Access Upgrade
+                      </Button>
+                    )}
                 </div>
               </div>
               {unreadCount > 0 && (
@@ -198,12 +208,22 @@ export default function DashboardPage() {
         {/* Authorization Level Manager - Admin/SuperAdmin Only */}
         {user?.auth >= AUTH_LEVELS.ADMIN && <AuthorizationChanger />}
 
-        {/* Authorization Request Form - Base Users, Creators, and Moderators Only */}
+        {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
         {user?.auth !== undefined && user.auth < AUTH_LEVELS.ADMIN && (
-          <AuthorizationRequestForm
-            currentUserAuthLevel={user.auth ?? 0}
-            onRequestSubmitted={loadDashboard}
-          />
+          <Dialog
+            open={isUpgradeDialogOpen}
+            onOpenChange={setIsUpgradeDialogOpen}
+          >
+            <DialogContent>
+              <AuthorizationRequestForm
+                currentUserAuthLevel={user.auth ?? 0}
+                onRequestSubmitted={async () => {
+                  await loadDashboard();
+                  setIsUpgradeDialogOpen(false);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Notifications Section */}
