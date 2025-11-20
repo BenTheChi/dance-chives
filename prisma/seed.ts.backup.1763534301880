@@ -2,11 +2,12 @@ import { PrismaClient } from "@prisma/client";
 import { insertEvent } from "../src/db/queries/event";
 import { insertWorkshop } from "../src/db/queries/workshop";
 import { insertSession } from "../src/db/queries/session";
+import { signupUser } from "../src/db/queries/user";
 import { Event } from "../src/types/event";
 import { Workshop } from "../src/types/workshop";
 import { Session } from "../src/types/session";
+import { City } from "../src/types/city";
 import driver from "../src/db/driver";
-import { seedNeo4j } from "../scripts/seed-neo4j";
 import {
   setVideoRoles,
   setSectionWinner,
@@ -70,172 +71,43 @@ async function main() {
   await prisma.user.deleteMany();
   console.log("✅ Cleared all existing data");
 
-  // Create Users (matching Neo4j seed data)
-  console.log(`🌱 Creating test users...`);
-  const users = [
-    {
-      id: "test-user-0",
-      name: "Base User",
-      email: "baseuser@example.com",
-      emailVerified: new Date(),
-      accountVerified: new Date(),
-      image: null,
-      auth: 0, // BASE_USER
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "test-user-1",
-      name: "Creator",
-      email: "creator@example.com",
-      emailVerified: new Date(),
-      accountVerified: new Date(),
-      image: null,
-      auth: 1, // CREATOR
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "test-user-2",
-      name: "Moderator",
-      email: "moderator@example.com",
-      emailVerified: new Date(),
-      accountVerified: new Date(),
-      image: null,
-      auth: 2, // MODERATOR
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "test-user-3",
-      name: "Admin",
-      email: "admin@example.com",
-      emailVerified: new Date(),
-      accountVerified: new Date(),
-      image: null,
-      auth: 3, // ADMIN
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "test-user-4",
-      name: "Super Admin",
-      email: "superadmin@example.com",
-      emailVerified: new Date(),
-      accountVerified: new Date(),
-      image: null,
-      auth: 3, // ADMIN (Super Admin uses same level)
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
+  // Create Users
+  console.log(`🌱 Creating ${0} users...`);
+  const users = null;
 
   for (const userData of users) {
     await prisma.user.create({
       data: userData,
     });
-    console.log(`✅ Created user: ${userData.email} (auth: ${userData.auth})`);
+    console.log(`✅ Created user: ${userData.email}`);
   }
 
-  // Create Accounts (OAuth Google accounts for login)
-  console.log(`🌱 Creating OAuth accounts...`);
-  const accounts = [
-    {
-      userId: "test-user-0",
-      type: "oauth",
-      provider: "google",
-      providerAccountId: "google-baseuser-000",
-      access_token: "mock-access-token-baseuser",
-      refresh_token: "mock-refresh-token-baseuser",
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: "Bearer",
-      scope: "openid email profile",
-      id_token: "mock-id-token-baseuser",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      userId: "test-user-1",
-      type: "oauth",
-      provider: "google",
-      providerAccountId: "google-creator-111",
-      access_token: "mock-access-token-creator",
-      refresh_token: "mock-refresh-token-creator",
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: "Bearer",
-      scope: "openid email profile",
-      id_token: "mock-id-token-creator",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      userId: "test-user-2",
-      type: "oauth",
-      provider: "google",
-      providerAccountId: "google-moderator-222",
-      access_token: "mock-access-token-moderator",
-      refresh_token: "mock-refresh-token-moderator",
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: "Bearer",
-      scope: "openid email profile",
-      id_token: "mock-id-token-moderator",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      userId: "test-user-3",
-      type: "oauth",
-      provider: "google",
-      providerAccountId: "google-admin-333",
-      access_token: "mock-access-token-admin",
-      refresh_token: "mock-refresh-token-admin",
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: "Bearer",
-      scope: "openid email profile",
-      id_token: "mock-id-token-admin",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      userId: "test-user-4",
-      type: "oauth",
-      provider: "google",
-      providerAccountId: "google-superadmin-444",
-      access_token: "mock-access-token-superadmin",
-      refresh_token: "mock-refresh-token-superadmin",
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: "Bearer",
-      scope: "openid email profile",
-      id_token: "mock-id-token-superadmin",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
+  // Create Accounts
+  console.log(`🌱 Creating ${0} accounts...`);
+  const accounts = null;
 
   for (const accountData of accounts) {
     await prisma.account.create({
       data: accountData,
     });
-    console.log(`✅ Created OAuth account for user: ${accountData.userId}`);
+    console.log(`✅ Created account for user: ${accountData.userId}`);
   }
 
   // Create Event references
   console.log(`🌱 Creating ${0} event references...`);
-  const eventReferences: any[] = [];
+  const eventReferences = null;
 
-  if (eventReferences && eventReferences.length > 0) {
-    for (const eventRef of eventReferences) {
-      await prisma.event.create({
-        data: eventRef,
-      });
-      console.log(`✅ Created event reference: ${eventRef.eventId}`);
-    }
+  for (const eventRef of eventReferences) {
+    await prisma.event.create({
+      data: eventRef,
+    });
+    console.log(`✅ Created event reference: ${eventRef.eventId}`);
   }
 
   // Create TaggingRequests
   if (0 > 0) {
     console.log(`🌱 Creating ${0} tagging requests...`);
-    const taggingRequests: any[] = [];
+    const taggingRequests = null;
 
     for (const request of taggingRequests) {
       await prisma.taggingRequest.create({
@@ -248,7 +120,7 @@ async function main() {
   // Create TeamMemberRequests
   if (0 > 0) {
     console.log(`🌱 Creating ${0} team member requests...`);
-    const teamMemberRequests: any[] = [];
+    const teamMemberRequests = null;
 
     for (const request of teamMemberRequests) {
       await prisma.teamMemberRequest.create({
@@ -261,7 +133,7 @@ async function main() {
   // Create AuthLevelChangeRequests
   if (0 > 0) {
     console.log(`🌱 Creating ${0} auth level change requests...`);
-    const authLevelChangeRequests: any[] = [];
+    const authLevelChangeRequests = null;
 
     for (const request of authLevelChangeRequests) {
       await prisma.authLevelChangeRequest.create({
@@ -274,7 +146,7 @@ async function main() {
   // Create RequestApprovals
   if (0 > 0) {
     console.log(`🌱 Creating ${0} request approvals...`);
-    const requestApprovals: any[] = [];
+    const requestApprovals = null;
 
     for (const approval of requestApprovals) {
       await prisma.requestApproval.create({
@@ -287,7 +159,7 @@ async function main() {
   // Create Notifications
   if (0 > 0) {
     console.log(`🌱 Creating ${0} notifications...`);
-    const notifications: any[] = [];
+    const notifications = null;
 
     for (const notification of notifications) {
       await prisma.notification.create({
@@ -300,7 +172,7 @@ async function main() {
   // Create Sessions (NextAuth)
   if (0 > 0) {
     console.log(`🌱 Creating ${0} sessions...`);
-    const sessions: any[] = [];
+    const sessions = null;
 
     for (const sessionData of sessions) {
       await prisma.session.create({
@@ -313,7 +185,7 @@ async function main() {
   // Create VerificationTokens
   if (0 > 0) {
     console.log(`🌱 Creating ${0} verification tokens...`);
-    const verificationTokens: any[] = [];
+    const verificationTokens = null;
 
     for (const token of verificationTokens) {
       await prisma.verificationToken.create({
@@ -326,7 +198,7 @@ async function main() {
   // Create Authenticators
   if (0 > 0) {
     console.log(`🌱 Creating ${0} authenticators...`);
-    const authenticators: any[] = [];
+    const authenticators = null;
 
     for (const authenticator of authenticators) {
       await prisma.authenticator.create({
@@ -338,8 +210,6 @@ async function main() {
 
   // Create Neo4j user profiles
   console.log("🌱 Creating Neo4j user profiles...");
-  await seedNeo4j();
-
   console.log("🎉 PostgreSQL seeding completed!");
 }
 

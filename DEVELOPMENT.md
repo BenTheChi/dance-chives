@@ -101,7 +101,7 @@ If you prefer to run commands individually:
 - **Username:** postgres
 - **Password:** dev_password
 - **GUI:** Run `npm run db:studio` to open **Prisma Studio**
-- **Purpose:** Stores user authentication, OAuth accounts, and invitations
+- **Purpose:** Stores user authentication and OAuth accounts
 
 **How to Access:**
 
@@ -155,7 +155,6 @@ The setup includes comprehensive test data automatically seeded when you run `np
   - David Wilson (test-user-4) - REGIONAL_CREATOR (auth: 1, unverified)
   - Eva Martinez (test-user-5) - BASE_USER (auth: 0, unverified)
 - **OAuth account records** for all test users (Google provider)
-- **3 test invitations** (2 pending, 1 used)
 - User emails: alice@example.com, bob@example.com, carol@example.com, david@example.com, eva@example.com
 
 ### Neo4j Test Data

@@ -22,15 +22,14 @@ async function seedNeo4j() {
             countryCode: "US",
             region: "Washington",
             population: 737015,
-            timezone: "America/Los_Angeles",
+            timezone: "America/Los_Angeles"
           },
           date: "01/01/1990",
           bio: "Dance enthusiast from Seattle",
           instagram: "@baseuser",
           website: "",
-          image:
-            "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-0/profile-pictures/48af12c9-d4a1-47b4-921d-5fdb9cc4e778-VSDF.jpg",
-        },
+          image: "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-0/profile-pictures/48af12c9-d4a1-47b4-921d-5fdb9cc4e778-VSDF.jpg"
+        }
       },
       {
         id: "test-user-1",
@@ -43,15 +42,14 @@ async function seedNeo4j() {
             countryCode: "US",
             region: "New York",
             population: 8804190,
-            timezone: "America/New_York",
+            timezone: "America/New_York"
           },
           date: "01/01/1990",
           bio: "Event creator and organizer",
           instagram: "@creator",
           website: "https://creator.example.com",
-          image:
-            "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-1/profile-pictures/6fe32a69-1bb3-4d5b-8b9a-90531b3b6921-cardio_man.png",
-        },
+          image: "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-1/profile-pictures/6fe32a69-1bb3-4d5b-8b9a-90531b3b6921-cardio_man.png"
+        }
       },
       {
         id: "test-user-2",
@@ -64,14 +62,14 @@ async function seedNeo4j() {
             countryCode: "US",
             region: "New York",
             population: 8804190,
-            timezone: "America/New_York",
+            timezone: "America/New_York"
           },
           date: "01/01/1990",
           bio: "Community moderator",
           instagram: "",
           website: "",
-          image: "",
-        },
+          image: ""
+        }
       },
       {
         id: "test-user-3",
@@ -84,15 +82,14 @@ async function seedNeo4j() {
             countryCode: "US",
             region: "Washington",
             population: 737015,
-            timezone: "America/Los_Angeles",
+            timezone: "America/Los_Angeles"
           },
           date: "01/01/1990",
           bio: "Platform administrator",
           instagram: "@admin",
           website: "",
-          image:
-            "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-3/profile-pictures/661d5b23-ca8d-4653-976f-0325f112d345-leviwand.jpg",
-        },
+          image: "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-3/profile-pictures/661d5b23-ca8d-4653-976f-0325f112d345-leviwand.jpg"
+        }
       },
       {
         id: "test-user-4",
@@ -105,15 +102,15 @@ async function seedNeo4j() {
             countryCode: "US",
             region: "New York",
             population: 8804190,
-            timezone: "America/New_York",
+            timezone: "America/New_York"
           },
           date: "01/01/1990",
           bio: "Super administrator with full access",
           instagram: "@superadmin",
           website: "https://superadmin.example.com",
-          image: "",
-        },
-      },
+          image: ""
+        }
+      }
     ];
 
     // Create users using the signupUser function

@@ -18,6 +18,7 @@
     "db:reset": "prisma migrate reset",
     "db:seed": "prisma db seed && npm run neo4j:seed",
     "neo4j:seed": "dotenv -e .env.local -e .env -- tsx scripts/seed-neo4j.ts",
+    "export:seed": "dotenv -e .env.local -e .env -- tsx scripts/export-seed-data.ts",
     "dev:setup": "npm run docker:up && sleep 10 && npm run dev",
     "db:setup": "docker-compose up prisma-setup"
   },
