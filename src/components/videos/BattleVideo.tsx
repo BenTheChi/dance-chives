@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Video } from "@/types/event";
+import { BattleVideo as BattleVideoType } from "@/types/video";
 import { Play } from "lucide-react";
 import { StyleBadge } from "@/components/ui/style-badge";
 import {
@@ -11,23 +11,27 @@ import {
   normalizeYouTubeThumbnailUrl,
 } from "@/lib/utils";
 
-interface EventCardProps {
-  video: Video;
+interface BattleVideoProps {
+  video: BattleVideoType;
   eventLink: string;
   eventTitle: string;
+  sectionTitle?: string;
+  bracketTitle?: string;
   onClick: () => void;
-  roles?: string[]; // Kept for API compatibility but not displayed
-  isWinner?: boolean;
+  styles?: string[];
+  currentUserId?: string;
 }
 
-export function EventCard({
+export function BattleVideo({
   video,
   eventLink,
   eventTitle,
+  sectionTitle,
+  bracketTitle,
   onClick,
-  roles,
-  isWinner = false,
-}: EventCardProps) {
+  styles,
+  currentUserId,
+}: BattleVideoProps) {
   // Parse youtube id from src and generate thumbnail URL
   const youtubeId = extractYouTubeVideoId(video.src);
   const thumbnailUrl = youtubeId
@@ -36,10 +40,20 @@ export function EventCard({
       )
     : "/placeholder.svg";
 
+  // Check if current user is a winner
+  const isWinner = currentUserId
+    ? (video.taggedWinners || []).some(
+        (user) => user.id === currentUserId || user.username === currentUserId
+      )
+    : false;
+
+  // Use provided styles or video styles
+  const displayStyles = styles || video.styles || [];
+
   return (
     <Card
-      className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${
-        isWinner ? "border-2 border-yellow-400 shadow-md" : ""
+      className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-2 border-red-500 ${
+        isWinner ? "shadow-md" : ""
       }`}
     >
       <CardContent className="p-0">
@@ -76,14 +90,26 @@ export function EventCard({
             )}
           </div>
 
-          <Link href={eventLink} className="text-sm text-muted-foreground">
+          <Link href={eventLink} className="text-sm text-muted-foreground hover:text-blue-600">
             {eventTitle}
           </Link>
 
+          {sectionTitle && (
+            <div className="text-xs text-muted-foreground">
+              Section: {sectionTitle}
+            </div>
+          )}
+
+          {bracketTitle && (
+            <div className="text-xs text-muted-foreground">
+              Bracket: {bracketTitle}
+            </div>
+          )}
+
           {/* Display video styles */}
-          {video.styles && video.styles.length > 0 && (
+          {displayStyles.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
-              {video.styles.map((style) => (
+              {displayStyles.map((style) => (
                 <StyleBadge key={style} style={style} />
               ))}
             </div>
@@ -93,3 +119,4 @@ export function EventCard({
     </Card>
   );
 }
+

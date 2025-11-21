@@ -28,10 +28,12 @@ import {
   eventExists,
   videoExistsInEvent,
   videoBelongsToWorkshop,
+  videoBelongsToSession,
   sectionExistsInEvent,
   isUserTaggedInVideo,
   isUserTaggedInVideoWithRole,
   isUserWinnerOfSection,
+  getVideoType,
   getEventTitle,
   getVideoTitle,
   getSessionTitle,
@@ -2136,8 +2138,13 @@ export async function tagSelfInVideo(
     throw new Error("Role is required for video tags");
   }
 
-  // Validate video role
-  if (!isValidVideoRole(role)) {
+  // Validate video role - allow Choreographer and Teacher in addition to standard video roles
+  const roleUpper = role.toUpperCase();
+  const isValid =
+    isValidVideoRole(role) ||
+    roleUpper === "CHOREOGRAPHER" ||
+    roleUpper === "TEACHER";
+  if (!isValid) {
     throw new Error(`Invalid video role: ${role}`);
   }
 
@@ -2147,12 +2154,13 @@ export async function tagSelfInVideo(
     throw new Error("Event not found");
   }
 
-  // Check if video belongs to a workshop (workshop videos don't support dancer/winner tags)
-  const isWorkshopVideo = await videoBelongsToWorkshop(videoId);
-  if (isWorkshopVideo) {
-    throw new Error(
-      "Dancer and winner tags are not supported for workshop videos"
-    );
+  // Dancer tags are supported for all videos
+  // Winner tags are only supported for battle videos
+  if (role === VIDEO_ROLE_WINNER) {
+    const videoType = await getVideoType(videoId);
+    if (videoType !== "battle") {
+      throw new Error("Winner tags are only supported for battle videos");
+    }
   }
 
   // Validate video exists
@@ -2204,7 +2212,12 @@ export async function tagSelfInVideo(
     try {
       // Get existing roles for this user in this video
       const existingRoles: string[] = [];
-      for (const roleToCheck of [VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER]) {
+      for (const roleToCheck of [
+        VIDEO_ROLE_DANCER,
+        VIDEO_ROLE_WINNER,
+        "Choreographer",
+        "Teacher",
+      ]) {
         const hasRole = await isUserTaggedInVideoWithRole(
           eventId,
           videoId,
@@ -2556,6 +2569,12 @@ export async function markUserAsVideoWinner(
   const videoExists = await videoExistsInEvent(eventId, videoId);
   if (!videoExists) {
     throw new Error("Video not found in this event");
+  }
+
+  // Winner tags are only supported for battle videos
+  const videoType = await getVideoType(videoId);
+  if (videoType !== "battle") {
+    throw new Error("Winner tags are only supported for battle videos");
   }
 
   // Get userId - if username is provided, look up user by username

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { EventCard as VideoCard } from "@/components/ui/event-card";
+import { VideoCard } from "@/components/videos/VideoCard";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
@@ -61,6 +61,7 @@ export function TaggedVideosGrid({
       title: taggedVideo.videoTitle,
       src: taggedVideo.videoSrc || "",
       styles: taggedVideo.styles || [],
+      type: (taggedVideo as any).type || "battle", // Include type if available, default to battle
       taggedWinners: winners,
       taggedDancers: dancers,
     };
@@ -77,11 +78,24 @@ export function TaggedVideosGrid({
               title: video.videoTitle,
               src: video.videoSrc || "",
               styles: video.styles || [],
+              type: (video as any).type || "battle", // Include type if available, default to battle
+              taggedWinners: (video.taggedUsers || []).filter(
+                (user) =>
+                  user?.role?.toUpperCase() === "WINNER" ||
+                  user?.role?.toUpperCase() === VIDEO_ROLE_WINNER
+              ),
+              taggedDancers: (video.taggedUsers || []).filter(
+                (user) =>
+                  !user?.role ||
+                  user.role.toUpperCase() === "DANCER" ||
+                  user.role.toUpperCase() === VIDEO_ROLE_DANCER
+              ),
             }}
             eventLink={`/events/${video.eventId}`}
             eventTitle={video.eventTitle}
+            sectionTitle={video.sectionTitle}
             onClick={() => handleVideoSelect(index)}
-            isWinner={isWinner}
+            currentUserId={session?.user?.id}
           />
         ))}
       </div>

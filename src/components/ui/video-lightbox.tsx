@@ -5,19 +5,140 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { Separator } from "@/components/ui/separator";
-import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Video } from "@/types/video";
 import { UserSearchItem } from "@/types/user";
 import Link from "next/link";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
-import {
-  fromNeo4jRoleFormat,
-  VIDEO_ROLE_DANCER,
-  VIDEO_ROLE_WINNER,
-} from "@/lib/utils/roles";
+import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 import { Trophy } from "lucide-react";
 import { extractYouTubeVideoId } from "@/lib/utils";
+import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useTransition } from "react";
+
+// Helper component for user badge with remove button
+function UserBadgeWithRemove({
+  user,
+  eventId,
+  videoId,
+  currentUserId,
+  badgeClassName,
+  icon: Icon,
+}: {
+  user: UserSearchItem;
+  eventId: string;
+  videoId: string;
+  currentUserId?: string;
+  badgeClassName?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const canRemove =
+    currentUserId &&
+    (currentUserId === user.id || currentUserId === user.username);
+
+  const handleRemove = () => {
+    if (!currentUserId || !canRemove) return;
+
+    startTransition(async () => {
+      try {
+        await removeTagFromVideo(eventId, videoId, user.id || user.username);
+        toast.success("Successfully removed tag");
+        router.refresh();
+      } catch (error) {
+        console.error("Error removing tag:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to remove tag. Please try again."
+        );
+      }
+    });
+  };
+
+  return (
+    <div className="relative inline-block group">
+      {canRemove && (
+        <button
+          onClick={handleRemove}
+          disabled={isPending}
+          className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+          title="Remove tag"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+      <Link
+        href={`/profiles/${user.username}`}
+        className="hover:opacity-80 transition-opacity"
+      >
+        <Badge
+          variant={badgeClassName ? "default" : "secondary"}
+          className={
+            badgeClassName || "text-xs cursor-pointer hover:bg-secondary/80"
+          }
+        >
+          {Icon && badgeClassName && (
+            <Icon className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
+          )}
+          {user.displayName}
+        </Badge>
+      </Link>
+    </div>
+  );
+}
+
+// Helper component for displaying user tags
+function UserTagList({
+  users,
+  title,
+  icon: Icon,
+  iconClassName,
+  badgeClassName,
+  eventId,
+  videoId,
+  currentUserId,
+}: {
+  users: UserSearchItem[];
+  title: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  iconClassName?: string;
+  badgeClassName?: string;
+  eventId: string;
+  videoId: string;
+  currentUserId?: string;
+}) {
+  if (users.length === 0) return null;
+
+  return (
+    <div className="space-y-2 sm:space-y-3">
+      <div className="flex items-center">
+        {Icon && (
+          <Icon
+            className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${iconClassName || ""}`}
+          />
+        )}
+        <h3 className="font-semibold text-sm sm:text-base">{title}</h3>
+      </div>
+      <div className="flex flex-wrap gap-1 sm:gap-2">
+        {users.map((user: UserSearchItem, index: number) => (
+          <UserBadgeWithRemove
+            key={user.username || index}
+            user={user}
+            eventId={eventId}
+            videoId={videoId}
+            currentUserId={currentUserId}
+            badgeClassName={badgeClassName}
+            icon={Icon}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface VideoLightboxProps {
   video: Video;
@@ -58,14 +179,6 @@ export function VideoLightbox({
   applyStylesToVideos,
   currentUserId,
 }: VideoLightboxProps) {
-  const handleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
@@ -80,10 +193,6 @@ export function VideoLightbox({
         case "ArrowRight":
           if (hasNext) onNext();
           break;
-        case "f":
-        case "F":
-          handleFullscreen();
-          break;
       }
     };
 
@@ -91,7 +200,7 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
-  // Check if this is a workshop or session video (workshop/session videos don't have dancer/winner tags)
+  // Check if this is a workshop or session video
   const isWorkshopOrSession =
     eventLink.startsWith("/workshops/") || eventLink.startsWith("/sessions/");
 
@@ -138,9 +247,29 @@ export function VideoLightbox({
             user.id === currentUserId || user.username === currentUserId
         )
       : false;
+  const isUserDancer = currentUserId
+    ? dancers.some(
+        (user: UserSearchItem) =>
+          user.id === currentUserId || user.username === currentUserId
+      )
+    : false;
+  const isUserChoreographer =
+    currentUserId && videoType === "choreography"
+      ? choreographers.some(
+          (user: UserSearchItem) =>
+            user.id === currentUserId || user.username === currentUserId
+        )
+      : false;
+  const isUserTeacher =
+    currentUserId && videoType === "class"
+      ? teachers.some(
+          (user: UserSearchItem) =>
+            user.id === currentUserId || user.username === currentUserId
+        )
+      : false;
 
   // Determine if winner self-tagging should be shown (only for battle videos)
-  const showWinnerSelfTagging = !isWorkshopOrSession && videoType === "battle";
+  const showWinnerSelfTagging = videoType === "battle";
 
   // Determine which styles to display: section styles if applyStylesToVideos is true, otherwise video styles
   const displayStyles = useMemo(() => {
@@ -157,18 +286,42 @@ export function VideoLightbox({
         closeButton={false}
         className="h-[95vh] sm:h-[90vh] p-0 gap-0 m-2 !max-w-[95vw] !w-[95vw]"
       >
-        <div className="flex flex-col lg:flex-row h-full w-full">
-          {/* Video Section */}
-          <div className="flex-1 flex flex-col bg-black min-h-0">
-            {/* Video Header */}
-            <div className="flex items-center justify-between p-2 sm:p-4 bg-black text-white">
-              <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
+        <div className="flex flex-col h-full w-full bg-black">
+          {/* Video Header */}
+          <div className="p-2 sm:p-4 bg-black text-white border-b border-white/10">
+            {/* First line: Title, metadata, and controls */}
+            <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2">
+              <div className="flex items-center flex-wrap gap-2 sm:gap-4 min-w-0 flex-1">
                 <h2 className="text-sm sm:text-lg font-semibold truncate">
                   {video.title}
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
                   {currentIndex + 1} of {totalVideos}
                 </span>
+                <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-300">
+                  <Link
+                    href={eventLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 whitespace-nowrap"
+                  >
+                    {eventTitle}
+                  </Link>
+                  {!isWorkshopOrSession && (
+                    <>
+                      <span>•</span>
+                      <span className="whitespace-nowrap">{sectionTitle}</span>
+                      {bracketTitle && (
+                        <>
+                          <span>•</span>
+                          <span className="whitespace-nowrap">
+                            {bracketTitle}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
@@ -197,15 +350,6 @@ export function VideoLightbox({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleFullscreen}
-                  className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
-                >
-                  <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
                   onClick={onClose}
                   className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
                 >
@@ -214,286 +358,201 @@ export function VideoLightbox({
               </div>
             </div>
 
-            {/* Video Player */}
-            <div className="flex-1 relative min-h-[200px] sm:min-h-[300px]">
-              {(() => {
-                const youtubeId = extractYouTubeVideoId(video.src);
-                if (!youtubeId) {
-                  return (
-                    <div className="flex items-center justify-center h-full bg-black text-white">
-                      <p className="text-sm">Invalid YouTube URL</p>
-                    </div>
-                  );
-                }
-                return (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
-                    title={video.title}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                );
-              })()}
-            </div>
+            {/* Second line: Style tags */}
+            {displayStyles.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                {displayStyles.map((style) => (
+                  <StyleBadge key={style} style={style} />
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:w-80 bg-background border-t lg:border-t-0 lg:border-l flex flex-col max-h-[40vh] lg:max-h-none">
-            <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
-              {/* Video Info */}
-              <div className="flex flex-col gap-2">
-                <div>
-                  <h3 className="font-semibold text-sm sm:text-base">Event</h3>
-                  <Link
-                    href={eventLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm sm:text-base text-blue-500 hover:text-blue-600"
-                  >
-                    {eventTitle}
-                  </Link>
-                </div>
-                {!isWorkshopOrSession && (
-                  <>
-                    <div>
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Section
-                      </h3>
-                      <div>{sectionTitle}</div>
-                    </div>
-                    <div>
-                      {bracketTitle && (
-                        <>
-                          <h3 className="font-semibold text-sm sm:text-base">
-                            Bracket
-                          </h3>
-                          <div>{bracketTitle}</div>
-                        </>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-              {/* <div className="space-y-2 sm:space-y-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs sm:text-sm"
-                  asChild
-                >
-                  <a href={eventLink} target="_blank" rel="noopener noreferrer">
-                    {eventTitle}
-                  </a>
-                </Button>
-              </div> */}
-
-              <Separator />
-
-              {/* Style Tags */}
-              {displayStyles.length > 0 && (
-                <div className="space-y-2 sm:space-y-3">
-                  <h3 className="font-semibold text-sm sm:text-base">
-                    Dance Styles
-                  </h3>
-                  <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {displayStyles.map((style) => (
-                      <StyleBadge key={style} style={style} />
-                    ))}
+          {/* Video Player */}
+          <div className="flex-1 relative min-h-[200px] sm:min-h-[300px]">
+            {(() => {
+              const youtubeId = extractYouTubeVideoId(video.src);
+              if (!youtubeId) {
+                return (
+                  <div className="flex items-center justify-center h-full bg-black text-white">
+                    <p className="text-sm">Invalid YouTube URL</p>
                   </div>
-                </div>
-              )}
+                );
+              }
+              return (
+                <iframe
+                  src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+                  title={video.title}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              );
+            })()}
+          </div>
 
-              {displayStyles.length > 0 && <Separator />}
-
-              {/* Tag Self Buttons - Only show for event videos, not workshop/session videos */}
-              {/* Show Dancer button for all video types, Winner button only for battle videos */}
-              {!isWorkshopOrSession && currentUserId && (
-                <div className="space-y-2 sm:space-y-3">
+          {/* Tagged Users Below Video */}
+          <div className="bg-black/90 text-white p-3 sm:p-4 space-y-3 border-t border-white/10">
+            {/* Tag Self Buttons Row */}
+            {currentUserId && (
+              <div className="flex flex-wrap gap-2">
+                {/* Winner button - only for battle videos */}
+                {videoType === "battle" && !isUserWinner && (
+                  <TagSelfButton
+                    eventId={eventId}
+                    target="video"
+                    targetId={video.id}
+                    currentUserId={currentUserId}
+                    role={VIDEO_ROLE_WINNER}
+                    isUserTagged={isUserWinner}
+                    buttonLabel="Tag Self as Winner"
+                    pendingLabel="Winner tag request pending"
+                    successLabel="Tagged as Winner"
+                  />
+                )}
+                {/* Dancer button - for all video types */}
+                {!isUserDancer && (
                   <TagSelfButton
                     eventId={eventId}
                     target="video"
                     targetId={video.id}
                     currentUserId={currentUserId}
                     role={VIDEO_ROLE_DANCER}
-                    isUserTagged={isUserTagged}
-                    showRemoveButton={true}
+                    isUserTagged={isUserDancer}
                     buttonLabel="Tag Self as Dancer"
                     pendingLabel="Dancer tag request pending"
                     successLabel="Tagged as Dancer"
                   />
-                  {showWinnerSelfTagging && !isUserWinner && (
-                    <TagSelfButton
+                )}
+                {/* Choreographer button - only for choreography videos */}
+                {videoType === "choreography" && !isUserChoreographer && (
+                  <TagSelfButton
+                    eventId={eventId}
+                    target="video"
+                    targetId={video.id}
+                    currentUserId={currentUserId}
+                    role={"Choreographer" as any}
+                    isUserTagged={isUserChoreographer}
+                    buttonLabel="Tag Self as Choreographer"
+                    pendingLabel="Choreographer tag request pending"
+                    successLabel="Tagged as Choreographer"
+                  />
+                )}
+                {/* Teacher button - only for class videos */}
+                {videoType === "class" && !isUserTeacher && (
+                  <TagSelfButton
+                    eventId={eventId}
+                    target="video"
+                    targetId={video.id}
+                    currentUserId={currentUserId}
+                    role={"Teacher" as any}
+                    isUserTagged={isUserTeacher}
+                    buttonLabel="Tag Self as Teacher"
+                    pendingLabel="Teacher tag request pending"
+                    successLabel="Tagged as Teacher"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Winners - Only show for battle videos */}
+            {videoType === "battle" && winners.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-yellow-500" />
+                  <h3 className="font-semibold text-sm sm:text-base">
+                    Winners
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {winners.map((winner: UserSearchItem) => (
+                    <UserBadgeWithRemove
+                      key={winner.username}
+                      user={winner}
                       eventId={eventId}
-                      target="video"
-                      targetId={video.id}
+                      videoId={video.id}
                       currentUserId={currentUserId}
-                      role={VIDEO_ROLE_WINNER}
-                      isUserTagged={isUserWinner}
-                      buttonLabel="Tag Self as Winner"
-                      pendingLabel="Winner tag request pending"
-                      successLabel="Tagged as Winner"
+                      badgeClassName="bg-yellow-500 hover:bg-yellow-600 text-xs cursor-pointer"
+                      icon={Trophy}
                     />
-                  )}
-                  {showWinnerSelfTagging && isUserWinner && (
-                    <TagSelfButton
-                      eventId={eventId}
-                      target="video"
-                      targetId={video.id}
-                      currentUserId={currentUserId}
-                      role={VIDEO_ROLE_WINNER}
-                      isUserTagged={isUserWinner}
-                      showRemoveButton={true}
-                      buttonLabel="Remove Winner Tag"
-                      pendingLabel="Winner tag request pending"
-                      successLabel="Removed Winner Tag"
-                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Choreographers - Only show for choreography videos */}
+            {videoType === "choreography" && choreographers.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <h3 className="font-semibold text-sm sm:text-base">
+                    Choreographers
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {choreographers.map(
+                    (choreographer: UserSearchItem, index: number) => (
+                      <UserBadgeWithRemove
+                        key={choreographer.username || index}
+                        user={choreographer}
+                        eventId={eventId}
+                        videoId={video.id}
+                        currentUserId={currentUserId}
+                        badgeClassName="bg-white/10 text-white border-white/20 text-xs cursor-pointer hover:bg-white/20"
+                      />
+                    )
                   )}
                 </div>
-              )}
+              </div>
+            )}
 
-              {!isWorkshopOrSession &&
-                ((showWinnerSelfTagging && isUserWinner) || currentUserId) && (
-                  <Separator />
-                )}
-
-              {/* Winners - Only show for battle videos in events, not workshop/session videos */}
-              {!isWorkshopOrSession &&
-                videoType === "battle" &&
-                winners.length > 0 && (
-                  <div className="space-y-2 sm:space-y-3">
-                    <div className="flex items-center">
-                      <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-500" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Winners
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      {winners.map((winner: UserSearchItem) => (
-                        <Link
-                          key={winner.username}
-                          href={`/profiles/${winner.username}`}
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          <Badge
-                            variant="default"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-xs cursor-pointer"
-                          >
-                            <Trophy className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
-                            {winner.displayName}
-                          </Badge>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {!isWorkshopOrSession &&
-                videoType === "battle" &&
-                winners.length > 0 && <Separator />}
-
-              {/* Choreographers - Only show for choreography videos */}
-              {!isWorkshopOrSession &&
-                videoType === "choreography" &&
-                choreographers.length > 0 && (
-                  <div className="space-y-2 sm:space-y-3">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Choreographers
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      {choreographers.map(
-                        (choreographer: UserSearchItem, index: number) => (
-                          <Link
-                            key={choreographer.username || index}
-                            href={`/profiles/${choreographer.username}`}
-                            className="hover:opacity-80 transition-opacity"
-                          >
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80"
-                            >
-                              {choreographer.displayName}
-                            </Badge>
-                          </Link>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {!isWorkshopOrSession &&
-                videoType === "choreography" &&
-                choreographers.length > 0 && <Separator />}
-
-              {/* Teachers - Only show for class videos */}
-              {!isWorkshopOrSession &&
-                videoType === "class" &&
-                teachers.length > 0 && (
-                  <div className="space-y-2 sm:space-y-3">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Teachers
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                      {teachers.map(
-                        (teacher: UserSearchItem, index: number) => (
-                          <Link
-                            key={teacher.username || index}
-                            href={`/profiles/${teacher.username}`}
-                            className="hover:opacity-80 transition-opacity"
-                          >
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80"
-                            >
-                              {teacher.displayName}
-                            </Badge>
-                          </Link>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              {!isWorkshopOrSession &&
-                videoType === "class" &&
-                teachers.length > 0 && <Separator />}
-
-              {/* Dancers - Show for all video types that have dancers */}
-              {!isWorkshopOrSession && dancers.length > 0 && (
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    <h3 className="font-semibold text-sm sm:text-base">
-                      Dancers
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {dancers.map(
-                      (participant: UserSearchItem, index: number) => (
-                        <Link
-                          key={participant.username || index}
-                          href={`/profiles/${participant.username}`}
-                          className="hover:opacity-80 transition-opacity"
-                        >
-                          <Badge
-                            variant="secondary"
-                            className="text-xs cursor-pointer hover:bg-secondary/80"
-                          >
-                            {participant.displayName}
-                          </Badge>
-                        </Link>
-                      )
-                    )}
-                  </div>
+            {/* Teachers - Only show for class videos */}
+            {videoType === "class" && teachers.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <h3 className="font-semibold text-sm sm:text-base">
+                    Teachers
+                  </h3>
                 </div>
-              )}
-            </div>
+                <div className="flex flex-wrap gap-2">
+                  {teachers.map((teacher: UserSearchItem, index: number) => (
+                    <UserBadgeWithRemove
+                      key={teacher.username || index}
+                      user={teacher}
+                      eventId={eventId}
+                      videoId={video.id}
+                      currentUserId={currentUserId}
+                      badgeClassName="bg-white/10 text-white border-white/20 text-xs cursor-pointer hover:bg-white/20"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dancers - Show for all video types */}
+            {dancers.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <h3 className="font-semibold text-sm sm:text-base">
+                    Dancers
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dancers.map((dancer: UserSearchItem, index: number) => (
+                    <UserBadgeWithRemove
+                      key={dancer.username || index}
+                      user={dancer}
+                      eventId={eventId}
+                      videoId={video.id}
+                      currentUserId={currentUserId}
+                      badgeClassName="bg-white/10 text-white border-white/20 text-xs cursor-pointer hover:bg-white/20"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

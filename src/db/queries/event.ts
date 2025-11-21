@@ -2401,6 +2401,21 @@ export const EditEvent = async (event: Competition) => {
         for (const br of sec.brackets) {
           if (br.videos) {
             for (const bvid of br.videos) {
+              // Get video type label
+              const videoType = bvid.type || "battle";
+              const videoLabel =
+                videoType.charAt(0).toUpperCase() + videoType.slice(1);
+
+              // Remove old video type labels before adding new one (only if video exists)
+              await tx.run(
+                `OPTIONAL MATCH (v:Video { id: $videoId })
+                 WITH v
+                 WHERE v IS NOT NULL
+                 CALL apoc.create.removeLabels(v, ['Battle', 'Freestyle', 'Choreography', 'Class']) YIELD node
+                 RETURN node`,
+                { videoId: bvid.id }
+              );
+
               await tx.run(
                 `MATCH (b:Bracket {id: $bracketId})
                  MERGE (bv:Video { id: $videoId })
@@ -2410,6 +2425,8 @@ export const EditEvent = async (event: Competition) => {
                  ON MATCH SET
                    bv.title = $title,
                    bv.src = $src
+                 WITH bv, b
+                 CALL apoc.create.addLabels(bv, ['Video', '${videoLabel}']) YIELD node
                  MERGE (bv)-[:IN]->(b)`,
                 {
                   bracketId: br.id,
@@ -2490,6 +2507,21 @@ export const EditEvent = async (event: Competition) => {
     for (const sec of event.sections) {
       if (!sec.hasBrackets && sec.videos) {
         for (const vid of sec.videos) {
+          // Get video type label
+          const videoType = vid.type || "battle";
+          const videoLabel =
+            videoType.charAt(0).toUpperCase() + videoType.slice(1);
+
+          // Remove old video type labels before adding new one (only if video exists)
+          await tx.run(
+            `OPTIONAL MATCH (v:Video { id: $videoId })
+             WITH v
+             WHERE v IS NOT NULL
+             CALL apoc.create.removeLabels(v, ['Battle', 'Freestyle', 'Choreography', 'Class']) YIELD node
+             RETURN node`,
+            { videoId: vid.id }
+          );
+
           await tx.run(
             `MATCH (e:Event {id: $id})<-[:IN]-(s:Section {id: $sectionId})
              MERGE (v:Video { id: $videoId })
@@ -2499,6 +2531,8 @@ export const EditEvent = async (event: Competition) => {
              ON MATCH SET
                v.title = $title,
                v.src = $src
+             WITH v, s
+             CALL apoc.create.addLabels(v, ['Video', '${videoLabel}']) YIELD node
              MERGE (v)-[:IN]->(s)`,
             {
               id,

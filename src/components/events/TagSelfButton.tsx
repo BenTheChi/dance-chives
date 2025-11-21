@@ -291,6 +291,24 @@ export function TagSelfButton({
     return null;
   }
 
+  // Get button color based on role
+  const getRoleColorClass = () => {
+    const roleStr = role as string;
+    if (isWinnerRole(role)) {
+      return "bg-yellow-500 hover:bg-yellow-600";
+    }
+    if (roleStr === "Dancer") {
+      return "bg-green-300 hover:bg-green-400 text-gray-900";
+    }
+    if (roleStr === "Teacher") {
+      return "bg-purple-300 hover:bg-purple-400 text-gray-900";
+    }
+    if (roleStr === "Choreographer") {
+      return "bg-blue-300 hover:bg-blue-400 text-gray-900";
+    }
+    return "";
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <Button
@@ -298,9 +316,7 @@ export function TagSelfButton({
         disabled={isPending}
         variant="default"
         size="sm"
-        className={`w-fit ${
-          isWinnerRole(role) ? "bg-yellow-500 hover:bg-yellow-600" : ""
-        }`}
+        className={`w-fit ${getRoleColorClass()}`}
       >
         {isWinnerRole(role) && <Trophy className="h-4 w-4 mr-2" />}
         {isPending ? "Processing..." : buttonLabel || defaultLabel}

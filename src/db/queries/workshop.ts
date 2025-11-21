@@ -1052,6 +1052,20 @@ export const editWorkshop = async (
 
     // Update videos
     for (const vid of workshop.videos) {
+      // Get video type label
+      const videoType = vid.type || "freestyle";
+      const videoLabel = videoType.charAt(0).toUpperCase() + videoType.slice(1);
+
+      // Remove old video type labels before adding new one (only if video exists)
+      await tx.run(
+        `OPTIONAL MATCH (v:Video { id: $videoId })
+         WITH v
+         WHERE v IS NOT NULL
+         CALL apoc.create.removeLabels(v, ['Battle', 'Freestyle', 'Choreography', 'Class']) YIELD node
+         RETURN node`,
+        { videoId: vid.id }
+      );
+
       await tx.run(
         `MATCH (w:Event:Workshop {id: $id})
          MERGE (v:Video { id: $videoId })
@@ -1061,6 +1075,8 @@ export const editWorkshop = async (
          ON MATCH SET
            v.title = $title,
            v.src = $src
+         WITH v, w
+         CALL apoc.create.addLabels(v, ['Video', '${videoLabel}']) YIELD node
          MERGE (v)-[:IN]->(w)`,
         {
           id: workshopId,

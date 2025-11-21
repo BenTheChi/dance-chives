@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { EventCard } from "@/components/ui/event-card";
+import { useState } from "react";
+import { VideoCard } from "@/components/videos/VideoCard";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/video";
-import { VIDEO_ROLE_WINNER, fromNeo4jRoleFormat } from "@/lib/utils/roles";
 
 interface VideoGalleryProps {
   videos: Video[];
@@ -37,48 +36,24 @@ export default function VideoGallery({
     setSelectedVideoIndex(index);
   };
 
-  // Check if this is a workshop or session (don't show winner badges for these)
-  const isWorkshopOrSession =
-    eventLink.startsWith("/workshops/") || eventLink.startsWith("/sessions/");
-
-  // Check if current user is a winner for each video
-  // Only show winner badges for battle videos in events (not workshop/session videos)
-  const videosWithWinnerStatus = useMemo(() => {
-    return videos.map((video: Video) => {
-      // Don't show winner badges for workshop/session videos
-      if (isWorkshopOrSession) {
-        return { video, isWinner: false };
-      }
-      // Only show winner badges for battle videos
-      const videoType = video.type || "battle";
-      if (videoType !== "battle") {
-        return { video, isWinner: false };
-      }
-      const videoAny = video as any;
-      const taggedWinners = videoAny.taggedWinners || [];
-      if (!currentUserId || taggedWinners.length === 0) {
-        return { video, isWinner: false };
-      }
-      const isWinner = taggedWinners.some(
-        (user: { id?: string; username?: string }) => {
-          return user.id === currentUserId || user.username === currentUserId;
-        }
-      );
-      return { video, isWinner };
-    });
-  }, [videos, currentUserId, isWorkshopOrSession]);
+  // Determine styles to display
+  const displayStyles =
+    applyStylesToVideos && sectionStyles ? sectionStyles : undefined;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {videosWithWinnerStatus.map(({ video, isWinner }, index: number) => (
-          <EventCard
-            eventLink={eventLink}
-            eventTitle={eventTitle}
+        {videos.map((video: Video, index: number) => (
+          <VideoCard
             key={video.id}
             video={video}
+            eventLink={eventLink}
+            eventTitle={eventTitle}
+            sectionTitle={sectionTitle}
+            bracketTitle={bracketTitle}
             onClick={() => handleVideoSelect(index)}
-            isWinner={isWinner}
+            styles={displayStyles}
+            currentUserId={currentUserId}
           />
         ))}
       </div>

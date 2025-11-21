@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EventCard } from "@/components/ui/event-card";
+import { VideoCard } from "@/components/videos/VideoCard";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/event";
 
@@ -30,11 +30,12 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {videos.map((item, index) => (
-          <EventCard
+          <VideoCard
             key={item.video.id}
+            video={item.video}
             eventLink={`/events/${item.eventId}`}
             eventTitle={item.eventTitle}
-            video={item.video}
+            sectionTitle={item.sectionTitle}
             onClick={() => handleVideoSelect(index)}
           />
         ))}
