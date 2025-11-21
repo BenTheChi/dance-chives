@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { SidebarTrigger } from "./ui/sidebar";
 import { TestLoginDropdown } from "./TestLoginDropdown";
+import { NotificationPopover } from "./NotificationPopover";
 
 export function AppNavbar() {
   const { data: session } = useSession();
@@ -51,7 +52,10 @@ export function AppNavbar() {
 
         <div className="flex items-center gap-x-2 whitespace-nowrap">
           {session ? (
-            <UserMenu session={session} />
+            <>
+              <NotificationPopover />
+              <UserMenu session={session} />
+            </>
           ) : (
             <>
               {process.env.NODE_ENV === "development" && <TestLoginDropdown />}

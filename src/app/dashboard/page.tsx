@@ -3,10 +3,7 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 import { useEffect, useState } from "react";
-import {
-  getDashboardData,
-  getUnreadNotificationCount,
-} from "@/lib/server_actions/request_actions";
+import { getDashboardData } from "@/lib/server_actions/request_actions";
 import {
   Card,
   CardContent,
@@ -19,7 +16,7 @@ import {
   OutgoingRequestCard,
 } from "@/components/requests/RequestCard";
 import { getAuthLevelName, AUTH_LEVELS } from "@/lib/utils/auth-utils";
-import { Bell, UserIcon } from "lucide-react";
+import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
@@ -29,15 +26,12 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
 
   const loadDashboard = async () => {
     try {
       const data = await getDashboardData();
       setDashboardData(data);
-      const count = await getUnreadNotificationCount();
-      setUnreadCount(count);
     } catch (error) {
       console.error("Failed to load dashboard:", error);
     } finally {
@@ -109,7 +103,6 @@ export default function DashboardPage() {
   const user = dashboardData?.user;
   const incomingRequests = dashboardData?.incomingRequests || {};
   const outgoingRequests = dashboardData?.outgoingRequests || {};
-  const notifications = dashboardData?.notifications || [];
   const userEvents = dashboardData?.userEvents || [];
   const teamMemberships = dashboardData?.teamMemberships || [];
 
@@ -193,14 +186,6 @@ export default function DashboardPage() {
                     )}
                 </div>
               </div>
-              {unreadCount > 0 && (
-                <div className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  <span className="text-sm font-medium">
-                    {unreadCount} unread
-                  </span>
-                </div>
-              )}
             </div>
           </CardHeader>
         </Card>
@@ -224,42 +209,6 @@ export default function DashboardPage() {
               />
             </DialogContent>
           </Dialog>
-        )}
-
-        {/* Notifications Section */}
-        {notifications.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Notifications</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {notifications.slice(0, 5).map((notification: any) => (
-                  <div
-                    key={notification.id}
-                    className={`rounded-lg border p-3 ${
-                      !notification.read ? "bg-blue-50 dark:bg-blue-950" : ""
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {notification.message}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </p>
-                      </div>
-                      {!notification.read && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         )}
 
         {/* Incoming Requests Section */}
