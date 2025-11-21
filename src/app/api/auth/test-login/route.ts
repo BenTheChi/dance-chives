@@ -16,6 +16,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  console.log("Prisma connecting with DATABASE_URL:", process.env.DATABASE_URL);
+
+
   try {
     const { userId } = await request.json();
 
@@ -25,7 +28,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+console.log("Attempting to validate test user with ID:", userId);
     // Verify the user exists
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -38,6 +41,10 @@ export async function POST(request: NextRequest) {
         accountVerified: true,
       },
     });
+
+    
+console.log("Prisma returned:", user);
+
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
