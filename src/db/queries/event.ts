@@ -1295,7 +1295,7 @@ export const getEventSections = async (id: string) => {
          [c in allChoreographers WHERE c.id IS NOT NULL] as choreographers,
          [t in allTeachers WHERE t.id IS NOT NULL] as teachers
     WHERE size(winners) > 0 OR size(dancers) > 0 OR size(choreographers) > 0 OR size(teachers) > 0
-    RETURN s.id as sectionId, v.id as videoId, 
+    RETURN s.id as sectionId, v.id as videoId, v.type as videoType,
            winners as taggedWinners,
            dancers as taggedDancers,
            choreographers as taggedChoreographers,
@@ -1679,7 +1679,7 @@ export const getSection = async (sectionId: string, eventId: string) => {
            [c in allChoreographers WHERE c.id IS NOT NULL] as choreographers,
            [t in allTeachers WHERE t.id IS NOT NULL] as teachers
       WHERE size(winners) > 0 OR size(dancers) > 0 OR size(choreographers) > 0 OR size(teachers) > 0
-      RETURN s.id as sectionId, v.id as videoId, 
+      RETURN s.id as sectionId, v.id as videoId, v.type as videoType,
              winners as taggedWinners,
              dancers as taggedDancers,
              choreographers as taggedChoreographers,
@@ -1723,7 +1723,7 @@ export const getSection = async (sectionId: string, eventId: string) => {
            [c in allChoreographers WHERE c.id IS NOT NULL] as choreographers,
            [t in allTeachers WHERE t.id IS NOT NULL] as teachers
       WHERE size(winners) > 0 OR size(dancers) > 0 OR size(choreographers) > 0 OR size(teachers) > 0
-      RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, 
+      RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, v.type as videoType,
              winners as taggedWinners,
              dancers as taggedDancers,
              choreographers as taggedChoreographers,

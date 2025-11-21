@@ -1,7 +1,7 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import EventFormWrapper from "@/components/EventFormWrapper";
 
-export default function AddEventPage() {
+export default function AddCompetitionPage() {
   return (
     <>
       <AppNavbar />
@@ -11,3 +11,4 @@ export default function AddEventPage() {
     </>
   );
 }
+

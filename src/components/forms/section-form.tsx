@@ -20,7 +20,8 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
 } from "react-hook-form";
-import { Section, Bracket, Video } from "@/types/event";
+import { Section, Bracket } from "@/types/event";
+import { BattleVideo, Video } from "@/types/video";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
 import { FormValues } from "./event-form";
@@ -145,10 +146,11 @@ export function SectionForm({
   const addVideoToSection = () => {
     if (!activeSection) return;
 
-    const newVideo: Video = {
+    const newVideo: BattleVideo = {
       id: Date.now().toString(),
       title: `Video ${activeSection.videos.length + 1}`,
       src: "https://example.com/video",
+      type: "battle",
       taggedWinners: [],
       taggedDancers: [],
     };
@@ -369,6 +371,62 @@ export function SectionForm({
           )}
         />
 
+        {/* Section Winners */}
+        <div className="space-y-2">
+          <DebouncedSearchMultiSelect<UserSearchItem>
+            onSearch={searchUsers}
+            placeholder="Search users to mark as section winners..."
+            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+            getItemId={(item) => item.username}
+            onChange={(users) => {
+              // Update section winners in form state with the complete list
+              const updatedSections = sections.map((section) => {
+                if (section.id !== activeSectionId) return section;
+                return {
+                  ...section,
+                  winners: users,
+                };
+              });
+
+              setValue("sections", normalizeSectionsForForm(updatedSections));
+
+              // Update local winners state for display
+              setSectionWinners(users);
+            }}
+            value={sectionWinners}
+            name="Section Winners"
+          />
+          {sectionWinners.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {sectionWinners
+                .filter((winner) => winner && winner.username) // Filter out any invalid entries
+                .map((winner) => {
+                  return (
+                    <Badge
+                      key={winner.username}
+                      variant="default"
+                      className="bg-yellow-500 hover:bg-yellow-600"
+                    >
+                      <Trophy className="w-3 h-3 mr-1" />
+                      {winner.displayName}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          handleRemoveSectionWinner(winner.username)
+                        }
+                        className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </Badge>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+
         <FormField
           key={`applyStylesToVideos-${activeSectionId}`}
           control={control}
@@ -415,65 +473,6 @@ export function SectionForm({
           />
         )}
 
-        {/* Section Winners - Only show in edit mode */}
-        {eventId && (
-          <div className="space-y-2">
-            <DebouncedSearchMultiSelect<UserSearchItem>
-              onSearch={searchUsers}
-              placeholder="Search users to mark as section winners..."
-              getDisplayValue={(item) =>
-                `${item.displayName} (${item.username})`
-              }
-              getItemId={(item) => item.username}
-              onChange={(users) => {
-                // Update section winners in form state with the complete list
-                const updatedSections = sections.map((section) => {
-                  if (section.id !== activeSectionId) return section;
-                  return {
-                    ...section,
-                    winners: users,
-                  };
-                });
-
-                setValue("sections", normalizeSectionsForForm(updatedSections));
-
-                // Update local winners state for display
-                setSectionWinners(users);
-              }}
-              value={sectionWinners}
-              name="Section Winners"
-            />
-            {sectionWinners.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {sectionWinners
-                  .filter((winner) => winner && winner.username) // Filter out any invalid entries
-                  .map((winner) => {
-                    return (
-                      <Badge
-                        key={winner.username}
-                        variant="default"
-                        className="bg-yellow-500 hover:bg-yellow-600"
-                      >
-                        <Trophy className="w-3 h-3 mr-1" />
-                        {winner.displayName}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            handleRemoveSectionWinner(winner.username)
-                          }
-                          className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </Badge>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-        )}
         <FormField
           key={`hasBrackets-${activeSectionId}`}
           control={control}

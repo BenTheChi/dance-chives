@@ -514,53 +514,38 @@ export function VideoForm({
           name="Tagged Dancers"
         />
 
-        {/* Video Winners Section - Only show for battle videos in edit mode */}
-        {eventId && videoType === "battle" && (
-          <div className="space-y-2">
-            <DebouncedSearchMultiSelect<UserSearchItem>
-              onSearch={searchUsers}
-              placeholder="Search users to mark as video winners..."
-              getDisplayValue={(item) =>
-                `${item.displayName} (${item.username})`
-              }
-              getItemId={(item) => item.username}
-              onChange={(users) => {
-                // updateTaggedWinners will automatically add new winners to dancers list
-                updateTaggedWinners(users);
-              }}
-              value={videoWinners}
-              name="Video Winners"
-            />
-            {videoWinners.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {videoWinners
-                  .filter((winner) => winner && winner.username) // Filter out any invalid entries
-                  .map((winner) => {
-                    return (
-                      <Badge
-                        key={winner.username}
-                        variant="default"
-                        className="bg-yellow-500 hover:bg-yellow-600"
-                      >
-                        <Trophy className="w-3 h-3 mr-1" />
-                        {winner.displayName}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            handleRemoveVideoWinner(winner.username)
-                          }
-                          className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </Badge>
-                    );
-                  })}
-              </div>
+        {/* Tagged Winners - only for battle videos */}
+        {videoType === "battle" && (
+          <FormField
+            control={control}
+            name={
+              context === "bracket"
+                ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.taggedWinners`
+                : `sections.${sectionIndex}.videos.${videoIndex}.taggedWinners`
+            }
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <DebouncedSearchMultiSelect<UserSearchItem>
+                    onSearch={searchUsers}
+                    placeholder="Search winners..."
+                    getDisplayValue={(item) =>
+                      `${item.displayName} (${item.username})`
+                    }
+                    getItemId={(item) => item.username}
+                    onChange={(users) => {
+                      field.onChange(users);
+                      // updateTaggedWinners will automatically add new winners to dancers list
+                      updateTaggedWinners(users);
+                    }}
+                    value={field.value || []}
+                    name="Tagged Winners"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
         )}
 
         {/* Tagged Choreographers - only for choreography videos */}

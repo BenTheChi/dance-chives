@@ -155,7 +155,7 @@ export default function DashboardPage() {
                     user.auth >= AUTH_LEVELS.CREATOR && (
                       <>
                         <Button asChild>
-                          <Link href="/add-event">Add Event</Link>
+                          <Link href="/add-competition">Add Competition</Link>
                         </Button>
                         <Button asChild>
                           <Link href="/add-workshop">Add Workshop</Link>
