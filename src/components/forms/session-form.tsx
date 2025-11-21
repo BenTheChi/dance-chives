@@ -14,21 +14,14 @@ import { FieldErrors, useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import {
-  SessionDetails,
-  SessionRole,
-  Picture,
-  Video,
-  SessionDate,
-} from "@/types/session";
+import { SessionDetails, SessionRole, SessionDate } from "@/types/session";
+import { Image } from "@/types/image";
+import { Video } from "@/types/video";
 import { SessionDetailsForm } from "./session-details-form";
 import SessionRolesForm from "./session-roles-form";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
-import {
-  addSession,
-  editSession,
-} from "@/lib/server_actions/session_actions";
+import { addSession, editSession } from "@/lib/server_actions/session_actions";
 import { usePathname, useRouter } from "next/navigation";
 import { SessionVideoForm } from "./session-video-form";
 
@@ -58,41 +51,47 @@ const videoSchema = z.object({
         message: "Video source must be a valid YouTube URL",
       }
     ),
+  type: z.enum(["battle", "freestyle", "choreography", "class"]),
   styles: z.array(z.string()).optional(),
+  taggedWinners: z.array(userSearchItemSchema).optional(),
+  taggedDancers: z.array(userSearchItemSchema).optional(),
+  taggedChoreographers: z.array(userSearchItemSchema).optional(),
+  taggedTeachers: z.array(userSearchItemSchema).optional(),
 });
 
-const pictureSchema = z.object({
+const imageSchema = z.object({
   id: z.string(),
   title: z.string(),
   url: z.string(),
-  type: z.string(),
   file: z.instanceof(File).nullable(),
 });
 
-const sessionDateSchema = z.object({
-  date: z
-    .string()
-    .min(1, "Date is required")
-    .regex(
-      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
-      "Date must be in MM/DD/YYYY format"
-    ),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-}).refine(
-  (data) => {
-    if (!data.startTime || !data.endTime) return true;
-    const [startHours, startMinutes] = data.startTime.split(":").map(Number);
-    const [endHours, endMinutes] = data.endTime.split(":").map(Number);
-    const startTotal = startHours * 60 + startMinutes;
-    const endTotal = endHours * 60 + endMinutes;
-    return endTotal > startTotal;
-  },
-  {
-    message: "End time must be after start time",
-    path: ["endTime"],
-  }
-);
+const sessionDateSchema = z
+  .object({
+    date: z
+      .string()
+      .min(1, "Date is required")
+      .regex(
+        /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
+        "Date must be in MM/DD/YYYY format"
+      ),
+    startTime: z.string().min(1, "Start time is required"),
+    endTime: z.string().min(1, "End time is required"),
+  })
+  .refine(
+    (data) => {
+      if (!data.startTime || !data.endTime) return true;
+      const [startHours, startMinutes] = data.startTime.split(":").map(Number);
+      const [endHours, endMinutes] = data.endTime.split(":").map(Number);
+      const startTotal = startHours * 60 + startMinutes;
+      const endTotal = endHours * 60 + endMinutes;
+      return endTotal > startTotal;
+    },
+    {
+      message: "End time must be after start time",
+      path: ["endTime"],
+    }
+  );
 
 const sessionDetailsSchema = z.object({
   creatorId: z.string().nullable().optional(),
@@ -104,14 +103,12 @@ const sessionDetailsSchema = z.object({
     region: z.string().min(1, "Region is required"),
     population: z.number(),
   }),
-  dates: z
-    .array(sessionDateSchema)
-    .min(1, "At least one date is required"),
+  dates: z.array(sessionDateSchema).min(1, "At least one date is required"),
   description: z.string(),
   schedule: z.string(),
   address: z.string(),
   cost: z.string(),
-  poster: pictureSchema.nullable().optional(),
+  poster: imageSchema.nullable().optional(),
   styles: z.array(z.string()).optional(),
 });
 
@@ -131,7 +128,7 @@ const formSchema = z.object({
   sessionDetails: sessionDetailsSchema,
   roles: z.array(sessionRoleSchema).optional(),
   videos: z.array(videoSchema),
-  gallery: z.array(pictureSchema),
+  gallery: z.array(imageSchema),
 });
 
 export type SessionFormValues = z.infer<typeof formSchema>;
@@ -140,9 +137,7 @@ interface SessionFormProps {
   initialData?: SessionFormValues;
 }
 
-export default function SessionForm({
-  initialData,
-}: SessionFormProps = {}) {
+export default function SessionForm({ initialData }: SessionFormProps = {}) {
   const pathname = usePathname()?.split("/") || [];
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
@@ -199,10 +194,11 @@ export default function SessionForm({
   const mainTabs = ["Session Details", "Roles", "Videos", "Photo Gallery"];
 
   const addVideo = () => {
-    const newVideo: Video = {
+    const newVideo = {
       id: Date.now().toString(),
       title: `Video ${videos.length + 1}`,
       src: "https://example.com/video",
+      type: "battle" as const,
     };
     setValue("videos", [...videos, newVideo]);
   };
@@ -477,7 +473,7 @@ export default function SessionForm({
                       name="gallery"
                       onFileChange={(files) => {
                         if (files) {
-                          setValue("gallery", files as Picture[]);
+                          setValue("gallery", files as Image[]);
                         } else {
                           setValue("gallery", []);
                         }
@@ -522,4 +518,3 @@ export default function SessionForm({
     </div>
   );
 }
-

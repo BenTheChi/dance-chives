@@ -1,11 +1,5 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Event } from "@/types/event";
+import { Competition } from "@/types/event";
 import {
   Building,
   Calendar,
@@ -35,6 +29,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getUser } from "@/db/queries/user";
 import { getEventTeamMembers } from "@/db/queries/team-member";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
+import { EventCard } from "@/types/event";
+import Eventcard from "@/components/cards";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -59,7 +55,7 @@ export default async function EventPage({ params }: PageProps) {
     notFound();
   }
 
-  const event = (await getEvent(paramResult.event)) as Event;
+  const event = (await getEvent(paramResult.event)) as Competition;
 
   // Check if current user is the creator
   const session = await auth();
@@ -483,132 +479,50 @@ export default async function EventPage({ params }: PageProps) {
           </section>
 
           {/* Sub Events */}
-          <section className="w-full bg-yellow-100 rounded-md p-4 md:col-span-1 xl:col-span-2">
-            <h2 className="text-2xl font-bold mb-2 text-center">Sub Events</h2>
-            <Accordion type="single" collapsible>
-              {event.subEvents.map((subEvent) => (
-                <AccordionItem
-                  value={subEvent.id}
-                  key={subEvent.id}
-                  className="border-x-2 border-t-2 border-gray-300 rounded-md my-2 first:rounded-t-md last:rounded-b-md last:border-2 w-full bg-violet-100"
-                >
-                  <AccordionTrigger className="px-5 cursor-pointer hover:no-underline">
-                    <div className="flex flex-row gap-2 items-center">
-                      <span className="text-lg font-bold">
-                        {subEvent.title}
-                      </span>
-                      <span>- {subEvent.startDate}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4 flex flex-row gap-2">
-                    <div className="flex flex-col gap-2">
-                      {subEvent.poster && (
-                        <Image
-                          src={subEvent.poster.url}
-                          alt={subEvent.poster.title}
-                          width={500}
-                          height={500}
-                          className="object-contain rounded-md w-full max-w-[500px] h-auto"
-                        />
-                      )}
+          {event.subEvents && event.subEvents.length > 0 && (
+            <section className="w-full bg-yellow-100 rounded-md p-4 md:col-span-1 xl:col-span-2">
+              <h2 className="text-2xl font-bold mb-4 text-center">
+                Sub Events (Main Event)
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {event.subEvents.map((subEvent: any) => {
+                  // Determine the route based on event type
+                  const eventType = subEvent.type || "competition";
+                  const eventRoute =
+                    eventType === "workshop"
+                      ? `/workshops/${subEvent.id}`
+                      : eventType === "session"
+                      ? `/sessions/${subEvent.id}`
+                      : `/events/${subEvent.id}`;
 
-                      <div className="flex flex-col gap-2 bg-orange-100 rounded-md p-4">
-                        <div className="flex flex-row gap-2">
-                          <Calendar /> <b>Date:</b> {subEvent.startDate}
-                        </div>
-                        {subEvent.startTime && subEvent.endTime && (
-                          <div className="flex flex-row gap-2">
-                            <Clock /> <b>Time:</b>{" "}
-                            {formatTimeToAMPM(subEvent.startTime)} -{" "}
-                            {formatTimeToAMPM(subEvent.endTime)}
-                          </div>
-                        )}
-                        {subEvent.address && (
-                          <div className="flex flex-row gap-2">
-                            <MapPin /> <b>Location:</b> {subEvent.address}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-row gap-2">
-                      {subEvent.description && (
-                        <div className="flex flex-col gap-2 bg-red-100 rounded-md p-4">
-                          <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-                            <FileText />
-                            Description:
-                          </div>
-                          <div className="whitespace-pre-wrap max-w-[500px]">
-                            {subEvent.description}
-                          </div>
-                        </div>
-                      )}
-                      {subEvent.schedule && (
-                        <div className="flex flex-col gap-2 bg-blue-100 rounded-md p-4">
-                          <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-                            <Calendar />
-                            Schedule:
-                          </div>
-                          <div className="whitespace-pre-wrap max-w-[500px]">
-                            {subEvent.schedule}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                  // Convert subEvent to EventCard format
+                  const eventCard: EventCard = {
+                    id: subEvent.id,
+                    title: subEvent.title || "",
+                    imageUrl: subEvent.poster?.url,
+                    date: subEvent.startDate || "",
+                    city: subEvent.city?.name || "",
+                    cityId: subEvent.city?.id,
+                    styles: subEvent.styles || [],
+                  };
 
-            {/* Workshops */}
-            {event.workshops && event.workshops.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-xl font-bold mb-4 text-center">
-                  Workshops
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {event.workshops.map((workshop) => (
-                    <Link
-                      key={workshop.id}
-                      href={`/workshops/${workshop.id}`}
-                      className="group"
-                    >
-                      <Card className="transition-all duration-200 hover:shadow-lg hover:scale-[1.02] h-full">
-                        <CardContent className="p-0">
-                          <div className="relative aspect-video overflow-hidden rounded-t-lg">
-                            {workshop.workshopDetails.poster ? (
-                              <Image
-                                src={workshop.workshopDetails.poster.url}
-                                alt={workshop.workshopDetails.poster.title}
-                                fill
-                                className="object-cover transition-transform duration-200 group-hover:scale-105"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                                No poster
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-4 space-y-2">
-                            <h4 className="font-semibold text-base line-clamp-2 group-hover:text-blue-600 transition-colors">
-                              {workshop.workshopDetails.title}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {workshop.workshopDetails.startDate}
-                            </p>
-                            {workshop.workshopDetails.cost && (
-                              <p className="text-sm font-medium">
-                                {workshop.workshopDetails.cost}
-                              </p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
+                  return (
+                    <Link key={subEvent.id} href={eventRoute}>
+                      <Eventcard
+                        id={eventCard.id}
+                        title={eventCard.title}
+                        imageUrl={eventCard.imageUrl}
+                        date={eventCard.date}
+                        city={eventCard.city}
+                        cityId={eventCard.cityId}
+                        styles={eventCard.styles}
+                      />
                     </Link>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
-          </section>
+            </section>
+          )}
 
           {/* Photo Gallery */}
           {event.gallery.length > 0 && (

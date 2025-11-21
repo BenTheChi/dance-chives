@@ -49,7 +49,7 @@ export default async function EditEventPage({
   }
 
   //Convert roles from Neo4j format (uppercase) to display format
-  const formattedRoles = currEvent.roles.map((role) => {
+  const formattedRoles = (currEvent.roles || []).map((role) => {
     return {
       ...role,
       title: fromNeo4jRoleFormat(role.title) || role.title,
@@ -58,7 +58,7 @@ export default async function EditEventPage({
   });
 
   //Add null values to picture objects
-  const formattedPictures = currEvent.gallery.map((picture) => {
+  const formattedPictures = (currEvent.gallery || []).map((picture) => {
     return {
       ...picture,
       file: null,
@@ -66,7 +66,7 @@ export default async function EditEventPage({
   });
 
   //Add null values to subEvent objects
-  const formattedSubEvents = currEvent.subEvents.map((subEvent) => {
+  const formattedSubEvents = (currEvent.subEvents || []).map((subEvent) => {
     return {
       ...subEvent,
       poster: subEvent.poster
@@ -80,7 +80,7 @@ export default async function EditEventPage({
   });
 
   //Add null values to workshop objects and format roles
-  const formattedWorkshops = currEvent.workshops.map((workshop) => {
+  const formattedWorkshops = (currEvent.workshops || []).map((workshop) => {
     return {
       ...workshop,
       workshopDetails: {

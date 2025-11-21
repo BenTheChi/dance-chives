@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
-import { Picture } from "@/types/event";
+import { Image } from "@/types/image";
 
 interface PosterImageProps {
-  poster: Picture | null;
+  poster: Image | null;
   className?: string;
   width?: number;
   height?: number;
@@ -22,7 +22,9 @@ export function PosterImage({
 
   if (!poster) {
     return (
-      <div className={`w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center ${className}`}>
+      <div
+        className={`w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center ${className}`}
+      >
         No poster
       </div>
     );
@@ -34,13 +36,15 @@ export function PosterImage({
         className={`cursor-pointer transition-all duration-200 hover:opacity-90 ${className}`}
         onClick={() => setIsLightboxOpen(true)}
       >
-        <Image
-          src={poster.url}
-          alt={poster.title}
-          width={width}
-          height={height}
-          className="object-contain rounded-md w-full"
-        />
+        {poster.url ? (
+          <NextImage
+            src={poster.url}
+            alt={poster.title}
+            width={width}
+            height={height}
+            className="object-contain rounded-md w-full"
+          />
+        ) : null}
       </div>
 
       {isLightboxOpen && (
@@ -59,4 +63,3 @@ export function PosterImage({
     </>
   );
 }
-

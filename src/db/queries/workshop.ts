@@ -2,7 +2,8 @@ import driver from "../driver";
 import { Workshop, WorkshopCard, WorkshopRole } from "../../types/workshop";
 import { UserSearchItem } from "../../types/user";
 import { City } from "../../types/city";
-import { Video, Picture } from "../../types/event";
+import { Video } from "../../types/video";
+import { Image } from "../../types/image";
 import {
   isValidWorkshopRole,
   WORKSHOP_ROLES,
@@ -40,13 +41,12 @@ async function getUserIdFromUserSearchItem(
 export const getWorkshop = async (id: string): Promise<Workshop> => {
   const session = driver.session();
 
-  // Get main workshop data
+  // Get main workshop data - now using Event:Event:Workshop labels
   const workshopResult = await session.run(
     `
-    MATCH (w:Workshop {id: $id})
+    MATCH (w:Event:Event:Workshop {id: $id})
     OPTIONAL MATCH (w)-[:IN]->(c:City)
-    OPTIONAL MATCH (w)-[:IN]->(e:Event)
-    OPTIONAL MATCH (poster:Picture)-[:POSTER]->(w)
+    OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(w)
     OPTIONAL MATCH (creator:User)-[:CREATED]->(w)
     
     RETURN w {
@@ -61,23 +61,17 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
       startTime: w.startTime,
       endTime: w.endTime,
       schedule: w.schedule,
-      creatorId: creator.id,
-      associatedEventId: e.id,
-      poster: poster {
-        id: poster.id,
-        title: poster.title,
-        url: poster.url,
-        type: poster.type
-      },
-      city: c {
-        id: c.id,
-        name: c.name,
-        countryCode: c.countryCode,
-        region: c.region,
-        population: c.population,
-        timezone: c.timezone
-      }
-    } as workshop
+      creatorId: creator.id
+    } as workshop,
+    poster.id as posterId,
+    poster.title as posterTitle,
+    poster.url as posterUrl,
+    c.id as cityId,
+    c.name as cityName,
+    c.countryCode as cityCountryCode,
+    c.region as cityRegion,
+    c.population as cityPopulation,
+    c.timezone as cityTimezone
   `,
     { id }
   );
@@ -86,7 +80,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   const validRoles = WORKSHOP_ROLES.filter((role) => role !== "TEAM_MEMBER");
   const rolesResult = await session.run(
     `
-    MATCH (w:Workshop {id: $id})<-[roleRel]-(user:User)
+    MATCH (w:Event:Event:Workshop {id: $id})<-[roleRel]-(user:User)
     WHERE type(roleRel) IN $validRoles
     RETURN collect({
       id: type(roleRel),
@@ -104,11 +98,12 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   // Get videos (workshops don't have dancer/winner tags)
   const videosResult = await session.run(
     `
-    MATCH (w:Workshop {id: $id})<-[:IN]-(v:Video)
+    MATCH (w:Event:Workshop {id: $id})<-[:IN]-(v:Video)
     RETURN collect({
       id: v.id,
       title: v.title,
       src: v.src,
+      type: "freestyle", // Default type - should be determined from video node labels
       taggedDancers: []
     }) as videos
   `,
@@ -118,7 +113,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   // Get video styles
   const videoStylesResult = await session.run(
     `
-    MATCH (w:Workshop {id: $id})<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    MATCH (w:Event:Workshop {id: $id})<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
     RETURN v.id as videoId, collect(style.name) as styles
   `,
     { id }
@@ -127,7 +122,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   // Get workshop styles
   const workshopStylesResult = await session.run(
     `
-    MATCH (w:Workshop {id: $id})-[:STYLE]->(style:Style)
+    MATCH (w:Event:Workshop {id: $id})-[:STYLE]->(style:Style)
     RETURN collect(style.name) as styles
   `,
     { id }
@@ -136,12 +131,11 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   // Get gallery
   const galleryResult = await session.run(
     `
-    MATCH (w:Workshop {id: $id})<-[:PHOTO]-(galleryPic:Picture)
-    RETURN collect(galleryPic {
+    MATCH (w:Event:Workshop {id: $id})<-[:PHOTO]-(galleryPic:Image:Gallery)
+    RETURN collect({
       id: galleryPic.id,
       title: galleryPic.title,
-      url: galleryPic.url,
-      type: galleryPic.type
+      url: galleryPic.url
     }) as gallery
   `,
     { id }
@@ -149,7 +143,10 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
 
   session.close();
 
-  const workshop = workshopResult.records[0]?.get("workshop");
+  const workshopRecord = workshopResult.records[0];
+  const workshop = workshopRecord?.get("workshop");
+  const posterId = workshopRecord?.get("posterId");
+  const cityId = workshopRecord?.get("cityId");
   const roles = rolesResult.records[0]?.get("roles") || [];
   const videos = videosResult.records[0]?.get("videos") || [];
   const videoStyles = videoStylesResult.records;
@@ -160,6 +157,27 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   if (!workshop) {
     throw new Error(`Workshop with id ${id} not found`);
   }
+
+  // Construct poster object from individual fields
+  const poster = posterId
+    ? {
+        id: posterId,
+        title: workshopRecord?.get("posterTitle") || "",
+        url: workshopRecord?.get("posterUrl") || "",
+      }
+    : null;
+
+  // Construct city object from individual fields
+  const city = cityId
+    ? {
+        id: cityId,
+        name: workshopRecord?.get("cityName") || "",
+        countryCode: workshopRecord?.get("cityCountryCode") || "",
+        region: workshopRecord?.get("cityRegion") || "",
+        population: workshopRecord?.get("cityPopulation") || 0,
+        timezone: workshopRecord?.get("cityTimezone"),
+      }
+    : null;
 
   // Add styles to videos
   const videoStylesMap = new Map<string, string[]>();
@@ -174,7 +192,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
 
   return {
     ...workshop,
-    workshopDetails: {
+    eventDetails: {
       title: workshop.title,
       description: workshop.description,
       address: workshop.address,
@@ -184,14 +202,13 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
       endTime: workshop.endTime,
       schedule: workshop.schedule,
       creatorId: workshop.creatorId,
-      poster: workshop.poster,
-      city: workshop.city,
+      poster: poster,
+      city: city,
       styles: workshopStyles,
     },
     roles,
     videos: videosWithStyles,
     gallery,
-    associatedEventId: workshop.associatedEventId,
   };
 };
 
@@ -200,9 +217,9 @@ export const getWorkshops = async (): Promise<WorkshopCard[]> => {
 
   const result = await session.run(
     `
-    MATCH (w:Workshop)
+    MATCH (w:Event:Workshop)
     OPTIONAL MATCH (w)-[:IN]->(c:City)
-    OPTIONAL MATCH (poster:Picture)-[:POSTER]->(w)
+    OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(w)
     RETURN collect({
       id: w.id,
       title: w.title,
@@ -219,7 +236,7 @@ export const getWorkshops = async (): Promise<WorkshopCard[]> => {
   // Get workshop styles
   const workshopStylesResult = await session.run(
     `
-    MATCH (w:Workshop)-[:STYLE]->(style:Style)
+    MATCH (w:Event:Workshop)-[:STYLE]->(style:Style)
     RETURN w.id as workshopId, collect(style.name) as styles
   `,
     {}
@@ -228,7 +245,7 @@ export const getWorkshops = async (): Promise<WorkshopCard[]> => {
   // Get video styles for workshops
   const videoStylesResult = await session.run(
     `
-    MATCH (w:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    MATCH (w:Event:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
     WITH w.id as workshopId, collect(DISTINCT style.name) as styles
     RETURN workshopId, styles
   `,
@@ -279,8 +296,12 @@ const createWorkshopVideos = async (
   const session = driver.session();
   try {
     for (const vid of videos) {
+      // Get video type label
+      const videoType = vid.type || "freestyle"; // Default to freestyle for workshops
+      const videoLabel = videoType.charAt(0).toUpperCase() + videoType.slice(1);
+
       await session.run(
-        `MATCH (w:Workshop {id: $workshopId})
+        `MATCH (w:Event:Workshop {id: $workshopId})
          MERGE (v:Video {id: $videoId})
          ON CREATE SET
            v.title = $title,
@@ -288,6 +309,8 @@ const createWorkshopVideos = async (
          ON MATCH SET
            v.title = $title,
            v.src = $src
+         WITH v, w
+         CALL apoc.create.addLabels(v, ['Video', '${videoLabel}']) YIELD node
          MERGE (v)-[:IN]->(w)`,
         {
           workshopId,
@@ -296,6 +319,9 @@ const createWorkshopVideos = async (
           src: vid.src,
         }
       );
+
+      // Create user relationships based on video type
+      await createVideoUserRelationships(vid, vid.id);
 
       // Create video style relationships
       const videoStyles = vid.styles || [];
@@ -318,29 +344,261 @@ const createWorkshopVideos = async (
   }
 };
 
+// Helper function to create user relationships for a video based on video type
+async function createVideoUserRelationships(
+  video: Video,
+  videoId: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    if (video.type === "battle") {
+      const battleVideo = video as any;
+      // Create DANCER relationships
+      if (battleVideo.taggedDancers && battleVideo.taggedDancers.length > 0) {
+        for (const dancer of battleVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create WINNER relationships
+      if (battleVideo.taggedWinners && battleVideo.taggedWinners.length > 0) {
+        for (const winner of battleVideo.taggedWinners) {
+          const userId = await getUserIdFromUserSearchItem(winner);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:WINNER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "freestyle") {
+      const freestyleVideo = video as any;
+      // Create DANCER relationships
+      if (
+        freestyleVideo.taggedDancers &&
+        freestyleVideo.taggedDancers.length > 0
+      ) {
+        for (const dancer of freestyleVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "choreography") {
+      const choreographyVideo = video as any;
+      // Create CHOREOGRAPHER relationships
+      if (
+        choreographyVideo.taggedChoreographers &&
+        choreographyVideo.taggedChoreographers.length > 0
+      ) {
+        for (const choreographer of choreographyVideo.taggedChoreographers) {
+          const userId = await getUserIdFromUserSearchItem(choreographer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:CHOREOGRAPHER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create DANCER relationships
+      if (
+        choreographyVideo.taggedDancers &&
+        choreographyVideo.taggedDancers.length > 0
+      ) {
+        for (const dancer of choreographyVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "class") {
+      const classVideo = video as any;
+      // Create TEACHER relationships
+      if (classVideo.taggedTeachers && classVideo.taggedTeachers.length > 0) {
+        for (const teacher of classVideo.taggedTeachers) {
+          const userId = await getUserIdFromUserSearchItem(teacher);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:TEACHER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create DANCER relationships
+      if (classVideo.taggedDancers && classVideo.taggedDancers.length > 0) {
+        for (const dancer of classVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+// Helper function to update user relationships for a video
+// First deletes all existing relationships, then creates new ones
+async function updateVideoUserRelationships(
+  video: Video,
+  videoId: string,
+  tx: any
+): Promise<void> {
+  // Delete all existing user-video relationships for this video
+  await tx.run(
+    `MATCH (v:Video {id: $videoId})<-[r:DANCER|WINNER|CHOREOGRAPHER|TEACHER]-(:User)
+     DELETE r`,
+    { videoId }
+  );
+
+  // Create new relationships based on video type
+  if (video.type === "battle") {
+    const battleVideo = video as any;
+    // Create DANCER relationships
+    if (battleVideo.taggedDancers && battleVideo.taggedDancers.length > 0) {
+      for (const dancer of battleVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+    // Create WINNER relationships
+    if (battleVideo.taggedWinners && battleVideo.taggedWinners.length > 0) {
+      for (const winner of battleVideo.taggedWinners) {
+        const userId = await getUserIdFromUserSearchItem(winner);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:WINNER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  } else if (video.type === "freestyle") {
+    const freestyleVideo = video as any;
+    // Create DANCER relationships
+    if (
+      freestyleVideo.taggedDancers &&
+      freestyleVideo.taggedDancers.length > 0
+    ) {
+      for (const dancer of freestyleVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  } else if (video.type === "choreography") {
+    const choreographyVideo = video as any;
+    // Create CHOREOGRAPHER relationships
+    if (
+      choreographyVideo.taggedChoreographers &&
+      choreographyVideo.taggedChoreographers.length > 0
+    ) {
+      for (const choreographer of choreographyVideo.taggedChoreographers) {
+        const userId = await getUserIdFromUserSearchItem(choreographer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:CHOREOGRAPHER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+    // Create DANCER relationships
+    if (
+      choreographyVideo.taggedDancers &&
+      choreographyVideo.taggedDancers.length > 0
+    ) {
+      for (const dancer of choreographyVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  } else if (video.type === "class") {
+    const classVideo = video as any;
+    // Create TEACHER relationships
+    if (classVideo.taggedTeachers && classVideo.taggedTeachers.length > 0) {
+      for (const teacher of classVideo.taggedTeachers) {
+        const userId = await getUserIdFromUserSearchItem(teacher);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:TEACHER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+    // Create DANCER relationships
+    if (classVideo.taggedDancers && classVideo.taggedDancers.length > 0) {
+      for (const dancer of classVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  }
+}
+
 // Helper function to create workshop posters
 const createWorkshopPoster = async (
   workshopId: string,
-  poster: Picture | null
+  poster: Image | null
 ): Promise<void> => {
   if (!poster?.id) return;
 
   const session = driver.session();
   try {
     await session.run(
-      `MATCH (w:Workshop {id: $workshopId})
-       OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(w)
+      `MATCH (w:Event:Workshop {id: $workshopId})
+       OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(w)
        DELETE r
        WITH w
-       MERGE (p:Picture {id: $posterId})
+       MERGE (p:Image:Gallery {id: $posterId})
        ON CREATE SET
          p.title = $title,
-         p.url = $url,
-         p.type = 'poster'
+         p.url = $url
        ON MATCH SET
          p.title = $title,
          p.url = $url
-       MERGE (p)-[:POSTER]->(w)`,
+       MERGE (p)-[:POSTER_OF]->(w)`,
       {
         workshopId,
         posterId: poster.id,
@@ -356,7 +614,7 @@ const createWorkshopPoster = async (
 // Helper function to create gallery photos
 const createWorkshopGalleryPhotos = async (
   workshopId: string,
-  gallery: Picture[]
+  gallery: Image[]
 ): Promise<void> => {
   if (gallery.length === 0) return;
 
@@ -364,12 +622,11 @@ const createWorkshopGalleryPhotos = async (
   try {
     for (const pic of gallery) {
       await session.run(
-        `MATCH (w:Workshop {id: $workshopId})
-         MERGE (p:Picture {id: $picId})
+        `MATCH (w:Event:Workshop {id: $workshopId})
+         MERGE (p:Image:Gallery {id: $picId})
          ON CREATE SET
            p.title = $title,
-           p.url = $url,
-           p.type = 'photo'
+           p.url = $url
          ON MATCH SET
            p.title = $title,
            p.url = $url
@@ -399,7 +656,7 @@ const createWorkshopStyles = async (
     const normalizedStyles = normalizeStyleNames(styles);
     await session.run(
       `
-      MATCH (w:Workshop {id: $workshopId})
+      MATCH (w:Event:Workshop {id: $workshopId})
       WITH w, $styles AS styles
       UNWIND styles AS styleName
       MERGE (style:Style {name: styleName})
@@ -465,7 +722,7 @@ export const insertWorkshop = async (workshop: Workshop): Promise<any> => {
 
   const result = await session.run(
     `
-    MERGE (w:Workshop {id: $workshopId})
+    MERGE (w:Event:Workshop {id: $workshopId})
     ON CREATE SET 
       w.title = $title,
       w.description = $description,
@@ -501,19 +758,18 @@ export const insertWorkshop = async (workshop: Workshop): Promise<any> => {
     MERGE (w)-[:IN]->(c)
 
     WITH w
-    OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(w)
+    OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(w)
     DELETE r
     WITH w
     FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
-      MERGE (newPoster:Picture {id: poster.id})
+      MERGE (newPoster:Image:Gallery {id: poster.id})
       ON CREATE SET
         newPoster.title = poster.title,
-        newPoster.url = poster.url,
-        newPoster.type = 'poster'
-      ON MATCH SET
+        newPoster.url = poster.url
+      SET
         newPoster.title = poster.title,
         newPoster.url = poster.url
-      MERGE (newPoster)-[:POSTER]->(w)
+      MERGE (newPoster)-[:POSTER_OF]->(w)
     )
 
     WITH w
@@ -538,31 +794,24 @@ export const insertWorkshop = async (workshop: Workshop): Promise<any> => {
     }
 
     WITH w
-    FOREACH (eventId IN CASE WHEN $eventId IS NOT NULL THEN [$eventId] ELSE [] END |
-      MERGE (e:Event {id: eventId})
-      MERGE (w)-[:IN]->(e)
-    )
-
-    WITH w
     RETURN w as workshop
   `,
     {
       workshopId: workshop.id,
-      creatorId: workshop.workshopDetails.creatorId,
-      title: workshop.workshopDetails.title,
-      description: workshop.workshopDetails.description,
-      address: workshop.workshopDetails.address,
-      cost: workshop.workshopDetails.cost,
-      startDate: workshop.workshopDetails.startDate,
-      startTime: workshop.workshopDetails.startTime,
-      endTime: workshop.workshopDetails.endTime,
-      schedule: workshop.workshopDetails.schedule,
+      creatorId: workshop.eventDetails.creatorId,
+      title: workshop.eventDetails.title,
+      description: workshop.eventDetails.description,
+      address: workshop.eventDetails.address,
+      cost: workshop.eventDetails.cost,
+      startDate: workshop.eventDetails.startDate,
+      startTime: workshop.eventDetails.startTime,
+      endTime: workshop.eventDetails.endTime,
+      schedule: workshop.eventDetails.schedule || null,
       createdAt: workshop.createdAt.toISOString(),
       updatedAt: workshop.updatedAt.toISOString(),
-      poster: workshop.workshopDetails.poster,
-      city: workshop.workshopDetails.city,
+      poster: workshop.eventDetails.poster,
+      city: workshop.eventDetails.city,
       roles: workshop.roles,
-      eventId: workshop.associatedEventId || null,
     }
   );
 
@@ -586,12 +835,9 @@ export const insertWorkshop = async (workshop: Workshop): Promise<any> => {
 
   // Create videos, gallery, poster, and styles in separate queries
   await createWorkshopVideos(workshop.id, workshop.videos);
-  await createWorkshopPoster(
-    workshop.id,
-    workshop.workshopDetails.poster || null
-  );
+  await createWorkshopPoster(workshop.id, workshop.eventDetails.poster || null);
   await createWorkshopGalleryPhotos(workshop.id, workshop.gallery);
-  await createWorkshopStyles(workshop.id, workshop.workshopDetails.styles);
+  await createWorkshopStyles(workshop.id, workshop.eventDetails.styles);
 
   return workshopNode.properties;
 };
@@ -656,7 +902,7 @@ export const editWorkshop = async (
     // Update workshop properties
     await tx.run(
       `
-      MATCH (w:Workshop {id: $id})
+      MATCH (w:Event:Workshop {id: $id})
       SET w.title = $title,
           w.description = $description,
           w.address = $address,
@@ -669,14 +915,14 @@ export const editWorkshop = async (
     `,
       {
         id: workshopId,
-        title: workshop.workshopDetails.title,
-        description: workshop.workshopDetails.description,
-        address: workshop.workshopDetails.address,
-        cost: workshop.workshopDetails.cost,
-        startDate: workshop.workshopDetails.startDate,
-        startTime: workshop.workshopDetails.startTime,
-        endTime: workshop.workshopDetails.endTime,
-        schedule: workshop.workshopDetails.schedule,
+        title: workshop.eventDetails.title,
+        description: workshop.eventDetails.description,
+        address: workshop.eventDetails.address,
+        cost: workshop.eventDetails.cost,
+        startDate: workshop.eventDetails.startDate,
+        startTime: workshop.eventDetails.startTime,
+        endTime: workshop.eventDetails.endTime,
+        schedule: workshop.eventDetails.schedule || null,
         updatedAt: workshop.updatedAt.toISOString(),
       }
     );
@@ -684,7 +930,7 @@ export const editWorkshop = async (
     // Update city relationship
     await tx.run(
       `
-      MATCH (w:Workshop {id: $id})
+      MATCH (w:Event:Workshop {id: $id})
       OPTIONAL MATCH (w)-[oldCityRel:IN]->(:City)
       DELETE oldCityRel
       WITH w
@@ -699,35 +945,34 @@ export const editWorkshop = async (
         c.population = $city.population
       MERGE (w)-[:IN]->(c)
     `,
-      { id: workshopId, city: workshop.workshopDetails.city }
+      { id: workshopId, city: workshop.eventDetails.city }
     );
 
     // Update poster
     await tx.run(
       `
-      MATCH (w:Workshop {id: $id})
-      OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(w)
+      MATCH (w:Event:Workshop {id: $id})
+      OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(w)
       DELETE r
       WITH w
       FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
-        MERGE (newPoster:Picture {id: poster.id})
+        MERGE (newPoster:Image {id: poster.id})
         ON CREATE SET
           newPoster.title = poster.title,
-          newPoster.url = poster.url,
-          newPoster.type = 'poster'
-        ON MATCH SET
+          newPoster.url = poster.url
+        SET
           newPoster.title = poster.title,
           newPoster.url = poster.url
-        MERGE (newPoster)-[:POSTER]->(w)
+        MERGE (newPoster)-[:POSTER_OF]->(w)
       )
     `,
-      { id: workshopId, poster: workshop.workshopDetails.poster }
+      { id: workshopId, poster: workshop.eventDetails.poster }
     );
 
     // Update roles
     if (workshop.roles && workshop.roles.length > 0) {
       await tx.run(
-        `MATCH (w:Workshop {id: $id})
+        `MATCH (w:Event:Workshop {id: $id})
          UNWIND $roles AS roleData
          WITH w, roleData
          WHERE roleData.user.id IS NOT NULL
@@ -742,7 +987,7 @@ export const editWorkshop = async (
 
       // Delete roles not in the new list
       await tx.run(
-        `MATCH (w:Workshop {id: $id})
+        `MATCH (w:Event:Workshop {id: $id})
          MATCH (u:User)-[r]->(w)
          WHERE type(r) IN $validRoles AND NOT u.id IN [role IN $roles WHERE role.user.id IS NOT NULL | role.user.id]
          DELETE r`,
@@ -751,7 +996,7 @@ export const editWorkshop = async (
     } else {
       // Remove all roles if none provided
       await tx.run(
-        `MATCH (w:Workshop {id: $id})
+        `MATCH (w:Event:Workshop {id: $id})
          MATCH (u:User)-[r]->(w)
          WHERE type(r) IN $validRoles
          DELETE r`,
@@ -762,35 +1007,31 @@ export const editWorkshop = async (
     // Update event association
     await tx.run(
       `
-      MATCH (w:Workshop {id: $id})
+      MATCH (w:Event:Workshop {id: $id})
       OPTIONAL MATCH (w)-[oldEventRel:IN]->(:Event)
       DELETE oldEventRel
       WITH w
-      FOREACH (eventId IN CASE WHEN $eventId IS NOT NULL THEN [$eventId] ELSE [] END |
-        MERGE (e:Event {id: eventId})
-        MERGE (w)-[:IN]->(e)
-      )
     `,
-      { id: workshopId, eventId: workshop.associatedEventId || null }
+      { id: workshopId }
     );
 
     // Update workshop styles
     await tx.run(
-      `MATCH (w:Workshop {id: $id})-[r:STYLE]->(:Style)
+      `MATCH (w:Event:Workshop {id: $id})-[r:STYLE]->(:Style)
        DELETE r`,
       { id: workshopId }
     );
 
     if (
-      workshop.workshopDetails.styles &&
-      workshop.workshopDetails.styles.length > 0
+      workshop.eventDetails.styles &&
+      workshop.eventDetails.styles.length > 0
     ) {
       const normalizedStyles = normalizeStyleNames(
-        workshop.workshopDetails.styles
+        workshop.eventDetails.styles
       );
       await tx.run(
         `
-        MATCH (w:Workshop {id: $id})
+        MATCH (w:Event:Workshop {id: $id})
         WITH w, $styles AS styles
         UNWIND styles AS styleName
         MERGE (style:Style {name: styleName})
@@ -802,7 +1043,7 @@ export const editWorkshop = async (
 
     // Delete videos not in the new list
     await tx.run(
-      `MATCH (w:Workshop {id: $id})
+      `MATCH (w:Event:Workshop {id: $id})
        MATCH (v:Video)-[:IN]->(w)
        WHERE NOT v.id IN [vid IN $videos | vid.id]
        DETACH DELETE v`,
@@ -812,7 +1053,7 @@ export const editWorkshop = async (
     // Update videos
     for (const vid of workshop.videos) {
       await tx.run(
-        `MATCH (w:Workshop {id: $id})
+        `MATCH (w:Event:Workshop {id: $id})
          MERGE (v:Video { id: $videoId })
          ON CREATE SET
            v.title = $title,
@@ -830,7 +1071,7 @@ export const editWorkshop = async (
       );
     }
 
-    // Update video styles (workshops don't have dancer/winner tags)
+    // Update video styles
     for (const vid of workshop.videos) {
       // Update video styles
       await tx.run(
@@ -854,11 +1095,16 @@ export const editWorkshop = async (
       }
     }
 
+    // Update video user relationships (tagged dancers, winners, choreographers, teachers)
+    for (const vid of workshop.videos) {
+      await updateVideoUserRelationships(vid, vid.id, tx);
+    }
+
     // Update gallery
     await tx.run(
-      `MATCH (w:Workshop {id: $id})
+      `MATCH (w:Event:Workshop {id: $id})
        FOREACH (pic IN $gallery |
-         MERGE (g:Picture { id: pic.id, title: pic.title, url: pic.url, type: pic.type })
+         MERGE (g:Image:Gallery { id: pic.id, title: pic.title, url: pic.url })
          MERGE (g)-[:PHOTO]->(w)
        )`,
       { id: workshopId, gallery: workshop.gallery }
@@ -866,8 +1112,8 @@ export const editWorkshop = async (
 
     // Delete gallery items not in the new list
     await tx.run(
-      `MATCH (w:Workshop {id: $id})
-       MATCH (g:Picture)-[:PHOTO]->(w)
+      `MATCH (w:Event:Workshop {id: $id})
+       MATCH (g:Image)-[:PHOTO]->(w)
        WHERE NOT g.id IN [pic IN $gallery | pic.id]
        DETACH DELETE g`,
       { id: workshopId, gallery: workshop.gallery }
@@ -893,7 +1139,7 @@ export const deleteWorkshop = async (workshopId: string): Promise<boolean> => {
   try {
     await session.run(
       `
-      MATCH (w:Workshop {id: $id})
+      MATCH (w:Event:Workshop {id: $id})
       DETACH DELETE w
     `,
       { id: workshopId }
@@ -914,7 +1160,7 @@ export const getWorkshopCreator = async (
   try {
     const result = await session.run(
       `
-      MATCH (u:User)-[:CREATED]->(w:Workshop {id: $workshopId})
+      MATCH (u:User)-[:CREATED]->(w:Event:Workshop {id: $workshopId})
       RETURN u.id as creatorId
       LIMIT 1
     `,
@@ -939,7 +1185,7 @@ export const isWorkshopCreator = async (
   try {
     const result = await session.run(
       `
-      MATCH (u:User {id: $userId})-[:CREATED]->(w:Workshop {id: $workshopId})
+      MATCH (u:User {id: $userId})-[:CREATED]->(w:Event:Workshop {id: $workshopId})
       RETURN count(*) as count
     `,
       { workshopId, userId }
@@ -959,7 +1205,7 @@ export const getWorkshopTeamMembers = async (
   try {
     const result = await session.run(
       `
-      MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User)
+      MATCH (w:Event:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User)
       RETURN DISTINCT user.id as userId
     `,
       { workshopId }
@@ -980,7 +1226,7 @@ export const isWorkshopTeamMember = async (
   try {
     const result = await session.run(
       `
-      MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
+      MATCH (w:Event:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
       RETURN count(rel) as count
     `,
       { workshopId, userId }
@@ -1000,7 +1246,7 @@ export const getWorkshopsByEvent = async (
 
   const result = await session.run(
     `
-    MATCH (e:Event {id: $eventId})<-[:IN]-(w:Workshop)
+    MATCH (e:Event {id: $eventId})<-[:IN]-(w:Event:Workshop)
     RETURN collect(w.id) as workshopIds
   `,
     { eventId }

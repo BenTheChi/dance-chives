@@ -2,7 +2,8 @@
 
 import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
-import { EventDetails, Picture } from "@/types/event";
+import { CompetitionDetails } from "@/types/event";
+import { Image } from "@/types/image";
 import { City, CitySearchItem } from "@/types/city";
 import {
   FormControl,
@@ -19,7 +20,7 @@ import DateInput from "../DateInput";
 interface EventDetailsFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
-  eventDetails: EventDetails;
+  eventDetails: CompetitionDetails;
   register: UseFormRegister<FormValues>;
 }
 
@@ -245,7 +246,7 @@ export function EventDetailsForm({
                 register={register}
                 name="eventDetails.poster"
                 onFileChange={(file) => {
-                  setValue("eventDetails.poster", file as Picture);
+                  setValue("eventDetails.poster", file as Image);
                 }}
                 className="bg-[#E8E7E7]"
                 maxFiles={1}

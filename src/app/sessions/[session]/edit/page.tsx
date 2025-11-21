@@ -79,7 +79,7 @@ export default async function EditSessionPage({
   });
 
   // Format dates array
-  const formattedDates = currSession.sessionDetails.dates.map((date) => ({
+  const formattedDates = currSession.eventDetails.dates.map((date) => ({
     date: date.date,
     startTime: date.startTime,
     endTime: date.endTime,
@@ -87,17 +87,17 @@ export default async function EditSessionPage({
 
   // Add null values to sessionDetails objects
   const formattedSessionDetails = {
-    ...currSession.sessionDetails,
-    description: currSession.sessionDetails.description || "",
-    schedule: currSession.sessionDetails.schedule || "",
-    address: currSession.sessionDetails.address || "",
-    cost: currSession.sessionDetails.cost || "",
-    styles: currSession.sessionDetails.styles || [],
+    ...currSession.eventDetails,
+    description: currSession.eventDetails.description || "",
+    schedule: currSession.eventDetails.schedule || "",
+    address: currSession.eventDetails.address || "",
+    cost: currSession.eventDetails.cost || "",
+    styles: currSession.eventDetails.styles || [],
     dates: formattedDates,
-    poster: currSession.sessionDetails.poster
+    poster: currSession.eventDetails.poster
       ? {
-          ...currSession.sessionDetails.poster,
-          title: currSession.sessionDetails.poster.title || "",
+          ...currSession.eventDetails.poster,
+          title: currSession.eventDetails.poster.title || "",
           file: null,
         }
       : null,
@@ -120,4 +120,3 @@ export default async function EditSessionPage({
     </>
   );
 }
-

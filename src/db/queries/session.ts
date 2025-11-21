@@ -1,8 +1,14 @@
 import driver from "../driver";
-import { Session, SessionCard, SessionRole, SessionDate } from "../../types/session";
+import {
+  Session,
+  SessionCard,
+  SessionRole,
+  SessionDate,
+} from "../../types/session";
 import { UserSearchItem } from "../../types/user";
 import { City } from "../../types/city";
-import { Video, Picture } from "../../types/event";
+import { Video } from "../../types/video";
+import { Image } from "../../types/image";
 import {
   getNeo4jRoleFormats,
   toNeo4jRoleFormat,
@@ -45,9 +51,9 @@ export const getSession = async (id: string): Promise<Session> => {
   // Get main session data
   const sessionResult = await session.run(
     `
-    MATCH (s:Session {id: $id})
+    MATCH (s:Event:Session {id: $id})
     OPTIONAL MATCH (s)-[:IN]->(c:City)
-    OPTIONAL MATCH (poster:Picture)-[:POSTER]->(s)
+    OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(s)
     OPTIONAL MATCH (creator:User)-[:CREATED]->(s)
     
     RETURN s {
@@ -60,22 +66,17 @@ export const getSession = async (id: string): Promise<Session> => {
       cost: s.cost,
       dates: s.dates,
       schedule: s.schedule,
-      creatorId: creator.id,
-      poster: poster {
-        id: poster.id,
-        title: poster.title,
-        url: poster.url,
-        type: poster.type
-      },
-      city: c {
-        id: c.id,
-        name: c.name,
-        countryCode: c.countryCode,
-        region: c.region,
-        population: c.population,
-        timezone: c.timezone
-      }
-    } as session
+      creatorId: creator.id
+    } as session,
+    poster.id as posterId,
+    poster.title as posterTitle,
+    poster.url as posterUrl,
+    c.id as cityId,
+    c.name as cityName,
+    c.countryCode as cityCountryCode,
+    c.region as cityRegion,
+    c.population as cityPopulation,
+    c.timezone as cityTimezone
   `,
     { id }
   );
@@ -86,7 +87,7 @@ export const getSession = async (id: string): Promise<Session> => {
   );
   const rolesResult = await session.run(
     `
-    MATCH (s:Session {id: $id})<-[roleRel]-(user:User)
+    MATCH (s:Event:Event:Session {id: $id})<-[roleRel]-(user:User)
     WHERE type(roleRel) IN $validRoles
     RETURN collect({
       id: type(roleRel),
@@ -101,16 +102,65 @@ export const getSession = async (id: string): Promise<Session> => {
     { id, validRoles: validRoleFormats }
   );
 
-  // Get videos (sessions don't have dancer/winner tags)
+  // Get videos with their types determined from labels
   const videosResult = await session.run(
     `
-    MATCH (s:Session {id: $id})<-[:IN]-(v:Video)
+    MATCH (s:Event:Session {id: $id})<-[:IN]-(v:Video)
     RETURN collect({
       id: v.id,
       title: v.title,
       src: v.src,
-      taggedDancers: []
+      type: CASE 
+        WHEN 'Battle' IN labels(v) THEN 'battle'
+        WHEN 'Freestyle' IN labels(v) THEN 'freestyle'
+        WHEN 'Choreography' IN labels(v) THEN 'choreography'
+        WHEN 'Class' IN labels(v) THEN 'class'
+        ELSE 'freestyle'
+      END
     }) as videos
+  `,
+    { id }
+  );
+
+  // Get tagged users for videos using relationship types - separate winners, dancers, choreographers, teachers
+  const videoUsersResult = await session.run(
+    `
+    MATCH (s:Event:Session {id: $id})<-[:IN]-(v:Video)
+    OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+    OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
+    OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
+    WITH v,
+         collect(DISTINCT {
+           id: winner.id,
+           displayName: winner.displayName,
+           username: winner.username
+         }) as allWinners,
+         collect(DISTINCT {
+           id: dancer.id,
+           displayName: dancer.displayName,
+           username: dancer.username
+         }) as allDancers,
+         collect(DISTINCT {
+           id: choreographer.id,
+           displayName: choreographer.displayName,
+           username: choreographer.username
+         }) as allChoreographers,
+         collect(DISTINCT {
+           id: teacher.id,
+           displayName: teacher.displayName,
+           username: teacher.username
+         }) as allTeachers
+    WITH v,
+         [w in allWinners WHERE w.id IS NOT NULL] as winners,
+         [d in allDancers WHERE d.id IS NOT NULL] as dancers,
+         [c in allChoreographers WHERE c.id IS NOT NULL] as choreographers,
+         [t in allTeachers WHERE t.id IS NOT NULL] as teachers
+    RETURN v.id as videoId, 
+           winners as taggedWinners,
+           dancers as taggedDancers,
+           choreographers as taggedChoreographers,
+           teachers as taggedTeachers
   `,
     { id }
   );
@@ -118,7 +168,7 @@ export const getSession = async (id: string): Promise<Session> => {
   // Get video styles
   const videoStylesResult = await session.run(
     `
-    MATCH (s:Session {id: $id})<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    MATCH (s:Event:Session {id: $id})<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
     RETURN v.id as videoId, collect(style.name) as styles
   `,
     { id }
@@ -127,7 +177,7 @@ export const getSession = async (id: string): Promise<Session> => {
   // Get session styles
   const sessionStylesResult = await session.run(
     `
-    MATCH (s:Session {id: $id})-[:STYLE]->(style:Style)
+    MATCH (s:Event:Session {id: $id})-[:STYLE]->(style:Style)
     RETURN collect(style.name) as styles
   `,
     { id }
@@ -136,12 +186,12 @@ export const getSession = async (id: string): Promise<Session> => {
   // Get gallery
   const galleryResult = await session.run(
     `
-    MATCH (s:Session {id: $id})<-[:PHOTO]-(galleryPic:Picture)
-    RETURN collect(galleryPic {
+    MATCH (s:Event:Session {id: $id})<-[:PHOTO]-(galleryPic:Image:Gallery)
+    WITH galleryPic
+    RETURN collect({
       id: galleryPic.id,
       title: galleryPic.title,
-      url: galleryPic.url,
-      type: galleryPic.type
+      url: galleryPic.url
     }) as gallery
   `,
     { id }
@@ -149,9 +199,13 @@ export const getSession = async (id: string): Promise<Session> => {
 
   session.close();
 
-  const sessionData = sessionResult.records[0]?.get("session");
+  const sessionRecord = sessionResult.records[0];
+  const sessionData = sessionRecord?.get("session");
+  const posterId = sessionRecord?.get("posterId");
+  const cityId = sessionRecord?.get("cityId");
   const roles = rolesResult.records[0]?.get("roles") || [];
   const videos = videosResult.records[0]?.get("videos") || [];
+  const videoUsers = videoUsersResult.records;
   const videoStyles = videoStylesResult.records;
   const sessionStyles = sessionStylesResult.records[0]?.get("styles") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
@@ -161,33 +215,89 @@ export const getSession = async (id: string): Promise<Session> => {
     throw new Error(`Session with id ${id} not found`);
   }
 
+  // Construct poster object from individual fields
+  const poster = posterId
+    ? {
+        id: posterId,
+        title: sessionRecord?.get("posterTitle") || "",
+        url: sessionRecord?.get("posterUrl") || "",
+      }
+    : null;
+
+  // Construct city object from individual fields
+  const city = cityId
+    ? {
+        id: cityId,
+        name: sessionRecord?.get("cityName") || "",
+        countryCode: sessionRecord?.get("cityCountryCode") || "",
+        region: sessionRecord?.get("cityRegion") || "",
+        population: sessionRecord?.get("cityPopulation") || 0,
+        timezone: sessionRecord?.get("cityTimezone"),
+      }
+    : null;
+
   // Parse dates array from JSON string
   let dates: SessionDate[] = [];
   if (sessionData.dates) {
     try {
-      dates = typeof sessionData.dates === "string" 
-        ? JSON.parse(sessionData.dates) 
-        : sessionData.dates;
+      dates =
+        typeof sessionData.dates === "string"
+          ? JSON.parse(sessionData.dates)
+          : sessionData.dates;
     } catch (error) {
       console.error("Error parsing dates array:", error);
       dates = [];
     }
   }
 
-  // Add styles to videos
+  // Create maps for video users and styles
+  const videoUsersMap = new Map<string, any>();
+  videoUsers.forEach((record: any) => {
+    videoUsersMap.set(record.get("videoId"), {
+      taggedWinners: record.get("taggedWinners") || [],
+      taggedDancers: record.get("taggedDancers") || [],
+      taggedChoreographers: record.get("taggedChoreographers") || [],
+      taggedTeachers: record.get("taggedTeachers") || [],
+    });
+  });
+
   const videoStylesMap = new Map<string, string[]>();
   videoStyles.forEach((record: any) => {
     videoStylesMap.set(record.get("videoId"), record.get("styles"));
   });
 
-  const videosWithStyles = videos.map((video: Video) => ({
-    ...video,
-    styles: videoStylesMap.get(video.id) || [],
-  }));
+  // Merge videos with tagged users and styles
+  const videosWithStyles = videos.map((video: Video) => {
+    const userData = videoUsersMap.get(video.id);
+    const videoType = video.type || "freestyle";
+
+    const result: any = {
+      ...video,
+      styles: videoStylesMap.get(video.id) || [],
+      taggedDancers: userData?.taggedDancers || [],
+    };
+
+    // Only include taggedWinners for battle videos
+    if (videoType === "battle") {
+      result.taggedWinners = userData?.taggedWinners || [];
+    }
+
+    // Only include taggedChoreographers for choreography videos
+    if (videoType === "choreography") {
+      result.taggedChoreographers = userData?.taggedChoreographers || [];
+    }
+
+    // Only include taggedTeachers for class videos
+    if (videoType === "class") {
+      result.taggedTeachers = userData?.taggedTeachers || [];
+    }
+
+    return result;
+  });
 
   return {
     ...sessionData,
-    sessionDetails: {
+    eventDetails: {
       title: sessionData.title,
       description: sessionData.description,
       address: sessionData.address,
@@ -195,8 +305,8 @@ export const getSession = async (id: string): Promise<Session> => {
       dates: dates,
       schedule: sessionData.schedule,
       creatorId: sessionData.creatorId,
-      poster: sessionData.poster,
-      city: sessionData.city,
+      poster: poster,
+      city: city,
       styles: sessionStyles,
     },
     roles,
@@ -210,9 +320,9 @@ export const getSessions = async (): Promise<SessionCard[]> => {
 
   const result = await session.run(
     `
-    MATCH (s:Session)
+    MATCH (s:Event:Session)
     OPTIONAL MATCH (s)-[:IN]->(c:City)
-    OPTIONAL MATCH (poster:Picture)-[:POSTER]->(s)
+    OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(s)
     RETURN collect({
       id: s.id,
       title: s.title,
@@ -229,7 +339,7 @@ export const getSessions = async (): Promise<SessionCard[]> => {
   // Get session styles
   const sessionStylesResult = await session.run(
     `
-    MATCH (s:Session)-[:STYLE]->(style:Style)
+    MATCH (s:Event:Session)-[:STYLE]->(style:Style)
     RETURN s.id as sessionId, collect(style.name) as styles
   `,
     {}
@@ -238,7 +348,7 @@ export const getSessions = async (): Promise<SessionCard[]> => {
   // Get video styles for sessions
   const videoStylesResult = await session.run(
     `
-    MATCH (s:Session)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+    MATCH (s:Event:Session)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
     WITH s.id as sessionId, collect(DISTINCT style.name) as styles
     RETURN sessionId, styles
   `,
@@ -265,7 +375,8 @@ export const getSessions = async (): Promise<SessionCard[]> => {
     let firstDate = "";
     if (s.dates) {
       try {
-        const dates = typeof s.dates === "string" ? JSON.parse(s.dates) : s.dates;
+        const dates =
+          typeof s.dates === "string" ? JSON.parse(s.dates) : s.dates;
         if (Array.isArray(dates) && dates.length > 0) {
           firstDate = dates[0].date || "";
         }
@@ -302,8 +413,12 @@ const createSessionVideos = async (
   const session = driver.session();
   try {
     for (const vid of videos) {
+      // Get video type label
+      const videoType = vid.type || "freestyle"; // Default to freestyle for sessions
+      const videoLabel = videoType.charAt(0).toUpperCase() + videoType.slice(1);
+
       await session.run(
-        `MATCH (s:Session {id: $sessionId})
+        `MATCH (s:Event:Session {id: $sessionId})
          MERGE (v:Video {id: $videoId})
          ON CREATE SET
            v.title = $title,
@@ -311,6 +426,8 @@ const createSessionVideos = async (
          ON MATCH SET
            v.title = $title,
            v.src = $src
+         WITH v, s
+         CALL apoc.create.addLabels(v, ['Video', '${videoLabel}']) YIELD node
          MERGE (v)-[:IN]->(s)`,
         {
           sessionId,
@@ -319,6 +436,9 @@ const createSessionVideos = async (
           src: vid.src,
         }
       );
+
+      // Create user relationships based on video type
+      await createVideoUserRelationships(vid, vid.id);
 
       // Create video style relationships
       const videoStyles = vid.styles || [];
@@ -341,6 +461,239 @@ const createSessionVideos = async (
   }
 };
 
+// Helper function to create user relationships for a video based on video type
+async function createVideoUserRelationships(
+  video: Video,
+  videoId: string
+): Promise<void> {
+  const session = driver.session();
+  try {
+    if (video.type === "battle") {
+      const battleVideo = video as any;
+      // Create DANCER relationships
+      if (battleVideo.taggedDancers && battleVideo.taggedDancers.length > 0) {
+        for (const dancer of battleVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create WINNER relationships
+      if (battleVideo.taggedWinners && battleVideo.taggedWinners.length > 0) {
+        for (const winner of battleVideo.taggedWinners) {
+          const userId = await getUserIdFromUserSearchItem(winner);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:WINNER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "freestyle") {
+      const freestyleVideo = video as any;
+      // Create DANCER relationships
+      if (
+        freestyleVideo.taggedDancers &&
+        freestyleVideo.taggedDancers.length > 0
+      ) {
+        for (const dancer of freestyleVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "choreography") {
+      const choreographyVideo = video as any;
+      // Create CHOREOGRAPHER relationships
+      if (
+        choreographyVideo.taggedChoreographers &&
+        choreographyVideo.taggedChoreographers.length > 0
+      ) {
+        for (const choreographer of choreographyVideo.taggedChoreographers) {
+          const userId = await getUserIdFromUserSearchItem(choreographer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:CHOREOGRAPHER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create DANCER relationships
+      if (
+        choreographyVideo.taggedDancers &&
+        choreographyVideo.taggedDancers.length > 0
+      ) {
+        for (const dancer of choreographyVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "class") {
+      const classVideo = video as any;
+      // Create TEACHER relationships
+      if (classVideo.taggedTeachers && classVideo.taggedTeachers.length > 0) {
+        for (const teacher of classVideo.taggedTeachers) {
+          const userId = await getUserIdFromUserSearchItem(teacher);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:TEACHER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create DANCER relationships
+      if (classVideo.taggedDancers && classVideo.taggedDancers.length > 0) {
+        for (const dancer of classVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+// Helper function to update user relationships for a video
+// First deletes all existing relationships, then creates new ones
+async function updateVideoUserRelationships(
+  video: Video,
+  videoId: string,
+  tx: any
+): Promise<void> {
+  // Delete all existing user-video relationships for this video
+  await tx.run(
+    `MATCH (v:Video {id: $videoId})<-[r:DANCER|WINNER|CHOREOGRAPHER|TEACHER]-(:User)
+     DELETE r`,
+    { videoId }
+  );
+
+  // Create new relationships based on video type
+  if (video.type === "battle") {
+    const battleVideo = video as any;
+    // Create DANCER relationships
+    if (battleVideo.taggedDancers && battleVideo.taggedDancers.length > 0) {
+      for (const dancer of battleVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+    // Create WINNER relationships
+    if (battleVideo.taggedWinners && battleVideo.taggedWinners.length > 0) {
+      for (const winner of battleVideo.taggedWinners) {
+        const userId = await getUserIdFromUserSearchItem(winner);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:WINNER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  } else if (video.type === "freestyle") {
+    const freestyleVideo = video as any;
+    // Create DANCER relationships
+    if (
+      freestyleVideo.taggedDancers &&
+      freestyleVideo.taggedDancers.length > 0
+    ) {
+      for (const dancer of freestyleVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  } else if (video.type === "choreography") {
+    const choreographyVideo = video as any;
+    // Create CHOREOGRAPHER relationships
+    if (
+      choreographyVideo.taggedChoreographers &&
+      choreographyVideo.taggedChoreographers.length > 0
+    ) {
+      for (const choreographer of choreographyVideo.taggedChoreographers) {
+        const userId = await getUserIdFromUserSearchItem(choreographer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:CHOREOGRAPHER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+    // Create DANCER relationships
+    if (
+      choreographyVideo.taggedDancers &&
+      choreographyVideo.taggedDancers.length > 0
+    ) {
+      for (const dancer of choreographyVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  } else if (video.type === "class") {
+    const classVideo = video as any;
+    // Create TEACHER relationships
+    if (classVideo.taggedTeachers && classVideo.taggedTeachers.length > 0) {
+      for (const teacher of classVideo.taggedTeachers) {
+        const userId = await getUserIdFromUserSearchItem(teacher);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:TEACHER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+    // Create DANCER relationships
+    if (classVideo.taggedDancers && classVideo.taggedDancers.length > 0) {
+      for (const dancer of classVideo.taggedDancers) {
+        const userId = await getUserIdFromUserSearchItem(dancer);
+        await tx.run(
+          `MATCH (v:Video {id: $videoId})
+           MERGE (u:User {id: $userId})
+           MERGE (u)-[:DANCER]->(v)`,
+          { videoId, userId }
+        );
+      }
+    }
+  }
+}
+
 // Helper function to create session styles
 const createSessionStyles = async (
   sessionId: string,
@@ -353,7 +706,7 @@ const createSessionStyles = async (
     const normalizedStyles = normalizeStyleNames(styles);
     await session.run(
       `
-      MATCH (s:Session {id: $sessionId})
+      MATCH (s:Event:Session {id: $sessionId})
       WITH s, $styles AS styles
       UNWIND styles AS styleName
       MERGE (style:Style {name: styleName})
@@ -369,26 +722,25 @@ const createSessionStyles = async (
 // Helper function to create session posters
 const createSessionPoster = async (
   sessionId: string,
-  poster: Picture | null
+  poster: Image | null
 ): Promise<void> => {
   if (!poster?.id) return;
 
   const session = driver.session();
   try {
     await session.run(
-      `MATCH (s:Session {id: $sessionId})
-       OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(s)
+      `MATCH (s:Event:Session {id: $sessionId})
+       OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(s)
        DELETE r
        WITH s
-       MERGE (p:Picture {id: $posterId})
+       MERGE (p:Image:Gallery {id: $posterId})
        ON CREATE SET
          p.title = $title,
-         p.url = $url,
-         p.type = 'poster'
+         p.url = $url
        ON MATCH SET
          p.title = $title,
          p.url = $url
-       MERGE (p)-[:POSTER]->(s)`,
+       MERGE (p)-[:POSTER_OF]->(s)`,
       {
         sessionId,
         posterId: poster.id,
@@ -404,7 +756,7 @@ const createSessionPoster = async (
 // Helper function to create gallery photos
 const createSessionGalleryPhotos = async (
   sessionId: string,
-  gallery: Picture[]
+  gallery: Image[]
 ): Promise<void> => {
   if (gallery.length === 0) return;
 
@@ -412,12 +764,11 @@ const createSessionGalleryPhotos = async (
   try {
     for (const pic of gallery) {
       await session.run(
-        `MATCH (s:Session {id: $sessionId})
-         MERGE (p:Picture {id: $picId})
+        `MATCH (s:Event:Session {id: $sessionId})
+         MERGE (p:Image:Gallery {id: $picId})
          ON CREATE SET
            p.title = $title,
-           p.url = $url,
-           p.type = 'photo'
+           p.url = $url
          ON MATCH SET
            p.title = $title,
            p.url = $url
@@ -487,11 +838,11 @@ export const insertSession = async (session: Session): Promise<any> => {
   const sessionDriver = driver.session();
 
   // Convert dates array to JSON string
-  const datesJson = JSON.stringify(session.sessionDetails.dates || []);
+  const datesJson = JSON.stringify(session.eventDetails.dates || []);
 
   const result = await sessionDriver.run(
     `
-    MERGE (s:Session {id: $sessionId})
+    MERGE (s:Event:Session {id: $sessionId})
     ON CREATE SET 
       s.title = $title,
       s.description = $description,
@@ -523,19 +874,18 @@ export const insertSession = async (session: Session): Promise<any> => {
     MERGE (s)-[:IN]->(c)
 
     WITH s
-    OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(s)
+    OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(s)
     DELETE r
     WITH s
     FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
-      MERGE (newPoster:Picture {id: poster.id})
+      MERGE (newPoster:Image:Gallery {id: poster.id})
       ON CREATE SET
         newPoster.title = poster.title,
-        newPoster.url = poster.url,
-        newPoster.type = 'poster'
-      ON MATCH SET
+        newPoster.url = poster.url
+      SET
         newPoster.title = poster.title,
         newPoster.url = poster.url
-      MERGE (newPoster)-[:POSTER]->(s)
+      MERGE (newPoster)-[:POSTER_OF]->(s)
     )
 
     WITH s
@@ -564,17 +914,17 @@ export const insertSession = async (session: Session): Promise<any> => {
   `,
     {
       sessionId: session.id,
-      creatorId: session.sessionDetails.creatorId,
-      title: session.sessionDetails.title,
-      description: session.sessionDetails.description,
-      address: session.sessionDetails.address,
-      cost: session.sessionDetails.cost,
+      creatorId: session.eventDetails.creatorId,
+      title: session.eventDetails.title,
+      description: session.eventDetails.description,
+      address: session.eventDetails.address,
+      cost: session.eventDetails.cost,
       dates: datesJson,
-      schedule: session.sessionDetails.schedule,
+      schedule: session.eventDetails.schedule || null,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
-      poster: session.sessionDetails.poster,
-      city: session.sessionDetails.city,
+      poster: session.eventDetails.poster,
+      city: session.eventDetails.city,
       roles: session.roles,
     }
   );
@@ -599,12 +949,9 @@ export const insertSession = async (session: Session): Promise<any> => {
 
   // Create videos, gallery, poster, and styles in separate queries
   await createSessionVideos(session.id, session.videos);
-  await createSessionPoster(
-    session.id,
-    session.sessionDetails.poster || null
-  );
+  await createSessionPoster(session.id, session.eventDetails.poster || null);
   await createSessionGalleryPhotos(session.id, session.gallery);
-  await createSessionStyles(session.id, session.sessionDetails.styles);
+  await createSessionStyles(session.id, session.eventDetails.styles);
 
   return sessionNode.properties;
 };
@@ -667,12 +1014,12 @@ export const editSession = async (
     const tx = sessionDriver.beginTransaction();
 
     // Convert dates array to JSON string
-    const datesJson = JSON.stringify(session.sessionDetails.dates || []);
+    const datesJson = JSON.stringify(session.eventDetails.dates || []);
 
     // Update session properties
     await tx.run(
       `
-      MATCH (s:Session {id: $id})
+      MATCH (s:Event:Session {id: $id})
       SET s.title = $title,
           s.description = $description,
           s.address = $address,
@@ -683,12 +1030,12 @@ export const editSession = async (
     `,
       {
         id: sessionId,
-        title: session.sessionDetails.title,
-        description: session.sessionDetails.description,
-        address: session.sessionDetails.address,
-        cost: session.sessionDetails.cost,
+        title: session.eventDetails.title,
+        description: session.eventDetails.description,
+        address: session.eventDetails.address,
+        cost: session.eventDetails.cost,
         dates: datesJson,
-        schedule: session.sessionDetails.schedule,
+        schedule: session.eventDetails.schedule || null,
         updatedAt: session.updatedAt.toISOString(),
       }
     );
@@ -696,7 +1043,7 @@ export const editSession = async (
     // Update city relationship
     await tx.run(
       `
-      MATCH (s:Session {id: $id})
+      MATCH (s:Event:Session {id: $id})
       OPTIONAL MATCH (s)-[oldCityRel:IN]->(:City)
       DELETE oldCityRel
       WITH s
@@ -711,48 +1058,42 @@ export const editSession = async (
         c.population = $city.population
       MERGE (s)-[:IN]->(c)
     `,
-      { id: sessionId, city: session.sessionDetails.city }
+      { id: sessionId, city: session.eventDetails.city }
     );
 
     // Update poster
     await tx.run(
       `
-      MATCH (s:Session {id: $id})
-      OPTIONAL MATCH (oldPoster:Picture)-[r:POSTER]->(s)
+      MATCH (s:Event:Session {id: $id})
+      OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(s)
       DELETE r
       WITH s
       FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
-        MERGE (newPoster:Picture {id: poster.id})
+        MERGE (newPoster:Image:Gallery {id: poster.id})
         ON CREATE SET
           newPoster.title = poster.title,
-          newPoster.url = poster.url,
-          newPoster.type = 'poster'
-        ON MATCH SET
+          newPoster.url = poster.url
+        SET
           newPoster.title = poster.title,
           newPoster.url = poster.url
-        MERGE (newPoster)-[:POSTER]->(s)
+        MERGE (newPoster)-[:POSTER_OF]->(s)
       )
     `,
-      { id: sessionId, poster: session.sessionDetails.poster }
+      { id: sessionId, poster: session.eventDetails.poster }
     );
 
     // Update session styles
     await tx.run(
-      `MATCH (s:Session {id: $id})-[r:STYLE]->(:Style)
+      `MATCH (s:Event:Session {id: $id})-[r:STYLE]->(:Style)
        DELETE r`,
       { id: sessionId }
     );
 
-    if (
-      session.sessionDetails.styles &&
-      session.sessionDetails.styles.length > 0
-    ) {
-      const normalizedStyles = normalizeStyleNames(
-        session.sessionDetails.styles
-      );
+    if (session.eventDetails.styles && session.eventDetails.styles.length > 0) {
+      const normalizedStyles = normalizeStyleNames(session.eventDetails.styles);
       await tx.run(
         `
-        MATCH (s:Session {id: $id})
+        MATCH (s:Event:Session {id: $id})
         WITH s, $styles AS styles
         UNWIND styles AS styleName
         MERGE (style:Style {name: styleName})
@@ -766,7 +1107,7 @@ export const editSession = async (
     const validRoleFormats = getNeo4jRoleFormats();
     if (session.roles && session.roles.length > 0) {
       await tx.run(
-        `MATCH (s:Session {id: $id})
+        `MATCH (s:Event:Session {id: $id})
          UNWIND $roles AS roleData
          WITH s, roleData
          WHERE roleData.user.id IS NOT NULL
@@ -785,7 +1126,7 @@ export const editSession = async (
 
       // Delete roles not in the new list
       await tx.run(
-        `MATCH (s:Session {id: $id})
+        `MATCH (s:Event:Session {id: $id})
          MATCH (u:User)-[r]->(s)
          WHERE type(r) IN $validRoles AND type(r) <> 'TEAM_MEMBER' AND type(r) <> 'CREATED'
          AND NOT u.id IN [role IN $roles WHERE role.user.id IS NOT NULL | role.user.id]
@@ -795,7 +1136,7 @@ export const editSession = async (
     } else {
       // Remove all roles if none provided (except TEAM_MEMBER and CREATED)
       await tx.run(
-        `MATCH (s:Session {id: $id})
+        `MATCH (s:Event:Session {id: $id})
          MATCH (u:User)-[r]->(s)
          WHERE type(r) IN $validRoles AND type(r) <> 'TEAM_MEMBER' AND type(r) <> 'CREATED'
          DELETE r`,
@@ -805,7 +1146,7 @@ export const editSession = async (
 
     // Delete videos not in the new list
     await tx.run(
-      `MATCH (s:Session {id: $id})
+      `MATCH (s:Event:Session {id: $id})
        MATCH (v:Video)-[:IN]->(s)
        WHERE NOT v.id IN [vid IN $videos | vid.id]
        DETACH DELETE v`,
@@ -814,8 +1155,12 @@ export const editSession = async (
 
     // Update videos
     for (const vid of session.videos) {
+      // Get video type label
+      const videoType = vid.type || "freestyle";
+      const videoLabel = videoType.charAt(0).toUpperCase() + videoType.slice(1);
+
       await tx.run(
-        `MATCH (s:Session {id: $id})
+        `MATCH (s:Event:Session {id: $id})
          MERGE (v:Video { id: $videoId })
          ON CREATE SET
            v.title = $title,
@@ -823,6 +1168,8 @@ export const editSession = async (
          ON MATCH SET
            v.title = $title,
            v.src = $src
+         WITH v, s
+         CALL apoc.create.addLabels(v, ['Video', '${videoLabel}']) YIELD node
          MERGE (v)-[:IN]->(s)`,
         {
           id: sessionId,
@@ -857,11 +1204,16 @@ export const editSession = async (
       }
     }
 
+    // Update video user relationships (tagged dancers, winners, choreographers, teachers)
+    for (const vid of session.videos) {
+      await updateVideoUserRelationships(vid, vid.id, tx);
+    }
+
     // Update gallery
     await tx.run(
-      `MATCH (s:Session {id: $id})
+      `MATCH (s:Event:Session {id: $id})
        FOREACH (pic IN $gallery |
-         MERGE (g:Picture { id: pic.id, title: pic.title, url: pic.url, type: pic.type })
+         MERGE (g:Image:Gallery { id: pic.id, title: pic.title, url: pic.url })
          MERGE (g)-[:PHOTO]->(s)
        )`,
       { id: sessionId, gallery: session.gallery }
@@ -869,8 +1221,8 @@ export const editSession = async (
 
     // Delete gallery items not in the new list
     await tx.run(
-      `MATCH (s:Session {id: $id})
-       MATCH (g:Picture)-[:PHOTO]->(s)
+      `MATCH (s:Event:Session {id: $id})
+       MATCH (g:Image)-[:PHOTO]->(s)
        WHERE NOT g.id IN [pic IN $gallery | pic.id]
        DETACH DELETE g`,
       { id: sessionId, gallery: session.gallery }
@@ -896,7 +1248,7 @@ export const deleteSession = async (sessionId: string): Promise<boolean> => {
   try {
     await session.run(
       `
-      MATCH (s:Session {id: $id})
+      MATCH (s:Event:Session {id: $id})
       DETACH DELETE s
     `,
       { id: sessionId }
@@ -910,12 +1262,14 @@ export const deleteSession = async (sessionId: string): Promise<boolean> => {
   }
 };
 
-export const getSessionPictures = async (sessionId: string): Promise<string[]> => {
+export const getSessionImages = async (
+  sessionId: string
+): Promise<string[]> => {
   const session = driver.session();
   const result = await session.run(
-    `MATCH (s:Session {id: $sessionId})
-    OPTIONAL MATCH (s)<-[:POSTER]-(poster:Picture)
-    OPTIONAL MATCH (s)<-[:PHOTO]-(gallery:Picture)
+    `MATCH (s:Event:Session {id: $sessionId})
+    OPTIONAL MATCH (s)<-[:POSTER_OF]-(poster:Image)
+    OPTIONAL MATCH (s)<-[:PHOTO]-(gallery:Image)
 
     RETURN poster, gallery
     `,
@@ -946,7 +1300,7 @@ export const getSessionCreator = async (
   try {
     const result = await session.run(
       `
-      MATCH (u:User)-[:CREATED]->(s:Session {id: $sessionId})
+      MATCH (u:User)-[:CREATED]->(s:Event:Session {id: $sessionId})
       RETURN u.id as creatorId
       LIMIT 1
     `,
@@ -971,7 +1325,7 @@ export const isSessionCreator = async (
   try {
     const result = await session.run(
       `
-      MATCH (u:User {id: $userId})-[:CREATED]->(s:Session {id: $sessionId})
+      MATCH (u:User {id: $userId})-[:CREATED]->(s:Event:Session {id: $sessionId})
       RETURN count(*) as count
     `,
       { sessionId, userId }
@@ -990,7 +1344,7 @@ export const searchSessions = async (
   const session = driver.session();
 
   try {
-    let query = `MATCH (s:Session)`;
+    let query = `MATCH (s:Event:Session)`;
     const params: any = {};
 
     if (keyword && keyword.trim()) {
@@ -1027,7 +1381,7 @@ export const searchAccessibleSessions = async (
 
     // If user is moderator, admin, or super_admin, they can see all sessions
     if (authLevel >= AUTH_LEVELS.MODERATOR) {
-      query = `MATCH (s:Session)`;
+      query = `MATCH (s:Event:Session)`;
 
       if (keyword && keyword.trim()) {
         query += ` WHERE toLower(s.title) CONTAINS toLower($keyword)`;
@@ -1037,8 +1391,8 @@ export const searchAccessibleSessions = async (
       // Otherwise, only show sessions where user is creator or team member
       query = `
         MATCH (u:User {id: $userId})
-        OPTIONAL MATCH (u)-[:CREATED]->(s1:Session)
-        OPTIONAL MATCH (u)-[:TEAM_MEMBER]->(s2:Session)
+        OPTIONAL MATCH (u)-[:CREATED]->(s1:Event:Session)
+        OPTIONAL MATCH (u)-[:TEAM_MEMBER]->(s2:Event:Session)
         WITH collect(DISTINCT s1) + collect(DISTINCT s2) as sessions
         UNWIND sessions as s
         WHERE s IS NOT NULL
@@ -1062,4 +1416,3 @@ export const searchAccessibleSessions = async (
     await session.close();
   }
 };
-

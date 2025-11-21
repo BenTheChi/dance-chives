@@ -14,12 +14,9 @@ import { FieldErrors, useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import {
-  WorkshopDetails,
-  WorkshopRole,
-  Picture,
-  Video,
-} from "@/types/workshop";
+import { WorkshopDetails, WorkshopRole } from "@/types/workshop";
+import { Image } from "@/types/image";
+import { Video } from "@/types/video";
 import { WorkshopDetailsForm } from "./workshop-details-form";
 import WorkshopRolesForm from "./workshop-roles-form";
 import { WORKSHOP_ROLES } from "@/lib/utils/roles";
@@ -58,14 +55,18 @@ const videoSchema = z.object({
         message: "Video source must be a valid YouTube URL",
       }
     ),
+  type: z.enum(["battle", "freestyle", "choreography", "class"]),
   styles: z.array(z.string()).optional(),
+  taggedWinners: z.array(userSearchItemSchema).optional(),
+  taggedDancers: z.array(userSearchItemSchema).optional(),
+  taggedChoreographers: z.array(userSearchItemSchema).optional(),
+  taggedTeachers: z.array(userSearchItemSchema).optional(),
 });
 
-const pictureSchema = z.object({
+const imageSchema = z.object({
   id: z.string(),
   title: z.string(),
   url: z.string(),
-  type: z.string(),
   file: z.instanceof(File).nullable(),
 });
 
@@ -92,7 +93,7 @@ const workshopDetailsSchema = z.object({
   startTime: z.string(),
   endTime: z.string(),
   cost: z.string(),
-  poster: pictureSchema.nullable().optional(),
+  poster: imageSchema.nullable().optional(),
   styles: z.array(z.string()).optional(),
 });
 
@@ -112,7 +113,7 @@ const formSchema = z.object({
   workshopDetails: workshopDetailsSchema,
   roles: z.array(workshopRoleSchema).optional(),
   videos: z.array(videoSchema),
-  gallery: z.array(pictureSchema),
+  gallery: z.array(imageSchema),
   associatedEventId: z.string().nullable().optional(),
   isSubeventEnabled: z.boolean().optional(),
 });
@@ -184,7 +185,12 @@ export default function WorkshopForm({
   const workshopDetails = watch("workshopDetails");
   const roles = watch("roles") ?? [];
   const videos = watch("videos") ?? [];
-  const gallery = watch("gallery") ?? [];
+  const galleryRaw = watch("gallery") ?? [];
+  // Normalize gallery to ensure all images have the type property
+  const gallery: Image[] = galleryRaw.map((img) => ({
+    ...img,
+    type: ((img as any).type || "gallery") as "gallery" | "profile" | "poster",
+  }));
   const associatedEventId = watch("associatedEventId");
 
   const mainTabs = ["Workshop Details", "Roles", "Videos", "Photo Gallery"];
@@ -194,6 +200,7 @@ export default function WorkshopForm({
       id: Date.now().toString(),
       title: `Video ${videos.length + 1}`,
       src: "https://example.com/video",
+      type: "battle",
     };
     setValue("videos", [...videos, newVideo]);
   };
@@ -478,7 +485,16 @@ export default function WorkshopForm({
                       name="gallery"
                       onFileChange={(files) => {
                         if (files) {
-                          setValue("gallery", files as Picture[]);
+                          const filesArray = Array.isArray(files)
+                            ? files
+                            : [files];
+                          setValue(
+                            "gallery",
+                            filesArray.map((file) => ({
+                              ...file,
+                              type: "gallery" as const,
+                            }))
+                          );
                         } else {
                           setValue("gallery", []);
                         }

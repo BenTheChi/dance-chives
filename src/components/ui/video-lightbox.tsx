@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Separator } from "@/components/ui/separator";
 import { X, ChevronLeft, ChevronRight, Maximize, Users } from "lucide-react";
-import { Video } from "@/types/event";
+import { Video } from "@/types/video";
+import { UserSearchItem } from "@/types/user";
 import Link from "next/link";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
 import {
@@ -94,38 +95,52 @@ export function VideoLightbox({
   const isWorkshopOrSession =
     eventLink.startsWith("/workshops/") || eventLink.startsWith("/sessions/");
 
-  const winners = video?.taggedWinners || [];
-  const dancers = video?.taggedDancers || [];
+  // Get video type, defaulting to "battle" for backwards compatibility
+  const videoType = video?.type || "battle";
+
+  // Get tagged users based on video type
+  const winners =
+    (videoType === "battle" && (video as any)?.taggedWinners) || [];
+  const dancers = (video as any)?.taggedDancers || [];
+  const choreographers =
+    (videoType === "choreography" && (video as any)?.taggedChoreographers) ||
+    [];
+  const teachers =
+    (videoType === "class" && (video as any)?.taggedTeachers) || [];
 
   // Combine all participants (winners are also dancers, so we deduplicate)
-  const allParticipantsSet = new Map<string, (typeof winners)[0]>();
-  dancers.forEach((user) => {
+  const allParticipantsSet = new Map<string, UserSearchItem>();
+  dancers.forEach((user: UserSearchItem) => {
     if (user && user.username) {
       allParticipantsSet.set(user.username, user);
     }
   });
-  winners.forEach((user) => {
+  winners.forEach((user: UserSearchItem) => {
     if (user && user.username) {
       allParticipantsSet.set(user.username, user);
     }
   });
   const allParticipants = Array.from(allParticipantsSet.values());
 
-  const otherParticipants: typeof allParticipants = [];
-
   // For user comparisons, we need to check by username if currentUserId is a username
   // or by id if currentUserId is an id. Since currentUserId comes from session, it's likely an id.
   // But we'll check both username and id for compatibility
   const isUserTagged = currentUserId
     ? allParticipants.some(
-        (user) => user.id === currentUserId || user.username === currentUserId
+        (user: UserSearchItem) =>
+          user.id === currentUserId || user.username === currentUserId
       )
     : false;
-  const isUserWinner = currentUserId
-    ? winners.some(
-        (user) => user.id === currentUserId || user.username === currentUserId
-      )
-    : false;
+  const isUserWinner =
+    currentUserId && videoType === "battle"
+      ? winners.some(
+          (user: UserSearchItem) =>
+            user.id === currentUserId || user.username === currentUserId
+        )
+      : false;
+
+  // Determine if winner self-tagging should be shown (only for battle videos)
+  const showWinnerSelfTagging = !isWorkshopOrSession && videoType === "battle";
 
   // Determine which styles to display: section styles if applyStylesToVideos is true, otherwise video styles
   const displayStyles = useMemo(() => {
@@ -292,6 +307,7 @@ export function VideoLightbox({
               {displayStyles.length > 0 && <Separator />}
 
               {/* Tag Self Buttons - Only show for event videos, not workshop/session videos */}
+              {/* Show Dancer button for all video types, Winner button only for battle videos */}
               {!isWorkshopOrSession && currentUserId && (
                 <div className="space-y-2 sm:space-y-3">
                   <TagSelfButton
@@ -306,7 +322,7 @@ export function VideoLightbox({
                     pendingLabel="Dancer tag request pending"
                     successLabel="Tagged as Dancer"
                   />
-                  {!isUserWinner && (
+                  {showWinnerSelfTagging && !isUserWinner && (
                     <TagSelfButton
                       eventId={eventId}
                       target="video"
@@ -319,7 +335,7 @@ export function VideoLightbox({
                       successLabel="Tagged as Winner"
                     />
                   )}
-                  {isUserWinner && (
+                  {showWinnerSelfTagging && isUserWinner && (
                     <TagSelfButton
                       eventId={eventId}
                       target="video"
@@ -336,42 +352,119 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {!isWorkshopOrSession && (isUserWinner || currentUserId) && (
-                <Separator />
-              )}
+              {!isWorkshopOrSession &&
+                ((showWinnerSelfTagging && isUserWinner) || currentUserId) && (
+                  <Separator />
+                )}
 
-              {/* Winners - Only show for event videos, not workshop/session videos */}
-              {!isWorkshopOrSession && winners.length > 0 && (
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex items-center">
-                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-500" />
-                    <h3 className="font-semibold text-sm sm:text-base">
-                      Winners
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {winners.map((winner) => (
-                      <Link
-                        key={winner.username}
-                        href={`/profiles/${winner.username}`}
-                        className="hover:opacity-80 transition-opacity"
-                      >
-                        <Badge
-                          variant="default"
-                          className="bg-yellow-500 hover:bg-yellow-600 text-xs cursor-pointer"
+              {/* Winners - Only show for battle videos in events, not workshop/session videos */}
+              {!isWorkshopOrSession &&
+                videoType === "battle" &&
+                winners.length > 0 && (
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center">
+                      <Trophy className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-500" />
+                      <h3 className="font-semibold text-sm sm:text-base">
+                        Winners
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      {winners.map((winner: UserSearchItem) => (
+                        <Link
+                          key={winner.username}
+                          href={`/profiles/${winner.username}`}
+                          className="hover:opacity-80 transition-opacity"
                         >
-                          <Trophy className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
-                          {winner.displayName}
-                        </Badge>
-                      </Link>
-                    ))}
+                          <Badge
+                            variant="default"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-xs cursor-pointer"
+                          >
+                            <Trophy className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
+                            {winner.displayName}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {!isWorkshopOrSession && winners.length > 0 && <Separator />}
+              {!isWorkshopOrSession &&
+                videoType === "battle" &&
+                winners.length > 0 && <Separator />}
 
-              {/* Dancers - Only show for event videos, not workshop/session videos */}
+              {/* Choreographers - Only show for choreography videos */}
+              {!isWorkshopOrSession &&
+                videoType === "choreography" &&
+                choreographers.length > 0 && (
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                      <h3 className="font-semibold text-sm sm:text-base">
+                        Choreographers
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      {choreographers.map(
+                        (choreographer: UserSearchItem, index: number) => (
+                          <Link
+                            key={choreographer.username || index}
+                            href={`/profiles/${choreographer.username}`}
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            <Badge
+                              variant="secondary"
+                              className="text-xs cursor-pointer hover:bg-secondary/80"
+                            >
+                              {choreographer.displayName}
+                            </Badge>
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {!isWorkshopOrSession &&
+                videoType === "choreography" &&
+                choreographers.length > 0 && <Separator />}
+
+              {/* Teachers - Only show for class videos */}
+              {!isWorkshopOrSession &&
+                videoType === "class" &&
+                teachers.length > 0 && (
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                      <h3 className="font-semibold text-sm sm:text-base">
+                        Teachers
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
+                      {teachers.map(
+                        (teacher: UserSearchItem, index: number) => (
+                          <Link
+                            key={teacher.username || index}
+                            href={`/profiles/${teacher.username}`}
+                            className="hover:opacity-80 transition-opacity"
+                          >
+                            <Badge
+                              variant="secondary"
+                              className="text-xs cursor-pointer hover:bg-secondary/80"
+                            >
+                              {teacher.displayName}
+                            </Badge>
+                          </Link>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {!isWorkshopOrSession &&
+                videoType === "class" &&
+                teachers.length > 0 && <Separator />}
+
+              {/* Dancers - Show for all video types that have dancers */}
               {!isWorkshopOrSession && dancers.length > 0 && (
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex items-center">
@@ -381,48 +474,22 @@ export function VideoLightbox({
                     </h3>
                   </div>
                   <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {dancers.map((participant, index) => (
-                      <Link
-                        key={index}
-                        href={`/profiles/${participant.username}`}
-                        className="hover:opacity-80 transition-opacity"
-                      >
-                        <Badge
-                          variant="secondary"
-                          className="text-xs cursor-pointer hover:bg-secondary/80"
+                    {dancers.map(
+                      (participant: UserSearchItem, index: number) => (
+                        <Link
+                          key={participant.username || index}
+                          href={`/profiles/${participant.username}`}
+                          className="hover:opacity-80 transition-opacity"
                         >
-                          {participant.displayName}
-                        </Badge>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Other Participants (non-dancers) */}
-              {otherParticipants.length > 0 && (
-                <div className="space-y-2 sm:space-y-3">
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                    <h3 className="font-semibold text-sm sm:text-base">
-                      Other Participants
-                    </h3>
-                  </div>
-                  <div className="flex flex-wrap gap-1 sm:gap-2">
-                    {otherParticipants.map((participant, index) => (
-                      <Link
-                        key={index}
-                        href={`/profiles/${participant.username}`}
-                        className="hover:opacity-80 transition-opacity"
-                      >
-                        <Badge
-                          variant="secondary"
-                          className="text-xs cursor-pointer hover:bg-secondary/80"
-                        >
-                          {participant.displayName}
-                        </Badge>
-                      </Link>
-                    ))}
+                          <Badge
+                            variant="secondary"
+                            className="text-xs cursor-pointer hover:bg-secondary/80"
+                          >
+                            {participant.displayName}
+                          </Badge>
+                        </Link>
+                      )
+                    )}
                   </div>
                 </div>
               )}

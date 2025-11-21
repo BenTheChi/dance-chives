@@ -7,7 +7,8 @@ import {
   UseFormSetValue,
   useFieldArray,
 } from "react-hook-form";
-import { SessionDetails, Picture, SessionDate } from "@/types/session";
+import { SessionDetails, SessionDate } from "@/types/session";
+import { Image } from "@/types/image";
 import { City, CitySearchItem } from "@/types/city";
 import {
   FormControl,
@@ -333,7 +334,7 @@ export function SessionDetailsForm({
                 register={register}
                 name="sessionDetails.poster"
                 onFileChange={(file) => {
-                  setValue("sessionDetails.poster", file as Picture);
+                  setValue("sessionDetails.poster", file as Image);
                 }}
                 className="bg-[#E8E7E7]"
                 maxFiles={1}

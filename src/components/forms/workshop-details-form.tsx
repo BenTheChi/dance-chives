@@ -7,7 +7,8 @@ import {
   UseFormSetValue,
   useWatch,
 } from "react-hook-form";
-import { WorkshopDetails, Picture } from "@/types/workshop";
+import { WorkshopDetails } from "@/types/workshop";
+import { Image } from "@/types/image";
 import { City, CitySearchItem } from "@/types/city";
 import {
   FormControl,
@@ -408,7 +409,7 @@ export function WorkshopDetailsForm({
                 register={register}
                 name="workshopDetails.poster"
                 onFileChange={(file) => {
-                  setValue("workshopDetails.poster", file as Picture);
+                  setValue("workshopDetails.poster", file as Image);
                 }}
                 className="bg-[#E8E7E7]"
                 maxFiles={1}

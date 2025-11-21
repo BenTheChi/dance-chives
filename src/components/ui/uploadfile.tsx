@@ -8,17 +8,17 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { UseFormRegister, FieldValues, Path } from "react-hook-form";
-import Image from "next/image";
-import { Picture } from "@/types/event";
+import NextImage from "next/image";
+import type { Image } from "@/types/image";
 import { toast } from "sonner";
 
 interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
   name: Path<T>;
-  onFileChange: (files: Picture[] | Picture | null) => void;
+  onFileChange: (files: Image[] | Image | null) => void;
   className?: string;
   maxFiles: number;
-  files: Picture[] | Picture | null;
+  files: Image[] | Image | null;
 }
 
 export default function UploadFile<T extends FieldValues>({
@@ -48,7 +48,7 @@ export default function UploadFile<T extends FieldValues>({
       return;
     }
 
-    //convert File to Picture
+    //convert File to Image
     const newPictures = fileArray.map((file) => ({
       id: crypto.randomUUID(),
       title: file.name,
@@ -73,17 +73,17 @@ export default function UploadFile<T extends FieldValues>({
       }
 
       // Merge new files with existing
-      onFileChange([...currentFiles, ...newPictures] as Picture[]);
+      onFileChange([...currentFiles, ...newPictures] as Image[]);
     } else {
       // For single file uploads (posters): replace
-      onFileChange(newPictures[0] as Picture);
+      onFileChange(newPictures[0] as Image);
     }
 
     // Reset input value to allow selecting the same file again
     e.target.value = "";
   };
 
-  const removeFile = (fileToRemove: Picture) => {
+  const removeFile = (fileToRemove: Image) => {
     //Make an api call to delete the file here if the url exists
     if (fileToRemove.url) {
       //delete the file from the DB api call
@@ -122,7 +122,7 @@ export default function UploadFile<T extends FieldValues>({
               <div key={file.id} className="relative group">
                 {file.file ? (
                   <>
-                    <Image
+                    <NextImage
                       key={file.id}
                       src={URL.createObjectURL(file.file as File)}
                       alt={file.title}
@@ -140,14 +140,16 @@ export default function UploadFile<T extends FieldValues>({
                   </>
                 ) : (
                   <>
-                    <Image
-                      key={file.id}
-                      src={file.url}
-                      alt={file.title}
-                      width={200}
-                      height={200}
-                      className="m-4 w-full max-w-[200px] h-auto object-contain"
-                    />
+                    {file.url ? (
+                      <NextImage
+                        key={file.id}
+                        src={file.url}
+                        alt={file.title}
+                        width={200}
+                        height={200}
+                        className="m-4 w-full max-w-[200px] h-auto object-contain"
+                      />
+                    ) : null}
                     <button
                       onClick={() => removeFile(file)}
                       className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
@@ -163,7 +165,7 @@ export default function UploadFile<T extends FieldValues>({
             <div key={files.id} className="relative group">
               {files.file ? (
                 <>
-                  <Image
+                  <NextImage
                     key={files.id}
                     src={URL.createObjectURL(files.file as File)}
                     alt={files.title}
@@ -181,14 +183,16 @@ export default function UploadFile<T extends FieldValues>({
                 </>
               ) : (
                 <>
-                  <Image
-                    key={files.id}
-                    src={files.url}
-                    alt={files.title}
-                    width={200}
-                    height={200}
-                    className="m-4 w-full max-w-[200px] h-auto object-contain"
-                  />
+                  {files.url ? (
+                    <NextImage
+                      key={files.id}
+                      src={files.url || ""}
+                      alt={files.title}
+                      width={200}
+                      height={200}
+                      className="m-4 w-full max-w-[200px] h-auto object-contain"
+                    />
+                  ) : null}
                   <button
                     onClick={() => removeFile(files)}
                     className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"

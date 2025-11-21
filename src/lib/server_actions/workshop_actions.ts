@@ -11,7 +11,8 @@ import {
   getWorkshop as getWorkshopQuery,
   deleteWorkshop as deleteWorkshopQuery,
 } from "@/db/queries/workshop";
-import { Workshop, WorkshopDetails, Picture } from "@/types/workshop";
+import { Workshop, WorkshopDetails } from "@/types/workshop";
+import { Image } from "@/types/image";
 import { generateSlugId } from "@/lib/utils";
 import {
   canCreateWorkshops,
@@ -47,7 +48,6 @@ interface addWorkshopProps {
       id: string;
       title: string;
       url: string;
-      type: string;
       file: File | null;
     } | null;
     styles?: string[];
@@ -65,6 +65,7 @@ interface addWorkshopProps {
     id: string;
     title: string;
     src: string;
+    type: "battle" | "freestyle" | "choreography" | "class";
     styles?: string[];
     taggedWinners?: {
       id?: string;
@@ -76,12 +77,21 @@ interface addWorkshopProps {
       displayName: string;
       username: string;
     }[];
+    taggedChoreographers?: {
+      id?: string;
+      displayName: string;
+      username: string;
+    }[];
+    taggedTeachers?: {
+      id?: string;
+      displayName: string;
+      username: string;
+    }[];
   }[];
   gallery: {
     id: string;
     title: string;
     url: string;
-    type: string;
     file: File | null;
   }[];
   associatedEventId?: string | null;
@@ -154,20 +164,28 @@ export async function addWorkshop(props: addWorkshopProps): Promise<response> {
       id: workshopId,
       createdAt: now,
       updatedAt: now,
-      workshopDetails: {
+      eventDetails: {
         ...props.workshopDetails,
         creatorId: session.user.id,
         description: props.workshopDetails.description ?? "",
         schedule: props.workshopDetails.schedule ?? "",
         styles: props.workshopDetails.styles || [],
+        poster: props.workshopDetails.poster
+          ? {
+              ...props.workshopDetails.poster,
+              type: "poster" as const,
+            }
+          : null,
       },
       roles: (props.roles || []).map((role) => ({
         ...role,
         title: role.title as "ORGANIZER" | "TEACHER",
       })),
       videos: props.videos || [],
-      gallery: props.gallery || [],
-      associatedEventId: props.associatedEventId || undefined,
+      gallery: (props.gallery || []).map((img) => ({
+        ...img,
+        type: "gallery" as const,
+      })),
     };
 
     await insertWorkshop(workshop);
@@ -231,14 +249,9 @@ export async function editWorkshop(
   // Check if user is workshop team member
   const isTeamMember = await isWorkshopTeamMember(workshopId, session.user.id);
 
-  // Check if workshop is associated with event and user is event team member
-  let isEventTeamMember = false;
-  if (oldWorkshop.associatedEventId) {
-    const eventTeamMembers = await getEventTeamMembers(
-      oldWorkshop.associatedEventId
-    );
-    isEventTeamMember = eventTeamMembers.includes(session.user.id);
-  }
+  // Note: Workshops are now separate Event:Workshop nodes, not associated with events
+  // Team member check is handled by isWorkshopTeamMember above
+  const isEventTeamMember = false;
 
   // Check authorization - allow team members even without auth level
   const authLevel = session.user.auth ?? 0;
@@ -265,9 +278,9 @@ export async function editWorkshop(
     // Delete old poster if new one is being uploaded
     if (
       editedWorkshop.workshopDetails.poster?.file &&
-      oldWorkshop.workshopDetails.poster?.url
+      oldWorkshop.eventDetails.poster?.url
     ) {
-      await deleteFromR2(oldWorkshop.workshopDetails.poster.url);
+      await deleteFromR2(oldWorkshop.eventDetails.poster.url);
     }
 
     // Upload new poster if exists
@@ -318,20 +331,28 @@ export async function editWorkshop(
       id: workshopId,
       createdAt: oldWorkshop.createdAt,
       updatedAt: now,
-      workshopDetails: {
+      eventDetails: {
         ...editedWorkshop.workshopDetails,
         creatorId: workshopCreatorId,
         description: editedWorkshop.workshopDetails.description ?? "",
         schedule: editedWorkshop.workshopDetails.schedule ?? "",
         styles: editedWorkshop.workshopDetails.styles || [],
+        poster: editedWorkshop.workshopDetails.poster
+          ? {
+              ...editedWorkshop.workshopDetails.poster,
+              type: "poster" as const,
+            }
+          : null,
       },
       roles: (editedWorkshop.roles || []).map((role) => ({
         ...role,
         title: role.title as "ORGANIZER" | "TEACHER",
       })),
       videos: editedWorkshop.videos || [],
-      gallery: editedWorkshop.gallery || [],
-      associatedEventId: editedWorkshop.associatedEventId || undefined,
+      gallery: (editedWorkshop.gallery || []).map((img) => ({
+        ...img,
+        type: "gallery" as const,
+      })),
     };
 
     await editWorkshopQuery(workshopId, workshop);
@@ -413,8 +434,8 @@ export async function deleteWorkshop(workshopId: string): Promise<response> {
   try {
     // Delete poster and gallery from storage
     const urlsToDelete: string[] = [];
-    if (workshop.workshopDetails.poster?.url) {
-      urlsToDelete.push(workshop.workshopDetails.poster.url);
+    if (workshop.eventDetails.poster?.url) {
+      urlsToDelete.push(workshop.eventDetails.poster.url);
     }
     workshop.gallery.forEach((pic) => {
       if (pic.url) {

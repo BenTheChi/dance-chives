@@ -9,7 +9,6 @@ type ImageType =
   | "user-profile"
   | "event-poster"
   | "event-gallery"
-  | "subevent-poster"
   | "workshop-poster"
   | "workshop-gallery"
   | "session-poster"
@@ -63,11 +62,6 @@ function generateR2Path(
       return `events/${entityId}/posters/${uniqueFilename}`;
     case "event-gallery":
       return `events/${entityId}/gallery/${uniqueFilename}`;
-    case "subevent-poster":
-      if (!subEntityId) {
-        throw new Error("subEntityId is required for subevent-poster type");
-      }
-      return `events/${entityId}/sub-events/${subEntityId}/posters/${uniqueFilename}`;
     case "workshop-poster":
       return `workshops/${entityId}/posters/${uniqueFilename}`;
     case "workshop-gallery":
@@ -180,15 +174,6 @@ export async function uploadEventGalleryToR2(
   return Promise.all(
     files.map((file) => uploadToR2(file, "event-gallery", eventId))
   );
-}
-
-// Sub-event posters
-export async function uploadSubEventPosterToR2(
-  file: File,
-  eventId: string,
-  subEventId: string
-): Promise<{ success: boolean; url?: string; id?: string }> {
-  return uploadToR2(file, "subevent-poster", eventId, subEventId);
 }
 
 // Workshop posters

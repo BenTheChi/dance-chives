@@ -1,20 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { insertEvent } from "../src/db/queries/event";
-import { insertWorkshop } from "../src/db/queries/workshop";
-import { insertSession } from "../src/db/queries/session";
-import { Event } from "../src/types/event";
-import { Workshop } from "../src/types/workshop";
-import { Session } from "../src/types/session";
 import driver from "../src/db/driver";
 import { seedNeo4j } from "../scripts/seed-neo4j";
-import {
-  setVideoRoles,
-  setSectionWinner,
-  setEventRoles,
-  addTeamMember,
-  addWorkshopTeamMember,
-  addSessionTeamMember,
-} from "../src/db/queries/team-member";
 
 const prisma = new PrismaClient();
 
@@ -35,37 +21,6 @@ async function main() {
 
   // Clear all existing data
   console.log("🗑️  Clearing existing PostgreSQL data...");
-
-  const safeDelete = async (
-    operation: () => Promise<any>,
-    tableName: string
-  ) => {
-    try {
-      await operation();
-    } catch (error: any) {
-      if (error.code === "P2021" || error.message?.includes("does not exist")) {
-        console.log(`⚠️  Table ${tableName} does not exist, skipping...`);
-      } else {
-        throw error;
-      }
-    }
-  };
-
-  await safeDelete(
-    () => prisma.requestApproval.deleteMany(),
-    "RequestApproval"
-  );
-  await safeDelete(() => prisma.notification.deleteMany(), "Notification");
-  await safeDelete(
-    () => prisma.authLevelChangeRequest.deleteMany(),
-    "AuthLevelChangeRequest"
-  );
-  await safeDelete(
-    () => prisma.teamMemberRequest.deleteMany(),
-    "TeamMemberRequest"
-  );
-  await safeDelete(() => prisma.taggingRequest.deleteMany(), "TaggingRequest");
-  await prisma.event.deleteMany();
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
   console.log("✅ Cleared all existing data");
@@ -217,123 +172,6 @@ async function main() {
       data: accountData,
     });
     console.log(`✅ Created OAuth account for user: ${accountData.userId}`);
-  }
-
-  // Create Event references
-  console.log(`🌱 Creating ${0} event references...`);
-  const eventReferences: any[] = [];
-
-  if (eventReferences && eventReferences.length > 0) {
-    for (const eventRef of eventReferences) {
-      await prisma.event.create({
-        data: eventRef,
-      });
-      console.log(`✅ Created event reference: ${eventRef.eventId}`);
-    }
-  }
-
-  // Create TaggingRequests
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} tagging requests...`);
-    const taggingRequests: any[] = [];
-
-    for (const request of taggingRequests) {
-      await prisma.taggingRequest.create({
-        data: request,
-      });
-    }
-    console.log(`✅ Created ${0} tagging requests`);
-  }
-
-  // Create TeamMemberRequests
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} team member requests...`);
-    const teamMemberRequests: any[] = [];
-
-    for (const request of teamMemberRequests) {
-      await prisma.teamMemberRequest.create({
-        data: request,
-      });
-    }
-    console.log(`✅ Created ${0} team member requests`);
-  }
-
-  // Create AuthLevelChangeRequests
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} auth level change requests...`);
-    const authLevelChangeRequests: any[] = [];
-
-    for (const request of authLevelChangeRequests) {
-      await prisma.authLevelChangeRequest.create({
-        data: request,
-      });
-    }
-    console.log(`✅ Created ${0} auth level change requests`);
-  }
-
-  // Create RequestApprovals
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} request approvals...`);
-    const requestApprovals: any[] = [];
-
-    for (const approval of requestApprovals) {
-      await prisma.requestApproval.create({
-        data: approval,
-      });
-    }
-    console.log(`✅ Created ${0} request approvals`);
-  }
-
-  // Create Notifications
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} notifications...`);
-    const notifications: any[] = [];
-
-    for (const notification of notifications) {
-      await prisma.notification.create({
-        data: notification,
-      });
-    }
-    console.log(`✅ Created ${0} notifications`);
-  }
-
-  // Create Sessions (NextAuth)
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} sessions...`);
-    const sessions: any[] = [];
-
-    for (const sessionData of sessions) {
-      await prisma.session.create({
-        data: sessionData,
-      });
-    }
-    console.log(`✅ Created ${0} sessions`);
-  }
-
-  // Create VerificationTokens
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} verification tokens...`);
-    const verificationTokens: any[] = [];
-
-    for (const token of verificationTokens) {
-      await prisma.verificationToken.create({
-        data: token,
-      });
-    }
-    console.log(`✅ Created ${0} verification tokens`);
-  }
-
-  // Create Authenticators
-  if (0 > 0) {
-    console.log(`🌱 Creating ${0} authenticators...`);
-    const authenticators: any[] = [];
-
-    for (const authenticator of authenticators) {
-      await prisma.authenticator.create({
-        data: authenticator,
-      });
-    }
-    console.log(`✅ Created ${0} authenticators`);
   }
 
   // Create Neo4j user profiles

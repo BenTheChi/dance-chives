@@ -10,9 +10,10 @@ import {
   editSession as editSessionQuery,
   getSession as getSessionQuery,
   deleteSession as deleteSessionQuery,
-  getSessionPictures,
+  getSessionImages,
 } from "@/db/queries/session";
-import { Session, SessionDetails, Picture } from "@/types/session";
+import { Session, SessionDetails } from "@/types/session";
+import { Image } from "@/types/image";
 import { generateSlugId } from "@/lib/utils";
 import {
   canCreateWorkshops, // Reuse same permission check as workshops
@@ -24,6 +25,7 @@ import {
   getSessionTeamMembers,
   isSessionTeamMember,
 } from "@/db/queries/team-member";
+import { FreestyleVideo } from "@/types/video";
 
 interface addSessionProps {
   sessionDetails: {
@@ -49,7 +51,6 @@ interface addSessionProps {
       id: string;
       title: string;
       url: string;
-      type: string;
       file: File | null;
     } | null;
     styles?: string[];
@@ -67,6 +68,7 @@ interface addSessionProps {
     id: string;
     title: string;
     src: string;
+    type: "battle" | "freestyle" | "choreography" | "class";
     styles?: string[];
     taggedWinners?: {
       id?: string;
@@ -78,12 +80,21 @@ interface addSessionProps {
       displayName: string;
       username: string;
     }[];
+    taggedChoreographers?: {
+      id?: string;
+      displayName: string;
+      username: string;
+    }[];
+    taggedTeachers?: {
+      id?: string;
+      displayName: string;
+      username: string;
+    }[];
   }[];
   gallery: {
     id: string;
     title: string;
     url: string;
-    type: string;
     file: File | null;
   }[];
 }
@@ -156,16 +167,25 @@ export async function addSession(props: addSessionProps): Promise<response> {
       id: sessionId,
       createdAt: now,
       updatedAt: now,
-      sessionDetails: {
+      eventDetails: {
         ...props.sessionDetails,
         creatorId: session.user.id,
         description: props.sessionDetails.description ?? "",
         schedule: props.sessionDetails.schedule ?? "",
         styles: props.sessionDetails.styles || [],
+        poster: props.sessionDetails.poster
+          ? {
+              ...props.sessionDetails.poster,
+              type: "poster" as const,
+            }
+          : null,
       },
       roles: props.roles || [],
       videos: props.videos || [],
-      gallery: props.gallery || [],
+      gallery: (props.gallery || []).map((pic) => ({
+        ...pic,
+        type: "gallery" as const,
+      })),
     };
 
     await insertSession(sessionData);
@@ -253,9 +273,9 @@ export async function editSession(
     // Delete old poster if new one is being uploaded
     if (
       editedSession.sessionDetails.poster?.file &&
-      oldSession.sessionDetails.poster?.url
+      oldSession.eventDetails.poster?.url
     ) {
-      await deleteFromR2(oldSession.sessionDetails.poster.url);
+      await deleteFromR2(oldSession.eventDetails.poster.url);
     }
 
     // Upload new poster if exists
@@ -307,16 +327,25 @@ export async function editSession(
       id: sessionId,
       createdAt: oldSession.createdAt,
       updatedAt: now,
-      sessionDetails: {
+      eventDetails: {
         ...editedSession.sessionDetails,
         creatorId: sessionCreatorId,
         description: editedSession.sessionDetails.description ?? "",
         schedule: editedSession.sessionDetails.schedule ?? "",
         styles: editedSession.sessionDetails.styles || [],
+        poster: editedSession.sessionDetails.poster
+          ? {
+              ...editedSession.sessionDetails.poster,
+              type: "poster" as const,
+            }
+          : null,
       },
       roles: editedSession.roles || [],
       videos: editedSession.videos || [],
-      gallery: editedSession.gallery || [],
+      gallery: (editedSession.gallery || []).map((pic) => ({
+        ...pic,
+        type: "gallery" as const,
+      })),
     };
 
     await editSessionQuery(sessionId, sessionData);
@@ -400,7 +429,7 @@ export async function deleteSession(sessionId: string): Promise<response> {
 
   try {
     // Delete poster and gallery from storage
-    const pictures = await getSessionPictures(sessionId);
+    const pictures = await getSessionImages(sessionId);
 
     for (const url of pictures) {
       await deleteFromR2(url);

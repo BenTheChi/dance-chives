@@ -16,11 +16,20 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
 } from "react-hook-form";
-import { Video } from "@/types/workshop";
+import { Video } from "@/types/video";
 import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { useState, useEffect } from "react";
 import { WorkshopFormValues } from "./workshop-form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
+import { UserSearchItem } from "@/types/user";
 
 interface WorkshopVideoFormProps {
   video: Video;
@@ -104,6 +113,57 @@ export function WorkshopVideoForm({
     setValue("videos", updatedVideos);
   };
 
+  const updateVideoType = (
+    type: "battle" | "freestyle" | "choreography" | "class"
+  ) => {
+    const currentVideos = getValues("videos") || [];
+    const updatedVideos = currentVideos.map((v) =>
+      v.id === video.id ? { ...v, type } : v
+    );
+
+    setValue("videos", updatedVideos);
+  };
+
+  const updateTaggedUsers = (
+    field:
+      | "taggedDancers"
+      | "taggedWinners"
+      | "taggedChoreographers"
+      | "taggedTeachers",
+    users: UserSearchItem[]
+  ) => {
+    const currentVideos = getValues("videos") || [];
+    const updatedVideos = currentVideos.map((v) =>
+      v.id === video.id ? { ...v, [field]: users } : v
+    );
+
+    setValue("videos", updatedVideos);
+  };
+
+  // Search users function
+  async function searchUsers(query: string): Promise<UserSearchItem[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    return fetch(`/api/users?keyword=${encodeURIComponent(query)}`)
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to fetch users", response.statusText);
+          return [];
+        }
+        return response.json();
+      })
+      .then((data) => data.data || [])
+      .catch((error) => {
+        console.error(error);
+        return [];
+      });
+  }
+
+  const formVideo = getFormVideo();
+  const videoType = formVideo?.type || video.type || "battle";
+
   return (
     <Card className="group">
       <CardHeader className="relative">
@@ -183,6 +243,155 @@ export function WorkshopVideoForm({
             />
           )}
         />
+
+        <FormField
+          control={control}
+          name={`videos.${videoIndex}.type`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Video Type</FormLabel>
+              <FormControl>
+                <Select
+                  value={field.value || "battle"}
+                  onValueChange={(value) => {
+                    const type = value as
+                      | "battle"
+                      | "freestyle"
+                      | "choreography"
+                      | "class";
+                    field.onChange(type);
+                    updateVideoType(type);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select video type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="battle">Battle</SelectItem>
+                    <SelectItem value="freestyle">Freestyle</SelectItem>
+                    <SelectItem value="choreography">Choreography</SelectItem>
+                    <SelectItem value="class">Class</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Tagged Dancers - shown for all video types */}
+        <FormField
+          control={control}
+          name={`videos.${videoIndex}.taggedDancers`}
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <DebouncedSearchMultiSelect<UserSearchItem>
+                  onSearch={searchUsers}
+                  placeholder="Search dancers..."
+                  getDisplayValue={(item) =>
+                    `${item.displayName} (${item.username})`
+                  }
+                  getItemId={(item) => item.username}
+                  onChange={(users) => {
+                    field.onChange(users);
+                    updateTaggedUsers("taggedDancers", users);
+                  }}
+                  value={field.value || []}
+                  name="Tagged Dancers"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Tagged Winners - only for battle videos */}
+        {videoType === "battle" && (
+          <FormField
+            control={control}
+            name={`videos.${videoIndex}.taggedWinners`}
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <DebouncedSearchMultiSelect<UserSearchItem>
+                    onSearch={searchUsers}
+                    placeholder="Search winners..."
+                    getDisplayValue={(item) =>
+                      `${item.displayName} (${item.username})`
+                    }
+                    getItemId={(item) => item.username}
+                    onChange={(users) => {
+                      field.onChange(users);
+                      updateTaggedUsers("taggedWinners", users);
+                    }}
+                    value={field.value || []}
+                    name="Tagged Winners"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Tagged Choreographers - only for choreography videos */}
+        {videoType === "choreography" && (
+          <FormField
+            control={control}
+            name={`videos.${videoIndex}.taggedChoreographers`}
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <DebouncedSearchMultiSelect<UserSearchItem>
+                    onSearch={searchUsers}
+                    placeholder="Search choreographers..."
+                    getDisplayValue={(item) =>
+                      `${item.displayName} (${item.username})`
+                    }
+                    getItemId={(item) => item.username}
+                    onChange={(users) => {
+                      field.onChange(users);
+                      updateTaggedUsers("taggedChoreographers", users);
+                    }}
+                    value={field.value || []}
+                    name="Tagged Choreographers"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Tagged Teachers - only for class videos */}
+        {videoType === "class" && (
+          <FormField
+            control={control}
+            name={`videos.${videoIndex}.taggedTeachers`}
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <DebouncedSearchMultiSelect<UserSearchItem>
+                    onSearch={searchUsers}
+                    placeholder="Search teachers..."
+                    getDisplayValue={(item) =>
+                      `${item.displayName} (${item.username})`
+                    }
+                    getItemId={(item) => item.username}
+                    onChange={(users) => {
+                      field.onChange(users);
+                      updateTaggedUsers("taggedTeachers", users);
+                    }}
+                    value={field.value || []}
+                    name="Tagged Teachers"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={control}

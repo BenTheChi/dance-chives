@@ -4,16 +4,21 @@ import {
   deleteFromR2,
   uploadEventPosterToR2,
   uploadEventGalleryToR2,
-  uploadSubEventPosterToR2,
-  uploadWorkshopPosterToR2,
-  uploadWorkshopGalleryToR2,
+  // Removed uploadSubEventPosterToR2 - subevents are now relationships, not separate nodes
+  // Removed uploadWorkshopPosterToR2 and uploadWorkshopGalleryToR2 - workshops are now separate Event:Workshop nodes
 } from "../R2";
 import {
   insertEvent,
   EditEvent as editEventQuery,
   getEvent as getEventQuery,
 } from "@/db/queries/event";
-import { Event, EventDetails, Section, SubEvent, Picture } from "@/types/event";
+import {
+  BaseEventDetails,
+  CompetitionDetails,
+  Competition,
+  Section,
+} from "@/types/event";
+import { Image } from "@/types/image";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
@@ -54,7 +59,6 @@ interface addEventProps {
       id: string;
       title: string;
       url: string;
-      type: string;
       file: File | null;
     } | null;
   };
@@ -69,6 +73,7 @@ interface addEventProps {
       id: string;
       title: string;
       src: string;
+      type: "battle" | "freestyle" | "choreography" | "class";
       styles?: string[];
       taggedWinners?: {
         id?: string; // Optional - server can look up by username if not provided
@@ -76,6 +81,16 @@ interface addEventProps {
         username: string;
       }[];
       taggedDancers?: {
+        id?: string; // Optional - server can look up by username if not provided
+        displayName: string;
+        username: string;
+      }[];
+      taggedChoreographers?: {
+        id?: string; // Optional - server can look up by username if not provided
+        displayName: string;
+        username: string;
+      }[];
+      taggedTeachers?: {
         id?: string; // Optional - server can look up by username if not provided
         displayName: string;
         username: string;
@@ -88,8 +103,24 @@ interface addEventProps {
         id: string;
         title: string;
         src: string;
+        type: "battle" | "freestyle" | "choreography" | "class";
         styles?: string[];
-        taggedUsers?: {
+        taggedWinners?: {
+          id?: string; // Optional - server can look up by username if not provided
+          displayName: string;
+          username: string;
+        }[];
+        taggedDancers?: {
+          id?: string; // Optional - server can look up by username if not provided
+          displayName: string;
+          username: string;
+        }[];
+        taggedChoreographers?: {
+          id?: string; // Optional - server can look up by username if not provided
+          displayName: string;
+          username: string;
+        }[];
+        taggedTeachers?: {
           id?: string; // Optional - server can look up by username if not provided
           displayName: string;
           username: string;
@@ -109,25 +140,17 @@ interface addEventProps {
   subEvents: {
     id: string;
     title: string;
-    description?: string;
-    schedule?: string;
-    startDate: string;
-    address?: string;
-    startTime?: string;
-    endTime?: string;
-    poster?: {
-      id: string;
-      title: string;
-      url: string;
-      type: string;
-      file: File | null;
-    } | null;
+    type: "competition" | "workshop" | "session";
+    imageUrl?: string;
+    date: string;
+    city: string;
+    cityId?: number;
+    styles?: string[];
   }[];
   gallery: {
     id: string;
     title: string;
     url: string;
-    type: string;
     file: File | null;
   }[];
   workshops?: {
@@ -153,7 +176,6 @@ interface addEventProps {
         id: string;
         title: string;
         url: string;
-        type: string;
         file: File | null;
       } | null;
       styles?: string[];
@@ -177,12 +199,21 @@ interface addEventProps {
         displayName: string;
         username: string;
       }[];
+      taggedChoreographers?: {
+        id?: string;
+        displayName: string;
+        username: string;
+      }[];
+      taggedTeachers?: {
+        id?: string;
+        displayName: string;
+        username: string;
+      }[];
     }[];
     gallery: {
       id: string;
       title: string;
       url: string;
-      type: string;
       file: File | null;
     }[];
     associatedEventId?: string;
@@ -194,7 +225,7 @@ interface addEventProps {
 interface response {
   error?: string;
   status: number;
-  event: Event | null;
+  event: Competition | null;
 }
 
 export async function addEvent(props: addEventProps): Promise<response> {
@@ -230,24 +261,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       }
     }
 
-    // Upload subEvent posters
-    for (const subEvent of props.subEvents) {
-      if (subEvent.poster?.file) {
-        const posterResult = await uploadSubEventPosterToR2(
-          subEvent.poster.file,
-          eventId,
-          subEvent.id
-        );
-        if (posterResult.success) {
-          subEvent.poster = {
-            ...subEvent.poster,
-            id: posterResult.id!,
-            url: posterResult.url!,
-            file: null,
-          };
-        }
-      }
-    }
+    // Subevents are now relationships - no poster upload needed
 
     // Upload gallery files
     const galleryFiles = props.gallery.filter((item) => item.file);
@@ -269,36 +283,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
       });
     }
 
-    // Upload workshop gallery files
-    if (props.workshops) {
-      for (const workshop of props.workshops) {
-        const workshopId =
-          workshop.id || generateSlugId(workshop.workshopDetails.title);
-        const galleryFiles = workshop.gallery.filter((pic) => pic.file);
-        if (galleryFiles.length > 0) {
-          const galleryResults = await uploadWorkshopGalleryToR2(
-            galleryFiles.map((pic) => pic.file!),
-            workshopId
-          );
-          galleryResults.forEach((result, index) => {
-            const originalPic = galleryFiles[index];
-            const galleryIndex = workshop.gallery.findIndex(
-              (p) => p.id === originalPic.id
-            );
-            if (
-              galleryIndex !== -1 &&
-              result.success &&
-              result.url &&
-              result.id
-            ) {
-              workshop.gallery[galleryIndex].url = result.url;
-              workshop.gallery[galleryIndex].id = result.id;
-              workshop.gallery[galleryIndex].file = null;
-            }
-          });
-        }
-      }
-    }
+    // Workshops are now separate Event:Workshop nodes, not nested in Competition
+    // Workshop handling removed - they have their own actions
 
     // Process sections to handle brackets/videos based on hasBrackets
     const processedSections: Section[] = props.sections.map((section) => {
@@ -339,8 +325,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     const timezoneData = await response.json();
 
-    // Create the EventDetails object
-    const eventDetails: EventDetails = {
+    // Create the CompetitionDetails object
+    const eventDetails: CompetitionDetails = {
       creatorId: session.user.id,
       title: props.eventDetails.title,
       description: props.eventDetails.description ?? "",
@@ -351,39 +337,28 @@ export async function addEvent(props: addEventProps): Promise<response> {
       startTime: props.eventDetails.startTime,
       endTime: props.eventDetails.endTime,
       schedule: props.eventDetails.schedule ?? "",
-      poster: props.eventDetails.poster as Picture | null,
+      poster: props.eventDetails.poster as Image | null,
       city: {
         ...props.eventDetails.city,
         timezone: timezoneData.data.timezone,
       },
     };
 
-    // Process workshops to ensure they have required fields
-    const processedWorkshops = (props.workshops || []).map((workshop) => ({
-      ...workshop,
-      createdAt: workshop.createdAt ? new Date(workshop.createdAt) : new Date(),
-      updatedAt: new Date(),
-      workshopDetails: {
-        ...workshop.workshopDetails,
-        creatorId: workshop.workshopDetails.creatorId || session.user.id,
-      },
-      roles: (workshop.roles || []).map((role) => ({
-        ...role,
-        title: role.title as "ORGANIZER" | "TEACHER",
-      })),
-    }));
+    // Workshops are now separate Event:Workshop nodes, not nested in Competition
+    // Workshop processing removed - they have their own actions
 
-    // Create the Event object that matches the insertEvent query structure
-    const event: Event = {
+    // Create the Competition object that matches the insertEvent query structure
+    // Note: subEvents are now relationships, so we pass just the IDs
+    // Workshops are now separate Event:Workshop nodes, not nested in Competition
+    const event: Competition = {
       id: eventId,
       createdAt: new Date(),
       updatedAt: new Date(),
       eventDetails: eventDetails,
       roles: props.roles || [],
       sections: processedSections,
-      subEvents: props.subEvents as SubEvent[],
-      workshops: processedWorkshops,
-      gallery: props.gallery as Picture[],
+      subEvents: props.subEvents.map((se) => ({ id: se.id } as any)), // Only IDs needed for relationships
+      gallery: props.gallery as Image[],
     };
 
     // Call insertEvent with the properly structured Event object
@@ -445,7 +420,7 @@ export async function editEvent(
     };
   }
 
-  const oldEvent = response.event as Event;
+  const oldEvent = response.event as Competition;
 
   // Check if user is a team member
   const isEventTeamMember = await isTeamMember(eventId, session.user.id);
@@ -501,51 +476,7 @@ export async function editEvent(
       await deleteFromR2(oldEvent.eventDetails.poster.url);
     }
 
-    // Upload subEvent posters
-    for (const subEvent of editedEvent.subEvents) {
-      if (!subEvent.poster) {
-        // Delete old poster if it exists
-        const oldSubEvent = oldEvent.subEvents.find(
-          (s) => s.id === subEvent.id
-        );
-        if (oldSubEvent && oldSubEvent.poster) {
-          await deleteFromR2(oldSubEvent.poster.url);
-        }
-      }
-
-      if (subEvent.poster?.file) {
-        // Delete old poster if it exists
-        const oldSubEvent = oldEvent.subEvents.find(
-          (s) => s.id === subEvent.id
-        );
-        if (oldSubEvent && oldSubEvent.poster) {
-          await deleteFromR2(oldSubEvent.poster.url);
-        }
-
-        const posterResult = await uploadSubEventPosterToR2(
-          subEvent.poster.file,
-          eventId,
-          subEvent.id
-        );
-        if (posterResult.success) {
-          subEvent.poster = {
-            ...subEvent.poster,
-            id: posterResult.id!,
-            url: posterResult.url!,
-            file: null,
-          };
-        }
-      }
-    }
-
-    // Delete subEvent posters where the entire subEvent has been deleted
-    for (const subEvent of oldEvent.subEvents) {
-      if (!editedEvent.subEvents.find((s) => s.id === subEvent.id)) {
-        if (subEvent.poster) {
-          await deleteFromR2(subEvent.poster.url);
-        }
-      }
-    }
+    // Subevents are now relationships - no poster upload/delete needed
 
     // Upload gallery files
     const galleryFiles = editedEvent.gallery.filter((item) => item.file);
@@ -574,91 +505,8 @@ export async function editEvent(
       }
     }
 
-    // Upload workshop posters and gallery files
-    if (editedEvent.workshops) {
-      for (const workshop of editedEvent.workshops) {
-        const oldWorkshop = oldEvent.workshops?.find(
-          (w) => w.id === workshop.id
-        );
-
-        if (!workshop.workshopDetails.poster) {
-          // Delete old poster if it exists
-          if (oldWorkshop?.workshopDetails.poster) {
-            await deleteFromR2(oldWorkshop.workshopDetails.poster.url);
-          }
-        }
-
-        if (workshop.workshopDetails.poster?.file) {
-          // Delete old poster if it exists
-          if (oldWorkshop?.workshopDetails.poster) {
-            await deleteFromR2(oldWorkshop.workshopDetails.poster.url);
-          }
-
-          const posterResult = await uploadWorkshopPosterToR2(
-            workshop.workshopDetails.poster.file,
-            workshop.id
-          );
-          if (posterResult.success) {
-            workshop.workshopDetails.poster = {
-              ...workshop.workshopDetails.poster,
-              id: posterResult.id!,
-              url: posterResult.url!,
-              file: null,
-            };
-          }
-        }
-
-        // Upload workshop gallery files
-        const galleryFiles = workshop.gallery.filter((pic) => pic.file);
-        if (galleryFiles.length > 0) {
-          const galleryResults = await uploadWorkshopGalleryToR2(
-            galleryFiles.map((pic) => pic.file!),
-            workshop.id
-          );
-          galleryResults.forEach((result, index) => {
-            const originalPic = galleryFiles[index];
-            const galleryIndex = workshop.gallery.findIndex(
-              (p) => p.id === originalPic.id
-            );
-            if (
-              galleryIndex !== -1 &&
-              result.success &&
-              result.url &&
-              result.id
-            ) {
-              workshop.gallery[galleryIndex].url = result.url;
-              workshop.gallery[galleryIndex].id = result.id;
-              workshop.gallery[galleryIndex].file = null;
-            }
-          });
-        }
-
-        // Delete gallery items that don't exist in edited workshop
-        if (oldWorkshop) {
-          for (const item of oldWorkshop.gallery || []) {
-            if (!workshop.gallery.find((g) => g.id === item.id)) {
-              await deleteFromR2(item.url);
-            }
-          }
-        }
-      }
-    }
-
-    // Delete workshop posters and gallery where the entire workshop has been deleted
-    if (oldEvent.workshops) {
-      for (const workshop of oldEvent.workshops) {
-        if (!editedEvent.workshops?.find((w) => w.id === workshop.id)) {
-          // Delete poster if it exists
-          if (workshop.workshopDetails.poster) {
-            await deleteFromR2(workshop.workshopDetails.poster.url);
-          }
-          // Delete gallery items if they exist
-          for (const item of workshop.gallery || []) {
-            await deleteFromR2(item.url);
-          }
-        }
-      }
-    }
+    // Workshops are now separate Event:Workshop nodes, not nested in Competition
+    // Workshop handling removed - they have their own actions
 
     // Process sections to handle brackets/videos based on hasBrackets
     const processedSections: Section[] = editedEvent.sections.map((section) => {
@@ -705,7 +553,7 @@ export async function editEvent(
     }
 
     // Create the EventDetails object
-    const eventDetails: EventDetails = {
+    const eventDetails: CompetitionDetails = {
       creatorId: oldEvent.eventDetails.creatorId,
       title: editedEvent.eventDetails.title,
       description: editedEvent.eventDetails.description ?? "",
@@ -716,43 +564,26 @@ export async function editEvent(
       startTime: editedEvent.eventDetails.startTime,
       endTime: editedEvent.eventDetails.endTime,
       schedule: editedEvent.eventDetails.schedule ?? "",
-      poster: editedEvent.eventDetails.poster as Picture | null,
+      poster: editedEvent.eventDetails.poster as Image | null,
       city: {
         ...editedEvent.eventDetails.city,
         timezone: timezone,
       },
     };
 
-    // Process workshops to ensure they have required fields
-    const processedWorkshops = (editedEvent.workshops || []).map(
-      (workshop) => ({
-        ...workshop,
-        createdAt: workshop.createdAt
-          ? new Date(workshop.createdAt)
-          : new Date(),
-        updatedAt: new Date(),
-        workshopDetails: {
-          ...workshop.workshopDetails,
-          creatorId: workshop.workshopDetails.creatorId || session.user.id,
-        },
-        roles: (workshop.roles || []).map((role) => ({
-          ...role,
-          title: role.title as "ORGANIZER" | "TEACHER",
-        })),
-      })
-    );
+    // Workshops are now separate Event:Workshop nodes, not nested in Competition
+    // Workshop processing removed - they have their own actions
 
     // Create the Event object that matches the EditEvent query structure
-    const event: Event = {
+    const event: Competition = {
       id: eventId,
       createdAt: new Date(), // This will be preserved by the database
       updatedAt: new Date(),
       eventDetails: eventDetails,
       roles: editedEvent.roles || [],
       sections: processedSections,
-      subEvents: editedEvent.subEvents as SubEvent[],
-      workshops: processedWorkshops,
-      gallery: editedEvent.gallery as Picture[],
+      subEvents: editedEvent.subEvents.map((se) => ({ id: se.id } as any)), // Only IDs needed for relationships
+      gallery: editedEvent.gallery as Image[],
     };
 
     // Call EditEvent with the properly structured Event object
@@ -792,34 +623,52 @@ export async function editEvent(
             const oldVideo = oldSection?.videos.find(
               (v) => v.id === newVideo.id
             );
-            const oldTaggedWinners = oldVideo?.taggedWinners || [];
-            const oldTaggedDancers = oldVideo?.taggedDancers || [];
-            const newTaggedWinners = newVideo.taggedWinners || [];
-            const newTaggedDancers = newVideo.taggedDancers || [];
+            const oldVideoAny = oldVideo as any;
+            const newVideoAny = newVideo as any;
+            const oldTaggedWinners = oldVideoAny?.taggedWinners || [];
+            const oldTaggedDancers = oldVideoAny?.taggedDancers || [];
+            const oldTaggedChoreographers =
+              oldVideoAny?.taggedChoreographers || [];
+            const oldTaggedTeachers = oldVideoAny?.taggedTeachers || [];
+            const newTaggedWinners = newVideoAny?.taggedWinners || [];
+            const newTaggedDancers = newVideoAny?.taggedDancers || [];
+            const newTaggedChoreographers =
+              newVideoAny?.taggedChoreographers || [];
+            const newTaggedTeachers = newVideoAny?.taggedTeachers || [];
 
             // Combine old and new users to get all usernames
             const allOldUsers = new Set(
               [
-                ...oldTaggedWinners.map((u) => u.username),
-                ...oldTaggedDancers.map((u) => u.username),
+                ...oldTaggedWinners.map((u: any) => u.username),
+                ...oldTaggedDancers.map((u: any) => u.username),
+                ...oldTaggedChoreographers.map((u: any) => u.username),
+                ...oldTaggedTeachers.map((u: any) => u.username),
               ].filter(Boolean)
             );
             const allNewUsers = new Set(
               [
-                ...newTaggedWinners.map((u) => u.username),
-                ...newTaggedDancers.map((u) => u.username),
+                ...newTaggedWinners.map((u: any) => u.username),
+                ...newTaggedDancers.map((u: any) => u.username),
+                ...newTaggedChoreographers.map((u: any) => u.username),
+                ...newTaggedTeachers.map((u: any) => u.username),
               ].filter(Boolean)
             );
 
             // Process all users in the new set
             for (const username of allNewUsers) {
               const winner = newTaggedWinners.find(
-                (u) => u.username === username
+                (u: any) => u.username === username
               );
               const dancer = newTaggedDancers.find(
-                (u) => u.username === username
+                (u: any) => u.username === username
               );
-              const user = winner || dancer;
+              const choreographer = newTaggedChoreographers.find(
+                (u: any) => u.username === username
+              );
+              const teacher = newTaggedTeachers.find(
+                (u: any) => u.username === username
+              );
+              const user = winner || dancer || choreographer || teacher;
 
               if (!user) continue;
 
@@ -834,6 +683,16 @@ export async function editEvent(
               // If user is in winners list, add WINNER role
               if (winner) {
                 roles.push(VIDEO_ROLE_WINNER);
+              }
+
+              // If user is in choreographers list, add CHOREOGRAPHER role
+              if (choreographer) {
+                roles.push("CHOREOGRAPHER");
+              }
+
+              // If user is in teachers list, add TEACHER role
+              if (teacher) {
+                roles.push("TEACHER");
               }
 
               try {
@@ -858,8 +717,12 @@ export async function editEvent(
             for (const username of allOldUsers) {
               if (!allNewUsers.has(username)) {
                 const oldUser =
-                  oldTaggedWinners.find((u) => u.username === username) ||
-                  oldTaggedDancers.find((u) => u.username === username);
+                  oldTaggedWinners.find((u: any) => u.username === username) ||
+                  oldTaggedDancers.find((u: any) => u.username === username) ||
+                  oldTaggedChoreographers.find(
+                    (u: any) => u.username === username
+                  ) ||
+                  oldTaggedTeachers.find((u: any) => u.username === username);
                 if (oldUser) {
                   const userId = await getUserId(oldUser);
                   console.log(
@@ -882,34 +745,52 @@ export async function editEvent(
               const oldVideo = oldBracket?.videos.find(
                 (v) => v.id === newVideo.id
               );
-              const oldTaggedWinners = oldVideo?.taggedWinners || [];
-              const oldTaggedDancers = oldVideo?.taggedDancers || [];
-              const newTaggedWinners = newVideo.taggedWinners || [];
-              const newTaggedDancers = newVideo.taggedDancers || [];
+              const oldVideoAny = oldVideo as any;
+              const newVideoAny = newVideo as any;
+              const oldTaggedWinners = oldVideoAny?.taggedWinners || [];
+              const oldTaggedDancers = oldVideoAny?.taggedDancers || [];
+              const oldTaggedChoreographers =
+                oldVideoAny?.taggedChoreographers || [];
+              const oldTaggedTeachers = oldVideoAny?.taggedTeachers || [];
+              const newTaggedWinners = newVideoAny?.taggedWinners || [];
+              const newTaggedDancers = newVideoAny?.taggedDancers || [];
+              const newTaggedChoreographers =
+                newVideoAny?.taggedChoreographers || [];
+              const newTaggedTeachers = newVideoAny?.taggedTeachers || [];
 
               // Combine old and new users to get all usernames
               const allOldUsers = new Set(
                 [
-                  ...oldTaggedWinners.map((u) => u.username),
-                  ...oldTaggedDancers.map((u) => u.username),
+                  ...oldTaggedWinners.map((u: any) => u.username),
+                  ...oldTaggedDancers.map((u: any) => u.username),
+                  ...oldTaggedChoreographers.map((u: any) => u.username),
+                  ...oldTaggedTeachers.map((u: any) => u.username),
                 ].filter(Boolean)
               );
               const allNewUsers = new Set(
                 [
-                  ...newTaggedWinners.map((u) => u.username),
-                  ...newTaggedDancers.map((u) => u.username),
+                  ...newTaggedWinners.map((u: any) => u.username),
+                  ...newTaggedDancers.map((u: any) => u.username),
+                  ...newTaggedChoreographers.map((u: any) => u.username),
+                  ...newTaggedTeachers.map((u: any) => u.username),
                 ].filter(Boolean)
               );
 
               // Process all users in the new set
               for (const username of allNewUsers) {
                 const winner = newTaggedWinners.find(
-                  (u) => u.username === username
+                  (u: any) => u.username === username
                 );
                 const dancer = newTaggedDancers.find(
-                  (u) => u.username === username
+                  (u: any) => u.username === username
                 );
-                const user = winner || dancer;
+                const choreographer = newTaggedChoreographers.find(
+                  (u: any) => u.username === username
+                );
+                const teacher = newTaggedTeachers.find(
+                  (u: any) => u.username === username
+                );
+                const user = winner || dancer || choreographer || teacher;
 
                 if (!user) continue;
 
@@ -924,6 +805,16 @@ export async function editEvent(
                 // If user is in winners list, add WINNER role
                 if (winner) {
                   roles.push(VIDEO_ROLE_WINNER);
+                }
+
+                // If user is in choreographers list, add CHOREOGRAPHER role
+                if (choreographer) {
+                  roles.push("CHOREOGRAPHER");
+                }
+
+                // If user is in teachers list, add TEACHER role
+                if (teacher) {
+                  roles.push("TEACHER");
                 }
 
                 try {
@@ -948,8 +839,16 @@ export async function editEvent(
               for (const username of allOldUsers) {
                 if (!allNewUsers.has(username)) {
                   const oldUser =
-                    oldTaggedWinners.find((u) => u.username === username) ||
-                    oldTaggedDancers.find((u) => u.username === username);
+                    oldTaggedWinners.find(
+                      (u: any) => u.username === username
+                    ) ||
+                    oldTaggedDancers.find(
+                      (u: any) => u.username === username
+                    ) ||
+                    oldTaggedChoreographers.find(
+                      (u: any) => u.username === username
+                    ) ||
+                    oldTaggedTeachers.find((u: any) => u.username === username);
                   if (oldUser) {
                     const userId = await getUserId(oldUser);
                     console.log(

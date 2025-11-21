@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -38,10 +38,21 @@ export function TagSelfDropdown({
   // Filter out roles already assigned to the current user
   // Convert AVAILABLE_ROLES to display format for comparison
   // Also filter out "Team Member" if user is already a team member
-  const availableRoles = AVAILABLE_ROLES.filter(
-    (role) =>
-      !currentUserRoles.includes(role) &&
-      !(role === "Team Member" && isTeamMember)
+  // Memoize to prevent unnecessary recalculations
+  const availableRoles = useMemo(
+    () =>
+      AVAILABLE_ROLES.filter(
+        (role) =>
+          !currentUserRoles.includes(role) &&
+          !(role === "Team Member" && isTeamMember)
+      ),
+    [currentUserRoles, isTeamMember]
+  );
+
+  // Memoize the roles string for stable dependency comparison
+  const availableRolesKey = useMemo(
+    () => availableRoles.join(","),
+    [availableRoles]
   );
 
   // Check for pending requests for each available role
@@ -73,7 +84,7 @@ export function TagSelfDropdown({
     };
 
     checkPendingRequests();
-  }, [sessionId, session?.user?.id, availableRoles.join(",")]);
+  }, [sessionId, session?.user?.id, availableRolesKey]);
 
   // Don't show the dropdown if user is not logged in or all roles are taken
   if (!session?.user?.id || availableRoles.length === 0) {
@@ -192,4 +203,3 @@ export function TagSelfDropdown({
     </div>
   );
 }
-

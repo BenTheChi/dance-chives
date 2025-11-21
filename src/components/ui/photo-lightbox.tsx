@@ -4,11 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight, Maximize, Loader2 } from "lucide-react";
-import { Picture } from "@/types/event";
-import Image from "next/image";
+import { Image } from "@/types/image";
+import NextImage from "next/image";
 
 interface PhotoLightboxProps {
-  image: Picture;
+  image: Image;
   isOpen: boolean;
   onClose: () => void;
   onNext: () => void;
@@ -178,24 +178,22 @@ export function PhotoLightbox({
                   {image?.url || "Invalid image URL"}
                 </p>
               </div>
-            ) : (
-              image?.url && (
-                <div className="relative w-full h-full">
-                  <Image
-                    src={image.url}
-                    alt={displayTitle}
-                    fill
-                    className={`object-contain ${
-                      isLoading ? "opacity-0" : "opacity-100"
-                    } transition-opacity duration-200`}
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 95vw"
-                    unoptimized={false}
-                  />
-                </div>
-              )
-            )}
+            ) : image.url ? (
+              <div className="relative w-full h-full">
+                <NextImage
+                  src={image.url}
+                  alt={displayTitle}
+                  fill
+                  className={`object-contain ${
+                    isLoading ? "opacity-0" : "opacity-100"
+                  } transition-opacity duration-200`}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 95vw"
+                  unoptimized={false}
+                />
+              </div>
+            ) : null}
 
             {/* Navigation areas for clicking on sides of image */}
             {!hasError && image?.url && (

@@ -17,7 +17,8 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import { FormValues } from "./event-form";
-import { Section, Video } from "@/types/event";
+import { Section } from "@/types/event";
+import { Video } from "@/types/video";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { VideoEmbed } from "../VideoEmbed";
@@ -25,6 +26,13 @@ import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface VideoFormProps {
   video: Video;
@@ -86,12 +94,29 @@ export function VideoForm({
   );
   const [videoWinners, setVideoWinners] = useState<UserSearchItem[]>([]);
   const [videoDancers, setVideoDancers] = useState<UserSearchItem[]>([]);
+  const [videoChoreographers, setVideoChoreographers] = useState<
+    UserSearchItem[]
+  >([]);
+  const [videoTeachers, setVideoTeachers] = useState<UserSearchItem[]>([]);
 
-  // Load existing winners and dancers from separate arrays
+  // Load existing tagged users from separate arrays
+  // Use type assertion since Video is a union type and properties are on specific types
+  const videoAny = video as any;
   useEffect(() => {
-    setVideoWinners(video.taggedWinners || []);
-    setVideoDancers(video.taggedDancers || []);
-  }, [video.taggedWinners, video.taggedDancers, video.id]);
+    setVideoWinners(videoAny.taggedWinners || []);
+    setVideoDancers(videoAny.taggedDancers || []);
+    setVideoChoreographers(videoAny.taggedChoreographers || []);
+    setVideoTeachers(videoAny.taggedTeachers || []);
+  }, [
+    videoAny.taggedWinners,
+    videoAny.taggedDancers,
+    videoAny.taggedChoreographers,
+    videoAny.taggedTeachers,
+    video.id,
+  ]);
+
+  // Get current video type
+  const videoType = video.type || "battle";
 
   const updateTaggedDancers = (dancers: UserSearchItem[]) => {
     console.log("🟢 [updateTaggedDancers] Updating tagged dancers:", dancers);
@@ -279,6 +304,110 @@ export function VideoForm({
     setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
+  const updateVideoType = (
+    type: "battle" | "freestyle" | "choreography" | "class"
+  ) => {
+    const currentSections = getValues("sections") || [];
+    const updatedSections = currentSections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (context === "section") {
+        return {
+          ...section,
+          videos: section.videos.map((v) =>
+            v.id === video.id ? { ...v, type } : v
+          ),
+        };
+      } else {
+        return {
+          ...section,
+          brackets: section.brackets.map((bracket) =>
+            bracket.id === activeBracketId
+              ? {
+                  ...bracket,
+                  videos: bracket.videos.map((v) =>
+                    v.id === video.id ? { ...v, type } : v
+                  ),
+                }
+              : bracket
+          ),
+        };
+      }
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+  };
+
+  const updateTaggedChoreographers = (choreographers: UserSearchItem[]) => {
+    const currentSections = getValues("sections") || [];
+    const updatedSections = currentSections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (context === "section") {
+        return {
+          ...section,
+          videos: section.videos.map((v) =>
+            v.id === video.id
+              ? { ...v, taggedChoreographers: choreographers }
+              : v
+          ),
+        };
+      } else {
+        return {
+          ...section,
+          brackets: section.brackets.map((bracket) =>
+            bracket.id === activeBracketId
+              ? {
+                  ...bracket,
+                  videos: bracket.videos.map((v) =>
+                    v.id === video.id
+                      ? { ...v, taggedChoreographers: choreographers }
+                      : v
+                  ),
+                }
+              : bracket
+          ),
+        };
+      }
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+    setVideoChoreographers(choreographers);
+  };
+
+  const updateTaggedTeachers = (teachers: UserSearchItem[]) => {
+    const currentSections = getValues("sections") || [];
+    const updatedSections = currentSections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (context === "section") {
+        return {
+          ...section,
+          videos: section.videos.map((v) =>
+            v.id === video.id ? { ...v, taggedTeachers: teachers } : v
+          ),
+        };
+      } else {
+        return {
+          ...section,
+          brackets: section.brackets.map((bracket) =>
+            bracket.id === activeBracketId
+              ? {
+                  ...bracket,
+                  videos: bracket.videos.map((v) =>
+                    v.id === video.id ? { ...v, taggedTeachers: teachers } : v
+                  ),
+                }
+              : bracket
+          ),
+        };
+      }
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+    setVideoTeachers(teachers);
+  };
+
   // Check if styles should be disabled (when section has applyStylesToVideos enabled)
   const activeSection = sections.find((s) => s.id === activeSectionId);
   const isStylesDisabled = activeSection?.applyStylesToVideos || false;
@@ -336,18 +465,57 @@ export function VideoForm({
           )}
         />
 
+        <FormField
+          control={control}
+          name={
+            context === "bracket"
+              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.type`
+              : `sections.${sectionIndex}.videos.${videoIndex}.type`
+          }
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Video Type</FormLabel>
+              <FormControl>
+                <Select
+                  value={field.value || "battle"}
+                  onValueChange={(value) => {
+                    const type = value as
+                      | "battle"
+                      | "freestyle"
+                      | "choreography"
+                      | "class";
+                    field.onChange(type);
+                    updateVideoType(type);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select video type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="battle">Battle</SelectItem>
+                    <SelectItem value="freestyle">Freestyle</SelectItem>
+                    <SelectItem value="choreography">Choreography</SelectItem>
+                    <SelectItem value="class">Class</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <DebouncedSearchMultiSelect<UserSearchItem>
           onSearch={searchUsers}
           placeholder="Search dancers..."
           getDisplayValue={(item) => `${item.displayName} (${item.username})`}
           getItemId={(item) => item.username}
           onChange={updateTaggedDancers}
-          value={video.taggedDancers ?? []}
+          value={videoAny.taggedDancers ?? []}
           name="Tagged Dancers"
         />
 
-        {/* Video Winners Section - Only show in edit mode */}
-        {eventId && (
+        {/* Video Winners Section - Only show for battle videos in edit mode */}
+        {eventId && videoType === "battle" && (
           <div className="space-y-2">
             <DebouncedSearchMultiSelect<UserSearchItem>
               onSearch={searchUsers}
@@ -393,6 +561,32 @@ export function VideoForm({
               </div>
             )}
           </div>
+        )}
+
+        {/* Tagged Choreographers - only for choreography videos */}
+        {videoType === "choreography" && (
+          <DebouncedSearchMultiSelect<UserSearchItem>
+            onSearch={searchUsers}
+            placeholder="Search choreographers..."
+            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+            getItemId={(item) => item.username}
+            onChange={updateTaggedChoreographers}
+            value={videoAny.taggedChoreographers ?? []}
+            name="Tagged Choreographers"
+          />
+        )}
+
+        {/* Tagged Teachers - only for class videos */}
+        {videoType === "class" && (
+          <DebouncedSearchMultiSelect<UserSearchItem>
+            onSearch={searchUsers}
+            placeholder="Search teachers..."
+            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+            getItemId={(item) => item.username}
+            onChange={updateTaggedTeachers}
+            value={videoAny.taggedTeachers ?? []}
+            name="Tagged Teachers"
+          />
         )}
 
         <FormField

@@ -73,7 +73,7 @@ export default async function SessionPage({ params }: PageProps) {
           sessionData.user.auth,
           {
             sessionId: session.id,
-            sessionCreatorId: session.sessionDetails.creatorId,
+            sessionCreatorId: session.eventDetails.creatorId,
             isTeamMember: isTeamMember,
           },
           sessionData.user.id
@@ -87,7 +87,7 @@ export default async function SessionPage({ params }: PageProps) {
           sessionData.user.auth,
           {
             sessionId: session.id,
-            sessionCreatorId: session.sessionDetails.creatorId,
+            sessionCreatorId: session.eventDetails.creatorId,
             isTeamMember: isTeamMember,
           },
           sessionData.user.id
@@ -108,8 +108,8 @@ export default async function SessionPage({ params }: PageProps) {
   const allStyles = new Set<string>();
 
   // Add session-level styles
-  if (session.sessionDetails.styles) {
-    session.sessionDetails.styles.forEach((style) => allStyles.add(style));
+  if (session.eventDetails.styles) {
+    session.eventDetails.styles.forEach((style) => allStyles.add(style));
   }
 
   // Add video-level styles
@@ -134,8 +134,8 @@ export default async function SessionPage({ params }: PageProps) {
   });
 
   // Fetch creator and team members for Team Members section
-  const creator = session.sessionDetails.creatorId
-    ? await getUser(session.sessionDetails.creatorId)
+  const creator = session.eventDetails.creatorId
+    ? await getUser(session.eventDetails.creatorId)
     : null;
   const teamMemberIds = await getSessionTeamMembers(session.id);
   const teamMembers = await Promise.all(teamMemberIds.map((id) => getUser(id)));
@@ -163,7 +163,7 @@ export default async function SessionPage({ params }: PageProps) {
           </div>
 
           <PosterImage
-            poster={session.sessionDetails.poster}
+            poster={session.eventDetails.poster}
             className="md:col-span-1 xl:col-span-1"
           />
 
@@ -171,16 +171,16 @@ export default async function SessionPage({ params }: PageProps) {
             {/* Session Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">
-                {session.sessionDetails.title}
+                {session.eventDetails.title}
               </h1>
               {/* Multiple Dates */}
-              {session.sessionDetails.dates && session.sessionDetails.dates.length > 0 && (
+              {session.eventDetails.dates && session.eventDetails.dates.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-row gap-2">
                     <Calendar />
                     <b>Dates:</b>
                   </div>
-                  {session.sessionDetails.dates.map((date, index) => (
+                  {session.eventDetails.dates.map((date, index) => (
                     <div key={index} className="ml-6 flex flex-col gap-1">
                       <div className="flex flex-row gap-2">
                         <span>{date.date}</span>
@@ -200,38 +200,38 @@ export default async function SessionPage({ params }: PageProps) {
               <div className="flex flex-row gap-2">
                 <Building />
                 <b>City:</b>{" "}
-                {session.sessionDetails.city.id ? (
+                {session.eventDetails.city.id ? (
                   <Link
-                    href={`/cities/${session.sessionDetails.city.id}`}
+                    href={`/cities/${session.eventDetails.city.id}`}
                     className="hover:text-blue-600 hover:underline transition-colors"
                   >
-                    {session.sessionDetails.city.name}
-                    {session.sessionDetails.city.countryCode &&
-                      `, ${session.sessionDetails.city.countryCode}`}
+                    {session.eventDetails.city.name}
+                    {session.eventDetails.city.countryCode &&
+                      `, ${session.eventDetails.city.countryCode}`}
                   </Link>
                 ) : (
                   <>
-                    {session.sessionDetails.city.name}
-                    {session.sessionDetails.city.countryCode &&
-                      `, ${session.sessionDetails.city.countryCode}`}
+                    {session.eventDetails.city.name}
+                    {session.eventDetails.city.countryCode &&
+                      `, ${session.eventDetails.city.countryCode}`}
                   </>
                 )}
               </div>
-              {session.sessionDetails.address && (
+              {session.eventDetails.address && (
                 <div className="flex flex-row gap-2">
                   <div className="flex flex-row gap-2">
                     <MapPin />
                     <b>Location:</b>
                   </div>
                   <div className="whitespace-pre-wrap">
-                    {session.sessionDetails.address}
+                    {session.eventDetails.address}
                   </div>
                 </div>
               )}
-              {session.sessionDetails.cost && (
+              {session.eventDetails.cost && (
                 <div className="flex flex-row gap-2">
                   <DollarSign />
-                  <b>Cost:</b> {session.sessionDetails.cost}
+                  <b>Cost:</b> {session.eventDetails.cost}
                 </div>
               )}
               {sessionStyles.length > 0 && (
@@ -334,26 +334,26 @@ export default async function SessionPage({ params }: PageProps) {
 
           {/* Description and Schedule */}
           <div className="flex flex-col gap-4 md:col-span-2 xl:col-span-2">
-            {session.sessionDetails.description && (
+            {session.eventDetails.description && (
               <section className="bg-red-100 p-4 rounded-md">
                 <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl mb-2">
                   <FileText />
                   Description:
                 </div>
                 <div className="whitespace-pre-wrap">
-                  {session.sessionDetails.description}
+                  {session.eventDetails.description}
                 </div>
               </section>
             )}
 
-            {session.sessionDetails.schedule && (
+            {session.eventDetails.schedule && (
               <section className="bg-blue-100 p-4 rounded-md">
                 <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl mb-2">
                   <Calendar />
                   Schedule:
                 </div>
                 <div className="whitespace-pre-wrap">
-                  {session.sessionDetails.schedule}
+                  {session.eventDetails.schedule}
                 </div>
               </section>
             )}
@@ -365,7 +365,7 @@ export default async function SessionPage({ params }: PageProps) {
                 <VideoGallery
                   videos={session.videos}
                   eventLink={`/sessions/${session.id}`}
-                  eventTitle={session.sessionDetails.title}
+                  eventTitle={session.eventDetails.title}
                   eventId={session.id}
                   sectionTitle=""
                   sectionStyles={[]}

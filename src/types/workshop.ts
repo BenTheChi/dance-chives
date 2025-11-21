@@ -1,40 +1,26 @@
 import { City } from "./city";
 import { UserSearchItem } from "./user";
-import { Picture, Video } from "./event";
+import { Image } from "./image";
+import { Video } from "./video";
+import { BaseEvent, BaseEventDetails, Role } from "./event";
 
-// Re-export Picture and Video for convenience
-export type { Picture, Video };
+// Re-export for convenience
+export type { Image, Video };
 
-export interface WorkshopDetails {
-  title: string;
-  startDate: string;
-  description?: string;
-  schedule?: string;
-  address?: string;
-  startTime?: string;
-  endTime?: string;
-  creatorId: string;
-  cost?: string;
-  poster?: Picture | null;
-  city: City;
-  styles?: string[];
+// Workshop EventDetails - extends BaseEventDetails
+export interface WorkshopDetails extends BaseEventDetails {
+  startDate: string; // Single date for workshop
 }
 
-export interface Workshop {
-  id: string;
-  createdAt: Date;
-  updatedAt: Date;
-  workshopDetails: WorkshopDetails;
-  roles: WorkshopRole[];
-  videos: Video[];
-  gallery: Picture[];
-  associatedEventId?: string; // Event ID if workshop is associated with an event
+// Workshop Event - extends BaseEvent, no sections, only video gallery
+export interface Workshop extends BaseEvent {
+  eventDetails: WorkshopDetails;
+  videos: Video[]; // Video gallery at event level only
 }
 
-export interface WorkshopRole {
-  id: string;
+// WorkshopRole - same as Role but kept for backward compatibility
+export interface WorkshopRole extends Role {
   title: "ORGANIZER" | "TEACHER" | "TEAM_MEMBER";
-  user: UserSearchItem | null;
 }
 
 export interface WorkshopCard {

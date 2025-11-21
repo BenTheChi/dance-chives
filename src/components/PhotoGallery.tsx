@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import { PhotoLightbox } from "@/components/ui/photo-lightbox";
-import { Picture } from "@/types/event";
+import { Image } from "@/types/image";
 
 interface PhotoGalleryProps {
-  images: Picture[];
+  images: Image[];
 }
 
 export function PhotoGallery({ images }: PhotoGalleryProps) {
@@ -31,13 +31,15 @@ export function PhotoGallery({ images }: PhotoGalleryProps) {
             className="relative group cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg"
             onClick={() => handleImageSelect(index)}
           >
-            <Image
-              src={image.url}
-              alt={image.title || `Gallery image ${index + 1}`}
-              width={200}
-              height={200}
-              className="object-contain w-full max-w-[200px] h-auto rounded-md"
-            />
+            {image.url ? (
+              <NextImage
+                src={image.url}
+                alt={image.title || `Gallery image ${index + 1}`}
+                width={200}
+                height={200}
+                className="object-contain w-full max-w-[200px] h-auto rounded-md"
+              />
+            ) : null}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-md" />
           </div>
         ))}
@@ -69,4 +71,3 @@ export function PhotoGallery({ images }: PhotoGalleryProps) {
     </>
   );
 }
-
