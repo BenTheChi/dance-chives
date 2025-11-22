@@ -1978,7 +1978,7 @@ export async function tagSelfWithRole(eventId: string, role: string) {
   const canTagDirectly =
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
-    (await isEventCreator(eventId, userId));
+    (await isCompetitionCreator(eventId, userId));
 
   if (canTagDirectly) {
     // User has permission - tag directly
@@ -2203,7 +2203,7 @@ export async function tagSelfInVideo(
   const canTagDirectly =
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
-    (await isEventCreator(eventId, userId));
+    (await isCompetitionCreator(eventId, userId));
 
   if (canTagDirectly) {
     console.log("Applying tag in Neo4j");
@@ -2370,7 +2370,7 @@ export async function tagSelfInSection(
   const canTagDirectly =
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
-    (await isEventCreator(eventId, userId));
+    (await isCompetitionCreator(eventId, userId));
 
   if (canTagDirectly) {
     console.log("Applying section tag in Neo4j");
@@ -2456,7 +2456,7 @@ export async function removeTagFromVideo(
     currentUserId === userId || // User removing their own tag
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, currentUserId)) ||
-    (await isEventCreator(eventId, currentUserId));
+    (await isCompetitionCreator(eventId, currentUserId));
 
   if (canRemoveDirectly) {
     // User has permission - remove directly by setting empty roles
@@ -2504,7 +2504,7 @@ export async function removeTagFromSection(
     currentUserId === userId || // User removing their own tag
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, currentUserId)) ||
-    (await isEventCreator(eventId, currentUserId));
+    (await isCompetitionCreator(eventId, currentUserId));
 
   if (canRemoveDirectly) {
     // User has permission - remove directly by setting winner to null
@@ -2552,7 +2552,7 @@ export async function markUserAsVideoWinner(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isEventCreator(eventId, editorId));
+    (await isCompetitionCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2633,7 +2633,7 @@ export async function markUserAsSectionWinner(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isEventCreator(eventId, editorId));
+    (await isCompetitionCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2695,7 +2695,7 @@ export async function removeVideoWinnerTag(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isEventCreator(eventId, editorId));
+    (await isCompetitionCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2737,7 +2737,7 @@ export async function removeSectionWinnerTag(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isEventCreator(eventId, editorId));
+    (await isCompetitionCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2796,6 +2796,60 @@ export async function getPendingTagRequest(
   });
 
   return request;
+}
+
+/**
+ * Get all pending tagging requests for an event for a user
+ * Returns a map of role -> request for all pending requests
+ * This is more efficient than calling getPendingTagRequest for each role individually
+ */
+export async function getAllPendingTagRequestsForEvent(
+  eventId: string,
+  userId?: string,
+  roles?: string[]
+): Promise<Map<string, { id: string; status: string; createdAt: Date }>> {
+  const targetUserId = userId || (await requireAuth());
+
+  const whereClause: any = {
+    eventId,
+    senderId: targetUserId,
+    targetUserId: targetUserId,
+    status: "PENDING",
+    videoId: null,
+    sectionId: null,
+  };
+
+  // If roles are provided, filter by them
+  if (roles && roles.length > 0) {
+    whereClause.role = { in: roles };
+  }
+
+  const requests = await prisma.taggingRequest.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      role: true,
+    },
+  });
+
+  // Convert to a Map for easy lookup
+  const requestMap = new Map<
+    string,
+    { id: string; status: string; createdAt: Date }
+  >();
+  requests.forEach((request) => {
+    if (request.role) {
+      requestMap.set(request.role, {
+        id: request.id,
+        status: request.status,
+        createdAt: request.createdAt,
+      });
+    }
+  });
+
+  return requestMap;
 }
 
 /**

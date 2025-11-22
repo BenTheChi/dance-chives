@@ -1,197 +1,138 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import {
-  tagSelfInVideo,
-  tagSelfInSection,
-  removeTagFromVideo,
-  removeTagFromSection,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AVAILABLE_ROLES } from "@/lib/utils/roles";
+import {
+  tagSelfWithRole,
   getPendingTagRequest,
 } from "@/lib/server_actions/request_actions";
-import {
-  VIDEO_ROLE_DANCER,
-  VIDEO_ROLE_WINNER,
-  SECTION_ROLE_WINNER,
-} from "@/lib/utils/roles";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Trophy, X } from "lucide-react";
-
-type TagTarget = "video" | "section";
-type TagRole =
-  | typeof VIDEO_ROLE_DANCER
-  | typeof VIDEO_ROLE_WINNER
-  | typeof SECTION_ROLE_WINNER;
-
-// Helper function to check if role is a winner role
-// Both VIDEO_ROLE_WINNER and SECTION_ROLE_WINNER have the value "Winner"
-function isWinnerRole(
-  role: TagRole
-): role is typeof VIDEO_ROLE_WINNER | typeof SECTION_ROLE_WINNER {
-  return (role as string) === "Winner";
-}
 
 interface TagSelfButtonProps {
   eventId: string;
-  target: TagTarget;
-  targetId: string; // videoId or sectionId
-  currentUserId: string | undefined;
-  role: TagRole;
-  isUserTagged: boolean;
-  showRemoveButton?: boolean;
-  buttonLabel?: string;
-  pendingLabel?: string;
-  successLabel?: string;
+  currentUserRoles: string[]; // Roles already assigned to the current user
+  isTeamMember?: boolean; // Whether the user is already a team member
+  canTagDirectly: boolean; // Whether the user can tag directly or needs to make a request
 }
 
 export function TagSelfButton({
   eventId,
-  target,
-  targetId,
-  currentUserId,
-  role,
-  isUserTagged,
-  showRemoveButton = false,
-  buttonLabel,
-  pendingLabel,
-  successLabel,
+  currentUserRoles,
+  isTeamMember = false,
+  canTagDirectly,
 }: TagSelfButtonProps) {
-  const [pendingRequest, setPendingRequest] = useState<{
-    id: string;
-    status: string;
-    createdAt: Date;
-  } | null>(null);
+  const { data: session } = useSession();
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const [isPending, startTransition] = useTransition();
+  const [pendingRoles, setPendingRoles] = useState<Set<string>>(new Set());
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
 
-  // Don't show the button if user is not logged in
-  if (!currentUserId) {
+  // Filter out roles already assigned to the current user
+  // Also filter out "Team Member" if user is already a team member
+  const availableRoles = useMemo(
+    () =>
+      AVAILABLE_ROLES.filter(
+        (role) =>
+          !currentUserRoles.includes(role) &&
+          !(role === "Team Member" && isTeamMember)
+      ),
+    [currentUserRoles, isTeamMember]
+  );
+
+  // Check for pending requests for all available roles in a single GET request
+  useEffect(() => {
+    if (!session?.user?.id || availableRoles.length === 0) {
+      return;
+    }
+
+    const checkPendingRequests = async () => {
+      try {
+        // Fetch all pending requests for all available roles in a single GET request
+        const rolesParam = availableRoles.join(",");
+        const response = await fetch(
+          `/api/tagging-requests/pending?eventId=${encodeURIComponent(eventId)}&roles=${encodeURIComponent(rolesParam)}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch pending requests");
+        }
+
+        const { data } = await response.json();
+        // Convert object to Set of roles that have pending requests
+        const pendingSet = new Set<string>(Object.keys(data || {}));
+        setPendingRoles(pendingSet);
+      } catch (error) {
+        console.error("Error checking pending requests:", error);
+      }
+    };
+
+    checkPendingRequests();
+  }, [eventId, session?.user?.id, availableRoles]);
+
+  // Don't show the button if user is not logged in or all roles are taken
+  if (!session?.user?.id || availableRoles.length === 0) {
     return null;
   }
 
-  // Check for pending requests on mount and when user tags/untags
-  useEffect(() => {
-    if (!currentUserId) {
-      setPendingRequest(null);
+  // Filter out roles with pending requests
+  const selectableRoles = availableRoles.filter(
+    (role) => !pendingRoles.has(role)
+  );
+
+  const handleConfirm = () => {
+    if (!selectedRole) {
+      toast.error("Please select a role");
       return;
     }
-
-    // If user is already tagged, they shouldn't have a pending request
-    if (isUserTagged) {
-      setPendingRequest(null);
-      return;
-    }
-
-    // Check for pending request
-    const videoId = target === "video" ? targetId : undefined;
-    const sectionId = target === "section" ? targetId : undefined;
-
-    getPendingTagRequest(eventId, videoId, currentUserId, sectionId, role)
-      .then((request) => {
-        setPendingRequest(request);
-      })
-      .catch((error) => {
-        console.error("Error fetching pending request:", error);
-        setPendingRequest(null);
-      });
-  }, [eventId, target, targetId, currentUserId, isUserTagged, role]);
-
-  const handleTagSelf = () => {
-    if (!currentUserId) return;
 
     startTransition(async () => {
       try {
-        if (target === "video") {
-          const result = await tagSelfInVideo(eventId, targetId, role);
+        const result = await tagSelfWithRole(eventId, selectedRole);
 
-          // Check if all requests already existed (only for video tags)
-          if (result.existingRequests && result.existingRequests.length > 0) {
-            const requestCount = result.existingRequests.length;
-            if (requestCount === 1) {
-              toast.info(
-                `A pending tagging request for ${result.existingRequests[0]} already exists`
-              );
-            } else {
-              toast.info(
-                `Pending tagging requests for ${result.existingRequests.join(
-                  " and "
-                )} already exist`
-              );
-            }
-            // Refresh to get pending request status
-            try {
-              const request = await getPendingTagRequest(
-                eventId,
-                targetId,
-                currentUserId,
-                undefined,
-                role
-              );
-              setPendingRequest(request);
-            } catch (fetchError) {
-              console.error("Error fetching pending request:", fetchError);
-            }
-            return;
-          }
-
-          if (result.directTag) {
-            const defaultMessage =
-              role === VIDEO_ROLE_WINNER
-                ? "Successfully tagged yourself as winner"
-                : "Successfully tagged yourself";
-            toast.success(successLabel || defaultMessage);
-            setPendingRequest(null);
-            router.refresh();
-          } else {
-            toast.success(
-              successLabel
-                ? `Request to ${successLabel.toLowerCase()} has been created`
-                : "Request to tag yourself has been created"
-            );
-            setPendingRequest(null);
-            try {
-              const request = await getPendingTagRequest(
-                eventId,
-                targetId,
-                currentUserId,
-                undefined,
-                role
-              );
-              setPendingRequest(request);
-            } catch (fetchError) {
-              console.error("Error fetching pending request:", fetchError);
-            }
-          }
+        if (result.directTag) {
+          toast.success(`Successfully tagged yourself as ${selectedRole}`);
+          setSelectedRole(""); // Reset selection
+          setIsDialogOpen(false); // Close dialog
+          router.refresh(); // Refresh the page to show the updated roles
         } else {
-          const result = await tagSelfInSection(eventId, targetId, role);
-
-          if (result.directTag) {
-            toast.success(
-              successLabel || "Successfully tagged yourself as winner"
+          toast.success(`Request to tag yourself as ${selectedRole} has been created`);
+          setSelectedRole(""); // Reset selection
+          setIsDialogOpen(false); // Close dialog
+          // Refresh to get pending request status
+          try {
+            const request = await getPendingTagRequest(
+              eventId,
+              undefined,
+              session?.user?.id,
+              undefined,
+              selectedRole
             );
-            setPendingRequest(null);
-            router.refresh();
-          } else {
-            toast.success(
-              successLabel
-                ? `Request to ${successLabel.toLowerCase()} has been created`
-                : "Request to tag yourself has been created"
-            );
-            setPendingRequest(null);
-            try {
-              const request = await getPendingTagRequest(
-                eventId,
-                undefined,
-                currentUserId,
-                targetId,
-                role
-              );
-              setPendingRequest(request);
-            } catch (fetchError) {
-              console.error("Error fetching pending request:", fetchError);
+            if (request) {
+              setPendingRoles((prev) => new Set(prev).add(selectedRole));
             }
+          } catch (fetchError) {
+            console.error("Error fetching pending request:", fetchError);
+            // Don't show error for this - it's not critical
           }
         }
       } catch (error) {
@@ -202,18 +143,17 @@ export function TagSelfButton({
           error.message.includes("already exists")
         ) {
           try {
-            const videoId = target === "video" ? targetId : undefined;
-            const sectionId = target === "section" ? targetId : undefined;
             const request = await getPendingTagRequest(
               eventId,
-              videoId,
-              currentUserId,
-              sectionId,
-              role
+              undefined,
+              session?.user?.id,
+              undefined,
+              selectedRole
             );
             if (request) {
-              setPendingRequest(request);
-              toast.info("A pending tagging request already exists");
+              setPendingRoles((prev) => new Set(prev).add(selectedRole));
+              toast.info(`${selectedRole} tag request pending`);
+              setIsDialogOpen(false);
               return;
             }
           } catch (fetchError) {
@@ -229,98 +169,75 @@ export function TagSelfButton({
     });
   };
 
-  const handleRemoveTag = () => {
-    if (!currentUserId) return;
-
-    startTransition(async () => {
-      try {
-        if (target === "video") {
-          await removeTagFromVideo(eventId, targetId, currentUserId);
-        } else {
-          await removeTagFromSection(eventId, targetId, currentUserId);
-        }
-        toast.success("Successfully removed tag");
-        router.refresh();
-      } catch (error) {
-        console.error("Error removing tag:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to remove tag. Please try again."
-        );
-      }
-    });
-  };
-
-  // Show pending request status
-  if (pendingRequest && !isUserTagged) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Badge variant="outline" className="w-fit">
-          {pendingLabel || `${role} tag request pending`}
-        </Badge>
-      </div>
-    );
-  }
-
-  // Show tag/untag button
-  const defaultLabel = isWinnerRole(role) ? "Tag Self as Winner" : "Tag Self";
-
-  // If user is tagged and showRemoveButton is true, show remove button
-  // Otherwise, if user is tagged and it's a winner role, hide the button (no remove option)
-  // Otherwise, show the tag button
-  if (isUserTagged && showRemoveButton) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Button
-          onClick={handleRemoveTag}
-          disabled={isPending}
-          variant="outline"
-          size="sm"
-          className="w-fit"
-        >
-          <X className="h-4 w-4 mr-2" />
-          Remove Tag
-        </Button>
-      </div>
-    );
-  }
-
-  // Hide button if user is already tagged and this is a winner-only button without remove option
-  if (isUserTagged && isWinnerRole(role) && !showRemoveButton) {
-    return null;
-  }
-
-  // Get button color based on role
-  const getRoleColorClass = () => {
-    const roleStr = role as string;
-    if (isWinnerRole(role)) {
-      return "bg-yellow-500 hover:bg-yellow-600";
-    }
-    if (roleStr === "Dancer") {
-      return "bg-green-300 hover:bg-green-400 text-gray-900";
-    }
-    if (roleStr === "Teacher") {
-      return "bg-purple-300 hover:bg-purple-400 text-gray-900";
-    }
-    if (roleStr === "Choreographer") {
-      return "bg-blue-300 hover:bg-blue-400 text-gray-900";
-    }
-    return "";
-  };
-
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 mt-2">
       <Button
-        onClick={handleTagSelf}
-        disabled={isPending}
-        variant="default"
+        variant="outline"
         size="sm"
-        className={`w-fit ${getRoleColorClass()}`}
+        onClick={() => setIsDialogOpen(true)}
+        className="w-fit"
       >
-        {isWinnerRole(role) && <Trophy className="h-4 w-4 mr-2" />}
-        {isPending ? "Processing..." : buttonLabel || defaultLabel}
+        Tag Myself
       </Button>
+      {pendingRoles.size > 0 && (
+        <div className="flex flex-col gap-2">
+          {Array.from(pendingRoles).map((role) => (
+            <Badge key={role} variant="outline" className="w-fit">
+              {role} tag request pending
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tag Yourself</DialogTitle>
+            <DialogDescription>
+              Select a role to tag yourself with for this event.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">Role</label>
+              <Select
+                value={selectedRole}
+                onValueChange={setSelectedRole}
+                disabled={isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectableRoles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDialogOpen(false);
+                setSelectedRole("");
+              }}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={isPending || !selectedRole}
+            >
+              {canTagDirectly ? "Confirm" : "Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

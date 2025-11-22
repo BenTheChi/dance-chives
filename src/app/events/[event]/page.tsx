@@ -18,13 +18,13 @@ import { notFound } from "next/navigation";
 import { DeleteCompetitionButton } from "@/components/DeleteCompetitionButton";
 import { auth } from "@/auth";
 import { isCompetitionCreator, isTeamMember } from "@/db/queries/team-member";
-import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
+import { TagSelfButton } from "@/components/events/TagSelfButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
-import { canUpdateCompetition, canDeleteCompetition } from "@/lib/utils/auth-utils";
+import { canUpdateCompetition, canDeleteCompetition, AUTH_LEVELS } from "@/lib/utils/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUser } from "@/db/queries/user";
 import { getEventTeamMembers } from "@/db/queries/team-member";
@@ -94,6 +94,12 @@ export default async function EventPage({ params }: PageProps) {
           session.user.id
         )
       : false;
+
+  // Check if user can tag directly (for role tagging)
+  const canTagDirectly =
+    (session?.user?.auth ?? 0) >= AUTH_LEVELS.MODERATOR ||
+    isEventTeamMember ||
+    isCreator;
 
   // Get current user's roles for this event (convert from Neo4j format to display format)
   // Exclude TEAM_MEMBER - team members are shown separately
@@ -256,13 +262,9 @@ export default async function EventPage({ params }: PageProps) {
               )}
             </section>
 
-            {/* Roles */}
+            {/* Event Roles */}
             <section className="p-4 rounded-md bg-green-100 flex flex-col gap-2">
-              <TagSelfDropdown
-                eventId={event.id}
-                currentUserRoles={currentUserRoles}
-                isTeamMember={isEventTeamMember}
-              />
+              <h2 className="text-xl font-bold mb-2">Event Roles</h2>
               {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
                 <div
                   key={roleTitle}
@@ -288,6 +290,12 @@ export default async function EventPage({ params }: PageProps) {
                   ))}
                 </div>
               ))}
+              <TagSelfButton
+                eventId={event.id}
+                currentUserRoles={currentUserRoles}
+                isTeamMember={isEventTeamMember}
+                canTagDirectly={canTagDirectly}
+              />
             </section>
 
             {/* Team Members Section */}

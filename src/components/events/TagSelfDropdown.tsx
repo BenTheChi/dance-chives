@@ -43,34 +43,31 @@ export function TagSelfDropdown({
       !(role === "Team Member" && isTeamMember)
   );
 
-  // Check for pending requests for each available role
+  // Check for pending requests for all available roles in a single GET request
   useEffect(() => {
     if (!session?.user?.id || availableRoles.length === 0) {
       return;
     }
 
     const checkPendingRequests = async () => {
-      const pendingSet = new Set<string>();
-      await Promise.all(
-        availableRoles.map(async (role) => {
-          try {
-            // Note: Role is stored in database as-is (e.g., "Organizer", not "ORGANIZER"), so we search for it as-is
-            const request = await getPendingTagRequest(
-              eventId,
-              undefined,
-              session.user.id,
-              undefined,
-              role
-            );
-            if (request) {
-              pendingSet.add(role);
-            }
-          } catch (error) {
-            console.error(`Error checking pending request for ${role}:`, error);
-          }
-        })
-      );
-      setPendingRoles(pendingSet);
+      try {
+        // Fetch all pending requests for all available roles in a single GET request
+        const rolesParam = availableRoles.join(",");
+        const response = await fetch(
+          `/api/tagging-requests/pending?eventId=${encodeURIComponent(eventId)}&roles=${encodeURIComponent(rolesParam)}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch pending requests");
+        }
+
+        const { data } = await response.json();
+        // Convert object to Set of roles that have pending requests
+        const pendingSet = new Set<string>(Object.keys(data || {}));
+        setPendingRoles(pendingSet);
+      } catch (error) {
+        console.error("Error checking pending requests:", error);
+      }
     };
 
     checkPendingRequests();
