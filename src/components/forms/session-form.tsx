@@ -251,7 +251,7 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
         return `/sessions/${id}`;
       case "competition":
       default:
-        return `/events/${id}`;
+        return `/competitions/${id}`;
     }
   };
 

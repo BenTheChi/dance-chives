@@ -238,7 +238,7 @@ export default function WorkshopForm({ initialData }: WorkshopFormProps = {}) {
         return `/sessions/${id}`;
       case "competition":
       default:
-        return `/events/${id}`;
+        return `/competitions/${id}`;
     }
   };
   // Normalize gallery to ensure all images have the type property

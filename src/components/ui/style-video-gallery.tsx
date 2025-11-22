@@ -33,7 +33,7 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
           <VideoCard
             key={item.video.id}
             video={item.video}
-            eventLink={`/events/${item.eventId}`}
+            eventLink={`/competitions/${item.eventId}`}
             eventTitle={item.eventTitle}
             sectionTitle={item.sectionTitle}
             onClick={() => handleVideoSelect(index)}
@@ -62,7 +62,7 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
           hasPrev={videos.length > 1}
           currentIndex={selectedVideoIndex}
           totalVideos={videos.length}
-          eventLink={`/events/${videos[selectedVideoIndex].eventId}`}
+          eventLink={`/competitions/${videos[selectedVideoIndex].eventId}`}
           eventTitle={videos[selectedVideoIndex].eventTitle}
           eventId={videos[selectedVideoIndex].eventId}
           sectionTitle={videos[selectedVideoIndex].sectionTitle}

@@ -4,7 +4,7 @@ import { getSection } from "@/db/queries/competition";
 import { notFound } from "next/navigation";
 
 type PageProps = {
-  params: Promise<{ event: string; section: string }>;
+  params: Promise<{ competition: string; section: string }>;
 };
 
 // Helper function to validate UUID format
@@ -15,8 +15,8 @@ function isValidUUID(uuid: string): boolean {
   return uuidRegex.test(uuid);
 }
 
-// Helper function to validate event ID format
-function isValidEventId(id: string): boolean {
+// Helper function to validate competition ID format
+function isValidCompetitionId(id: string): boolean {
   const invalidPatterns = [
     /\.(svg|png|jpg|jpeg|gif|ico|css|js|json|xml|txt|pdf|doc|docx)$/i,
     /^(logo|favicon|robots|sitemap|manifest)/i,
@@ -29,12 +29,12 @@ export default async function SectionPage({ params }: PageProps) {
   const paramResult = await params;
 
   // Validate inputs
-  if (!isValidUUID(paramResult.section) || !isValidEventId(paramResult.event)) {
+  if (!isValidUUID(paramResult.section) || !isValidCompetitionId(paramResult.competition)) {
     notFound();
   }
 
-  // Query by eventId + section UUID
-  const sectionData = await getSection(paramResult.section, paramResult.event);
+  // Query by competitionId + section UUID
+  const sectionData = await getSection(paramResult.section, paramResult.competition);
 
   if (!sectionData) {
     notFound();
@@ -55,3 +55,4 @@ export default async function SectionPage({ params }: PageProps) {
     </>
   );
 }
+

@@ -339,7 +339,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/events/${event.eventId}`}>View</a>
+                      <a href={`/competitions/${event.eventId}`}>View</a>
                     </Button>
                   </div>
                 ))}
@@ -374,7 +374,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/events/${membership.eventId}`}>View</a>
+                      <a href={`/competitions/${membership.eventId}`}>View</a>
                     </Button>
                   </div>
                 ))}

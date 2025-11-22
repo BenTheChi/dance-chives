@@ -93,7 +93,7 @@ export default function SectionBracketTabSelector({
         className="ml-5 mb-5 hover:bg-gray-300 hover:shadow-none hover:cursor-pointer shadow-md "
         variant="secondary"
       >
-        <Link href={`/events/${eventId}`}>
+        <Link href={`/competitions/${eventId}`}>
           Back to {eventTitle}
         </Link>
       </Button>
@@ -174,7 +174,7 @@ export default function SectionBracketTabSelector({
                     (bracket) => bracket.id === activeBracket
                   )?.videos || []
                 }
-                eventLink={`/events/${eventId}`}
+                eventLink={`/competitions/${eventId}`}
                 eventTitle={eventTitle}
                 eventId={eventId}
                 sectionTitle={section?.title}
@@ -194,7 +194,7 @@ export default function SectionBracketTabSelector({
         <div className="p-5 border-2 rounded-lg">
           <VideoGallery
             videos={section?.videos}
-            eventLink={`/events/${eventId}`}
+            eventLink={`/competitions/${eventId}`}
             eventTitle={eventTitle}
             eventId={eventId}
             sectionTitle={section?.title}

@@ -3,7 +3,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { getEvents } from "@/db/queries/competition";
 import { EventCard } from "@/types/event";
 
-export default async function EventsPage() {
+export default async function CompetitionsPage() {
   const events = await getEvents();
 
   return (
@@ -31,3 +31,4 @@ export default async function EventsPage() {
     </>
   );
 }
+

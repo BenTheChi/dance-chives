@@ -33,12 +33,12 @@ import { EventCard } from "@/types/event";
 import Eventcard from "@/components/cards";
 
 type PageProps = {
-  params: Promise<{ event: string }>;
+  params: Promise<{ competition: string }>;
 };
 
-// Helper function to validate event ID format
-function isValidEventId(id: string): boolean {
-  // Event IDs should not contain file extensions or be static asset names
+// Helper function to validate competition ID format
+function isValidCompetitionId(id: string): boolean {
+  // Competition IDs should not contain file extensions or be static asset names
   const invalidPatterns = [
     /\.(svg|png|jpg|jpeg|gif|ico|css|js|json|xml|txt|pdf|doc|docx)$/i,
     /^(logo|favicon|robots|sitemap|manifest)/i,
@@ -47,15 +47,15 @@ function isValidEventId(id: string): boolean {
   return !invalidPatterns.some((pattern) => pattern.test(id));
 }
 
-export default async function EventPage({ params }: PageProps) {
+export default async function CompetitionPage({ params }: PageProps) {
   const paramResult = await params;
 
-  // Validate the event ID before trying to fetch it
-  if (!isValidEventId(paramResult.event)) {
+  // Validate the competition ID before trying to fetch it
+  if (!isValidCompetitionId(paramResult.competition)) {
     notFound();
   }
 
-  const event = (await getCompetition(paramResult.event)) as Competition;
+  const event = (await getCompetition(paramResult.competition)) as Competition;
 
   // Check if current user is the creator
   const session = await auth();
@@ -163,12 +163,12 @@ export default async function EventPage({ params }: PageProps) {
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full">
           <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 xl:col-span-4 auto-rows-min">
-            <Link href="/events" className="hover:underline">
-              {`Back to Events`}
+            <Link href="/competitions" className="hover:underline">
+              {`Back to Competitions`}
             </Link>
             {canEdit && (
               <Button asChild>
-                <Link href={`/events/${event.id}/edit`}>Edit</Link>
+                <Link href={`/competitions/${event.id}/edit`}>Edit</Link>
               </Button>
             )}
             {canDelete && <DeleteCompetitionButton competitionId={event.id} />}
@@ -187,7 +187,7 @@ export default async function EventPage({ params }: PageProps) {
                 <div className="flex flex-row gap-2">
                   <span>Main Event:</span>
                   <Link
-                    href={`/events/${event.eventDetails.parentEvent.id}`}
+                    href={`/competitions/${event.eventDetails.parentEvent.id}`}
                     className="hover:text-blue-600 hover:underline transition-colors"
                   >
                     {event.eventDetails.parentEvent.title}
@@ -366,7 +366,7 @@ export default async function EventPage({ params }: PageProps) {
           {/* Sections */}
           <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md hover:bg-green-200 hover:cursor-pointer hover:shadow-none">
             <div className="w-full">
-              <Link href={`/events/${event.id}/sections`} className="w-full">
+              <Link href={`/competitions/${event.id}/sections`} className="w-full">
                 <h2 className="text-2xl font-bold mb-4 text-center">
                   Sections
                 </h2>
@@ -380,7 +380,7 @@ export default async function EventPage({ params }: PageProps) {
                   >
                     <div className="flex justify-between items-center mb-2">
                       <Link
-                        href={`/events/${event.id}/sections/${section.id}`}
+                        href={`/competitions/${event.id}/sections/${section.id}`}
                         className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
                       >
                         {section.title}
@@ -512,7 +512,7 @@ export default async function EventPage({ params }: PageProps) {
                       ? `/workshops/${subEvent.id}`
                       : eventType === "session"
                       ? `/sessions/${subEvent.id}`
-                      : `/events/${subEvent.id}`;
+                      : `/competitions/${subEvent.id}`;
 
                   // Convert subEvent to EventCard format
                   const eventCard: EventCard = {
@@ -557,3 +557,4 @@ export default async function EventPage({ params }: PageProps) {
     </>
   );
 }
+

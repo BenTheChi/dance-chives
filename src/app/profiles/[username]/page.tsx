@@ -165,7 +165,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       ? `/workshops/${event.eventId}`
                       : eventType === "session"
                       ? `/sessions/${event.eventId}`
-                      : `/events/${event.eventId}`;
+                      : `/competitions/${event.eventId}`;
 
                   return (
                     <Eventcard
@@ -204,7 +204,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       ? `/workshops/${event.eventId}`
                       : eventType === "session"
                       ? `/sessions/${event.eventId}`
-                      : `/events/${event.eventId}`;
+                      : `/competitions/${event.eventId}`;
 
                   return (
                     <Eventcard

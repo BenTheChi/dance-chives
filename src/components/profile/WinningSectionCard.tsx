@@ -27,7 +27,7 @@ export function WinningSectionCard({ section }: WinningSectionCardProps) {
               {section.sectionTitle}
             </h3>
             <Link
-              href={`/events/${section.eventId}`}
+              href={`/competitions/${section.eventId}`}
               className="text-sm text-blue-600 hover:underline"
             >
               {section.eventTitle}
@@ -51,14 +51,14 @@ export function WinningSectionCard({ section }: WinningSectionCardProps) {
 
           <div className="flex gap-2 pt-2">
             <Link
-              href={`/events/${section.eventId}`}
+              href={`/competitions/${section.eventId}`}
               className="text-xs text-blue-600 hover:underline"
             >
               View Event
             </Link>
             <span className="text-xs text-muted-foreground">•</span>
             <Link
-              href={`/events/${section.eventId}/sections`}
+              href={`/competitions/${section.eventId}/sections`}
               className="text-xs text-blue-600 hover:underline"
             >
               View Sections

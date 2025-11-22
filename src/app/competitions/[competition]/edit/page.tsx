@@ -9,12 +9,12 @@ import { canUpdateCompetition } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
 import { isTeamMember } from "@/db/queries/team-member";
 
-export default async function EditEventPage({
+export default async function EditCompetitionPage({
   params,
 }: {
-  params: Promise<{ event: string }>;
+  params: Promise<{ competition: string }>;
 }) {
-  const { event } = await params;
+  const { competition } = await params;
   const session = await auth();
 
   // Check authentication
@@ -22,7 +22,7 @@ export default async function EditEventPage({
     redirect("/login");
   }
 
-  const currEvent = await getCompetition(event);
+  const currEvent = await getCompetition(competition);
 
   // Check if event exists
   if (!currEvent) {
@@ -30,14 +30,14 @@ export default async function EditEventPage({
   }
 
   // Check if user is a team member
-  const isEventTeamMember = await isTeamMember(event, session.user.id);
+  const isEventTeamMember = await isTeamMember(competition, session.user.id);
 
   // Check authorization - allow team members even without auth level
   const authLevel = session.user.auth ?? 0;
   const hasPermission = canUpdateCompetition(
     authLevel,
     {
-      eventId: event,
+      eventId: competition,
       eventCreatorId: currEvent.eventDetails.creatorId,
       isTeamMember: isEventTeamMember,
     },
@@ -45,7 +45,7 @@ export default async function EditEventPage({
   );
 
   if (!hasPermission) {
-    redirect(`/events/${event}`);
+    redirect(`/competitions/${competition}`);
   }
 
   //Convert roles from Neo4j format (uppercase) to display format
@@ -155,3 +155,4 @@ export default async function EditEventPage({
     </>
   );
 }
+

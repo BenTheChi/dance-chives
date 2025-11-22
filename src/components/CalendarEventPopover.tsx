@@ -52,7 +52,7 @@ export function CalendarEventPopover({
   const getLinkUrl = () => {
     switch (type) {
       case "event":
-        return `/events/${originalData.id}`;
+        return `/competitions/${originalData.id}`;
       case "workshop":
         return `/workshops/${originalData.id}`;
       case "session":
@@ -73,7 +73,7 @@ export function CalendarEventPopover({
         return `/sessions/${parentId}`;
       case "competition":
       default:
-        return `/events/${parentId}`;
+        return `/competitions/${parentId}`;
     }
   };
 

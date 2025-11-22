@@ -28,7 +28,7 @@ import { usePathname } from "next/navigation";
 const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
   { title: "Styles", url: "/styles", icon: Tag },
-  { title: "Events", url: "/events", icon: CalendarIcon },
+  { title: "Competitions", url: "/competitions", icon: CalendarIcon },
   { title: "Workshops", url: "/workshops", icon: GraduationCap },
   { title: "Sessions", url: "/sessions", icon: Clock },
   { title: "Cities", url: "/cities", icon: MapPin },

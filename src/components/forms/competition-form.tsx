@@ -210,8 +210,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
-  // Extract current event ID from pathname (e.g., /events/[event]/edit or /events/[event])
-  const currentEventId = pathname[1] === "events" && pathname[2] ? pathname[2] : undefined;
+  // Extract current event ID from pathname (e.g., /competitions/[competition]/edit or /competitions/[competition])
+  const currentEventId = pathname[1] === "competitions" && pathname[2] ? pathname[2] : undefined;
 
   const [activeMainTab, setActiveMainTab] = useState("Event Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
@@ -276,7 +276,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         return `/sessions/${id}`;
       case "competition":
       default:
-        return `/events/${id}`;
+        return `/competitions/${id}`;
     }
   };
   const roles = watch("roles") ?? [];
@@ -393,7 +393,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.status === 200) {
-            router.push(`/events/${pathname[pathname.length - 2]}`);
+            router.push(`/competitions/${pathname[pathname.length - 2]}`);
           } else {
             toast.error("Failed to update event", {
               description: "Please try again.",
@@ -405,7 +405,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.event) {
-            router.push(`/events/${response.event.id}`);
+            router.push(`/competitions/${response.event.id}`);
           } else {
             toast.error("Failed to submit event", {
               description: "Please try again.",

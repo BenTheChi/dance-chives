@@ -23,7 +23,7 @@ export const DeleteCompetitionButton = ({ competitionId }: { competitionId: stri
 
       if (response.status === 200) {
         toast.success("Competition deleted");
-        router.push("/events");
+        router.push("/competitions");
       } else {
         console.error(response.statusText);
         toast.error("Failed to delete competition");

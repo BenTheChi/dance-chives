@@ -3255,17 +3255,17 @@ export const searchEventsForSubeventSelection = async (
 export const getEvents = async (): Promise<EventCard[]> => {
   const session = driver.session();
 
-  // Get events with basic info
+  // Get competitions with basic info (only Event:Competition)
   const eventsResult = await session.run(
-    `MATCH (e:Event)-[:IN]->(c:City)
+    `MATCH (e:Event:Competition)-[:IN]->(c:City)
     OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
     WITH DISTINCT e, c, p
     RETURN e.id as eventId, e.title as title, e.startDate as date, c.name as city, c.id as cityId, p.url as imageUrl`
   );
 
-  // Get all styles for each event (from sections and videos)
+  // Get all styles for each competition (from sections and videos)
   const stylesResult = await session.run(
-    `MATCH (e:Event)
+    `MATCH (e:Event:Competition)
     OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
     OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
     OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)

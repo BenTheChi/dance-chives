@@ -175,7 +175,7 @@ export default async function SessionPage({ params }: PageProps) {
                 <div className="flex flex-row gap-2">
                   <span>Main Event:</span>
                   <Link
-                    href={`/events/${session.eventDetails.parentEvent.id}`}
+                    href={`/competitions/${session.eventDetails.parentEvent.id}`}
                     className="hover:text-blue-600 hover:underline transition-colors"
                   >
                     {session.eventDetails.parentEvent.title}

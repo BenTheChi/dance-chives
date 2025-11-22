@@ -187,7 +187,7 @@ export default async function WorkshopPage({ params }: PageProps) {
                 <div className="flex flex-row gap-2">
                   <span>Main Event:</span>
                   <Link
-                    href={`/events/${workshop.eventDetails.parentEvent.id}`}
+                    href={`/competitions/${workshop.eventDetails.parentEvent.id}`}
                     className="hover:text-blue-600 hover:underline transition-colors"
                   >
                     {workshop.eventDetails.parentEvent.title}

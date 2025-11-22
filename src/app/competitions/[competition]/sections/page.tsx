@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Section } from "@/types/event";
 
 type PageProps = {
-  params: Promise<{ event: string }>;
+  params: Promise<{ competition: string }>;
 };
 
-// Helper function to validate event ID format
-function isValidEventId(id: string): boolean {
-  // Event IDs should not contain file extensions or be static asset names
+// Helper function to validate competition ID format
+function isValidCompetitionId(id: string): boolean {
+  // Competition IDs should not contain file extensions or be static asset names
   const invalidPatterns = [
     /\.(svg|png|jpg|jpeg|gif|ico|css|js|json|xml|txt|pdf|doc|docx)$/i,
     /^(logo|favicon|robots|sitemap|manifest)/i,
@@ -25,12 +25,12 @@ function isValidEventId(id: string): boolean {
 export default async function SectionsPage({ params }: PageProps) {
   const paramResult = await params;
 
-  // Validate the event ID before trying to fetch it
-  if (!isValidEventId(paramResult.event)) {
+  // Validate the competition ID before trying to fetch it
+  if (!isValidCompetitionId(paramResult.competition)) {
     notFound();
   }
 
-  const { sections, title } = await getCompetitionSections(paramResult.event);
+  const { sections, title } = await getCompetitionSections(paramResult.competition);
 
   return (
     <>
@@ -42,7 +42,7 @@ export default async function SectionsPage({ params }: PageProps) {
             variant="secondary"
             className="hover:bg-gray-300 hover:shadow-none hover:cursor-pointer shadow-md"
           >
-            <Link href={`/events/${paramResult.event}`}>Back to {title}</Link>
+            <Link href={`/competitions/${paramResult.competition}`}>Back to {title}</Link>
           </Button>
           <h1 className="text-3xl font-bold">Sections</h1>
         </div>
@@ -63,7 +63,7 @@ export default async function SectionsPage({ params }: PageProps) {
               >
                 <div className="flex justify-between items-center mb-2">
                   <Link
-                    href={`/events/${paramResult.event}/sections/${section.id}`}
+                    href={`/competitions/${paramResult.competition}/sections/${section.id}`}
                     className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
                   >
                     {section.title}
@@ -186,3 +186,4 @@ export default async function SectionsPage({ params }: PageProps) {
     </>
   );
 }
+
