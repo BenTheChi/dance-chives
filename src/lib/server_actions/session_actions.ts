@@ -97,6 +97,16 @@ interface addSessionProps {
     url: string;
     file: File | null;
   }[];
+  subEvents?: {
+    id: string;
+    title: string;
+    type: "competition" | "workshop" | "session";
+    imageUrl?: string;
+    date: string;
+    city: string;
+    cityId?: number;
+    styles?: string[];
+  }[];
 }
 
 interface response {
@@ -189,6 +199,12 @@ export async function addSession(props: addSessionProps): Promise<response> {
     };
 
     await insertSession(sessionData);
+
+    // Create subevents (as relationships) if provided
+    if (props.subEvents && props.subEvents.length > 0) {
+      const { createSubEvents } = await import("@/db/queries/event");
+      await createSubEvents(sessionId, props.subEvents);
+    }
 
     const createdSession = await getSessionQuery(sessionId);
 
@@ -349,6 +365,28 @@ export async function editSession(
     };
 
     await editSessionQuery(sessionId, sessionData);
+
+    // Update subevents (as relationships) if provided
+    if (editedSession.subEvents !== undefined) {
+      const { createSubEvents } = await import("@/db/queries/event");
+      const driver = (await import("@/db/driver")).default;
+      const dbSession = driver.session();
+      try {
+        // Remove old subevent relationships
+        await dbSession.run(
+          `MATCH (s:Event:Session {id: $sessionId})
+           OPTIONAL MATCH (subEvent:Event)-[r:SUBEVENT_OF]->(s)
+           DELETE r`,
+          { sessionId }
+        );
+        // Create new subevent relationships
+        if (editedSession.subEvents && editedSession.subEvents.length > 0) {
+          await createSubEvents(sessionId, editedSession.subEvents);
+        }
+      } finally {
+        await dbSession.close();
+      }
+    }
 
     const updatedSession = await getSessionQuery(sessionId);
 

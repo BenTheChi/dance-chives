@@ -24,6 +24,7 @@ import UploadFile from "../ui/uploadfile";
 import { addSession, editSession } from "@/lib/server_actions/session_actions";
 import { usePathname, useRouter } from "next/navigation";
 import { SessionVideoForm } from "./session-video-form";
+import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(),
@@ -124,14 +125,55 @@ const sessionRoleSchema = z.object({
   user: userSearchItemSchema.nullable(),
 });
 
+// Subevent schema - now just references to existing events
+const subEventSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  type: z.enum(["competition", "workshop", "session"]),
+  imageUrl: z.string().optional(),
+  date: z.preprocess((val) => val ?? "", z.string()),
+  city: z.preprocess((val) => val ?? "", z.string()),
+  cityId: z.number().optional(),
+  styles: z.array(z.string()).optional(),
+});
+
 const formSchema = z.object({
   sessionDetails: sessionDetailsSchema,
   roles: z.array(sessionRoleSchema).optional(),
   videos: z.array(videoSchema),
   gallery: z.array(imageSchema),
+  subEvents: z.array(subEventSchema),
 });
 
 export type SessionFormValues = z.infer<typeof formSchema>;
+
+// Helper function to normalize subevents for form - convert from BaseEvent[] to form format
+function normalizeSubEventsForForm(
+  subEvents?: Array<{
+    id: string;
+    title: string;
+    type?: string;
+    imageUrl?: string;
+    date?: string;
+    city?: string | { name?: string; id?: number };
+    cityId?: number;
+    styles?: string[];
+  }>
+): SessionFormValues["subEvents"] {
+  if (!subEvents) return [];
+  return subEvents.map((subEvent) => ({
+    id: subEvent.id,
+    title: subEvent.title,
+    type:
+      (subEvent.type as "competition" | "workshop" | "session") ||
+      "competition",
+    imageUrl: subEvent.imageUrl,
+    date: subEvent.date || "",
+    city: typeof subEvent.city === 'string' ? subEvent.city : subEvent.city?.name || "",
+    cityId: subEvent.cityId || (typeof subEvent.city === 'object' && subEvent.city?.id) || undefined,
+    styles: subEvent.styles || [],
+  }));
+}
 
 interface SessionFormProps {
   initialData?: SessionFormValues;
@@ -141,6 +183,8 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
   const pathname = usePathname()?.split("/") || [];
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
+  // Extract current session ID from pathname (e.g., /sessions/[session]/edit or /sessions/[session])
+  const currentEventId = pathname[1] === "sessions" && pathname[2] ? pathname[2] : undefined;
 
   const [activeMainTab, setActiveMainTab] = useState("Session Details");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,6 +196,7 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
     defaultValues: initialData
       ? {
           ...initialData,
+          subEvents: initialData.subEvents || [],
         }
       : {
           sessionDetails: {
@@ -181,6 +226,7 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
           roles: [],
           videos: [],
           gallery: [],
+          subEvents: [],
         },
   });
 
@@ -190,8 +236,14 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
   const roles = watch("roles") ?? [];
   const videos = watch("videos") ?? [];
   const gallery = watch("gallery") ?? [];
+  const subEvents = watch("subEvents") ?? [];
 
-  const mainTabs = ["Session Details", "Roles", "Videos", "Photo Gallery"];
+  const mainTabs = ["Session Details", "Roles", "Subevents", "Videos", "Photo Gallery"];
+
+  // Subevent selection handler - using DebouncedSearchMultiSelect
+  const handleSubEventChange = (selectedEvents: SessionFormValues["subEvents"]) => {
+    setValue("subEvents", selectedEvents);
+  };
 
   const addVideo = () => {
     const newVideo = {
@@ -429,6 +481,112 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
             />
           )}
 
+          {activeMainTab === "Subevents" && (
+            <div className="space-y-6">
+              {/* SubEvents Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">
+                  Sub Events (Main Event)
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Select existing events to be subevents of this main event.
+                  Subevents cannot have their own subevents.
+                </p>
+
+                <DebouncedSearchMultiSelect<
+                  SessionFormValues["subEvents"][0] & {
+                    displayName: string;
+                    username: string;
+                  }
+                >
+                  value={subEvents.map((se) => ({
+                    ...se,
+                    displayName: se.title,
+                    username: se.id,
+                  }))}
+                  onChange={(values) => {
+                    handleSubEventChange(
+                      values.map((v) => ({
+                        id: v.id,
+                        title: v.title,
+                        type: v.type,
+                        imageUrl: v.imageUrl,
+                        date: v.date,
+                        city: v.city,
+                        cityId: v.cityId,
+                        styles: v.styles,
+                      }))
+                    );
+                  }}
+                  onSearch={async (keyword: string) => {
+                    const url = new URL("/api/events/subevents", window.location.origin);
+                    url.searchParams.set("keyword", keyword);
+                    if (currentEventId) {
+                      url.searchParams.set("excludeEventId", currentEventId);
+                    }
+                    const response = await fetch(url.toString());
+                    const data = await response.json();
+                    return (data.data || []).map(
+                      (item: SessionFormValues["subEvents"][0]) => ({
+                        ...item,
+                        displayName: item.title,
+                        username: item.id,
+                      })
+                    );
+                  }}
+                  getDisplayValue={(item) => item.title}
+                  getItemId={(item) => item.id}
+                  name="subEvents"
+                  placeholder="Search for events to add as subevents..."
+                  className="mb-6"
+                />
+
+                {/* Event Card Previews */}
+                {subEvents.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-md font-semibold mb-4">
+                      Selected Subevents
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {subEvents.map((subEvent) => (
+                        <div
+                          key={subEvent.id}
+                          className="border rounded-lg p-4"
+                        >
+                          <div className="relative aspect-video overflow-hidden rounded-lg mb-3">
+                            <img
+                              src={subEvent.imageUrl || "/exploreEvents.jpg"}
+                              alt={subEvent.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <h5 className="font-semibold text-sm mb-1">
+                            {subEvent.title}
+                          </h5>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            {subEvent.date} • {typeof subEvent.city === 'string' ? subEvent.city : (subEvent.city as any)?.name || ''}
+                          </p>
+                          {subEvent.styles && subEvent.styles.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {subEvent.styles.slice(0, 3).map((style) => (
+                                <span
+                                  key={style}
+                                  className="text-xs px-2 py-0.5 bg-secondary rounded"
+                                >
+                                  {style}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeMainTab === "Videos" && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
@@ -490,7 +648,7 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
 
           {/* Bottom Navigation */}
           <div className="flex justify-center gap-4 mt-8">
-            <Button type="button" variant="destructive">
+            <Button type="button" variant="destructive" onClick={() => router.back()}>
               Cancel
             </Button>
             <Button

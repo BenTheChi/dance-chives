@@ -81,6 +81,18 @@ export const getSession = async (id: string): Promise<Session> => {
     { id }
   );
 
+  // Get parent event if this session is a subevent
+  const parentEventResult = await session.run(
+    `
+    MATCH (s:Event:Session {id: $id})-[:SUBEVENT_OF]->(parent:Event)
+    RETURN parent {
+      id: parent.id,
+      title: parent.title
+    } as parentEvent
+    `,
+    { id }
+  );
+
   // Get roles (exclude TEAM_MEMBER - team members are shown separately)
   const validRoleFormats = getNeo4jRoleFormats().filter(
     (role) => role !== "TEAM_MEMBER"
@@ -197,6 +209,54 @@ export const getSession = async (id: string): Promise<Session> => {
     { id }
   );
 
+  // Get sub events - now using :SUBEVENT_OF relationship between Event nodes
+  // Subevents can be any event type (Competition, Workshop, Session)
+  const subEventsResult = await session.run(
+    `
+    MATCH (s:Event:Session {id: $id})
+    OPTIONAL MATCH (subEvent:Event)-[:SUBEVENT_OF]->(s)
+    OPTIONAL MATCH (subEvent)-[:IN]->(subCity:City)
+    OPTIONAL MATCH (sePoster:Image)-[:POSTER_OF]->(subEvent)
+    OPTIONAL MATCH (subCreator:User)-[:CREATED]->(subEvent)
+    OPTIONAL MATCH (subEvent)-[:STYLE]->(subStyle:Style)
+    
+    WITH subEvent, subCity, sePoster, subCreator, collect(DISTINCT subStyle.name) as styles
+    WHERE subEvent IS NOT NULL
+    RETURN collect({
+      id: subEvent.id,
+      title: subEvent.title,
+      description: subEvent.description,
+      schedule: subEvent.schedule,
+      startDate: subEvent.startDate,
+      address: subEvent.address,
+      startTime: subEvent.startTime,
+      endTime: subEvent.endTime,
+      creatorId: subCreator.id,
+      type: CASE
+        WHEN 'Competition' IN labels(subEvent) THEN 'competition'
+        WHEN 'Workshop' IN labels(subEvent) THEN 'workshop'
+        WHEN 'Session' IN labels(subEvent) THEN 'session'
+        ELSE 'competition'
+      END,
+      poster: sePoster {
+        id: sePoster.id,
+        title: sePoster.title,
+        url: sePoster.url
+      },
+      city: subCity {
+        id: subCity.id,
+        name: subCity.name,
+        countryCode: subCity.countryCode,
+        region: subCity.region,
+        population: subCity.population,
+        timezone: subCity.timezone
+      },
+      styles: styles
+    }) as subEvents
+  `,
+    { id }
+  );
+
   session.close();
 
   const sessionRecord = sessionResult.records[0];
@@ -209,6 +269,8 @@ export const getSession = async (id: string): Promise<Session> => {
   const videoStyles = videoStylesResult.records;
   const sessionStyles = sessionStylesResult.records[0]?.get("styles") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
+  const subEvents = subEventsResult.records[0]?.get("subEvents") || [];
+  const parentEvent = parentEventResult.records[0]?.get("parentEvent") || null;
 
   // Check if session exists
   if (!sessionData) {
@@ -305,6 +367,7 @@ export const getSession = async (id: string): Promise<Session> => {
       dates: dates,
       schedule: sessionData.schedule,
       creatorId: sessionData.creatorId,
+      parentEvent: parentEvent,
       poster: poster,
       city: city,
       styles: sessionStyles,
@@ -312,6 +375,16 @@ export const getSession = async (id: string): Promise<Session> => {
     roles,
     videos: videosWithStyles,
     gallery,
+    subEvents: subEvents.map((se: any) => ({
+      id: se.id,
+      title: se.title,
+      type: se.type,
+      imageUrl: se.poster?.url,
+      date: se.startDate || "",
+      city: se.city?.name || "",
+      cityId: se.city?.id,
+      styles: se.styles || [],
+    })),
   };
 };
 

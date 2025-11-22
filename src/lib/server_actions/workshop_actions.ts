@@ -94,7 +94,16 @@ interface addWorkshopProps {
     url: string;
     file: File | null;
   }[];
-  associatedEventId?: string | null;
+  subEvents?: {
+    id: string;
+    title: string;
+    type: "competition" | "workshop" | "session";
+    imageUrl?: string;
+    date: string;
+    city: string;
+    cityId?: number;
+    styles?: string[];
+  }[];
 }
 
 interface response {
@@ -189,6 +198,12 @@ export async function addWorkshop(props: addWorkshopProps): Promise<response> {
     };
 
     await insertWorkshop(workshop);
+
+    // Create subevents (as relationships) if provided
+    if (props.subEvents && props.subEvents.length > 0) {
+      const { createSubEvents } = await import("@/db/queries/event");
+      await createSubEvents(workshopId, props.subEvents);
+    }
 
     const createdWorkshop = await getWorkshopQuery(workshopId);
 
@@ -356,6 +371,28 @@ export async function editWorkshop(
     };
 
     await editWorkshopQuery(workshopId, workshop);
+
+    // Update subevents (as relationships) if provided
+    if (editedWorkshop.subEvents !== undefined) {
+      const { createSubEvents } = await import("@/db/queries/event");
+      const driver = (await import("@/db/driver")).default;
+      const session = driver.session();
+      try {
+        // Remove old subevent relationships
+        await session.run(
+          `MATCH (w:Event:Workshop {id: $workshopId})
+           OPTIONAL MATCH (subEvent:Event)-[r:SUBEVENT_OF]->(w)
+           DELETE r`,
+          { workshopId }
+        );
+        // Create new subevent relationships
+        if (editedWorkshop.subEvents && editedWorkshop.subEvents.length > 0) {
+          await createSubEvents(workshopId, editedWorkshop.subEvents);
+        }
+      } finally {
+        await session.close();
+      }
+    }
 
     const updatedWorkshop = await getWorkshopQuery(workshopId);
 

@@ -173,6 +173,17 @@ export default async function SessionPage({ params }: PageProps) {
               <h1 className="text-2xl font-bold">
                 {session.eventDetails.title}
               </h1>
+              {session.eventDetails.parentEvent && (
+                <div className="flex flex-row gap-2">
+                  <span>Main Event:</span>
+                  <Link
+                    href={`/events/${session.eventDetails.parentEvent.id}`}
+                    className="hover:text-blue-600 hover:underline transition-colors"
+                  >
+                    {session.eventDetails.parentEvent.title}
+                  </Link>
+                </div>
+              )}
               {/* Multiple Dates */}
               {session.eventDetails.dates && session.eventDetails.dates.length > 0 && (
                 <div className="flex flex-col gap-2">

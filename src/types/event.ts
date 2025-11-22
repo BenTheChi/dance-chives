@@ -3,6 +3,12 @@ import { UserSearchItem } from "./user";
 import { Image } from "./image";
 import { Video } from "./video";
 
+// Parent event interface
+export interface ParentEvent {
+  id: string;
+  title: string;
+}
+
 // Base EventDetails interface - common properties for all event types
 export interface BaseEventDetails {
   title: string;
@@ -16,6 +22,7 @@ export interface BaseEventDetails {
   poster?: Image | null;
   city: City;
   styles?: string[]; // danceStyleTags
+  parentEvent?: ParentEvent | null;
 }
 
 // Competition EventDetails - has startDate (single date), prize, entryCost

@@ -7,15 +7,12 @@ import { WorkshopFormValues } from "@/components/forms/workshop-form";
 import { auth } from "@/auth";
 import {
   canUpdateWorkshop,
-  WorkshopPermissionContext,
 } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
 import {
   getWorkshopCreator,
-  getWorkshopTeamMembers,
   isWorkshopTeamMember,
 } from "@/db/queries/workshop";
-import { getEventTeamMembers } from "@/db/queries/team-member";
 
 export default async function EditWorkshopPage({
   params,
@@ -45,14 +42,8 @@ export default async function EditWorkshopPage({
   // Check if user is workshop team member
   const isTeamMember = await isWorkshopTeamMember(workshop, session.user.id);
 
-  // Check if workshop is associated with event and user is event team member
-  let isEventTeamMember = false;
-  if (currWorkshop.associatedEventId) {
-    const eventTeamMembers = await getEventTeamMembers(
-      currWorkshop.associatedEventId
-    );
-    isEventTeamMember = eventTeamMembers.includes(session.user.id);
-  }
+  // Workshops are no longer associated with events as sub-events
+  const isEventTeamMember = false;
 
   // Check authorization - allow team members even without auth level
   const authLevel = session.user.auth ?? 0;
@@ -90,22 +81,34 @@ export default async function EditWorkshopPage({
 
   // Add null values to workshopDetails objects
   const formattedWorkshopDetails = {
-    ...currWorkshop.workshopDetails,
-    description: currWorkshop.workshopDetails.description || "",
-    schedule: currWorkshop.workshopDetails.schedule || "",
-    address: currWorkshop.workshopDetails.address || "",
-    startTime: currWorkshop.workshopDetails.startTime || "",
-    endTime: currWorkshop.workshopDetails.endTime || "",
-    cost: currWorkshop.workshopDetails.cost || "",
-    styles: currWorkshop.workshopDetails.styles || [],
-    poster: currWorkshop.workshopDetails.poster
+    ...currWorkshop.eventDetails,
+    description: currWorkshop.eventDetails?.description || "",
+    schedule: currWorkshop.eventDetails?.schedule || "",
+    address: currWorkshop.eventDetails?.address || "",
+    startTime: currWorkshop.eventDetails?.startTime || "",
+    endTime: currWorkshop.eventDetails?.endTime || "",
+    cost: currWorkshop.eventDetails?.cost || "",
+    styles: currWorkshop.eventDetails?.styles || [],
+    poster: currWorkshop.eventDetails?.poster
       ? {
-          ...currWorkshop.workshopDetails.poster,
-          title: currWorkshop.workshopDetails.poster.title || "",
+          ...currWorkshop.eventDetails.poster,
+          title: currWorkshop.eventDetails.poster.title || "",
           file: null,
         }
       : null,
   };
+
+  // Format subevents for form
+  const formattedSubEvents = (currWorkshop.subEvents || []).map((subEvent) => ({
+    id: subEvent.id,
+    title: subEvent.title,
+    type: (subEvent.type as "competition" | "workshop" | "session") || "competition",
+    imageUrl: subEvent.imageUrl,
+    date: subEvent.date || "",
+    city: subEvent.city || "",
+    cityId: subEvent.cityId,
+    styles: subEvent.styles || [],
+  }));
 
   const initialData: WorkshopFormValues = {
     workshopDetails:
@@ -113,7 +116,7 @@ export default async function EditWorkshopPage({
     roles: formattedRoles,
     videos: currWorkshop.videos,
     gallery: formattedPictures,
-    associatedEventId: currWorkshop.associatedEventId || null,
+    subEvents: formattedSubEvents,
   };
 
   return (

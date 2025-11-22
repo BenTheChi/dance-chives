@@ -9,6 +9,7 @@ import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 
 interface EventcardProps extends EventCard {
   roles?: string[];
+  href?: string; // Optional href for the title link, defaults to /events/${id}
 }
 
 const Eventcard = ({
@@ -21,23 +22,24 @@ const Eventcard = ({
   cityId,
   styles,
   roles,
+  href,
 }: EventcardProps) => {
+  const titleHref = href || `/events/${id}`;
+  
   return (
     <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
       <CardContent className="p-0">
         <div className="relative aspect-video overflow-hidden rounded-t-lg">
-          <Link href={`/events/${id}`}>
-            <Image
-              src={imageUrl || "/exploreEvents.jpg"}
-              alt={title}
-              fill
-              className="object-cover transition-transform duration-200 group-hover:scale-105"
-            />
-          </Link>
+          <Image
+            src={imageUrl || "/exploreEvents.jpg"}
+            alt={title}
+            fill
+            className="object-cover transition-transform duration-200 group-hover:scale-105"
+          />
         </div>
 
         <div className="sm:p-4 space-y-2 sm:space-y-3">
-          <Link href={`/events/${id}`}>
+          <Link href={titleHref}>
             <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
               {title}
             </h3>

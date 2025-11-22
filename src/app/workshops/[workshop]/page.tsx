@@ -66,14 +66,8 @@ export default async function WorkshopPage({ params }: PageProps) {
     ? await isWorkshopTeamMember(workshop.id, session.user.id)
     : false;
 
-  // Check if workshop is associated with event and user is event team member
-  let isEventTeamMember = false;
-  if (workshop.associatedEventId && session?.user?.id) {
-    const eventTeamMembers = await getEventTeamMembers(
-      workshop.associatedEventId
-    );
-    isEventTeamMember = eventTeamMembers.includes(session.user.id);
-  }
+  // Note: Workshops are no longer associated with events
+  const isEventTeamMember = false;
 
   // Check if user can edit the workshop
   const canEdit =
@@ -82,7 +76,7 @@ export default async function WorkshopPage({ params }: PageProps) {
           session.user.auth,
           {
             workshopId: workshop.id,
-            workshopCreatorId: workshop.workshopDetails.creatorId,
+            workshopCreatorId: workshop.eventDetails?.creatorId ?? "",
             isTeamMember: isTeamMember,
             isEventTeamMember: isEventTeamMember,
           },
@@ -97,7 +91,7 @@ export default async function WorkshopPage({ params }: PageProps) {
           session.user.auth,
           {
             workshopId: workshop.id,
-            workshopCreatorId: workshop.workshopDetails.creatorId,
+            workshopCreatorId: workshop.eventDetails?.creatorId ?? "",
           },
           session.user.id
         )
@@ -117,8 +111,8 @@ export default async function WorkshopPage({ params }: PageProps) {
   const allStyles = new Set<string>();
 
   // Add workshop-level styles
-  if (workshop.workshopDetails.styles) {
-    workshop.workshopDetails.styles.forEach((style) => allStyles.add(style));
+  if (workshop.eventDetails?.styles) {
+    workshop.eventDetails.styles.forEach((style) => allStyles.add(style));
   }
 
   // Add video-level styles
@@ -143,8 +137,8 @@ export default async function WorkshopPage({ params }: PageProps) {
   });
 
   // Fetch creator and team members for Team Members section
-  const creator = workshop.workshopDetails.creatorId
-    ? await getUser(workshop.workshopDetails.creatorId)
+  const creator = workshop.eventDetails?.creatorId
+    ? await getUser(workshop.eventDetails.creatorId)
     : null;
   const teamMemberIds = await getWorkshopTeamMembers(workshop.id);
   const teamMembers = await Promise.all(teamMemberIds.map((id) => getUser(id)));
@@ -152,18 +146,9 @@ export default async function WorkshopPage({ params }: PageProps) {
     (member): member is NonNullable<typeof member> => member !== null
   );
 
-  // Fetch event team members separately if workshop is associated with an event
-  let eventTeamMemberIds: string[] = [];
-  let eventTeamMembers: NonNullable<Awaited<ReturnType<typeof getUser>>>[] = [];
-  if (workshop.associatedEventId) {
-    eventTeamMemberIds = await getEventTeamMembers(workshop.associatedEventId);
-    const eventTeamMembersData = await Promise.all(
-      eventTeamMemberIds.map((id) => getUser(id))
-    );
-    eventTeamMembers = eventTeamMembersData.filter(
-      (member): member is NonNullable<typeof member> => member !== null
-    );
-  }
+  // Note: Workshops are no longer associated with events
+  const eventTeamMemberIds: string[] = [];
+  const eventTeamMembers: NonNullable<Awaited<ReturnType<typeof getUser>>>[] = [];
 
   return (
     <>
@@ -187,7 +172,7 @@ export default async function WorkshopPage({ params }: PageProps) {
           </div>
 
           <PosterImage
-            poster={workshop.workshopDetails.poster}
+            poster={workshop.eventDetails.poster}
             className="md:col-span-1 xl:col-span-1"
           />
 
@@ -195,57 +180,68 @@ export default async function WorkshopPage({ params }: PageProps) {
             {/* Workshop Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">
-                {workshop.workshopDetails.title}
+                {workshop.eventDetails.title}
               </h1>
+              {workshop.eventDetails.parentEvent && (
+                <div className="flex flex-row gap-2">
+                  <span>Main Event:</span>
+                  <Link
+                    href={`/events/${workshop.eventDetails.parentEvent.id}`}
+                    className="hover:text-blue-600 hover:underline transition-colors"
+                  >
+                    {workshop.eventDetails.parentEvent.title}
+                  </Link>
+                </div>
+              )}
               <div className="flex flex-row gap-2">
                 <Calendar />
                 <b>Date:</b>
-                {workshop.workshopDetails.startDate}
+                {workshop.eventDetails.startDate}
               </div>
               <div className="flex flex-row gap-2">
                 <Building />
                 <b>City:</b>{" "}
-                {workshop.workshopDetails.city.id ? (
+                {workshop.eventDetails.city.id ? (
                   <Link
-                    href={`/cities/${workshop.workshopDetails.city.id}`}
+                    href={`/cities/${workshop.eventDetails.city.id}`}
                     className="hover:text-blue-600 hover:underline transition-colors"
                   >
-                    {workshop.workshopDetails.city.name}
-                    {workshop.workshopDetails.city.countryCode &&
-                      `, ${workshop.workshopDetails.city.countryCode}`}
+                    {workshop.eventDetails.city.name}
+                    {workshop.eventDetails.city.countryCode &&
+                      `, ${workshop.eventDetails.city.countryCode}`}
                   </Link>
                 ) : (
                   <>
-                    {workshop.workshopDetails.city.name}
-                    {workshop.workshopDetails.city.countryCode &&
-                      `, ${workshop.workshopDetails.city.countryCode}`}
+                    {workshop.eventDetails.city.name}
+                    {workshop.eventDetails.city.countryCode &&
+                      `, ${workshop.eventDetails.city.countryCode}`}
                   </>
                 )}
               </div>
-              {workshop.workshopDetails.address && (
+              {workshop.eventDetails.address && (
                 <div className="flex flex-row gap-2">
                   <div className="flex flex-row gap-2">
                     <MapPin />
                     <b>Location:</b>
                   </div>
                   <div className="whitespace-pre-wrap">
-                    {workshop.workshopDetails.address}
+                    {workshop.eventDetails.address}
                   </div>
                 </div>
               )}
-              {workshop.workshopDetails.startTime &&
-                workshop.workshopDetails.endTime && (
+              {workshop.eventDetails.startTime &&
+                workshop.eventDetails.endTime && (
                   <div className="flex flex-row gap-2">
                     <Clock />
                     <b>Time:</b>{" "}
-                    {formatTimeToAMPM(workshop.workshopDetails.startTime)} -{" "}
-                    {formatTimeToAMPM(workshop.workshopDetails.endTime)}
+                    {formatTimeToAMPM(workshop.eventDetails.startTime)} -{" "}
+                    {formatTimeToAMPM(workshop.eventDetails.endTime)}
                   </div>
                 )}
-              {workshop.workshopDetails.cost && (
+              {workshop.eventDetails.cost && (
                 <div className="flex flex-row gap-2">
                   <DollarSign />
-                  <b>Cost:</b> {workshop.workshopDetails.cost}
+                  <b>Cost:</b> {workshop.eventDetails.cost}
                 </div>
               )}
               {workshopStyles.length > 0 && (
@@ -256,17 +252,6 @@ export default async function WorkshopPage({ params }: PageProps) {
                       <StyleBadge key={style} style={style} />
                     ))}
                   </div>
-                </div>
-              )}
-              {workshop.associatedEventId && (
-                <div className="flex flex-row gap-2">
-                  <b>Associated Event:</b>
-                  <Link
-                    href={`/events/${workshop.associatedEventId}`}
-                    className="hover:text-blue-600 hover:underline"
-                  >
-                    View Event
-                  </Link>
                 </div>
               )}
             </section>
@@ -388,26 +373,26 @@ export default async function WorkshopPage({ params }: PageProps) {
 
           {/* Description and Schedule */}
           <div className="flex flex-col gap-4 md:col-span-2 xl:col-span-2">
-            {workshop.workshopDetails.description && (
+            {workshop.eventDetails.description && (
               <section className="bg-red-100 p-4 rounded-md">
                 <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl mb-2">
                   <FileText />
                   Description:
                 </div>
                 <div className="whitespace-pre-wrap">
-                  {workshop.workshopDetails.description}
+                  {workshop.eventDetails.description}
                 </div>
               </section>
             )}
 
-            {workshop.workshopDetails.schedule && (
+            {workshop.eventDetails.schedule && (
               <section className="bg-blue-100 p-4 rounded-md">
                 <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl mb-2">
                   <Calendar />
                   Schedule:
                 </div>
                 <div className="whitespace-pre-wrap">
-                  {workshop.workshopDetails.schedule}
+                  {workshop.eventDetails.schedule}
                 </div>
               </section>
             )}
@@ -419,7 +404,7 @@ export default async function WorkshopPage({ params }: PageProps) {
                 <VideoGallery
                   videos={workshop.videos}
                   eventLink={`/workshops/${workshop.id}`}
-                  eventTitle={workshop.workshopDetails.title}
+                  eventTitle={workshop.eventDetails.title}
                   eventId={workshop.id}
                   sectionTitle=""
                   sectionStyles={[]}

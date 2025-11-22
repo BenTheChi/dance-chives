@@ -12,6 +12,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = new URL(request.url);
   const keyword = searchParams.get("keyword");
+  const excludeEventId = searchParams.get("excludeEventId");
 
   try {
     // Get user's auth level
@@ -25,7 +26,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const events = await searchEventsForSubeventSelection(
       session.user.id,
       authLevel,
-      keyword || undefined
+      keyword || undefined,
+      excludeEventId || undefined
     );
 
     return NextResponse.json({ data: events });

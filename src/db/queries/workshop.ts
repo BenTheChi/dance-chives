@@ -76,6 +76,18 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
     { id }
   );
 
+  // Get parent event if this workshop is a subevent
+  const parentEventResult = await session.run(
+    `
+    MATCH (w:Event:Workshop {id: $id})-[:SUBEVENT_OF]->(parent:Event)
+    RETURN parent {
+      id: parent.id,
+      title: parent.title
+    } as parentEvent
+    `,
+    { id }
+  );
+
   // Get roles (exclude TEAM_MEMBER - team members are shown separately)
   const validRoles = WORKSHOP_ROLES.filter((role) => role !== "TEAM_MEMBER");
   const rolesResult = await session.run(
@@ -141,6 +153,54 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
     { id }
   );
 
+  // Get sub events - now using :SUBEVENT_OF relationship between Event nodes
+  // Subevents can be any event type (Competition, Workshop, Session)
+  const subEventsResult = await session.run(
+    `
+    MATCH (w:Event:Workshop {id: $id})
+    OPTIONAL MATCH (subEvent:Event)-[:SUBEVENT_OF]->(w)
+    OPTIONAL MATCH (subEvent)-[:IN]->(subCity:City)
+    OPTIONAL MATCH (sePoster:Image)-[:POSTER_OF]->(subEvent)
+    OPTIONAL MATCH (subCreator:User)-[:CREATED]->(subEvent)
+    OPTIONAL MATCH (subEvent)-[:STYLE]->(subStyle:Style)
+    
+    WITH subEvent, subCity, sePoster, subCreator, collect(DISTINCT subStyle.name) as styles
+    WHERE subEvent IS NOT NULL
+    RETURN collect({
+      id: subEvent.id,
+      title: subEvent.title,
+      description: subEvent.description,
+      schedule: subEvent.schedule,
+      startDate: subEvent.startDate,
+      address: subEvent.address,
+      startTime: subEvent.startTime,
+      endTime: subEvent.endTime,
+      creatorId: subCreator.id,
+      type: CASE
+        WHEN 'Competition' IN labels(subEvent) THEN 'competition'
+        WHEN 'Workshop' IN labels(subEvent) THEN 'workshop'
+        WHEN 'Session' IN labels(subEvent) THEN 'session'
+        ELSE 'competition'
+      END,
+      poster: sePoster {
+        id: sePoster.id,
+        title: sePoster.title,
+        url: sePoster.url
+      },
+      city: subCity {
+        id: subCity.id,
+        name: subCity.name,
+        countryCode: subCity.countryCode,
+        region: subCity.region,
+        population: subCity.population,
+        timezone: subCity.timezone
+      },
+      styles: styles
+    }) as subEvents
+  `,
+    { id }
+  );
+
   session.close();
 
   const workshopRecord = workshopResult.records[0];
@@ -152,6 +212,7 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
   const videoStyles = videoStylesResult.records;
   const workshopStyles = workshopStylesResult.records[0]?.get("styles") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
+  const parentEvent = parentEventResult.records[0]?.get("parentEvent") || null;
 
   // Check if workshop exists
   if (!workshop) {
@@ -190,6 +251,8 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
     styles: videoStylesMap.get(video.id) || [],
   }));
 
+  const subEvents = subEventsResult.records[0]?.get("subEvents") || [];
+
   return {
     ...workshop,
     eventDetails: {
@@ -205,10 +268,21 @@ export const getWorkshop = async (id: string): Promise<Workshop> => {
       poster: poster,
       city: city,
       styles: workshopStyles,
+      parentEvent: parentEvent,
     },
     roles,
     videos: videosWithStyles,
     gallery,
+    subEvents: subEvents.map((se: any) => ({
+      id: se.id,
+      title: se.title,
+      type: se.type,
+      imageUrl: se.poster?.url,
+      date: se.startDate || "",
+      city: se.city?.name || "",
+      cityId: se.city?.id,
+      styles: se.styles || [],
+    })),
   };
 };
 
@@ -1003,17 +1077,6 @@ export const editWorkshop = async (
         { id: workshopId, validRoles: WORKSHOP_ROLES }
       );
     }
-
-    // Update event association
-    await tx.run(
-      `
-      MATCH (w:Event:Workshop {id: $id})
-      OPTIONAL MATCH (w)-[oldEventRel:IN]->(:Event)
-      DELETE oldEventRel
-      WITH w
-    `,
-      { id: workshopId }
-    );
 
     // Update workshop styles
     await tx.run(

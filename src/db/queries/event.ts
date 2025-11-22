@@ -268,6 +268,18 @@ export const getEvent = async (id: string): Promise<Competition> => {
     { id }
   );
 
+  // Get parent event if this event is a subevent
+  const parentEventResult = await session.run(
+    `
+    MATCH (e:Event:Competition {id: $id})-[:SUBEVENT_OF]->(parent:Event)
+    RETURN parent {
+      id: parent.id,
+      title: parent.title
+    } as parentEvent
+    `,
+    { id }
+  );
+
   // Get roles (exclude TEAM_MEMBER - team members are shown separately)
   const validRoleFormats = getNeo4jRoleFormats().filter(
     (role) => role !== "TEAM_MEMBER"
@@ -714,6 +726,7 @@ export const getEvent = async (id: string): Promise<Competition> => {
   const roles = rolesResult.records[0]?.get("roles") || [];
   const subEvents = subEventsResult.records[0]?.get("subEvents") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
+  const parentEvent = parentEventResult.records[0]?.get("parentEvent") || null;
 
   // Check if event exists
   if (!event) {
@@ -735,6 +748,7 @@ export const getEvent = async (id: string): Promise<Competition> => {
       creatorId: event.creatorId,
       poster: event.poster,
       city: event.city,
+      parentEvent: parentEvent,
     },
     roles,
     sections,
@@ -745,7 +759,8 @@ export const getEvent = async (id: string): Promise<Competition> => {
 
 // Helper function to create subevent relationships
 // Subevents are now Event nodes with :SUBEVENT_OF relationship
-const createSubEvents = async (eventId: string, subEvents: any[]) => {
+// Works with Competition, Workshop, and Session event types
+export const createSubEvents = async (eventId: string, subEvents: any[]) => {
   if (subEvents.length === 0) return;
   const session = driver.session();
   try {
@@ -766,8 +781,9 @@ const createSubEvents = async (eventId: string, subEvents: any[]) => {
       }
 
       // Create :SUBEVENT_OF relationship from subevent to main event
+      // Works with any Event type (Competition, Workshop, Session)
       await session.run(
-        `MATCH (mainEvent:Event:Competition {id: $eventId})
+        `MATCH (mainEvent:Event {id: $eventId})
          MATCH (subEvent:Event {id: $subEventId})
          MERGE (subEvent)-[:SUBEVENT_OF]->(mainEvent)`,
         {
@@ -3116,12 +3132,14 @@ export const searchAccessibleEvents = async (
  * - User has access to (created or team member, or moderator/admin/super_admin)
  * - Do not already have a parent event (to prevent nested subevents)
  * - Match the keyword if provided
- * - Include all event types (Competition, Workshop, Session)
+ * - Include all event types the user has created (competition, workshop, session)
+ * - Exclude the current event (if excludeEventId is provided)
  */
 export const searchEventsForSubeventSelection = async (
   userId: string,
   authLevel: number,
-  keyword?: string
+  keyword?: string,
+  excludeEventId?: string
 ): Promise<
   Array<{
     id: string;
@@ -3149,6 +3167,11 @@ export const searchEventsForSubeventSelection = async (
         }
       `;
 
+      if (excludeEventId) {
+        query += ` AND e.id <> $excludeEventId`;
+        params.excludeEventId = excludeEventId;
+      }
+
       if (keyword && keyword.trim()) {
         query += ` AND toLower(e.title) CONTAINS toLower($keyword)`;
         params.keyword = keyword.trim();
@@ -3166,6 +3189,11 @@ export const searchEventsForSubeventSelection = async (
             (e)-[:SUBEVENT_OF]->(:Event)
           }
       `;
+
+      if (excludeEventId) {
+        query += ` AND e.id <> $excludeEventId`;
+        params.excludeEventId = excludeEventId;
+      }
 
       if (keyword && keyword.trim()) {
         query += ` AND toLower(e.title) CONTAINS toLower($keyword)`;
@@ -3776,8 +3804,6 @@ export interface CalendarWorkshopData {
     type: string;
   } | null;
   styles: string[];
-  associatedEventId?: string;
-  associatedEventTitle?: string;
 }
 
 export interface CalendarSessionData {
@@ -4089,11 +4115,9 @@ export const getCitySchedule = async (
     // Get workshops in this city
     const workshopsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)
-       OPTIONAL MATCH (w)-[:IN]->(e:Event)
        OPTIONAL MATCH (wPoster:Image)-[:POSTER_OF]->(w)
        RETURN w.id as id, w.title as title, w.startDate as startDate,
               w.startTime as startTime, w.endTime as endTime,
-              e.id as associatedEventId, e.title as associatedEventTitle,
               wPoster {
                 id: wPoster.id,
                 title: wPoster.title,
@@ -4154,8 +4178,6 @@ export const getCitySchedule = async (
           endTime: record.get("endTime") || undefined,
           poster: record.get("poster") || null,
           styles: allStyles,
-          associatedEventId: record.get("associatedEventId") || undefined,
-          associatedEventTitle: record.get("associatedEventTitle") || undefined,
         };
       }
     );

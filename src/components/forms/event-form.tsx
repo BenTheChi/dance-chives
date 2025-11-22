@@ -133,8 +133,8 @@ const subEventSchema = z.object({
   title: z.string(),
   type: z.enum(["competition", "workshop", "session"]),
   imageUrl: z.string().optional(),
-  date: z.string(),
-  city: z.string(),
+  date: z.preprocess((val) => val ?? "", z.string()),
+  city: z.preprocess((val) => val ?? "", z.string()),
   cityId: z.number().optional(),
   styles: z.array(z.string()).optional(),
 });
@@ -174,7 +174,7 @@ function normalizeSubEventsForForm(
     type?: string;
     imageUrl?: string;
     date?: string;
-    city?: string;
+    city?: string | { name?: string; id?: number };
     cityId?: number;
     styles?: string[];
   }>
@@ -188,8 +188,14 @@ function normalizeSubEventsForForm(
       "competition",
     imageUrl: subEvent.imageUrl,
     date: subEvent.date || "",
-    city: subEvent.city || "",
-    cityId: subEvent.cityId,
+    city:
+      typeof subEvent.city === "string"
+        ? subEvent.city
+        : subEvent.city?.name || "",
+    cityId:
+      subEvent.cityId ||
+      (typeof subEvent.city === "object" && subEvent.city?.id) ||
+      undefined,
     styles: subEvent.styles || [],
   }));
 }
@@ -202,6 +208,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
+  // Extract current event ID from pathname (e.g., /events/[event]/edit or /events/[event])
+  const currentEventId = pathname[1] === "events" && pathname[2] ? pathname[2] : undefined;
 
   const [activeMainTab, setActiveMainTab] = useState("Event Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
@@ -613,11 +621,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     );
                   }}
                   onSearch={async (keyword: string) => {
-                    const response = await fetch(
-                      `/api/events/subevents?keyword=${encodeURIComponent(
-                        keyword
-                      )}`
-                    );
+                    const url = new URL("/api/events/subevents", window.location.origin);
+                    url.searchParams.set("keyword", keyword);
+                    if (currentEventId) {
+                      url.searchParams.set("excludeEventId", currentEventId);
+                    }
+                    const response = await fetch(url.toString());
                     const data = await response.json();
                     return (data.data || []).map(
                       (item: FormValues["subEvents"][0]) => ({
@@ -657,7 +666,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                             {subEvent.title}
                           </h5>
                           <p className="text-xs text-muted-foreground mb-2">
-                            {subEvent.date} • {subEvent.city}
+                            {subEvent.date} •{" "}
+                            {typeof subEvent.city === "string"
+                              ? subEvent.city
+                              : (subEvent.city as any)?.name || ""}
                           </p>
                           {subEvent.styles && subEvent.styles.length > 0 && (
                             <div className="flex flex-wrap gap-1">
@@ -770,7 +782,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {/* Bottom Navigation */}
           <div className="flex justify-center gap-4 mt-8">
-            <Button type="button" variant="destructive">
+            <Button type="button" variant="destructive" onClick={() => router.back()}>
               Cancel
             </Button>
             <Button

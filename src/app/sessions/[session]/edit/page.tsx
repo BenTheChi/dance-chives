@@ -103,13 +103,30 @@ export default async function EditSessionPage({
       : null,
   };
 
+  // Format subevents for form
+  const formattedSubEvents = ((currSession.subEvents || []) as any[]).map(
+    (subEvent: any) => ({
+      id: subEvent.id,
+      title: subEvent.title,
+      type:
+        (subEvent.type as "competition" | "workshop" | "session") ||
+        "competition",
+      imageUrl: subEvent.imageUrl,
+      date: subEvent.date || "",
+      city: subEvent.city || "",
+      cityId: subEvent.cityId,
+      styles: subEvent.styles || [],
+    })
+  );
+
   const initialData: SessionFormValues = {
     sessionDetails:
       formattedSessionDetails as SessionFormValues["sessionDetails"],
     roles: formattedRoles,
     videos: currSession.videos,
     gallery: formattedPictures,
-  };
+    subEvents: formattedSubEvents,
+  } as SessionFormValues;
 
   return (
     <>

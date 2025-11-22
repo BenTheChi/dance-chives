@@ -169,7 +169,7 @@ export default async function EventPage({ params }: PageProps) {
           </div>
 
           <PosterImage
-            poster={event.eventDetails.poster}
+            poster={event.eventDetails.poster ?? null}
             className="md:col-span-1 xl:col-span-1"
           />
 
@@ -177,6 +177,17 @@ export default async function EventPage({ params }: PageProps) {
             {/* Event Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
+              {event.eventDetails.parentEvent && (
+                <div className="flex flex-row gap-2">
+                  <span>Main Event:</span>
+                  <Link
+                    href={`/events/${event.eventDetails.parentEvent.id}`}
+                    className="hover:text-blue-600 hover:underline transition-colors"
+                  >
+                    {event.eventDetails.parentEvent.title}
+                  </Link>
+                </div>
+              )}
               <div className="flex flex-row gap-2">
                 <Calendar />
                 <b>Date:</b>
@@ -507,17 +518,17 @@ export default async function EventPage({ params }: PageProps) {
                   };
 
                   return (
-                    <Link key={subEvent.id} href={eventRoute}>
-                      <Eventcard
-                        id={eventCard.id}
-                        title={eventCard.title}
-                        imageUrl={eventCard.imageUrl}
-                        date={eventCard.date}
-                        city={eventCard.city}
-                        cityId={eventCard.cityId}
-                        styles={eventCard.styles}
-                      />
-                    </Link>
+                    <Eventcard
+                      key={subEvent.id}
+                      id={eventCard.id}
+                      title={eventCard.title}
+                      imageUrl={eventCard.imageUrl}
+                      date={eventCard.date}
+                      city={eventCard.city}
+                      cityId={eventCard.cityId}
+                      styles={eventCard.styles}
+                      href={eventRoute}
+                    />
                   );
                 })}
               </div>
