@@ -1,5 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getEventSections } from "@/db/queries/event";
+import { getCompetitionSections } from "@/db/queries/competition";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -30,7 +30,7 @@ export default async function SectionsPage({ params }: PageProps) {
     notFound();
   }
 
-  const { sections, title } = await getEventSections(paramResult.event);
+  const { sections, title } = await getCompetitionSections(paramResult.event);
 
   return (
     <>

@@ -87,7 +87,13 @@ export const getSession = async (id: string): Promise<Session> => {
     MATCH (s:Event:Session {id: $id})-[:SUBEVENT_OF]->(parent:Event)
     RETURN parent {
       id: parent.id,
-      title: parent.title
+      title: parent.title,
+      type: CASE
+        WHEN 'Competition' IN labels(parent) THEN 'competition'
+        WHEN 'Workshop' IN labels(parent) THEN 'workshop'
+        WHEN 'Session' IN labels(parent) THEN 'session'
+        ELSE 'competition'
+      END
     } as parentEvent
     `,
     { id }

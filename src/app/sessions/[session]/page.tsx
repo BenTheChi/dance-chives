@@ -157,9 +157,7 @@ export default async function SessionPage({ params }: PageProps) {
                 <Link href={`/sessions/${session.id}/edit`}>Edit</Link>
               </Button>
             )}
-            {canDelete && (
-              <DeleteSessionButton sessionId={session.id} />
-            )}
+            {canDelete && <DeleteSessionButton sessionId={session.id} />}
           </div>
 
           <PosterImage
@@ -185,29 +183,31 @@ export default async function SessionPage({ params }: PageProps) {
                 </div>
               )}
               {/* Multiple Dates */}
-              {session.eventDetails.dates && session.eventDetails.dates.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-row gap-2">
-                    <Calendar />
-                    <b>Dates:</b>
-                  </div>
-                  {session.eventDetails.dates.map((date, index) => (
-                    <div key={index} className="ml-6 flex flex-col gap-1">
-                      <div className="flex flex-row gap-2">
-                        <span>{date.date}</span>
-                      </div>
-                      {(date.startTime || date.endTime) && (
-                        <div className="flex flex-row gap-2 ml-4">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {formatTimeToAMPM(date.startTime)} - {formatTimeToAMPM(date.endTime)}
-                          </span>
-                        </div>
-                      )}
+              {session.eventDetails.dates &&
+                session.eventDetails.dates.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-row gap-2">
+                      <Calendar />
+                      <b>Dates:</b>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {session.eventDetails.dates.map((date, index) => (
+                      <div key={index} className="ml-6 flex flex-col gap-1">
+                        <div className="flex flex-row gap-2">
+                          <span>{date.date}</span>
+                        </div>
+                        {(date.startTime || date.endTime) && (
+                          <div className="flex flex-row gap-2 ml-4">
+                            <Clock className="w-4 h-4" />
+                            <span>
+                              {formatTimeToAMPM(date.startTime)} -{" "}
+                              {formatTimeToAMPM(date.endTime)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               <div className="flex flex-row gap-2">
                 <Building />
                 <b>City:</b>{" "}
@@ -401,4 +401,3 @@ export default async function SessionPage({ params }: PageProps) {
     </>
   );
 }
-

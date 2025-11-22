@@ -158,18 +158,29 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.eventsCreated.map((event: any) => (
-                  <Eventcard
-                    key={event.eventId}
-                    id={event.eventId}
-                    title={event.eventTitle}
-                    imageUrl={event.imageUrl}
-                    date={event.startDate || ""}
-                    city={event.city || ""}
-                    cityId={event.cityId}
-                    styles={event.styles || []}
-                  />
-                ))}
+                {profile.eventsCreated.map((event: any) => {
+                  const eventType = event.eventType || "competition";
+                  const eventRoute =
+                    eventType === "workshop"
+                      ? `/workshops/${event.eventId}`
+                      : eventType === "session"
+                      ? `/sessions/${event.eventId}`
+                      : `/events/${event.eventId}`;
+                  
+                  return (
+                    <Eventcard
+                      key={event.eventId}
+                      id={event.eventId}
+                      title={event.eventTitle}
+                      imageUrl={event.imageUrl}
+                      date={event.startDate || ""}
+                      city={event.city || ""}
+                      cityId={event.cityId}
+                      styles={event.styles || []}
+                      href={eventRoute}
+                    />
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -186,19 +197,30 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.eventsWithRoles.map((event: any) => (
-                  <Eventcard
-                    key={event.eventId}
-                    id={event.eventId}
-                    title={event.eventTitle}
-                    imageUrl={event.imageUrl}
-                    date={event.startDate || ""}
-                    city={event.city || ""}
-                    cityId={event.cityId}
-                    styles={event.styles || []}
-                    roles={event.roles || []}
-                  />
-                ))}
+                {profile.eventsWithRoles.map((event: any) => {
+                  const eventType = event.eventType || "competition";
+                  const eventRoute =
+                    eventType === "workshop"
+                      ? `/workshops/${event.eventId}`
+                      : eventType === "session"
+                      ? `/sessions/${event.eventId}`
+                      : `/events/${event.eventId}`;
+                  
+                  return (
+                    <Eventcard
+                      key={event.eventId}
+                      id={event.eventId}
+                      title={event.eventTitle}
+                      imageUrl={event.imageUrl}
+                      date={event.startDate || ""}
+                      city={event.city || ""}
+                      cityId={event.cityId}
+                      styles={event.styles || []}
+                      roles={event.roles || []}
+                      href={eventRoute}
+                    />
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

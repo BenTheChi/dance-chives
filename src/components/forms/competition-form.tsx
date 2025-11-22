@@ -17,13 +17,15 @@ import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, CompetitionDetails, Role } from "@/types/event";
 import { Image } from "@/types/image";
-import { EventDetailsForm } from "./event-details-form";
+import { CompetitionDetailsForm } from "./competition-details-form";
 import RolesForm from "./roles-form";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
 import UploadFile from "../ui/uploadfile";
-import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
+import { addCompetition, editCompetition } from "@/lib/server_actions/competition_actions";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -262,6 +264,21 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
   const subEvents = watch("subEvents") ?? [];
+  const parentEvent = eventDetails?.parentEvent;
+
+  // Helper function to get parent event route
+  const getParentEventRoute = (type?: string, id?: string) => {
+    if (!id) return "#";
+    switch (type) {
+      case "workshop":
+        return `/workshops/${id}`;
+      case "session":
+        return `/sessions/${id}`;
+      case "competition":
+      default:
+        return `/events/${id}`;
+    }
+  };
   const roles = watch("roles") ?? [];
   const galleryRaw = watch("gallery") ?? [];
   // Normalize gallery to ensure all images have the type property
@@ -351,12 +368,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
       let response;
       if (isEditing) {
-        response = await editEvent(
+        response = await editCompetition(
           pathname[pathname.length - 2],
           normalizedData
         );
       } else {
-        response = await addEvent(normalizedData);
+        response = await addCompetition(normalizedData);
       }
 
       if (response.error) {
@@ -567,7 +584,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {/* Tab Content */}
           {activeMainTab === "Event Details" && (
-            <EventDetailsForm
+            <CompetitionDetailsForm
               control={control}
               setValue={setValue}
               eventDetails={eventDetails as CompetitionDetails}
@@ -585,7 +602,20 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {activeMainTab === "Subevents" && (
             <div className="space-y-6">
-              {/* SubEvents Section */}
+              {isEditing && parentEvent ? (
+                <Alert>
+                  <AlertDescription>
+                    This event is already the subevent of{" "}
+                    <Link
+                      href={getParentEventRoute(parentEvent.type, parentEvent.id)}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      {parentEvent.title}
+                    </Link>
+                    . Remove this event as a subevent if you would like to make this the main event.
+                  </AlertDescription>
+                </Alert>
+              ) : (
               <div>
                 <h3 className="text-lg font-semibold mb-4">
                   Sub Events (Main Event)
@@ -689,6 +719,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   </div>
                 )}
               </div>
+              )}
             </div>
           )}
 

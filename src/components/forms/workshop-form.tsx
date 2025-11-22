@@ -28,6 +28,8 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { WorkshopVideoForm } from "./workshop-video-form";
 import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
+import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(),
@@ -224,6 +226,21 @@ export default function WorkshopForm({ initialData }: WorkshopFormProps = {}) {
   const videos = watch("videos") ?? [];
   const galleryRaw = watch("gallery") ?? [];
   const subEvents = watch("subEvents") ?? [];
+  const parentEvent = workshopDetails?.parentEvent;
+
+  // Helper function to get parent event route
+  const getParentEventRoute = (type?: string, id?: string) => {
+    if (!id) return "#";
+    switch (type) {
+      case "workshop":
+        return `/workshops/${id}`;
+      case "session":
+        return `/sessions/${id}`;
+      case "competition":
+      default:
+        return `/events/${id}`;
+    }
+  };
   // Normalize gallery to ensure all images have the type property
   const gallery: Image[] = galleryRaw.map((img) => ({
     ...img,
@@ -484,7 +501,20 @@ export default function WorkshopForm({ initialData }: WorkshopFormProps = {}) {
 
           {activeMainTab === "Subevents" && (
             <div className="space-y-6">
-              {/* SubEvents Section */}
+              {isEditing && parentEvent ? (
+                <Alert>
+                  <AlertDescription>
+                    This event is already the subevent of{" "}
+                    <Link
+                      href={getParentEventRoute(parentEvent.type, parentEvent.id)}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      {parentEvent.title}
+                    </Link>
+                    . Remove this event as a subevent if you would like to make this the main event.
+                  </AlertDescription>
+                </Alert>
+              ) : (
               <div>
                 <h3 className="text-lg font-semibold mb-4">
                   Sub Events (Main Event)
@@ -520,12 +550,12 @@ export default function WorkshopForm({ initialData }: WorkshopFormProps = {}) {
                     );
                   }}
                   onSearch={async (keyword: string) => {
-                    const url = new URL("/api/events/subevents", window.location.origin);
-                    url.searchParams.set("keyword", keyword);
-                    if (currentEventId) {
-                      url.searchParams.set("excludeEventId", currentEventId);
-                    }
-                    const response = await fetch(url.toString());
+                      const url = new URL("/api/events/subevents", window.location.origin);
+                      url.searchParams.set("keyword", keyword);
+                      if (currentEventId) {
+                        url.searchParams.set("excludeEventId", currentEventId);
+                      }
+                      const response = await fetch(url.toString());
                     const data = await response.json();
                     return (data.data || []).map(
                       (item: WorkshopFormValues["subEvents"][0]) => ({
@@ -588,6 +618,7 @@ export default function WorkshopForm({ initialData }: WorkshopFormProps = {}) {
                   </div>
                 )}
               </div>
+              )}
             </div>
           )}
 

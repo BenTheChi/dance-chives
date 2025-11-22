@@ -7,6 +7,7 @@ import { Video } from "./video";
 export interface ParentEvent {
   id: string;
   title: string;
+  type?: "competition" | "workshop" | "session";
 }
 
 // Base EventDetails interface - common properties for all event types

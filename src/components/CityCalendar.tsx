@@ -23,14 +23,10 @@ import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {
   CalendarEventData,
-  CalendarSubEventData,
-  CalendarWorkshopData,
   CalendarSessionData,
-} from "@/db/queries/event";
+} from "@/db/queries/competition";
 import {
   convertEventToCalendarEvent,
-  convertSubEventToCalendarEvent,
-  convertWorkshopToCalendarEvent,
   convertSessionToCalendarEvents,
   CalendarEvent,
 } from "@/lib/utils/calendar-utils";
@@ -58,18 +54,23 @@ const localizer = dateFnsLocalizer({
 });
 
 interface CityCalendarProps {
-  events: CalendarEventData[];
-  subevents: CalendarSubEventData[];
-  workshops: CalendarWorkshopData[];
+  events: CalendarEventData[]; // Includes competitions and workshops
   sessions: CalendarSessionData[];
 }
 
 // Predefined colors for each event type
 const EVENT_COLORS = {
-  event: "#3b82f6", // Blue
-  subevent: "#10b981", // Green
-  workshop: "#f59e0b", // Orange
-  session: "#8b5cf6", // Purple
+  event: "#3b82f6", // Blue for competitions
+  subevent: "#6b7280", // Gray for subevents (default color)
+  workshop: "#f59e0b", // Orange for workshops
+  session: "#8b5cf6", // Purple for sessions
+};
+
+// Event type labels for legend
+const EVENT_TYPE_LABELS = {
+  event: "Competition",
+  workshop: "Workshop",
+  session: "Session",
 };
 
 // Month names for dropdown
@@ -253,8 +254,6 @@ function CustomToolbar({
 
 export function CityCalendar({
   events,
-  subevents,
-  workshops,
   sessions,
 }: CityCalendarProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
@@ -269,32 +268,28 @@ export function CityCalendar({
   const calendarEvents = useMemo(() => {
     const allEvents: CalendarEvent[] = [];
 
-    // Convert events
-    events.forEach((event) => {
-      allEvents.push(convertEventToCalendarEvent(event));
-    });
-
-    // Convert subevents
-    subevents.forEach((subEvent) => {
-      allEvents.push(convertSubEventToCalendarEvent(subEvent));
-    });
-
-    // Convert workshops
-    workshops.forEach((workshop) => {
-      allEvents.push(convertWorkshopToCalendarEvent(workshop));
-    });
+    // Convert events (includes competitions and workshops, filter out those with null dates)
+    events
+      .filter((event) => event.startDate)
+      .forEach((event) => {
+        allEvents.push(convertEventToCalendarEvent(event));
+      });
 
     // Convert sessions (returns array, so we spread it)
     sessions.forEach((session) => {
-      allEvents.push(...convertSessionToCalendarEvents(session));
+      const sessionEvents = convertSessionToCalendarEvents(session);
+      allEvents.push(...sessionEvents);
     });
 
     return allEvents;
-  }, [events, subevents, workshops, sessions]);
+  }, [events, sessions]);
 
   // Style events by type
   const eventPropGetter = (event: CalendarEvent) => {
-    const color = EVENT_COLORS[event.resource.type];
+    // Use the event type for coloring (competition, workshop, session)
+    // Subevents are still colored by their own type, not separately
+    const eventType = event.resource.type === "event" ? "event" : event.resource.type;
+    const color = EVENT_COLORS[eventType] || EVENT_COLORS.event;
     return {
       style: {
         backgroundColor: color,
@@ -340,6 +335,21 @@ export function CityCalendar({
 
   return (
     <div ref={calendarRef} className="relative">
+      {/* Legend */}
+      <div className="mb-4 flex flex-wrap gap-4 items-center">
+        <span className="text-sm font-medium">Event Types:</span>
+        {Object.entries(EVENT_TYPE_LABELS).map(([type, label]) => (
+          <div key={type} className="flex items-center gap-2">
+            <div
+              className="w-4 h-4 rounded"
+              style={{
+                backgroundColor: EVENT_COLORS[type as keyof typeof EVENT_COLORS],
+              }}
+            />
+            <span className="text-sm text-muted-foreground">{label}</span>
+          </div>
+        ))}
+      </div>
       <Calendar
         localizer={localizer}
         events={calendarEvents}

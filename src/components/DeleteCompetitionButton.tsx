@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export const DeleteEventButton = ({ eventId }: { eventId: string }) => {
+export const DeleteCompetitionButton = ({ competitionId }: { competitionId: string }) => {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -14,7 +14,7 @@ export const DeleteEventButton = ({ eventId }: { eventId: string }) => {
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/event?id=${eventId}`, {
+      const response = await fetch(`/api/competition?id=${competitionId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -22,15 +22,15 @@ export const DeleteEventButton = ({ eventId }: { eventId: string }) => {
       });
 
       if (response.status === 200) {
-        toast.success("Event deleted");
+        toast.success("Competition deleted");
         router.push("/events");
       } else {
         console.error(response.statusText);
-        toast.error("Failed to delete event");
+        toast.error("Failed to delete competition");
       }
     } catch (error) {
-      console.error("Error deleting event:", error);
-      toast.error("Failed to delete event");
+      console.error("Error deleting competition:", error);
+      toast.error("Failed to delete competition");
     } finally {
       setIsDeleting(false);
     }

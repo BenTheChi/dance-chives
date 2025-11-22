@@ -1,11 +1,11 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import EventFormWrapper from "@/components/EventFormWrapper";
-import { getEvent } from "@/db/queries/event";
+import CompetitionFormWrapper from "@/components/CompetitionFormWrapper";
+import { getCompetition } from "@/db/queries/competition";
 import { generateShortId } from "@/lib/utils";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
-import { FormValues } from "@/components/forms/event-form";
+import { FormValues } from "@/components/forms/competition-form";
 import { auth } from "@/auth";
-import { canUpdateEvent } from "@/lib/utils/auth-utils";
+import { canUpdateCompetition } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
 import { isTeamMember } from "@/db/queries/team-member";
 
@@ -22,7 +22,7 @@ export default async function EditEventPage({
     redirect("/login");
   }
 
-  const currEvent = await getEvent(event);
+  const currEvent = await getCompetition(event);
 
   // Check if event exists
   if (!currEvent) {
@@ -34,7 +34,7 @@ export default async function EditEventPage({
 
   // Check authorization - allow team members even without auth level
   const authLevel = session.user.auth ?? 0;
-  const hasPermission = canUpdateEvent(
+  const hasPermission = canUpdateCompetition(
     authLevel,
     {
       eventId: event,
@@ -150,7 +150,7 @@ export default async function EditEventPage({
     <>
       <AppNavbar />
       <div className="flex flex-col gap-4 p-6 md:px-4">
-        <EventFormWrapper initialData={eventFormValues} />
+        <CompetitionFormWrapper initialData={eventFormValues} />
       </div>
     </>
   );

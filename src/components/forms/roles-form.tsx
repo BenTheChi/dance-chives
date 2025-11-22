@@ -1,7 +1,7 @@
 "use client";
 
 import { Control, UseFormSetValue } from "react-hook-form";
-import { FormValues } from "./event-form";
+import { FormValues } from "./competition-form";
 import { Role } from "@/types/event";
 import { Button } from "../ui/button";
 import {

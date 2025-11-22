@@ -197,27 +197,27 @@ export interface EventPermissionContext {
   isTeamMember?: boolean;
 }
 
-export function canUpdateEvent(
+export function canUpdateCompetition(
   authLevel: number,
   context: EventPermissionContext,
   userId: string
 ): boolean {
-  // Admins can update any events
+  // Admins can update any competitions
   if (canUpdateAnyEvents(authLevel)) {
     return true;
   }
 
-  // Moderators can update any events
+  // Moderators can update any competitions
   if (canUpdateAnyEventsInCity(authLevel)) {
     return true;
   }
 
-  // Creators can update their own events
+  // Creators can update their own competitions
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
     return true;
   }
 
-  // Team members can update events
+  // Team members can update competitions
   if (context.isTeamMember) {
     return true;
   }
@@ -225,22 +225,22 @@ export function canUpdateEvent(
   return false;
 }
 
-export function canDeleteEvent(
+export function canDeleteCompetition(
   authLevel: number,
   context: EventPermissionContext,
   userId: string
 ): boolean {
-  // Admins can delete any events
+  // Admins can delete any competitions
   if (canDeleteAnyEvents(authLevel)) {
     return true;
   }
 
-  // Moderators can delete any events
+  // Moderators can delete any competitions
   if (canDeleteAnyEventsInCity(authLevel)) {
     return true;
   }
 
-  // Creators can delete their own events
+  // Creators can delete their own competitions
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
     return true;
   }

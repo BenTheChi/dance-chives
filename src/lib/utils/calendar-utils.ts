@@ -4,7 +4,7 @@ import {
   CalendarSubEventData,
   CalendarWorkshopData,
   CalendarSessionData,
-} from "@/db/queries/event";
+} from "@/db/queries/competition";
 
 /**
  * Convert 24-hour time string (HH:mm) to 12-hour AM/PM format
@@ -43,14 +43,26 @@ export interface CalendarEvent {
 /**
  * Parse MM/DD/YYYY date string and HH:mm time string into a Date object
  */
-function parseDateTime(dateStr: string, timeStr?: string): Date {
+function parseDateTime(dateStr: string | null | undefined, timeStr?: string | null | undefined): Date {
+  // Handle null/undefined date strings
+  if (!dateStr) {
+    // Return current date as fallback
+    const fallbackDate = new Date();
+    fallbackDate.setHours(0, 0, 0, 0);
+    return fallbackDate;
+  }
+
   // Parse date in MM/DD/YYYY format
   const date = parse(dateStr, "MM/dd/yyyy", new Date());
 
   if (timeStr) {
     // Parse time in HH:mm format (24-hour)
     const [hours, minutes] = timeStr.split(":").map(Number);
-    date.setHours(hours, minutes, 0, 0);
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      date.setHours(hours, minutes, 0, 0);
+    } else {
+      date.setHours(0, 0, 0, 0);
+    }
   } else {
     // Default to start of day if no time provided
     date.setHours(0, 0, 0, 0);
@@ -70,16 +82,26 @@ export function convertEventToCalendarEvent(
     ? parseDateTime(event.startDate, event.endTime)
     : parseDateTime(event.startDate, "23:59"); // Default to end of day if no end time
 
+  // Use eventType from data if available, otherwise default to "event"
+  const eventType = event.eventType === "workshop" 
+    ? "workshop" 
+    : event.eventType === "session"
+    ? "session"
+    : "event";
+
   return {
     id: event.id,
     title: event.title,
     start,
     end,
     resource: {
-      type: "event",
+      type: eventType,
       originalData: event,
       poster: event.poster,
       styles: event.styles,
+      parentEventId: event.parentEventId,
+      parentEventTitle: event.parentEventTitle,
+      parentEventType: event.parentEventType,
     },
   };
 }
@@ -179,6 +201,9 @@ export function convertSessionToCalendarEvents(
         dateEntry: dateEntry, // Store the specific date entry
         poster: session.poster,
         styles: session.styles,
+        parentEventId: session.parentEventId,
+        parentEventTitle: session.parentEventTitle,
+        parentEventType: session.parentEventType,
       },
     };
   });

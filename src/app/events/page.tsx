@@ -1,6 +1,6 @@
 import Eventcard from "@/components/cards";
 import { AppNavbar } from "@/components/AppNavbar";
-import { getEvents } from "@/db/queries/event";
+import { getEvents } from "@/db/queries/competition";
 import { EventCard } from "@/types/event";
 
 export default async function EventsPage() {

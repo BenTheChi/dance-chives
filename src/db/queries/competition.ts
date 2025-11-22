@@ -225,7 +225,7 @@ interface SectionVideoUserRecord {
   taggedTeachers?: UserSearchItem[];
 }
 
-export const getEvent = async (id: string): Promise<Competition> => {
+export const getCompetition = async (id: string): Promise<Competition> => {
   const session = driver.session();
 
   // Get main event data - now using Event:Competition labels
@@ -274,7 +274,13 @@ export const getEvent = async (id: string): Promise<Competition> => {
     MATCH (e:Event:Competition {id: $id})-[:SUBEVENT_OF]->(parent:Event)
     RETURN parent {
       id: parent.id,
-      title: parent.title
+      title: parent.title,
+      type: CASE
+        WHEN 'Competition' IN labels(parent) THEN 'competition'
+        WHEN 'Workshop' IN labels(parent) THEN 'workshop'
+        WHEN 'Session' IN labels(parent) THEN 'session'
+        ELSE 'competition'
+      END
     } as parentEvent
     `,
     { id }
@@ -722,32 +728,32 @@ export const getEvent = async (id: string): Promise<Competition> => {
 
   session.close();
 
-  const event = eventResult.records[0]?.get("event");
+  const competitionData = eventResult.records[0]?.get("event");
   const roles = rolesResult.records[0]?.get("roles") || [];
   const subEvents = subEventsResult.records[0]?.get("subEvents") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
   const parentEvent = parentEventResult.records[0]?.get("parentEvent") || null;
 
-  // Check if event exists
-  if (!event) {
-    throw new Error(`Event with id ${id} not found`);
+  // Check if competition exists
+  if (!competitionData) {
+    throw new Error(`Competition with id ${id} not found`);
   }
 
   return {
-    ...event,
+    ...competitionData,
     eventDetails: {
-      title: event.title,
-      description: event.description,
-      address: event.address,
-      prize: event.prize,
-      entryCost: event.entryCost,
-      startDate: event.startDate,
-      startTime: event.startTime,
-      endTime: event.endTime,
-      schedule: event.schedule,
-      creatorId: event.creatorId,
-      poster: event.poster,
-      city: event.city,
+      title: competitionData.title,
+      description: competitionData.description,
+      address: competitionData.address,
+      prize: competitionData.prize,
+      entryCost: competitionData.entryCost,
+      startDate: competitionData.startDate,
+      startTime: competitionData.startTime,
+      endTime: competitionData.endTime,
+      schedule: competitionData.schedule,
+      creatorId: competitionData.creatorId,
+      poster: competitionData.poster,
+      city: competitionData.city,
       parentEvent: parentEvent,
     },
     roles,
@@ -1050,10 +1056,10 @@ const createSectionVideos = async (sections: any[]) => {
   }
 };
 
-export const insertEvent = async (event: Competition) => {
+export const insertCompetition = async (competition: Competition) => {
   // Validate all roles before inserting
-  if (event.roles && event.roles.length > 0) {
-    for (const role of event.roles) {
+  if (competition.roles && competition.roles.length > 0) {
+    for (const role of competition.roles) {
       if (!isValidRole(role.title)) {
         throw new Error(
           `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
@@ -1065,7 +1071,7 @@ export const insertEvent = async (event: Competition) => {
 
     // Preprocess roles to ensure all users have ids
     const processedRoles = await Promise.all(
-      event.roles.map(async (role) => {
+      competition.roles.map(async (role) => {
         if (!role.user) {
           return role;
         }
@@ -1079,8 +1085,8 @@ export const insertEvent = async (event: Competition) => {
         };
       })
     );
-    event = {
-      ...event,
+    competition = {
+      ...competition,
       roles: processedRoles,
     };
   }
@@ -1166,22 +1172,22 @@ WITH e
 RETURN e as event
 `,
     {
-      eventId: event.id,
-      creatorId: event.eventDetails.creatorId,
-      title: event.eventDetails.title,
-      description: event.eventDetails.description,
-      address: event.eventDetails.address,
-      prize: event.eventDetails.prize,
-      entryCost: event.eventDetails.entryCost,
-      startDate: event.eventDetails.startDate,
-      startTime: event.eventDetails.startTime,
-      endTime: event.eventDetails.endTime,
-      schedule: event.eventDetails.schedule || null,
-      createdAt: event.createdAt.toISOString(),
-      updatedAt: event.updatedAt.toISOString(),
-      poster: event.eventDetails.poster,
-      city: event.eventDetails.city,
-      roles: event.roles,
+      eventId: competition.id,
+      creatorId: competition.eventDetails.creatorId,
+      title: competition.eventDetails.title,
+      description: competition.eventDetails.description,
+      address: competition.eventDetails.address,
+      prize: competition.eventDetails.prize,
+      entryCost: competition.eventDetails.entryCost,
+      startDate: competition.eventDetails.startDate,
+      startTime: competition.eventDetails.startTime,
+      endTime: competition.eventDetails.endTime,
+      schedule: competition.eventDetails.schedule || null,
+      createdAt: competition.createdAt.toISOString(),
+      updatedAt: competition.updatedAt.toISOString(),
+      poster: competition.eventDetails.poster,
+      city: competition.eventDetails.city,
+      roles: competition.roles,
     }
   );
 
@@ -1189,7 +1195,7 @@ RETURN e as event
   if (!result.records || result.records.length === 0) {
     await session.close();
     throw new Error(
-      `Failed to create event ${event.id}: No records returned from query`
+      `Failed to create competition ${competition.id}: No records returned from query`
     );
   }
 
@@ -1197,24 +1203,24 @@ RETURN e as event
   if (!eventNode) {
     await session.close();
     throw new Error(
-      `Failed to create event ${event.id}: Event node not found in result`
+      `Failed to create competition ${competition.id}: Competition node not found in result`
     );
   }
 
   await session.close();
 
   // Create subevents (as relationships), gallery, sections, brackets, and videos in separate queries
-  await createSubEvents(event.id, event.subEvents || []);
-  await createGalleryPhotos(event.id, event.gallery);
-  await createSections(event.id, event.sections);
-  await createBrackets(event.sections);
-  await createBracketVideos(event.sections);
-  await createSectionVideos(event.sections);
+  await createSubEvents(competition.id, competition.subEvents || []);
+  await createGalleryPhotos(competition.id, competition.gallery);
+  await createSections(competition.id, competition.sections);
+  await createBrackets(competition.sections);
+  await createBracketVideos(competition.sections);
+  await createSectionVideos(competition.sections);
 
   return eventNode.properties;
 };
 
-export const getEventSections = async (id: string) => {
+export const getCompetitionSections = async (id: string) => {
   const session = driver.session();
 
   // Get event title
@@ -2062,12 +2068,12 @@ export const getAllSections = async () => {
   }
 };
 
-export const EditEvent = async (event: Competition) => {
-  const { id, eventDetails } = event;
+export const EditCompetition = async (competition: Competition) => {
+  const { id, eventDetails } = competition;
 
   // Validate all roles before editing
-  if (event.roles && event.roles.length > 0) {
-    for (const role of event.roles) {
+  if (competition.roles && competition.roles.length > 0) {
+    for (const role of competition.roles) {
       if (!isValidRole(role.title)) {
         throw new Error(
           `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
@@ -2079,7 +2085,7 @@ export const EditEvent = async (event: Competition) => {
 
     // Preprocess roles to ensure all users have ids
     const processedRoles = await Promise.all(
-      event.roles.map(async (role) => {
+      competition.roles.map(async (role) => {
         if (!role.user) {
           return role;
         }
@@ -2093,8 +2099,8 @@ export const EditEvent = async (event: Competition) => {
         };
       })
     );
-    event = {
-      ...event,
+    competition = {
+      ...competition,
       roles: processedRoles,
     };
   }
@@ -2105,7 +2111,7 @@ export const EditEvent = async (event: Competition) => {
     // Start transaction
     const tx = session.beginTransaction();
 
-    // Update event properties
+    // Update competition properties
     await tx.run(
       `MATCH (e:Event:Competition {id: $id})
        SET e.title = $title,
@@ -2172,9 +2178,9 @@ export const EditEvent = async (event: Competition) => {
     const validRoleFormats = getNeo4jRoleFormats();
     // Separate regular roles from Team Member roles
     const regularRoles =
-      event.roles?.filter((role) => role.title !== "Team Member") || [];
+      competition.roles?.filter((role) => role.title !== "Team Member") || [];
     const teamMemberRoles =
-      event.roles?.filter((role) => role.title === "Team Member") || [];
+      competition.roles?.filter((role) => role.title === "Team Member") || [];
 
     // Handle regular roles
     if (regularRoles.length > 0) {
@@ -2267,8 +2273,8 @@ export const EditEvent = async (event: Competition) => {
     );
 
     // Create new subevent relationships
-    if (event.subEvents && event.subEvents.length > 0) {
-      for (const subEvent of event.subEvents) {
+    if (competition.subEvents && competition.subEvents.length > 0) {
+      for (const subEvent of competition.subEvents) {
         // Validate that subevent doesn't already have a parent
         const existingParentCheck = await tx.run(
           `MATCH (se:Event {id: $subEventId})-[r:SUBEVENT_OF]->(parent:Event)
@@ -2345,11 +2351,11 @@ export const EditEvent = async (event: Competition) => {
            s.applyStylesToVideos = COALESCE(sec.applyStylesToVideos, false)
          MERGE (s)-[:IN]->(e)
        )`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Create section style relationships (only if applyStylesToVideos is true)
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {
         const normalizedStyles = normalizeStyleNames(sec.styles);
         await tx.run(
@@ -2371,7 +2377,7 @@ export const EditEvent = async (event: Competition) => {
        MATCH (b:Bracket)-[:IN]->(s:Section)-[:IN]->(e)
        WHERE ANY(sec IN $sections WHERE sec.id = s.id AND sec.hasBrackets = false)
        DETACH DELETE b`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Cascade delete direct section videos if section hasBrackets is true
@@ -2380,7 +2386,7 @@ export const EditEvent = async (event: Competition) => {
        MATCH (vid:Video)-[:IN]->(s:Section)-[:IN]->(e)
        WHERE ANY(sec IN $sections WHERE sec.id = s.id AND sec.hasBrackets = true)
        DETACH DELETE vid`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Handle sections with brackets (hasBrackets = true)
@@ -2390,11 +2396,11 @@ export const EditEvent = async (event: Competition) => {
        UNWIND [s IN $sections WHERE s.hasBrackets = true] AS sec
        MERGE (s:Section {id: sec.id})
        MERGE (s)-[:IN]->(e)`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Then create brackets
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (sec.hasBrackets && sec.brackets) {
         for (const br of sec.brackets) {
           await tx.run(
@@ -2412,7 +2418,7 @@ export const EditEvent = async (event: Competition) => {
     }
 
     // Then create bracket videos
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (sec.hasBrackets && sec.brackets) {
         for (const br of sec.brackets) {
           if (br.videos) {
@@ -2458,7 +2464,7 @@ export const EditEvent = async (event: Competition) => {
     }
 
     // Then create user-video relationships for bracket videos
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (sec.hasBrackets && sec.brackets) {
         for (const br of sec.brackets) {
           if (br.videos) {
@@ -2485,7 +2491,7 @@ export const EditEvent = async (event: Competition) => {
     }
 
     // Create video style relationships for bracket videos
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (sec.hasBrackets && sec.brackets) {
         for (const br of sec.brackets) {
           if (br.videos) {
@@ -2516,11 +2522,11 @@ export const EditEvent = async (event: Competition) => {
        UNWIND [s IN $sections WHERE s.hasBrackets = false] AS sec
        MERGE (s:Section {id: sec.id})
        MERGE (s)-[:IN]->(e)`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Then create videos
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (!sec.hasBrackets && sec.videos) {
         for (const vid of sec.videos) {
           // Get video type label
@@ -2563,7 +2569,7 @@ export const EditEvent = async (event: Competition) => {
     }
 
     // Then create user-video relationships for direct section videos
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (!sec.hasBrackets && sec.videos) {
         for (const vid of sec.videos) {
           const taggedUsers = [
@@ -2586,7 +2592,7 @@ export const EditEvent = async (event: Competition) => {
     }
 
     // Create video style relationships for direct section videos
-    for (const sec of event.sections) {
+    for (const sec of competition.sections) {
       if (!sec.hasBrackets && sec.videos) {
         for (const vid of sec.videos) {
           if (vid.styles && vid.styles.length > 0) {
@@ -2612,7 +2618,7 @@ export const EditEvent = async (event: Competition) => {
        MATCH (s:Section)-[:IN]->(e)
        WHERE NOT ANY(sec IN $sections WHERE sec.id = s.id)
        DETACH DELETE s`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Delete brackets not in the new list
@@ -2621,7 +2627,7 @@ export const EditEvent = async (event: Competition) => {
        MATCH (b:Bracket)-[:IN]->(s:Section)-[:IN]->(e)
        WHERE NOT ANY(sec IN $sections WHERE ANY(br IN sec.brackets WHERE br.id = b.id))
        DETACH DELETE b`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Delete videos not in the new list (but preserve user nodes)
@@ -2630,7 +2636,7 @@ export const EditEvent = async (event: Competition) => {
        MATCH (v:Video)-[:IN]->(s:Section)-[:IN]->(e)
        WHERE NOT ANY(sec IN $sections WHERE ANY(vid IN sec.videos WHERE vid.id = v.id))
        DETACH DELETE v`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Delete videos in brackets not in the new list (but preserve user nodes)
@@ -2639,14 +2645,14 @@ export const EditEvent = async (event: Competition) => {
        MATCH (v:Video)-[:IN]->(b:Bracket)-[:IN]->(s:Section)-[:IN]->(e)
        WHERE NOT ANY(sec IN $sections WHERE ANY(br IN sec.brackets WHERE ANY(vid IN br.videos WHERE vid.id = v.id)))
        DETACH DELETE v`,
-      { id, sections: event.sections }
+      { id, sections: competition.sections }
     );
 
     // Workshops are now separate Event:Workshop nodes, not nested in events
     // This code is removed - workshops should be managed separately
     /*
-    if (event.workshops && event.workshops.length > 0) {
-      for (const workshop of event.workshops) {
+    if (competition.workshops && competition.workshops.length > 0) {
+      for (const workshop of competition.workshops) {
         // Get timezone for city if needed
         let timezone = workshop.workshopDetails.city.timezone;
         if (!timezone) {
@@ -2995,7 +3001,7 @@ export const EditEvent = async (event: Competition) => {
          MERGE (g:Image:Gallery { id: pic.id, title: pic.title, url: pic.url })
          MERGE (g)-[:PHOTO]->(e)
        )`,
-      { id, gallery: event.gallery }
+      { id, gallery: competition.gallery }
     );
 
     // Delete gallery items not in the new list
@@ -3004,7 +3010,7 @@ export const EditEvent = async (event: Competition) => {
        MATCH (g:Image)-[:PHOTO]->(e)
        WHERE NOT g.id IN [pic IN $gallery | pic.id]
        DETACH DELETE g`,
-      { id, gallery: event.gallery }
+      { id, gallery: competition.gallery }
     );
 
     // Commit transaction
@@ -3021,11 +3027,11 @@ export const EditEvent = async (event: Competition) => {
   }
 };
 
-export const deleteEvent = async (eventId: string) => {
+export const deleteCompetition = async (competitionId: string) => {
   const session = driver.session();
   try {
     await session.run(
-      `MATCH (e:Event {id: $id})
+      `MATCH (e:Event:Competition {id: $id})
     OPTIONAL MATCH (e)<-[:POSTER_OF|PHOTO]-(pic:Image)
     OPTIONAL MATCH (e)<-[:IN]-(s:Section)
     OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
@@ -3036,13 +3042,13 @@ export const deleteEvent = async (eventId: string) => {
     
     RETURN count(*) as deletedNodes`,
       {
-        id: eventId,
+        id: competitionId,
       }
     );
     await session.close();
     return true;
   } catch (error) {
-    console.error("Error deleting event:", error);
+    console.error("Error deleting competition:", error);
     return false;
   }
 };
@@ -3718,17 +3724,17 @@ export const getAllStyles = async (): Promise<string[]> => {
 
 // Gets all images including poster and gallery
 // Note: Subevents are now separate events with their own posters, not included here
-export const getEventPictures = async (eventId: string) => {
+export const getCompetitionPictures = async (competitionId: string) => {
   const session = driver.session();
   const result = await session.run(
-    `MATCH (e:Event {id: $eventId})
+    `MATCH (e:Event:Competition {id: $competitionId})
     OPTIONAL MATCH (e)<-[:POSTER_OF]-(poster:Image)
     OPTIONAL MATCH (e)<-[:PHOTO]-(gallery:Image)
 
     RETURN poster, gallery
     `,
     {
-      eventId,
+      competitionId,
     }
   );
   await session.close();
@@ -3772,6 +3778,10 @@ export interface CalendarEventData {
     type: string;
   } | null;
   styles: string[];
+  eventType?: "competition" | "workshop" | "session";
+  parentEventId?: string;
+  parentEventTitle?: string;
+  parentEventType?: "competition" | "workshop" | "session";
 }
 
 export interface CalendarSubEventData {
@@ -3817,13 +3827,14 @@ export interface CalendarSessionData {
     type: string;
   } | null;
   styles: string[];
+  parentEventId?: string;
+  parentEventTitle?: string;
+  parentEventType?: "competition" | "workshop" | "session";
 }
 
 export interface CityScheduleData {
-  events: CalendarEventData[];
-  subevents: CalendarSubEventData[];
-  workshops: CalendarWorkshopData[];
-  sessions: CalendarSessionData[];
+  events: CalendarEventData[]; // Includes competitions and workshops (with parent event info if subevent)
+  sessions: CalendarSessionData[]; // Sessions have multiple dates, handled separately
 }
 
 export const getAllCities = async (): Promise<City[]> => {
@@ -3986,23 +3997,34 @@ export const getCitySchedule = async (
   const session = driver.session();
 
   try {
-    // Get events in this city with full details
+    // Get all events in this city (competitions, workshops) with parent event info if subevent
+    // Sessions are handled separately because they have multiple dates
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       WHERE NOT 'Session' IN labels(e)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+       OPTIONAL MATCH (e)-[:SUBEVENT_OF]->(parent:Event)
        RETURN e.id as id, e.title as title, e.startDate as startDate,
               e.startTime as startTime, e.endTime as endTime,
-              poster {
-                id: poster.id,
-                title: poster.title,
-                url: poster.url,
-              } as poster`,
+              poster.id as posterId, poster.title as posterTitle, poster.url as posterUrl,
+              parent.id as parentEventId, parent.title as parentEventTitle,
+              CASE
+                WHEN 'Competition' IN labels(parent) THEN 'competition'
+                WHEN 'Workshop' IN labels(parent) THEN 'workshop'
+                WHEN 'Session' IN labels(parent) THEN 'session'
+                ELSE NULL
+              END as parentEventType,
+              CASE
+                WHEN 'Competition' IN labels(e) THEN 'competition'
+                WHEN 'Workshop' IN labels(e) THEN 'workshop'
+                ELSE 'competition'
+              END as eventType`,
       { cityId }
     );
 
-    // Get event styles
+    // Get event styles (for competitions with sections)
     const eventStylesResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+      `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event:Competition)
        OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
@@ -4034,101 +4056,9 @@ export const getCitySchedule = async (
       eventStylesMap.set(eventId, uniqueStyles);
     });
 
-    // Build events array
-    const events: CalendarEventData[] = eventsResult.records.map((record) => {
-      const eventId = record.get("id");
-      return {
-        id: eventId,
-        title: record.get("title"),
-        startDate: record.get("startDate"),
-        startTime: record.get("startTime") || undefined,
-        endTime: record.get("endTime") || undefined,
-        poster: record.get("poster") || null,
-        styles: eventStylesMap.get(eventId) || [],
-      };
-    });
-
-    // Get subevents connected to events in this city (now using :SUBEVENT_OF relationship)
-    const subEventsResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(mainEvent:Event)
-       OPTIONAL MATCH (subEvent:Event)-[:SUBEVENT_OF]->(mainEvent)
-       WHERE subEvent IS NOT NULL
-       OPTIONAL MATCH (subEvent)-[:IN]->(subCity:City)
-       OPTIONAL MATCH (sePoster:Image)-[:POSTER_OF]->(subEvent)
-       RETURN subEvent.id as id, subEvent.title as title, subEvent.startDate as startDate,
-              subEvent.startTime as startTime, subEvent.endTime as endTime,
-              mainEvent.id as parentEventId, mainEvent.title as parentEventTitle,
-              sePoster {
-                id: sePoster.id,
-                title: sePoster.title,
-                url: sePoster.url,
-              } as poster`,
-      { cityId }
-    );
-
-    // Get subevent styles (from subevent itself, not parent)
-    const subEventStylesResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(mainEvent:Event)
-       OPTIONAL MATCH (subEvent:Event)-[:SUBEVENT_OF]->(mainEvent)
-       WHERE subEvent IS NOT NULL
-       OPTIONAL MATCH (subEvent)-[:STYLE]->(style:Style)
-       WITH subEvent.id as subEventId,
-            collect(DISTINCT style.name) as styles
-       RETURN subEventId,
-              [s IN styles WHERE s IS NOT NULL] as allStyles`,
-      { cityId }
-    );
-
-    // Create styles map for subevents
-    const subEventStylesMap = new Map<string, string[]>();
-    subEventStylesResult.records.forEach((record) => {
-      const subEventId = record.get("subEventId");
-      const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
-      );
-      subEventStylesMap.set(subEventId, uniqueStyles);
-    });
-
-    // Build subevents array
-    const subevents: CalendarSubEventData[] = subEventsResult.records.map(
-      (record) => {
-        const subEventId = record.get("id");
-        return {
-          id: subEventId,
-          title: record.get("title"),
-          startDate: record.get("startDate"),
-          startTime: record.get("startTime") || undefined,
-          endTime: record.get("endTime") || undefined,
-          poster: record.get("poster") || null,
-          styles: subEventStylesMap.get(subEventId) || [],
-          parentEventId: record.get("parentEventId"),
-          parentEventTitle: record.get("parentEventTitle"),
-        };
-      }
-    );
-
-    // Get workshops in this city
-    const workshopsResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)
-       OPTIONAL MATCH (wPoster:Image)-[:POSTER_OF]->(w)
-       RETURN w.id as id, w.title as title, w.startDate as startDate,
-              w.startTime as startTime, w.endTime as endTime,
-              wPoster {
-                id: wPoster.id,
-                title: wPoster.title,
-                url: wPoster.url,
-              } as poster`,
-      { cityId }
-    );
-
-    // Get workshop styles
+    // Get workshop styles (needed before building events array)
     const workshopStylesResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)
+      `MATCH (c:City {id: $cityId})<-[:IN]-(w:Event:Workshop)
        OPTIONAL MATCH (w)-[:STYLE]->(style:Style)
        WITH w.id as workshopId, collect(DISTINCT style.name) as styles
        RETURN workshopId, styles`,
@@ -4137,7 +4067,7 @@ export const getCitySchedule = async (
 
     // Get video styles for workshops
     const workshopVideoStylesResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+      `MATCH (c:City {id: $cityId})<-[:IN]-(w:Event:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
        WITH w.id as workshopId, collect(DISTINCT style.name) as styles
        RETURN workshopId, styles`,
       { cityId }
@@ -4160,44 +4090,69 @@ export const getCitySchedule = async (
       );
     });
 
-    // Build workshops array
-    const workshops: CalendarWorkshopData[] = workshopsResult.records.map(
-      (record) => {
-        const workshopId = record.get("id");
-        const workshopStyles = workshopStylesMap.get(workshopId) || [];
-        const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
-        const allStyles = Array.from(
-          new Set([...workshopStyles, ...videoStyles])
-        );
-
-        return {
-          id: workshopId,
-          title: record.get("title"),
-          startDate: record.get("startDate"),
-          startTime: record.get("startTime") || undefined,
-          endTime: record.get("endTime") || undefined,
-          poster: record.get("poster") || null,
-          styles: allStyles,
-        };
+    // Build events array (includes competitions, workshops)
+    const events: CalendarEventData[] = eventsResult.records.map((record) => {
+      const eventId = record.get("id");
+      const posterId = record.get("posterId");
+      const posterTitle = record.get("posterTitle");
+      const posterUrl = record.get("posterUrl");
+      const poster = posterId && posterUrl
+        ? {
+            id: posterId,
+            title: posterTitle || "",
+            url: posterUrl,
+          }
+        : null;
+      const parentEventId = record.get("parentEventId");
+      const parentEventTitle = record.get("parentEventTitle");
+      const parentEventType = record.get("parentEventType") as "competition" | "workshop" | "session" | null;
+      const eventType = record.get("eventType") as "competition" | "workshop" | "session";
+      
+      // Get styles based on event type
+      let styles: string[] = [];
+      if (eventType === "competition") {
+        styles = eventStylesMap.get(eventId) || [];
+      } else if (eventType === "workshop") {
+        const workshopStyles = workshopStylesMap.get(eventId) || [];
+        const videoStyles = workshopVideoStylesMap.get(eventId) || [];
+        styles = Array.from(new Set([...workshopStyles, ...videoStyles]));
       }
-    );
+      
+      return {
+        id: eventId,
+        title: record.get("title"),
+        startDate: record.get("startDate"),
+        startTime: record.get("startTime") || undefined,
+        endTime: record.get("endTime") || undefined,
+        poster: poster,
+        styles: styles,
+        eventType: eventType,
+        parentEventId: parentEventId || undefined,
+        parentEventTitle: parentEventTitle || undefined,
+        parentEventType: parentEventType || undefined,
+      };
+    });
 
-    // Get sessions in this city
+    // Get sessions in this city (sessions have multiple dates, so handled separately)
     const sessionsResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(s:Session)
+      `MATCH (c:City {id: $cityId})<-[:IN]-(s:Event:Session)
        OPTIONAL MATCH (sPoster:Image)-[:POSTER_OF]->(s)
+       OPTIONAL MATCH (s)-[:SUBEVENT_OF]->(parent:Event)
        RETURN s.id as id, s.title as title, s.dates as dates,
-              sPoster {
-                id: sPoster.id,
-                title: sPoster.title,
-                url: sPoster.url,
-              } as poster`,
+              sPoster.id as posterId, sPoster.title as posterTitle, sPoster.url as posterUrl,
+              parent.id as parentEventId, parent.title as parentEventTitle,
+              CASE
+                WHEN 'Competition' IN labels(parent) THEN 'competition'
+                WHEN 'Workshop' IN labels(parent) THEN 'workshop'
+                WHEN 'Session' IN labels(parent) THEN 'session'
+                ELSE NULL
+              END as parentEventType`,
       { cityId }
     );
 
     // Get session styles
     const sessionStylesResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(s:Session)
+      `MATCH (c:City {id: $cityId})<-[:IN]-(s:Event:Session)
        OPTIONAL MATCH (s)-[:STYLE]->(style:Style)
        WITH s.id as sessionId, collect(DISTINCT style.name) as styles
        RETURN sessionId, styles`,
@@ -4206,7 +4161,7 @@ export const getCitySchedule = async (
 
     // Get video styles for sessions
     const sessionVideoStylesResult = await session.run(
-      `MATCH (c:City {id: $cityId})<-[:IN]-(s:Session)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+      `MATCH (c:City {id: $cityId})<-[:IN]-(s:Event:Session)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
        WITH s.id as sessionId, collect(DISTINCT style.name) as styles
        RETURN sessionId, styles`,
       { cityId }
@@ -4235,13 +4190,28 @@ export const getCitySchedule = async (
         const allStyles = Array.from(
           new Set([...sessionStyles, ...videoStyles])
         );
+        const posterId = record.get("posterId");
+        const posterTitle = record.get("posterTitle");
+        const posterUrl = record.get("posterUrl");
+        const poster = posterId && posterUrl
+          ? {
+              id: posterId,
+              title: posterTitle || "",
+              url: posterUrl,
+            }
+          : null;
+        const parentEventId = record.get("parentEventId");
+        const parentEventTitle = record.get("parentEventTitle");
 
         return {
           id: sessionId,
           title: record.get("title"),
           dates: record.get("dates") || "[]", // JSON string
-          poster: record.get("poster") || null,
+          poster: poster,
           styles: allStyles,
+          parentEventId: parentEventId || undefined,
+          parentEventTitle: parentEventTitle || undefined,
+          parentEventType: record.get("parentEventType") as "competition" | "workshop" | "session" | null || undefined,
         };
       }
     );
@@ -4249,10 +4219,8 @@ export const getCitySchedule = async (
     await session.close();
 
     return {
-      events,
-      subevents,
-      workshops,
-      sessions,
+      events, // Includes competitions and workshops (with parent event info if subevent)
+      sessions, // Sessions have multiple dates, handled separately
     };
   } catch (error) {
     console.error("Error fetching city schedule:", error);

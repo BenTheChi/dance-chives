@@ -1,6 +1,6 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import SectionBracketTabSelector from "@/components/SectionBracketTabSelector";
-import { getSection } from "@/db/queries/event";
+import { getSection } from "@/db/queries/competition";
 import { notFound } from "next/navigation";
 
 type PageProps = {

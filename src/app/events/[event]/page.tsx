@@ -13,18 +13,18 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
-import { getEvent } from "@/db/queries/event";
+import { getCompetition } from "@/db/queries/competition";
 import { notFound } from "next/navigation";
-import { DeleteEventButton } from "@/components/DeleteEventButton";
+import { DeleteCompetitionButton } from "@/components/DeleteCompetitionButton";
 import { auth } from "@/auth";
-import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
+import { isCompetitionCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfDropdown } from "@/components/events/TagSelfDropdown";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
-import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
+import { canUpdateCompetition, canDeleteCompetition } from "@/lib/utils/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUser } from "@/db/queries/user";
 import { getEventTeamMembers } from "@/db/queries/team-member";
@@ -55,12 +55,12 @@ export default async function EventPage({ params }: PageProps) {
     notFound();
   }
 
-  const event = (await getEvent(paramResult.event)) as Competition;
+  const event = (await getCompetition(paramResult.event)) as Competition;
 
   // Check if current user is the creator
   const session = await auth();
   const isCreator = session?.user?.id
-    ? await isEventCreator(event.id, session.user.id)
+    ? await isCompetitionCreator(event.id, session.user.id)
     : false;
 
   // Check if user is a team member
@@ -71,7 +71,7 @@ export default async function EventPage({ params }: PageProps) {
   // Check if user can edit the event
   const canEdit =
     session?.user?.id && session?.user?.auth !== undefined
-      ? canUpdateEvent(
+      ? canUpdateCompetition(
           session.user.auth,
           {
             eventId: event.id,
@@ -85,7 +85,7 @@ export default async function EventPage({ params }: PageProps) {
   // Check if user can delete the event
   const canDelete =
     session?.user?.id && session?.user?.auth !== undefined
-      ? canDeleteEvent(
+      ? canDeleteCompetition(
           session.user.auth,
           {
             eventId: event.id,
@@ -165,7 +165,7 @@ export default async function EventPage({ params }: PageProps) {
                 <Link href={`/events/${event.id}/edit`}>Edit</Link>
               </Button>
             )}
-            {canDelete && <DeleteEventButton eventId={event.id} />}
+            {canDelete && <DeleteCompetitionButton competitionId={event.id} />}
           </div>
 
           <PosterImage

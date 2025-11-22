@@ -1,4 +1,4 @@
-import { searchEventsForSubeventSelection } from "@/db/queries/event";
+import { searchEventsForSubeventSelection } from "@/db/queries/competition";
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/primsa";

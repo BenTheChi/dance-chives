@@ -9,7 +9,7 @@ import {
   FormMessage,
   FormControl,
 } from "@/components/ui/form";
-import { FormValues } from "./forms/event-form";
+import { FormValues } from "./forms/competition-form";
 
 interface DateInputProps {
   control: Control<FormValues>;

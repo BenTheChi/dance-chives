@@ -23,6 +23,8 @@ import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
 import { addSession, editSession } from "@/lib/server_actions/session_actions";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SessionVideoForm } from "./session-video-form";
 import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
 
@@ -237,6 +239,21 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
   const videos = watch("videos") ?? [];
   const gallery = watch("gallery") ?? [];
   const subEvents = watch("subEvents") ?? [];
+  const parentEvent = sessionDetails?.parentEvent;
+
+  // Helper function to get parent event route
+  const getParentEventRoute = (type?: string, id?: string) => {
+    if (!id) return "#";
+    switch (type) {
+      case "workshop":
+        return `/workshops/${id}`;
+      case "session":
+        return `/sessions/${id}`;
+      case "competition":
+      default:
+        return `/events/${id}`;
+    }
+  };
 
   const mainTabs = ["Session Details", "Roles", "Subevents", "Videos", "Photo Gallery"];
 
@@ -483,7 +500,20 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
 
           {activeMainTab === "Subevents" && (
             <div className="space-y-6">
-              {/* SubEvents Section */}
+              {isEditing && parentEvent ? (
+                <Alert>
+                  <AlertDescription>
+                    This event is already the subevent of{" "}
+                    <Link
+                      href={getParentEventRoute(parentEvent.type, parentEvent.id)}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      {parentEvent.title}
+                    </Link>
+                    . Remove this event as a subevent if you would like to make this the main event.
+                  </AlertDescription>
+                </Alert>
+              ) : (
               <div>
                 <h3 className="text-lg font-semibold mb-4">
                   Sub Events (Main Event)
@@ -519,12 +549,12 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
                     );
                   }}
                   onSearch={async (keyword: string) => {
-                    const url = new URL("/api/events/subevents", window.location.origin);
-                    url.searchParams.set("keyword", keyword);
-                    if (currentEventId) {
-                      url.searchParams.set("excludeEventId", currentEventId);
-                    }
-                    const response = await fetch(url.toString());
+                      const url = new URL("/api/events/subevents", window.location.origin);
+                      url.searchParams.set("keyword", keyword);
+                      if (currentEventId) {
+                        url.searchParams.set("excludeEventId", currentEventId);
+                      }
+                      const response = await fetch(url.toString());
                     const data = await response.json();
                     return (data.data || []).map(
                       (item: SessionFormValues["subEvents"][0]) => ({
@@ -584,6 +614,7 @@ export default function SessionForm({ initialData }: SessionFormProps = {}) {
                   </div>
                 )}
               </div>
+              )}
             </div>
           )}
 

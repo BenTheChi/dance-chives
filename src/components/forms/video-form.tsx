@@ -16,7 +16,7 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
 } from "react-hook-form";
-import { FormValues } from "./event-form";
+import { FormValues } from "./competition-form";
 import { Section } from "@/types/event";
 import { Video } from "@/types/video";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";

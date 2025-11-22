@@ -187,7 +187,7 @@ export async function getEventCreator(eventId: string): Promise<string | null> {
 /**
  * Check if a user is a team member of an event
  * Team members have edit access, separate from roles
- * NOTE: Creators are NOT team members - use isEventCreator() to check for creators
+ * NOTE: Creators are NOT team members - use isCompetitionCreator() to check for creators
  */
 export async function isTeamMember(
   eventId: string,
@@ -214,11 +214,11 @@ export async function isTeamMember(
 /**
  * Check if a user is the creator of an event
  */
-export async function isEventCreator(
-  eventId: string,
+export async function isCompetitionCreator(
+  competitionId: string,
   userId: string
 ): Promise<boolean> {
-  const creatorId = await getEventCreator(eventId);
+  const creatorId = await getEventCreator(competitionId);
   return creatorId === userId;
 }
 

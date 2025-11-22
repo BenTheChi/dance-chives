@@ -271,7 +271,13 @@ export async function getUserProfile(userIdOrUsername: string) {
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate,
              e.createdAt as createdAt, poster.url as imageUrl, c.name as city, c.id as cityId,
-             collect(DISTINCT s.name) as styles
+             collect(DISTINCT s.name) as styles,
+             CASE
+               WHEN 'Competition' IN labels(e) THEN 'competition'
+               WHEN 'Workshop' IN labels(e) THEN 'workshop'
+               WHEN 'Session' IN labels(e) THEN 'session'
+               ELSE 'competition'
+             END as eventType
       ORDER BY e.createdAt DESC
       `,
       { userId }
@@ -286,6 +292,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       city: record.get("city"),
       cityId: record.get("cityId") as number | undefined,
       styles: record.get("styles") || [],
+      eventType: record.get("eventType") as "competition" | "workshop" | "session",
     }));
 
     // Get events where user has roles with full event data (collecting all roles)
@@ -304,7 +311,13 @@ export async function getUserProfile(userIdOrUsername: string) {
              head(collect(DISTINCT poster.url)) as imageUrl, 
              head(collect(DISTINCT c.name)) as city,
              head(collect(DISTINCT c.id)) as cityId,
-             collect(DISTINCT s.name) as styles
+             collect(DISTINCT s.name) as styles,
+             CASE
+               WHEN 'Competition' IN labels(e) THEN 'competition'
+               WHEN 'Workshop' IN labels(e) THEN 'workshop'
+               WHEN 'Session' IN labels(e) THEN 'session'
+               ELSE 'competition'
+             END as eventType
       ORDER BY e.createdAt DESC
       `,
       { userId, validRoles: validRoleFormats }
@@ -320,6 +333,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       city: record.get("city"),
       cityId: record.get("cityId") as number | undefined,
       styles: record.get("styles") || [],
+      eventType: record.get("eventType") as "competition" | "workshop" | "session",
     }));
 
     // Get videos where user is tagged with full video data (collecting all roles)

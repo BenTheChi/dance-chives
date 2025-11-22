@@ -1,7 +1,7 @@
 "use client";
 
 import { Control, UseFormRegister, UseFormSetValue } from "react-hook-form";
-import { FormValues } from "./event-form";
+import { FormValues } from "./competition-form";
 import { CompetitionDetails } from "@/types/event";
 import { Image } from "@/types/image";
 import { City, CitySearchItem } from "@/types/city";
@@ -17,7 +17,7 @@ import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
 import DateInput from "../DateInput";
 
-interface EventDetailsFormProps {
+interface CompetitionDetailsFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
   eventDetails: CompetitionDetails;
@@ -50,7 +50,7 @@ async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
     });
 }
 
-export function EventDetailsForm({
+export function CompetitionDetailsForm({
   control,
   setValue,
   eventDetails,

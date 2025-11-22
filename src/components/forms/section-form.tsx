@@ -24,7 +24,7 @@ import { Section, Bracket } from "@/types/event";
 import { BattleVideo, Video } from "@/types/video";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
-import { FormValues } from "./event-form";
+import { FormValues } from "./competition-form";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";

@@ -1,5 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getStyleData } from "@/db/queries/event";
+import { getStyleData } from "@/db/queries/competition";
 import { notFound } from "next/navigation";
 import Eventcard from "@/components/cards";
 import { SectionCard } from "@/components/ui/section-card";

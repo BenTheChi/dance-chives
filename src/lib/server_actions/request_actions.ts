@@ -38,7 +38,7 @@ import {
   getVideoTitle,
   getSessionTitle,
   getEventCreator,
-  isEventCreator,
+  isCompetitionCreator,
   getEventTeamMembers,
   isWorkshopTeamMember,
   isSessionTeamMember,
@@ -1939,7 +1939,7 @@ export async function tagSelfWithRole(eventId: string, role: string) {
     const authLevel = session?.user?.auth || 0;
     const canAddDirectly =
       authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-      (await isEventCreator(eventId, userId));
+      (await isCompetitionCreator(eventId, userId));
 
     if (canAddDirectly) {
       // User has permission - add team member directly

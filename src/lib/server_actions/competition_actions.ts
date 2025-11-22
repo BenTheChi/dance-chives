@@ -8,10 +8,10 @@ import {
   // Removed uploadWorkshopPosterToR2 and uploadWorkshopGalleryToR2 - workshops are now separate Event:Workshop nodes
 } from "../R2";
 import {
-  insertEvent,
-  EditEvent as editEventQuery,
-  getEvent as getEventQuery,
-} from "@/db/queries/event";
+  insertCompetition,
+  EditCompetition as editCompetitionQuery,
+  getCompetition as getCompetitionQuery,
+} from "@/db/queries/competition";
 import {
   BaseEventDetails,
   CompetitionDetails,
@@ -21,7 +21,7 @@ import {
 import { Image } from "@/types/image";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
-import { canUpdateEvent } from "@/lib/utils/auth-utils";
+import { canUpdateCompetition } from "@/lib/utils/auth-utils";
 import {
   setVideoRoles,
   setSectionWinner,
@@ -36,7 +36,7 @@ import {
   SECTION_ROLE_WINNER,
 } from "@/lib/utils/roles";
 
-interface addEventProps {
+interface addCompetitionProps {
   eventDetails: {
     creatorId: string;
     title: string;
@@ -228,7 +228,7 @@ interface response {
   event: Competition | null;
 }
 
-export async function addEvent(props: addEventProps): Promise<response> {
+export async function addCompetition(props: addCompetitionProps): Promise<response> {
   const session = await auth();
 
   // Check for auth level here
@@ -347,10 +347,10 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Workshops are now separate Event:Workshop nodes, not nested in Competition
     // Workshop processing removed - they have their own actions
 
-    // Create the Competition object that matches the insertEvent query structure
+    // Create the Competition object that matches the insertCompetition query structure
     // Note: subEvents are now relationships, so we pass just the IDs
     // Workshops are now separate Event:Workshop nodes, not nested in Competition
-    const event: Competition = {
+    const competition: Competition = {
       id: eventId,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -361,19 +361,19 @@ export async function addEvent(props: addEventProps): Promise<response> {
       gallery: props.gallery as Image[],
     };
 
-    // Call insertEvent with the properly structured Event object
-    const result = await insertEvent(event);
+    // Call insertCompetition with the properly structured Competition object
+    const result = await insertCompetition(competition);
 
-    // Create corresponding PostgreSQL Event record to link Neo4j event to user
+    // Create corresponding PostgreSQL Event record to link Neo4j competition to user
     // Using upsert to handle cases where record might already exist
     await prisma.event.upsert({
-      where: { eventId: event.id },
+      where: { eventId: competition.id },
       update: {
         userId: session.user.id,
         creator: true,
       },
       create: {
-        eventId: event.id, // Neo4j event ID
+        eventId: competition.id, // Neo4j competition ID
         userId: session.user.id,
         creator: true,
       },
@@ -384,20 +384,20 @@ export async function addEvent(props: addEventProps): Promise<response> {
       event: result,
     };
   } catch (error) {
-    console.error("Error creating event:", error);
+    console.error("Error creating competition:", error);
     return {
-      error: "Failed to create event",
+      error: "Failed to create competition",
       status: 500,
       event: null,
     };
   }
 }
 
-export async function editEvent(
-  eventId: string,
-  editedEvent: addEventProps
+export async function editCompetition(
+  competitionId: string,
+  editedCompetition: addCompetitionProps
 ): Promise<response> {
-  console.log("🟢 [editEvent] Starting editEvent");
+  console.log("🟢 [editCompetition] Starting editCompetition");
   const session = await auth();
 
   // Check for auth level here
@@ -410,36 +410,36 @@ export async function editEvent(
     };
   }
 
-  const response = await getEvent(eventId);
+  const response = await getCompetition(competitionId);
 
   if (response.error || !response.event) {
     return {
-      error: "Failed to fetch event to edit",
+      error: "Failed to fetch competition to edit",
       status: 500,
       event: null,
     };
   }
 
-  const oldEvent = response.event as Competition;
+  const oldCompetition = response.event as Competition;
 
   // Check if user is a team member
-  const isEventTeamMember = await isTeamMember(eventId, session.user.id);
+  const isCompetitionTeamMember = await isTeamMember(competitionId, session.user.id);
 
   // Check authorization - allow team members even without auth level
   const authLevel = session.user.auth ?? 0;
-  const hasPermission = canUpdateEvent(
+  const hasPermission = canUpdateCompetition(
     authLevel,
     {
-      eventId: eventId,
-      eventCreatorId: oldEvent.eventDetails.creatorId,
-      isTeamMember: isEventTeamMember,
+      eventId: competitionId,
+      eventCreatorId: oldCompetition.eventDetails.creatorId,
+      isTeamMember: isCompetitionTeamMember,
     },
     session.user.id
   );
 
   if (!hasPermission) {
     return {
-      error: "You do not have permission to edit this event",
+      error: "You do not have permission to edit this competition",
       status: 403,
       event: null,
     };
@@ -447,60 +447,60 @@ export async function editEvent(
 
   try {
     //Delete pictures that have a file and a url
-    if (oldEvent.eventDetails.poster && !editedEvent.eventDetails.poster) {
-      await deleteFromR2(oldEvent.eventDetails.poster.url);
+    if (oldCompetition.eventDetails.poster && !editedCompetition.eventDetails.poster) {
+      await deleteFromR2(oldCompetition.eventDetails.poster.url);
     }
 
-    // Upload eventDetails poster if exists.  Delete old poster if it exists.
-    if (editedEvent.eventDetails.poster?.file) {
-      if (oldEvent.eventDetails.poster) {
-        await deleteFromR2(oldEvent.eventDetails.poster.url);
+    // Upload competitionDetails poster if exists.  Delete old poster if it exists.
+    if (editedCompetition.eventDetails.poster?.file) {
+      if (oldCompetition.eventDetails.poster) {
+        await deleteFromR2(oldCompetition.eventDetails.poster.url);
       }
 
       const posterResult = await uploadEventPosterToR2(
-        editedEvent.eventDetails.poster.file,
-        eventId
+        editedCompetition.eventDetails.poster.file,
+        competitionId
       );
       if (posterResult.success) {
-        editedEvent.eventDetails.poster = {
-          ...editedEvent.eventDetails.poster,
+        editedCompetition.eventDetails.poster = {
+          ...editedCompetition.eventDetails.poster,
           id: posterResult.id!,
           url: posterResult.url!,
           file: null,
         };
       }
     } else if (
-      !editedEvent.eventDetails.poster &&
-      oldEvent.eventDetails.poster
+      !editedCompetition.eventDetails.poster &&
+      oldCompetition.eventDetails.poster
     ) {
-      await deleteFromR2(oldEvent.eventDetails.poster.url);
+      await deleteFromR2(oldCompetition.eventDetails.poster.url);
     }
 
     // Subevents are now relationships - no poster upload/delete needed
 
     // Upload gallery files
-    const galleryFiles = editedEvent.gallery.filter((item) => item.file);
+    const galleryFiles = editedCompetition.gallery.filter((item) => item.file);
     if (galleryFiles.length > 0) {
       const galleryResults = await uploadEventGalleryToR2(
         galleryFiles.map((item) => item.file!),
-        eventId
+        competitionId
       );
       galleryResults.forEach((result, index) => {
         const originalItem = galleryFiles[index];
-        const galleryIndex = editedEvent.gallery.findIndex(
+        const galleryIndex = editedCompetition.gallery.findIndex(
           (g) => g.id === originalItem.id
         );
         if (galleryIndex !== -1 && result.success && result.url && result.id) {
-          editedEvent.gallery[galleryIndex].id = result.id;
-          editedEvent.gallery[galleryIndex].url = result.url;
-          editedEvent.gallery[galleryIndex].file = null;
+          editedCompetition.gallery[galleryIndex].id = result.id;
+          editedCompetition.gallery[galleryIndex].url = result.url;
+          editedCompetition.gallery[galleryIndex].file = null;
         }
       });
     }
 
-    // Delete gallery items that don't exist in editedEvent
-    for (const item of oldEvent.gallery) {
-      if (!editedEvent.gallery.find((g) => g.id === item.id)) {
+    // Delete gallery items that don't exist in editedCompetition
+    for (const item of oldCompetition.gallery) {
+      if (!editedCompetition.gallery.find((g) => g.id === item.id)) {
         await deleteFromR2(item.url);
       }
     }
@@ -509,7 +509,7 @@ export async function editEvent(
     // Workshop handling removed - they have their own actions
 
     // Process sections to handle brackets/videos based on hasBrackets
-    const processedSections: Section[] = editedEvent.sections.map((section) => {
+    const processedSections: Section[] = editedCompetition.sections.map((section) => {
       const { hasBrackets, ...sectionWithoutBrackets } = section;
 
       if (hasBrackets) {
@@ -531,12 +531,12 @@ export async function editEvent(
       }
     });
 
-    let timezone = oldEvent.eventDetails.city.timezone;
+    let timezone = oldCompetition.eventDetails.city.timezone;
 
-    if (editedEvent.eventDetails.city.id !== oldEvent.eventDetails.city.id) {
+    if (editedCompetition.eventDetails.city.id !== oldCompetition.eventDetails.city.id) {
       // Get timezone for city
       const response = await fetch(
-        `http://geodb-free-service.wirefreethought.com/v1/geo/places/${editedEvent.eventDetails.city.id}`
+        `http://geodb-free-service.wirefreethought.com/v1/geo/places/${editedCompetition.eventDetails.city.id}`
       );
 
       if (!response.ok) {
@@ -552,21 +552,21 @@ export async function editEvent(
       timezone = responseData.data.timezone;
     }
 
-    // Create the EventDetails object
+    // Create the CompetitionDetails object
     const eventDetails: CompetitionDetails = {
-      creatorId: oldEvent.eventDetails.creatorId,
-      title: editedEvent.eventDetails.title,
-      description: editedEvent.eventDetails.description ?? "",
-      address: editedEvent.eventDetails.address,
-      prize: editedEvent.eventDetails.prize,
-      entryCost: editedEvent.eventDetails.entryCost,
-      startDate: editedEvent.eventDetails.startDate,
-      startTime: editedEvent.eventDetails.startTime,
-      endTime: editedEvent.eventDetails.endTime,
-      schedule: editedEvent.eventDetails.schedule ?? "",
-      poster: editedEvent.eventDetails.poster as Image | null,
+      creatorId: oldCompetition.eventDetails.creatorId,
+      title: editedCompetition.eventDetails.title,
+      description: editedCompetition.eventDetails.description ?? "",
+      address: editedCompetition.eventDetails.address,
+      prize: editedCompetition.eventDetails.prize,
+      entryCost: editedCompetition.eventDetails.entryCost,
+      startDate: editedCompetition.eventDetails.startDate,
+      startTime: editedCompetition.eventDetails.startTime,
+      endTime: editedCompetition.eventDetails.endTime,
+      schedule: editedCompetition.eventDetails.schedule ?? "",
+      poster: editedCompetition.eventDetails.poster as Image | null,
       city: {
-        ...editedEvent.eventDetails.city,
+        ...editedCompetition.eventDetails.city,
         timezone: timezone,
       },
     };
@@ -574,22 +574,22 @@ export async function editEvent(
     // Workshops are now separate Event:Workshop nodes, not nested in Competition
     // Workshop processing removed - they have their own actions
 
-    // Create the Event object that matches the EditEvent query structure
-    const event: Competition = {
-      id: eventId,
+    // Create the Competition object that matches the EditCompetition query structure
+    const competition: Competition = {
+      id: competitionId,
       createdAt: new Date(), // This will be preserved by the database
       updatedAt: new Date(),
       eventDetails: eventDetails,
-      roles: editedEvent.roles || [],
+      roles: editedCompetition.roles || [],
       sections: processedSections,
-      subEvents: editedEvent.subEvents.map((se) => ({ id: se.id } as any)), // Only IDs needed for relationships
-      gallery: editedEvent.gallery as Image[],
+      subEvents: editedCompetition.subEvents.map((se) => ({ id: se.id } as any)), // Only IDs needed for relationships
+      gallery: editedCompetition.gallery as Image[],
     };
 
-    // Call EditEvent with the properly structured Event object
-    const result = await editEventQuery(event);
+    // Call EditCompetition with the properly structured Competition object
+    const result = await editCompetitionQuery(competition);
 
-    console.log("🟢 [editEvent] EditEvent result:", result);
+    console.log("🟢 [editCompetition] EditCompetition result:", result);
 
     if (result) {
       // Helper function to get userId from UserSearchItem
@@ -611,10 +611,10 @@ export async function editEvent(
 
       // Process tag diffs for videos and sections
       try {
-        console.log("🟢 [editEvent] Starting tag diff processing...");
+        console.log("🟢 [editCompetition] Starting tag diff processing...");
         // Process video tag diffs (both section videos and bracket videos)
         for (const newSection of processedSections) {
-          const oldSection = oldEvent.sections.find(
+          const oldSection = oldCompetition.sections.find(
             (s) => s.id === newSection.id
           );
 
@@ -932,8 +932,8 @@ export async function editEvent(
       console.log("✅ [editEvent] Tag diff processing completed");
 
       // Update corresponding PostgreSQL Event record to keep it in sync with Neo4j
-      // Use the original creator ID from oldEvent to preserve creator information
-      const creatorId = oldEvent.eventDetails.creatorId || session.user.id;
+      // Use the original creator ID from oldCompetition to preserve creator information
+      const creatorId = oldCompetition.eventDetails.creatorId || session.user.id;
 
       await prisma.event.upsert({
         where: { eventId: eventId },
@@ -969,7 +969,7 @@ export async function editEvent(
   }
 }
 
-export async function getEvent(eventId: string): Promise<response> {
+export async function getCompetition(competitionId: string): Promise<response> {
   const session = await auth();
 
   // Check for auth level here
@@ -983,11 +983,11 @@ export async function getEvent(eventId: string): Promise<response> {
   }
 
   try {
-    const eventData = await getEventQuery(eventId);
+    const competitionData = await getCompetitionQuery(competitionId);
 
-    if (!eventData) {
+    if (!competitionData) {
       return {
-        error: "Event not found",
+        error: "Competition not found",
         status: 404,
         event: null,
       };
@@ -995,10 +995,10 @@ export async function getEvent(eventId: string): Promise<response> {
 
     return {
       status: 200,
-      event: eventData,
+      event: competitionData,
     };
   } catch (error) {
-    console.error("Error fetching event:", error);
+    console.error("Error fetching competition:", error);
     return {
       error: "Failed to fetch event",
       status: 500,

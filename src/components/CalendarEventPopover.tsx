@@ -53,8 +53,6 @@ export function CalendarEventPopover({
     switch (type) {
       case "event":
         return `/events/${originalData.id}`;
-      case "subevent":
-        return `/events/${resource.parentEventId}#subevent-${originalData.id}`;
       case "workshop":
         return `/workshops/${originalData.id}`;
       case "session":
@@ -63,19 +61,28 @@ export function CalendarEventPopover({
         return "#";
     }
   };
+  
+  // Get parent event route based on parent event type
+  const getParentEventRoute = (parentId?: string) => {
+    if (!parentId) return "#";
+    const parentEventType = resource.parentEventType;
+    switch (parentEventType) {
+      case "workshop":
+        return `/workshops/${parentId}`;
+      case "session":
+        return `/sessions/${parentId}`;
+      case "competition":
+      default:
+        return `/events/${parentId}`;
+    }
+  };
 
-  // Get parent event link if applicable
+  // Get parent event link if applicable (for subevents)
   const getParentEventLink = () => {
-    if (type === "subevent" && resource.parentEventId) {
+    if (resource.parentEventId && resource.parentEventTitle) {
       return {
         id: resource.parentEventId,
         title: resource.parentEventTitle,
-      };
-    }
-    if (type === "workshop" && resource.associatedEventId) {
-      return {
-        id: resource.associatedEventId,
-        title: resource.associatedEventTitle,
       };
     }
     return null;
@@ -133,9 +140,9 @@ export function CalendarEventPopover({
           {/* Parent event link */}
           {parentEvent && (
             <div className="text-sm text-gray-600">
-              <span className="font-medium">Event:</span>{" "}
+              <span className="font-medium">Main Event:</span>{" "}
               <Link
-                href={`/events/${parentEvent.id}`}
+                href={getParentEventRoute(parentEvent.id)}
                 className="text-blue-600 hover:underline"
                 onClick={() => onOpenChange(false)}
               >

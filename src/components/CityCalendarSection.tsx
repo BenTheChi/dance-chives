@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getCitySchedule } from "@/db/queries/event";
+import { getCitySchedule } from "@/db/queries/competition";
 import { CityCalendar } from "./CityCalendar";
 import {
   Card,
@@ -28,8 +28,6 @@ async function CalendarContent({ cityId }: { cityId: number }) {
   return (
     <CityCalendar
       events={scheduleData.events}
-      subevents={scheduleData.subevents}
-      workshops={scheduleData.workshops}
       sessions={scheduleData.sessions}
     />
   );

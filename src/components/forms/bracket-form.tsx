@@ -17,7 +17,7 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import { VideoForm } from "./video-form";
-import { FormValues } from "./event-form";
+import { FormValues } from "./competition-form";
 import { Section, Bracket, Video } from "@/types/event";
 
 // Helper function to normalize sections for form (ensures description is always string)
