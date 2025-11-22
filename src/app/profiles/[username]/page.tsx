@@ -166,7 +166,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       : eventType === "session"
                       ? `/sessions/${event.eventId}`
                       : `/events/${event.eventId}`;
-                  
+
                   return (
                     <Eventcard
                       key={event.eventId}
@@ -205,7 +205,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       : eventType === "session"
                       ? `/sessions/${event.eventId}`
                       : `/events/${event.eventId}`;
-                  
+
                   return (
                     <Eventcard
                       key={event.eventId}

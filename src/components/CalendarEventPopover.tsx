@@ -61,7 +61,7 @@ export function CalendarEventPopover({
         return "#";
     }
   };
-  
+
   // Get parent event route based on parent event type
   const getParentEventRoute = (parentId?: string) => {
     if (!parentId) return "#";

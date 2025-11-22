@@ -161,7 +161,7 @@ export default async function SessionPage({ params }: PageProps) {
           </div>
 
           <PosterImage
-            poster={session.eventDetails.poster}
+            poster={session.eventDetails.poster ?? null}
             className="md:col-span-1 xl:col-span-1"
           />
 

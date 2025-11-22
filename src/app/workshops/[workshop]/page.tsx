@@ -148,7 +148,8 @@ export default async function WorkshopPage({ params }: PageProps) {
 
   // Note: Workshops are no longer associated with events
   const eventTeamMemberIds: string[] = [];
-  const eventTeamMembers: NonNullable<Awaited<ReturnType<typeof getUser>>>[] = [];
+  const eventTeamMembers: NonNullable<Awaited<ReturnType<typeof getUser>>>[] =
+    [];
 
   return (
     <>
@@ -172,7 +173,7 @@ export default async function WorkshopPage({ params }: PageProps) {
           </div>
 
           <PosterImage
-            poster={workshop.eventDetails.poster}
+            poster={workshop.eventDetails.poster ?? null}
             className="md:col-span-1 xl:col-span-1"
           />
 

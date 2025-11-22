@@ -292,7 +292,10 @@ export async function getUserProfile(userIdOrUsername: string) {
       city: record.get("city"),
       cityId: record.get("cityId") as number | undefined,
       styles: record.get("styles") || [],
-      eventType: record.get("eventType") as "competition" | "workshop" | "session",
+      eventType: record.get("eventType") as
+        | "competition"
+        | "workshop"
+        | "session",
     }));
 
     // Get events where user has roles with full event data (collecting all roles)
@@ -333,7 +336,10 @@ export async function getUserProfile(userIdOrUsername: string) {
       city: record.get("city"),
       cityId: record.get("cityId") as number | undefined,
       styles: record.get("styles") || [],
-      eventType: record.get("eventType") as "competition" | "workshop" | "session",
+      eventType: record.get("eventType") as
+        | "competition"
+        | "workshop"
+        | "session",
     }));
 
     // Get videos where user is tagged with full video data (collecting all roles)
