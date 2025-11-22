@@ -143,9 +143,7 @@ export default function SectionBracketTabSelector({
               target="section"
               targetId={section.id}
               currentUserId={currentUserId}
-              role={SECTION_ROLE_WINNER}
               isUserTagged={isUserWinner}
-              showRemoveButton={true}
               buttonLabel="Tag Self as Winner"
               pendingLabel="Winner tag request pending"
               successLabel="Tagged as Winner"

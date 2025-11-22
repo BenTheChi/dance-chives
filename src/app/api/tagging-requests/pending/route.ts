@@ -6,6 +6,8 @@ import { prisma } from "@/lib/primsa";
  * GET: Fetch all pending tagging requests for an event for the authenticated user
  * Query params:
  *   - eventId: required, the event ID
+ *   - sectionId: optional, the section ID (for section-level requests)
+ *   - videoId: optional, the video ID (for video-level requests)
  *   - roles: optional, comma-separated list of roles to filter by
  */
 export async function GET(request: NextRequest) {
@@ -17,6 +19,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
+    const sectionId = searchParams.get("sectionId");
+    const videoId = searchParams.get("videoId");
     const rolesParam = searchParams.get("roles");
 
     if (!eventId) {
@@ -31,9 +35,21 @@ export async function GET(request: NextRequest) {
       senderId: session.user.id,
       targetUserId: session.user.id,
       status: "PENDING",
-      videoId: null,
-      sectionId: null,
     };
+
+    // For event-level requests, videoId and sectionId should be null
+    // For section-level requests, sectionId should be set
+    // For video-level requests, videoId should be set
+    if (sectionId) {
+      whereClause.sectionId = sectionId;
+      whereClause.videoId = null;
+    } else if (videoId) {
+      whereClause.videoId = videoId;
+      whereClause.sectionId = null;
+    } else {
+      whereClause.videoId = null;
+      whereClause.sectionId = null;
+    }
 
     // If roles are provided, filter by them
     if (rolesParam) {

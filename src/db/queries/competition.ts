@@ -3318,6 +3318,7 @@ export const getEvents = async (): Promise<EventCard[]> => {
 export interface StyleData {
   styleName: string;
   events: EventCard[];
+  cityFilteredEvents?: EventCard[];
   sections: Array<{
     id: string;
     title: string;
@@ -3338,12 +3339,20 @@ export interface StyleData {
     image?: string;
     styles: string[];
   }>;
+  cityFilteredUsers?: Array<{
+    id: string;
+    displayName: string;
+    username: string;
+    image?: string;
+    styles: string[];
+  }>;
   workshops: WorkshopCard[];
   sessions: SessionCard[];
 }
 
 export const getStyleData = async (
-  styleName: string
+  styleName: string,
+  cityId?: number
 ): Promise<StyleData | null> => {
   const session = driver.session();
 
@@ -3494,6 +3503,66 @@ export const getStyleData = async (
        ORDER BY u.displayName ASC, u.username ASC`,
       { styleName: normalizedStyleName }
     );
+
+    // Get city-filtered events with this style (if cityId is provided)
+    let cityFilteredEventsResult: any = null;
+    let cityFilteredEventStylesResult: any = null;
+    if (cityId !== undefined) {
+      cityFilteredEventsResult = await session.run(
+        `MATCH (style:Style {name: $styleName})
+         OPTIONAL MATCH (style)<-[:STYLE]-(s:Section)-[:IN]->(e:Event)-[:IN]->(c:City {id: $cityId})
+         OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Section)-[:IN]->(e2:Event)-[:IN]->(c2:City {id: $cityId})
+         OPTIONAL MATCH (style)<-[:STYLE]-(v2:Video)-[:IN]->(b:Bracket)-[:IN]->(s3:Section)-[:IN]->(e3:Event)-[:IN]->(c3:City {id: $cityId})
+         WITH collect(DISTINCT e) as events1, collect(DISTINCT e2) as events2, collect(DISTINCT e3) as events3
+         WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
+         UNWIND allEvents as event
+         WITH DISTINCT event
+         OPTIONAL MATCH (event)-[:IN]->(c:City)
+         OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
+         RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl
+         ORDER BY event.startDate DESC`,
+        { styleName: normalizedStyleName, cityId }
+      );
+
+      // Get all styles for city-filtered events
+      cityFilteredEventStylesResult = await session.run(
+        `MATCH (style:Style {name: $styleName})
+         OPTIONAL MATCH (style)<-[:STYLE]-(s:Section)-[:IN]->(e:Event)-[:IN]->(c:City {id: $cityId})
+         OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Section)-[:IN]->(e2:Event)-[:IN]->(c2:City {id: $cityId})
+         OPTIONAL MATCH (style)<-[:STYLE]-(v2:Video)-[:IN]->(b:Bracket)-[:IN]->(s3:Section)-[:IN]->(e3:Event)-[:IN]->(c3:City {id: $cityId})
+         WITH collect(DISTINCT e) as events1, collect(DISTINCT e2) as events2, collect(DISTINCT e3) as events3
+         WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
+         UNWIND allEvents as event
+         WITH DISTINCT event
+         OPTIONAL MATCH (event)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+         OPTIONAL MATCH (event)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+         OPTIONAL MATCH (event)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+         WITH event.id as eventId,
+              collect(DISTINCT sectionStyle.name) as sectionStyles,
+              collect(DISTINCT videoStyle.name) as videoStyles,
+              collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+         WITH eventId,
+              [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+              [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+              [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+         RETURN eventId,
+                filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
+        { styleName: normalizedStyleName, cityId }
+      );
+    }
+
+    // Get city-filtered users with this style (if cityId is provided)
+    let cityFilteredUsersResult: any = null;
+    if (cityId !== undefined) {
+      cityFilteredUsersResult = await session.run(
+        `MATCH (style:Style {name: $styleName})<-[:STYLE]-(u:User)-[:LOCATED_IN]->(c:City {id: $cityId})
+         OPTIONAL MATCH (u)-[:STYLE]->(s:Style)
+         RETURN u.id as id, u.displayName as displayName, u.username as username,
+                u.image as image, collect(DISTINCT s.name) as styles
+         ORDER BY u.displayName ASC, u.username ASC`,
+        { styleName: normalizedStyleName, cityId }
+      );
+    }
 
     // Get workshops with this style (from workshop STYLE relationship or videos)
     const workshopsResult = await session.run(
@@ -3686,12 +3755,73 @@ export const getStyleData = async (
       };
     });
 
+    // Build city-filtered events array (if cityId was provided)
+    let cityFilteredEvents: EventCard[] = [];
+    if (cityFilteredEventsResult && cityFilteredEventStylesResult) {
+      // Create styles map for city-filtered events
+      const cityFilteredEventStylesMap = new Map<string, string[]>();
+      cityFilteredEventStylesResult.records.forEach((record: any) => {
+        const eventId = record.get("eventId");
+        const allStyles = (record.get("allStyles") || []) as unknown[];
+        const uniqueStyles = Array.from(
+          new Set(
+            allStyles.filter(
+              (s): s is string => typeof s === "string" && s !== null
+            )
+          )
+        );
+        cityFilteredEventStylesMap.set(eventId, uniqueStyles);
+      });
+
+      cityFilteredEvents = cityFilteredEventsResult.records.map(
+        (record: any) => {
+          const eventId = record.get("eventId");
+          return {
+            id: eventId,
+            title: record.get("title"),
+            series: undefined,
+            imageUrl: record.get("imageUrl"),
+            date: record.get("date"),
+            city: record.get("city"),
+            cityId: record.get("cityId") as number | undefined,
+            styles: cityFilteredEventStylesMap.get(eventId) || [],
+          };
+        }
+      );
+    }
+
+    // Build city-filtered users array (if cityId was provided)
+    let cityFilteredUsers: Array<{
+      id: string;
+      displayName: string;
+      username: string;
+      image?: string;
+      styles: string[];
+    }> = [];
+    if (cityFilteredUsersResult) {
+      cityFilteredUsers = cityFilteredUsersResult.records.map(
+        (record: any) => ({
+          id: record.get("id"),
+          displayName: record.get("displayName") || "",
+          username: record.get("username") || "",
+          image: record.get("image"),
+          styles: (record.get("styles") || []).filter(
+            (s: any) => s !== null && s !== undefined
+          ) as string[],
+        })
+      );
+    }
+
     return {
       styleName: normalizedStyleName,
       events,
+      cityFilteredEvents:
+        cityFilteredEvents.length > 0 ? cityFilteredEvents : undefined,
       sections,
       videos,
       users,
+      cityFilteredUsers:
+        cityFilteredUsers.length > 0 ? cityFilteredUsers : undefined,
       workshops,
       sessions,
     };

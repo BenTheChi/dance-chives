@@ -2,7 +2,6 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { getStyleData } from "@/db/queries/competition";
 import { notFound } from "next/navigation";
 import Eventcard from "@/components/cards";
-import { SectionCard } from "@/components/ui/section-card";
 import { StyleVideoGallery } from "@/components/ui/style-video-gallery";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 import { UserCard } from "@/components/user-card";
@@ -11,6 +10,8 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { normalizeYouTubeThumbnailUrl } from "@/lib/utils";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { auth } from "@/auth";
+import { getUser } from "@/db/queries/user";
 
 type PageProps = {
   params: Promise<{ style: string }>;
@@ -20,7 +21,17 @@ export default async function StylePage({ params }: PageProps) {
   const paramResult = await params;
   const styleName = decodeURIComponent(paramResult.style);
 
-  const styleData = await getStyleData(styleName);
+  // Get current user and their city
+  const session = await auth();
+  let cityId: number | undefined = undefined;
+  if (session?.user?.id) {
+    const user = await getUser(session.user.id);
+    if (user?.city) {
+      cityId = user.city.id;
+    }
+  }
+
+  const styleData = await getStyleData(styleName, cityId);
 
   if (!styleData) {
     notFound();
@@ -35,15 +46,15 @@ export default async function StylePage({ params }: PageProps) {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">{displayStyleName}</h1>
         <p className="text-muted-foreground mb-8">
-          Explore events, sections, videos, users, workshops, and sessions tagged with this dance style
+          Explore events, videos, users, workshops, and sessions tagged with this dance style
         </p>
 
-        {/* Events Section */}
-        {styleData.events.length > 0 && (
+        {/* Events in Your City Section */}
+        {styleData.cityFilteredEvents && styleData.cityFilteredEvents.length > 0 && (
           <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6">Events</h2>
+            <h2 className="text-2xl font-semibold mb-6">Events in Your City</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {styleData.events.map((event) => (
+              {styleData.cityFilteredEvents.map((event) => (
                 <Eventcard
                   key={event.id}
                   id={event.id}
@@ -60,24 +71,6 @@ export default async function StylePage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Sections Section */}
-        {styleData.sections.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6">Sections</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {styleData.sections.map((section) => (
-                <SectionCard
-                  key={section.id}
-                  id={section.id}
-                  title={section.title}
-                  eventId={section.eventId}
-                  eventTitle={section.eventTitle}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* Videos Section */}
         {styleData.videos.length > 0 && (
           <section className="mb-12">
@@ -86,12 +79,12 @@ export default async function StylePage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Users Section */}
-        {styleData.users.length > 0 && (
+        {/* Users in Your City Section */}
+        {styleData.cityFilteredUsers && styleData.cityFilteredUsers.length > 0 && (
           <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6">Users</h2>
+            <h2 className="text-2xl font-semibold mb-6">Users in Your City</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {styleData.users.map((user) => (
+              {styleData.cityFilteredUsers.map((user) => (
                 <UserCard
                   key={user.id}
                   id={user.id}
@@ -237,15 +230,14 @@ export default async function StylePage({ params }: PageProps) {
           </section>
         )}
 
-        {styleData.events.length === 0 &&
-          styleData.sections.length === 0 &&
+        {(!styleData.cityFilteredEvents || styleData.cityFilteredEvents.length === 0) &&
+          (!styleData.cityFilteredUsers || styleData.cityFilteredUsers.length === 0) &&
           styleData.videos.length === 0 &&
-          styleData.users.length === 0 &&
           styleData.workshops.length === 0 &&
           styleData.sessions.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                No events, sections, videos, users, workshops, or sessions found for this style.
+                No events, videos, users, workshops, or sessions found for this style.
               </p>
             </div>
           )}
