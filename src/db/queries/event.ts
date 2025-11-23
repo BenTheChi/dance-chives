@@ -501,86 +501,6 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-  // Get event-level videos (optional, for Workshop/Session)
-  const videosResult = await session.run(
-    `
-    MATCH (e:Event {id: $id})<-[:IN]-(v:Video)
-    WHERE NOT EXISTS {
-      (v)-[:IN]->(:Section)
-    }
-    RETURN collect({
-      id: v.id,
-      title: v.title,
-      src: v.src,
-      type: CASE 
-        WHEN 'BattleVideo' IN labels(v) THEN 'battle'
-        WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
-        WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
-        WHEN 'ClassVideo' IN labels(v) THEN 'class'
-        ELSE 'freestyle'
-      END
-    }) as videos
-  `,
-    { id }
-  );
-
-  // Get tagged users for event-level videos
-  const videoUsersResult = await session.run(
-    `
-    MATCH (e:Event {id: $id})<-[:IN]-(v:Video)
-    WHERE NOT EXISTS {
-      (v)-[:IN]->(:Section)
-    }
-    OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
-    OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
-    OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
-    OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
-    WITH v,
-         collect(DISTINCT {
-           id: winner.id,
-           displayName: winner.displayName,
-           username: winner.username
-         }) as allWinners,
-         collect(DISTINCT {
-           id: dancer.id,
-           displayName: dancer.displayName,
-           username: dancer.username
-         }) as allDancers,
-         collect(DISTINCT {
-           id: choreographer.id,
-           displayName: choreographer.displayName,
-           username: choreographer.username
-         }) as allChoreographers,
-         collect(DISTINCT {
-           id: teacher.id,
-           displayName: teacher.displayName,
-           username: teacher.username
-         }) as allTeachers
-    WITH v,
-         [w in allWinners WHERE w.id IS NOT NULL] as winners,
-         [d in allDancers WHERE d.id IS NOT NULL] as dancers,
-         [c in allChoreographers WHERE c.id IS NOT NULL] as choreographers,
-         [t in allTeachers WHERE t.id IS NOT NULL] as teachers
-    RETURN v.id as videoId, 
-           winners as taggedWinners,
-           dancers as taggedDancers,
-           choreographers as taggedChoreographers,
-           teachers as taggedTeachers
-  `,
-    { id }
-  );
-
-  // Get video styles for event-level videos
-  const videoStylesResult = await session.run(
-    `
-    MATCH (e:Event {id: $id})<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
-    WHERE NOT EXISTS {
-      (v)-[:IN]->(:Section)
-    }
-    RETURN v.id as videoId, collect(style.name) as styles
-  `,
-    { id }
-  );
 
   // Get event styles
   const eventStylesResult = await session.run(
@@ -768,45 +688,6 @@ export const getEvent = async (id: string): Promise<Event> => {
     });
   });
 
-  // Process event-level videos
-  const videos = videosResult.records[0]?.get("videos") || [];
-  const videoUsersMap = new Map<string, any>();
-  videoUsersResult.records.forEach((record: any) => {
-    videoUsersMap.set(record.get("videoId"), {
-      taggedWinners: record.get("taggedWinners") || [],
-      taggedDancers: record.get("taggedDancers") || [],
-      taggedChoreographers: record.get("taggedChoreographers") || [],
-      taggedTeachers: record.get("taggedTeachers") || [],
-    });
-  });
-
-  const videoStylesMap = new Map<string, string[]>();
-  videoStylesResult.records.forEach((record: any) => {
-    videoStylesMap.set(record.get("videoId"), record.get("styles"));
-  });
-
-  const videosWithStyles = videos.map((video: Video) => {
-    const userData = videoUsersMap.get(video.id);
-    const videoType = video.type || "freestyle";
-
-    const result: any = {
-      ...video,
-      styles: videoStylesMap.get(video.id) || [],
-      taggedDancers: userData?.taggedDancers || [],
-    };
-
-    if (videoType === "battle") {
-      result.taggedWinners = userData?.taggedWinners || [];
-    }
-    if (videoType === "choreography") {
-      result.taggedChoreographers = userData?.taggedChoreographers || [];
-    }
-    if (videoType === "class") {
-      result.taggedTeachers = userData?.taggedTeachers || [];
-    }
-
-    return result;
-  });
 
   // Parse dates - must be an array (required)
   let dates: SessionDate[] = [];
@@ -861,7 +742,6 @@ export const getEvent = async (id: string): Promise<Event> => {
     roles,
     sections,
     gallery,
-    ...(videosWithStyles.length > 0 && { videos: videosWithStyles }),
   };
 
   return result as Event;
@@ -923,24 +803,18 @@ export const getAllEvents = async (): Promise<EventCard[]> => {
     OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
     OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
     OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(ev:Video)-[:STYLE]->(eventVideoStyle:Style)
-    WHERE NOT EXISTS {
-      (ev)-[:IN]->(:Section)
-    }
     WITH e.id as eventId, 
          collect(DISTINCT eventStyle.name) as eventStyles,
          collect(DISTINCT sectionStyle.name) as sectionStyles,
          collect(DISTINCT videoStyle.name) as videoStyles,
-         collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles,
-         collect(DISTINCT eventVideoStyle.name) as eventVideoStyles
+         collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
     WITH eventId, 
          [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
          [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
          [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
-         [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles,
-         [style IN eventVideoStyles WHERE style IS NOT NULL] as filteredEventVideoStyles
+         [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
     RETURN eventId, 
-           filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles + filteredEventVideoStyles as allStyles
+           filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
   `
   );
 
@@ -1430,67 +1304,6 @@ const createSectionVideos = async (sections: any[]) => {
   }
 };
 
-/**
- * Helper function to create event-level videos
- */
-const createEventVideos = async (eventId: string, videos: any[]) => {
-  if (videos.length === 0) return;
-
-  const session = driver.session();
-  try {
-    for (const vid of videos) {
-      // Get video type label
-      const videoType = vid.type || "freestyle";
-      const videoLabel = getVideoTypeLabel(videoType);
-
-      await session.run(
-        `MATCH (e:Event {id: $eventId})
-         MERGE (v:Video {id: $videoId})
-         ON CREATE SET
-           v.title = $title,
-           v.src = $src
-         ON MATCH SET
-           v.title = $title,
-           v.src = $src
-         WITH v, e
-         CALL apoc.create.removeLabels(v, ${JSON.stringify(
-           getAllVideoTypeLabels()
-         )}) YIELD node as removedNode
-         WITH removedNode as v, e
-         CALL apoc.create.addLabels(v, ['Video', $videoLabel]) YIELD node
-         MERGE (v)-[:IN]->(e)`,
-        {
-          eventId,
-          videoId: vid.id,
-          title: vid.title,
-          src: vid.src,
-          videoLabel: videoLabel,
-        }
-      );
-
-      // Create user relationships based on video type
-      await createVideoUserRelationships(vid, vid.id);
-
-      // Create video style relationships
-      const videoStyles = vid.styles || [];
-      if (videoStyles.length > 0) {
-        const normalizedStyles = normalizeStyleNames(videoStyles);
-        await session.run(
-          `
-          MATCH (v:Video {id: $videoId})
-          WITH v, $styles AS styles
-          UNWIND styles AS styleName
-          MERGE (style:Style {name: styleName})
-          MERGE (v)-[:STYLE]->(style)
-          `,
-          { videoId: vid.id, styles: normalizedStyles }
-        );
-      }
-    }
-  } finally {
-    await session.close();
-  }
-};
 
 /**
  * Helper function to update video user relationships
@@ -1823,7 +1636,6 @@ export const insertEvent = async (event: Event): Promise<Event> => {
     await createBrackets(event.sections);
     await createBracketVideos(event.sections);
     await createSectionVideos(event.sections);
-    await createEventVideos(event.id, event.videos || []);
     await createGalleryPhotos(event.id, event.gallery);
 
     // Create section winners
@@ -2123,13 +1935,6 @@ export const editEvent = async (event: Event): Promise<Event> => {
       { id }
     );
 
-    // Delete existing event-level videos (not in sections/brackets)
-    await tx.run(
-      `MATCH (e:Event {id: $id})<-[:IN]-(v:Video)
-       WHERE NOT (v)-[:IN]->(:Section) AND NOT (v)-[:IN]->(:Bracket)
-       DETACH DELETE v`,
-      { id: event.id }
-    );
 
     // Commit transaction
     await tx.commit();
@@ -2140,7 +1945,6 @@ export const editEvent = async (event: Event): Promise<Event> => {
     await createBrackets(event.sections);
     await createBracketVideos(event.sections);
     await createSectionVideos(event.sections);
-    await createEventVideos(event.id, event.videos || []);
     await createGalleryPhotos(event.id, event.gallery);
 
     // Create section winners

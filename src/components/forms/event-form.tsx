@@ -203,7 +203,6 @@ const formSchema = z.object({
     }
   ),
   roles: z.array(roleSchema).optional(),
-  videos: z.array(videoSchema).optional(), // Event-level video gallery
   gallery: z.array(imageSchema),
 });
 
@@ -269,7 +268,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       },
       sections: [],
       roles: [],
-      videos: [],
       gallery: [],
     },
   });
@@ -287,7 +285,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
   const roles = watch("roles") ?? [];
-  const videos = watch("videos") ?? [];
   const galleryRaw = watch("gallery") ?? [];
   // Normalize gallery to ensure all images have the type property
   const gallery: Image[] = galleryRaw.map((img) => ({
@@ -311,26 +308,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     "Event Details",
     "Roles",
     "Sections",
-    "Videos",
     "Photo Gallery",
   ];
 
-  const addVideo = () => {
-    const newVideo: Video = {
-      id: Date.now().toString(),
-      title: `Video ${videos.length + 1}`,
-      src: "https://example.com/video",
-      type: "battle",
-    };
-    setValue("videos", [...videos, newVideo]);
-  };
-
-  const removeVideo = (videoId: string) => {
-    setValue(
-      "videos",
-      videos.filter((v) => v.id !== videoId)
-    );
-  };
 
   const addSection = () => {
     const newSection: Section = {
@@ -682,41 +662,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   }
                 />
               )}
-            </div>
-          )}
-
-          {activeMainTab === "Videos" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Videos</h3>
-                <Button
-                  type="button"
-                  onClick={addVideo}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Video
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {videos.map((video, videoIndex) => (
-                  <VideoForm
-                    key={video.id}
-                    control={control}
-                    setValue={setValue}
-                    getValues={getValues}
-                    video={video}
-                    videoIndex={videoIndex}
-                    context="event"
-                    onRemove={() => removeVideo(video.id)}
-                    eventId={
-                      isEditing ? pathname[pathname.length - 2] : undefined
-                    }
-                  />
-                ))}
-              </div>
             </div>
           )}
 

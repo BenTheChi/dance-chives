@@ -49,7 +49,6 @@ export interface Event {
   roles: Role[];
   gallery: Image[]; // photoGallery
   sections: Section[]; // Sections available for all event types
-  videos?: Video[]; // Video gallery at event level (optional, can also be in sections)
 }
 
 // Role interface - common across all event types

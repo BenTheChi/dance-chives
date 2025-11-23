@@ -37,11 +37,11 @@ import {
 interface VideoFormProps {
   video: Video;
   videoIndex: number;
-  sectionIndex?: number; // Optional for event-level videos
-  sections?: Section[]; // Optional for event-level videos
-  activeSectionId?: string; // Optional for event-level videos
-  activeBracketId?: string; // Optional for event-level videos
-  context: "section" | "bracket" | "event"; // Added "event" context
+  sectionIndex?: number;
+  sections?: Section[];
+  activeSectionId?: string;
+  activeBracketId?: string;
+  context: "section" | "bracket";
   onRemove: () => void;
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
@@ -144,19 +144,6 @@ export function VideoForm({
       }
     }
 
-    // Handle event-level videos
-    if (context === "event") {
-      const currentVideos = getValues("videos") || [];
-      const updatedVideos = currentVideos.map((v) =>
-        v.id === video.id
-          ? { ...v, taggedDancers: dancers, taggedWinners: winnersToUpdate }
-          : v
-      );
-      setValue("videos", updatedVideos);
-      setVideoDancers(dancers);
-      return;
-    }
-
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
@@ -231,19 +218,6 @@ export function VideoForm({
       }
     }
 
-    // Handle event-level videos
-    if (context === "event") {
-      const currentVideos = getValues("videos") || [];
-      const updatedVideos = currentVideos.map((v) =>
-        v.id === video.id
-          ? { ...v, taggedWinners: winners, taggedDancers: dancersToUpdate }
-          : v
-      );
-      setValue("videos", updatedVideos);
-      setVideoWinners(winners);
-      return;
-    }
-
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
@@ -303,16 +277,6 @@ export function VideoForm({
   };
 
   const updateVideoStyles = (styles: string[]) => {
-    // Handle event-level videos
-    if (context === "event") {
-      const currentVideos = getValues("videos") || [];
-      const updatedVideos = currentVideos.map((v) =>
-        v.id === video.id ? { ...v, styles } : v
-      );
-      setValue("videos", updatedVideos);
-      return;
-    }
-
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
@@ -348,16 +312,6 @@ export function VideoForm({
   const updateVideoType = (
     type: "battle" | "freestyle" | "choreography" | "class"
   ) => {
-    // Handle event-level videos
-    if (context === "event") {
-      const currentVideos = getValues("videos") || [];
-      const updatedVideos = currentVideos.map((v) =>
-        v.id === video.id ? { ...v, type } : v
-      );
-      setValue("videos", updatedVideos);
-      return;
-    }
-
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
@@ -391,17 +345,6 @@ export function VideoForm({
   };
 
   const updateTaggedChoreographers = (choreographers: UserSearchItem[]) => {
-    // Handle event-level videos
-    if (context === "event") {
-      const currentVideos = getValues("videos") || [];
-      const updatedVideos = currentVideos.map((v) =>
-        v.id === video.id ? { ...v, taggedChoreographers: choreographers } : v
-      );
-      setValue("videos", updatedVideos);
-      setVideoChoreographers(choreographers);
-      return;
-    }
-
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
@@ -440,17 +383,6 @@ export function VideoForm({
   };
 
   const updateTaggedTeachers = (teachers: UserSearchItem[]) => {
-    // Handle event-level videos
-    if (context === "event") {
-      const currentVideos = getValues("videos") || [];
-      const updatedVideos = currentVideos.map((v) =>
-        v.id === video.id ? { ...v, taggedTeachers: teachers } : v
-      );
-      setValue("videos", updatedVideos);
-      setVideoTeachers(teachers);
-      return;
-    }
-
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
@@ -486,8 +418,7 @@ export function VideoForm({
 
   // Check if styles should be disabled (when section has applyStylesToVideos enabled)
   const activeSection = sections?.find((s) => s.id === activeSectionId);
-  const isStylesDisabled =
-    (activeSection?.applyStylesToVideos || false) && context !== "event";
+  const isStylesDisabled = activeSection?.applyStylesToVideos || false;
 
   return (
     <Card className="group">
@@ -504,9 +435,7 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            (context === "event"
-              ? `videos.${videoIndex}.title`
-              : context === "bracket"
+            (context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.title`
               : `sections.${sectionIndex}.videos.${videoIndex}.title`) as any
           }
@@ -529,9 +458,7 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            (context === "event"
-              ? `videos.${videoIndex}.src`
-              : context === "bracket"
+            (context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.src`
               : `sections.${sectionIndex}.videos.${videoIndex}.src`) as any
           }
@@ -549,9 +476,7 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            (context === "event"
-              ? `videos.${videoIndex}.type`
-              : context === "bracket"
+            (context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.type`
               : `sections.${sectionIndex}.videos.${videoIndex}.type`) as any
           }
@@ -602,9 +527,7 @@ export function VideoForm({
           <FormField
             control={control}
             name={
-              (context === "event"
-                ? `videos.${videoIndex}.taggedWinners`
-                : context === "bracket"
+              (context === "bracket"
                 ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.taggedWinners`
                 : `sections.${sectionIndex}.videos.${videoIndex}.taggedWinners`) as any
             }
@@ -662,9 +585,7 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            (context === "event"
-              ? `videos.${videoIndex}.styles`
-              : context === "bracket"
+            (context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.styles`
               : `sections.${sectionIndex}.videos.${videoIndex}.styles`) as any
           }

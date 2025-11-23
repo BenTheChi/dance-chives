@@ -154,34 +154,6 @@ interface addEventProps {
       username: string;
     } | null;
   }[];
-  videos?: {
-    // Event-level videos
-    id: string;
-    title: string;
-    src: string;
-    type: "battle" | "freestyle" | "choreography" | "class";
-    styles?: string[];
-    taggedWinners?: {
-      id?: string;
-      displayName: string;
-      username: string;
-    }[];
-    taggedDancers?: {
-      id?: string;
-      displayName: string;
-      username: string;
-    }[];
-    taggedChoreographers?: {
-      id?: string;
-      displayName: string;
-      username: string;
-    }[];
-    taggedTeachers?: {
-      id?: string;
-      displayName: string;
-      username: string;
-    }[];
-  }[];
   gallery: {
     id: string;
     title: string;
@@ -541,7 +513,6 @@ export async function editEvent(
       eventDetails: eventDetails,
       roles: editedEvent.roles || [],
       sections: processedSections,
-      videos: editedEvent.videos || [],
       gallery: editedEvent.gallery as Image[],
     };
 
@@ -571,15 +542,6 @@ export async function editEvent(
       // Process tag diffs for videos and sections
       try {
         console.log("🟢 [editEvent] Starting tag diff processing...");
-
-        // Process event-level videos
-        if (editedEvent.videos && editedEvent.videos.length > 0) {
-          const oldEventVideos = oldEvent.videos || [];
-          for (const newVideo of editedEvent.videos) {
-            const oldVideo = oldEventVideos.find((v) => v.id === newVideo.id);
-            await processVideoTagDiffs(newVideo, oldVideo, eventId, getUserId);
-          }
-        }
 
         // Process section videos and bracket videos
         for (const newSection of processedSections) {

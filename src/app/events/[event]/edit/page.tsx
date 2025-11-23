@@ -89,7 +89,6 @@ export default async function EditEventPage({
     eventDetails: formattedEventDetails,
     sections: currEvent.sections,
     roles: formattedRoles,
-    videos: currEvent.videos || [],
     gallery: formattedPictures,
   } as FormValues;
 
