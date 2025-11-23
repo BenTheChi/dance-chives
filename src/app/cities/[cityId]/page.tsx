@@ -1,5 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getCityData } from "@/db/queries/competition";
+import { getCityData } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import Eventcard from "@/components/cards";
 import { UserCard } from "@/components/user-card";

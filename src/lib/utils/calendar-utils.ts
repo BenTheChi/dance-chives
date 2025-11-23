@@ -1,10 +1,9 @@
 import { parse } from "date-fns";
 import {
   CalendarEventData,
-  CalendarSubEventData,
   CalendarWorkshopData,
   CalendarSessionData,
-} from "@/db/queries/competition";
+} from "@/db/queries/event";
 
 /**
  * Convert 24-hour time string (HH:mm) to 12-hour AM/PM format
@@ -34,7 +33,7 @@ export interface CalendarEvent {
   start: Date;
   end: Date;
   resource: {
-    type: "event" | "subevent" | "workshop" | "session";
+    type: "event" | "workshop" | "session";
     originalData: any;
     [key: string]: any;
   };
@@ -95,40 +94,6 @@ export function convertEventToCalendarEvent(
       originalData: event,
       poster: event.poster,
       styles: event.styles,
-      ...(event.parentEventId && event.parentEventTitle
-        ? {
-            parentEventId: event.parentEventId,
-            parentEventTitle: event.parentEventTitle,
-            parentEventType: event.parentEventType,
-          }
-        : {}),
-    },
-  };
-}
-
-/**
- * Convert SubEvent to calendar event format
- */
-export function convertSubEventToCalendarEvent(
-  subEvent: CalendarSubEventData
-): CalendarEvent {
-  const start = parseDateTime(subEvent.startDate, subEvent.startTime);
-  const end = subEvent.endTime
-    ? parseDateTime(subEvent.startDate, subEvent.endTime)
-    : parseDateTime(subEvent.startDate, "23:59");
-
-  return {
-    id: subEvent.id,
-    title: subEvent.title,
-    start,
-    end,
-    resource: {
-      type: "subevent",
-      originalData: subEvent,
-      poster: subEvent.poster,
-      styles: subEvent.styles,
-      parentEventId: subEvent.parentEventId,
-      parentEventTitle: subEvent.parentEventTitle,
     },
   };
 }
@@ -154,13 +119,6 @@ export function convertWorkshopToCalendarEvent(
       originalData: workshop,
       poster: workshop.poster,
       styles: workshop.styles,
-      ...(workshop.parentEventId && workshop.parentEventTitle
-        ? {
-            parentEventId: workshop.parentEventId,
-            parentEventTitle: workshop.parentEventTitle,
-            parentEventType: workshop.parentEventType,
-          }
-        : {}),
     },
   };
 }
@@ -206,13 +164,6 @@ export function convertSessionToCalendarEvents(
         dateEntry: dateEntry, // Store the specific date entry
         poster: session.poster,
         styles: session.styles,
-        ...(session.parentEventId && session.parentEventTitle
-          ? {
-              parentEventId: session.parentEventId,
-              parentEventTitle: session.parentEventTitle,
-              parentEventType: session.parentEventType,
-            }
-          : {}),
       },
     };
   });

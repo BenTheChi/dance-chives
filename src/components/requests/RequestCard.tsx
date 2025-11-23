@@ -25,10 +25,7 @@ interface RequestCardProps {
     targetUser?: { name?: string; email: string };
     eventId?: string;
     eventTitle?: string;
-    sessionId?: string;
-    sessionTitle?: string | null;
-    workshopId?: string;
-    workshopTitle?: string | null;
+    eventType?: string | null;
     videoId?: string;
     videoTitle?: string | null;
     sectionId?: string;
@@ -127,22 +124,12 @@ function renderRequestDetails(
 
   // Tagging request details
   if (request.type === "TAGGING") {
-    if (request.workshopTitle) {
-      details.push(
-        <p key="workshop">
-          <span className="font-medium">Workshop:</span> {request.workshopTitle}
-        </p>
-      );
-    } else if (request.sessionTitle) {
-      details.push(
-        <p key="session">
-          <span className="font-medium">Session:</span> {request.sessionTitle}
-        </p>
-      );
-    } else if (request.eventTitle) {
+    if (request.eventTitle) {
       details.push(
         <p key="event">
-          <span className="font-medium">Event:</span> {request.eventTitle}
+          <span className="font-medium">Event:</span>{" "}
+          {request.eventType ? `${request.eventType} - ` : ""}
+          {request.eventTitle}
         </p>
       );
     }
@@ -381,27 +368,12 @@ export function OutgoingRequestCard({
                 {request.requestedLevel}
               </p>
             )}
-          {request.type === "TEAM_MEMBER" && (
-            <>
-              {request.workshopTitle && (
-                <p>
-                  <span className="font-medium">Workshop:</span>{" "}
-                  {request.workshopTitle}
-                </p>
-              )}
-              {request.sessionTitle && (
-                <p>
-                  <span className="font-medium">Session:</span>{" "}
-                  {request.sessionTitle}
-                </p>
-              )}
-              {request.eventTitle && (
-                <p>
-                  <span className="font-medium">Event:</span>{" "}
-                  {request.eventTitle}
-                </p>
-              )}
-            </>
+          {request.type === "TEAM_MEMBER" && request.eventTitle && (
+            <p>
+              <span className="font-medium">Event:</span>{" "}
+              {request.eventType ? `${request.eventType} - ` : ""}
+              {request.eventTitle}
+            </p>
           )}
           <p className={getStatusColor(localStatus)}>
             <span className="font-medium">Status:</span> {localStatus}

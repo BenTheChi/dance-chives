@@ -200,9 +200,11 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
-  // Check if this is a workshop or session video
+  // Check if this is a workshop or session video (legacy check, all events now use /events/)
   const isWorkshopOrSession =
-    eventLink.startsWith("/workshops/") || eventLink.startsWith("/sessions/");
+    eventLink.startsWith("/workshops/") ||
+    eventLink.startsWith("/sessions/") ||
+    eventLink.startsWith("/events/");
 
   // Get video type, defaulting to "battle" for backwards compatibility
   const videoType = video?.type || "battle";

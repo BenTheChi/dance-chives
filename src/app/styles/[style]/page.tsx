@@ -1,5 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getStyleData } from "@/db/queries/competition";
+import { getStyleData } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import Eventcard from "@/components/cards";
 import { StyleVideoGallery } from "@/components/ui/style-video-gallery";
@@ -117,7 +117,7 @@ export default async function StylePage({ params }: PageProps) {
                 >
                   <CardContent className="p-0">
                     <div className="relative aspect-video overflow-hidden rounded-t-lg">
-                      <Link href={`/workshops/${workshop.id}`}>
+                      <Link href={`/events/${workshop.id}`}>
                         <Image
                           src={normalizeYouTubeThumbnailUrl(workshop.imageUrl)}
                           alt={workshop.title}
@@ -128,7 +128,7 @@ export default async function StylePage({ params }: PageProps) {
                     </div>
 
                     <div className="sm:p-4 space-y-2 sm:space-y-3">
-                      <Link href={`/workshops/${workshop.id}`}>
+                      <Link href={`/events/${workshop.id}`}>
                         <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
                           {workshop.title}
                         </h3>
@@ -183,7 +183,7 @@ export default async function StylePage({ params }: PageProps) {
                 >
                   <CardContent className="p-0">
                     <div className="relative aspect-video overflow-hidden rounded-t-lg">
-                      <Link href={`/sessions/${session.id}`}>
+                      <Link href={`/events/${session.id}`}>
                         <Image
                           src={normalizeYouTubeThumbnailUrl(session.imageUrl)}
                           alt={session.title}
@@ -194,7 +194,7 @@ export default async function StylePage({ params }: PageProps) {
                     </div>
 
                     <div className="sm:p-4 space-y-2 sm:space-y-3">
-                      <Link href={`/sessions/${session.id}`}>
+                      <Link href={`/events/${session.id}`}>
                         <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
                           {session.title}
                         </h3>

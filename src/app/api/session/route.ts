@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  deleteSession,
-  getSessionPictures,
-  getSession as getSessionQuery,
-  searchSessions,
-  searchAccessibleSessions,
-  getSessionCreator,
-} from "@/db/queries/session";
+import { deleteEvent, getEventImages, getEvent } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { deleteFromR2 } from "@/lib/R2";
-import { canDeleteSession } from "@/lib/utils/auth-utils";
-import { isSessionTeamMember } from "@/db/queries/team-member";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { canDeleteEvent } from "@/lib/utils/auth-utils";
+import { isTeamMember } from "@/db/queries/team-member";
+import { prisma } from "@/lib/primsa";
+import { searchEvents, searchAccessibleEvents } from "@/db/queries/event";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -22,22 +16,19 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json(
-      { message: "Session ID is required" },
+      { message: "Event ID is required" },
       { status: 400 }
     );
   }
 
   try {
-    // Check authorization - get session to check creator ID
-    const sessionData = await getSessionQuery(id);
-    if (!sessionData) {
-      return NextResponse.json(
-        { message: "Session not found" },
-        { status: 404 }
-      );
+    // Check authorization - get event to check creator ID
+    const eventData = await getEvent(id);
+    if (!eventData) {
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    // Check if user has permission to delete this session
+    // Check if user has permission to delete this event
     if (!session.user.auth) {
       return NextResponse.json(
         { message: "User authorization level not found" },
@@ -45,35 +36,27 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const sessionCreatorId = await getSessionCreator(id);
-    if (!sessionCreatorId) {
-      return NextResponse.json(
-        { message: "Session creator not found" },
-        { status: 500 }
-      );
-    }
+    const isEventTeamMember = await isTeamMember(id, session.user.id);
 
-    const isTeamMember = await isSessionTeamMember(id, session.user.id);
-
-    const hasPermission = canDeleteSession(
+    const hasPermission = canDeleteEvent(
       session.user.auth,
       {
-        sessionId: id,
-        sessionCreatorId: sessionCreatorId,
-        isTeamMember: isTeamMember,
+        eventId: id,
+        eventCreatorId: eventData.eventDetails.creatorId,
+        isTeamMember: isEventTeamMember,
       },
       session.user.id
     );
 
     if (!hasPermission) {
       return NextResponse.json(
-        { message: "You do not have permission to delete this session" },
+        { message: "You do not have permission to delete this event" },
         { status: 403 }
       );
     }
 
-    // First delete all the pictures associated with the session
-    const pictures = await getSessionPictures(id);
+    // First delete all the pictures associated with the event
+    const pictures = await getEventImages(id);
 
     await Promise.all(
       pictures.map(async (url) => {
@@ -81,16 +64,21 @@ export async function DELETE(request: NextRequest) {
       })
     );
 
-    const result = await deleteSession(id);
+    const result = await deleteEvent(id);
 
     if (!result) {
       return NextResponse.json(
-        { message: "Failed to delete session" },
+        { message: "Failed to delete event" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ message: "Session deleted" }, { status: 200 });
+    // Delete corresponding PostgreSQL Event record
+    await prisma.event.deleteMany({
+      where: { eventId: id },
+    });
+
+    return NextResponse.json({ message: "Event deleted" }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -112,7 +100,7 @@ export async function GET(request: NextRequest) {
       }
 
       const authLevel = session.user.auth || 0;
-      const results = await searchAccessibleSessions(
+      const results = await searchAccessibleEvents(
         session.user.id,
         authLevel,
         keyword || undefined
@@ -120,7 +108,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({ data: results });
     } else {
-      const results = await searchSessions(keyword || undefined);
+      const results = await searchEvents(keyword || undefined);
       return NextResponse.json({ data: results });
     }
   } catch (error) {
@@ -131,4 +119,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

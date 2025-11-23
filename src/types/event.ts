@@ -3,15 +3,28 @@ import { UserSearchItem } from "./user";
 import { Image } from "./image";
 import { Video } from "./video";
 
-// Parent event interface
-export interface ParentEvent {
-  id: string;
-  title: string;
-  type?: "competition" | "workshop" | "session";
+// Re-export Video for convenience
+export type { Video } from "./video";
+
+// Event type labels for categorization (stored as Neo4j labels, not properties)
+export type EventType =
+  | "Battle"
+  | "Competition"
+  | "Class"
+  | "Workshop"
+  | "Session"
+  | "Party"
+  | "Festival"
+  | "Performance";
+
+export interface SessionDate {
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
-// Base EventDetails interface - common properties for all event types
-export interface BaseEventDetails {
+// EventDetails interface - unified properties for all event types
+export interface EventDetails {
   title: string;
   description?: string;
   schedule?: string;
@@ -20,64 +33,26 @@ export interface BaseEventDetails {
   endTime?: string;
   creatorId: string;
   cost?: string;
+  prize?: string; // Prize information (can be used by any event type)
+  entryCost?: string; // Entry cost (can be used by any event type)
+  startDate: string; // Required: Single date for events
+  dates?: SessionDate[]; // Optional: Array of dates for recurring events
   poster?: Image | null;
   city: City;
   styles?: string[]; // danceStyleTags
-  parentEvent?: ParentEvent | null;
+  eventType?: EventType; // Optional: for categorization only, stored as Neo4j label
 }
 
-// Competition EventDetails - has startDate (single date), prize, entryCost
-export interface CompetitionDetails extends BaseEventDetails {
-  startDate: string; // Single date for competition
-  prize?: string;
-  entryCost?: string;
-}
-
-// Workshop EventDetails - has startDate (single date)
-export interface WorkshopDetails extends BaseEventDetails {
-  startDate: string; // Single date for workshop
-}
-
-// Session EventDetails - has dates array for recurrence
-export interface SessionDetails extends BaseEventDetails {
-  dates: SessionDate[]; // Array of dates for recurring sessions
-}
-
-export interface SessionDate {
-  date: string;
-  startTime: string;
-  endTime: string;
-}
-
-// Base Event interface - common properties for all event types
-export interface BaseEvent {
+// Event interface - unified event structure for all event types
+export interface Event {
   id: string;
   createdAt: Date;
   updatedAt: Date;
+  eventDetails: EventDetails;
   roles: Role[];
   gallery: Image[]; // photoGallery
-  subEvents?: BaseEvent[]; // Subevents are now relationships to other events
-}
-
-// Competition Event - has sections with winners and brackets
-export interface Competition extends BaseEvent {
-  eventDetails: CompetitionDetails;
-  sections: Section[];
-  // No videos at event level - videos are in sections/brackets
-  // Workshops are now separate Event:Workshop nodes, not nested
-}
-
-// Workshop Event - no sections, only video gallery at event level
-export interface Workshop extends BaseEvent {
-  eventDetails: WorkshopDetails;
-  videos: Video[]; // Video gallery at event level only
-}
-
-// Session Event - no sections/brackets, has dates array, has video gallery at event level
-export interface Session extends BaseEvent {
-  eventDetails: SessionDetails;
-  videos: Video[]; // Video gallery at event level
-  // No sections or brackets
+  sections: Section[]; // Sections available for all event types
+  videos?: Video[]; // Video gallery at event level (optional, can also be in sections)
 }
 
 // Role interface - common across all event types
@@ -87,30 +62,28 @@ export interface Role {
   user: UserSearchItem | null;
 }
 
-// Section for Competitions - has brackets and winners
+// Section - universal for all event types
+// Brackets and winners are optional and depend on section type
 export interface Section {
   id: string;
   title: string;
   description?: string;
-  hasBrackets: boolean;
-  videos: Video[];
-  brackets: Bracket[];
+  sectionType?:
+    | "Battle"
+    | "Tournament"
+    | "Competition"
+    | "Performance"
+    | "Showcase"
+    | "Class"
+    | "Session"
+    | "Mixed"; // Section type stored as Neo4j label
+  hasBrackets: boolean; // Whether this section uses brackets (auto-set based on section type)
+  videos: Video[]; // Direct videos in section (when hasBrackets is false)
+  brackets: Bracket[]; // Brackets in section (when hasBrackets is true)
   styles?: string[];
   applyStylesToVideos?: boolean;
-  applyVideoTypeToVideos?: boolean; // New: apply video type to all videos in section
-  winners?: UserSearchItem[];
-}
-
-// Section for Workshops - no brackets, no winners
-export interface WorkshopSection {
-  id: string;
-  title: string;
-  description?: string;
-  videos: Video[];
-  styles?: string[];
-  applyStylesToVideos?: boolean;
-  applyVideoTypeToVideos?: boolean; // New: apply video type to all videos in section
-  // No brackets, no winners
+  applyVideoTypeToVideos?: boolean; // Apply video type to all videos in section
+  winners?: UserSearchItem[]; // Section winners (optional, depends on section type)
 }
 
 export interface Bracket {

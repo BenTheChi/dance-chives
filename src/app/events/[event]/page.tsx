@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Competition } from "@/types/event";
+import { Event } from "@/types/event";
 import {
   Building,
   Calendar,
@@ -13,32 +13,29 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
-import { getCompetition } from "@/db/queries/competition";
+import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { DeleteCompetitionButton } from "@/components/DeleteCompetitionButton";
 import { auth } from "@/auth";
-import { isCompetitionCreator, isTeamMember } from "@/db/queries/team-member";
+import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
-import { canUpdateCompetition, canDeleteCompetition, AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { canUpdateEvent, canDeleteEvent, AUTH_LEVELS } from "@/lib/utils/auth-utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUser } from "@/db/queries/user";
 import { getEventTeamMembers } from "@/db/queries/team-member";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
-import { EventCard } from "@/types/event";
-import Eventcard from "@/components/cards";
 
 type PageProps = {
-  params: Promise<{ competition: string }>;
+  params: Promise<{ event: string }>;
 };
 
-// Helper function to validate competition ID format
-function isValidCompetitionId(id: string): boolean {
-  // Competition IDs should not contain file extensions or be static asset names
+// Helper function to validate event ID format
+function isValidEventId(id: string): boolean {
   const invalidPatterns = [
     /\.(svg|png|jpg|jpeg|gif|ico|css|js|json|xml|txt|pdf|doc|docx)$/i,
     /^(logo|favicon|robots|sitemap|manifest)/i,
@@ -47,20 +44,20 @@ function isValidCompetitionId(id: string): boolean {
   return !invalidPatterns.some((pattern) => pattern.test(id));
 }
 
-export default async function CompetitionPage({ params }: PageProps) {
+export default async function EventPage({ params }: PageProps) {
   const paramResult = await params;
 
-  // Validate the competition ID before trying to fetch it
-  if (!isValidCompetitionId(paramResult.competition)) {
+  // Validate the event ID before trying to fetch it
+  if (!isValidEventId(paramResult.event)) {
     notFound();
   }
 
-  const event = (await getCompetition(paramResult.competition)) as Competition;
+  const event = await getEvent(paramResult.event) as Event;
 
   // Check if current user is the creator
   const session = await auth();
   const isCreator = session?.user?.id
-    ? await isCompetitionCreator(event.id, session.user.id)
+    ? await isEventCreator(event.id, session.user.id)
     : false;
 
   // Check if user is a team member
@@ -71,7 +68,7 @@ export default async function CompetitionPage({ params }: PageProps) {
   // Check if user can edit the event
   const canEdit =
     session?.user?.id && session?.user?.auth !== undefined
-      ? canUpdateCompetition(
+      ? canUpdateEvent(
           session.user.auth,
           {
             eventId: event.id,
@@ -85,7 +82,7 @@ export default async function CompetitionPage({ params }: PageProps) {
   // Check if user can delete the event
   const canDelete =
     session?.user?.id && session?.user?.auth !== undefined
-      ? canDeleteCompetition(
+      ? canDeleteEvent(
           session.user.auth,
           {
             eventId: event.id,
@@ -157,18 +154,22 @@ export default async function CompetitionPage({ params }: PageProps) {
     (member): member is NonNullable<typeof member> => member !== null
   );
 
+  // Determine date to display
+  const eventDetails = event.eventDetails as any;
+  const displayDate = eventDetails.startDate || (eventDetails.dates && Array.isArray(eventDetails.dates) && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : "");
+
   return (
     <>
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full">
           <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 xl:col-span-4 auto-rows-min">
-            <Link href="/competitions" className="hover:underline">
-              {`Back to Competitions`}
+            <Link href="/events" className="hover:underline">
+              {`Back to Events`}
             </Link>
             {canEdit && (
               <Button asChild>
-                <Link href={`/competitions/${event.id}/edit`}>Edit</Link>
+                <Link href={`/events/${event.id}/edit`}>Edit</Link>
               </Button>
             )}
             {canDelete && <DeleteCompetitionButton competitionId={event.id} />}
@@ -183,22 +184,13 @@ export default async function CompetitionPage({ params }: PageProps) {
             {/* Event Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
-              {event.eventDetails.parentEvent && (
+              {displayDate && (
                 <div className="flex flex-row gap-2">
-                  <span>Main Event:</span>
-                  <Link
-                    href={`/competitions/${event.eventDetails.parentEvent.id}`}
-                    className="hover:text-blue-600 hover:underline transition-colors"
-                  >
-                    {event.eventDetails.parentEvent.title}
-                  </Link>
+                  <Calendar />
+                  <b>Date:</b>
+                  {displayDate}
                 </div>
               )}
-              <div className="flex flex-row gap-2">
-                <Calendar />
-                <b>Date:</b>
-                {event.eventDetails.startDate}
-              </div>
               <div className="flex flex-row gap-2">
                 <Building />
                 <b>City:</b>{" "}
@@ -237,16 +229,22 @@ export default async function CompetitionPage({ params }: PageProps) {
                   - {formatTimeToAMPM(event.eventDetails.endTime)}
                 </div>
               )}
-              {event.eventDetails.prize && (
+              {eventDetails.prize && (
                 <div className="flex flex-row gap-2">
                   <Gift />
-                  <b>Prize:</b> {event.eventDetails.prize}
+                  <b>Prize:</b> {eventDetails.prize}
                 </div>
               )}
-              {event.eventDetails.entryCost && (
+              {eventDetails.entryCost && (
                 <div className="flex flex-row gap-2">
                   <DollarSign />
-                  <b>Entry Cost:</b> {event.eventDetails.entryCost}
+                  <b>Entry Cost:</b> {eventDetails.entryCost}
+                </div>
+              )}
+              {event.eventDetails.cost && (
+                <div className="flex flex-row gap-2">
+                  <DollarSign />
+                  <b>Cost:</b> {event.eventDetails.cost}
                 </div>
               )}
               {eventStyles.length > 0 && (
@@ -366,7 +364,7 @@ export default async function CompetitionPage({ params }: PageProps) {
           {/* Sections */}
           <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md hover:bg-green-200 hover:cursor-pointer hover:shadow-none">
             <div className="w-full">
-              <Link href={`/competitions/${event.id}/sections`} className="w-full">
+              <Link href={`/events/${event.id}/sections`} className="w-full">
                 <h2 className="text-2xl font-bold mb-4 text-center">
                   Sections
                 </h2>
@@ -380,7 +378,7 @@ export default async function CompetitionPage({ params }: PageProps) {
                   >
                     <div className="flex justify-between items-center mb-2">
                       <Link
-                        href={`/competitions/${event.id}/sections/${section.id}`}
+                        href={`/events/${event.id}/sections/${section.id}`}
                         className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
                       >
                         {section.title}
@@ -496,52 +494,6 @@ export default async function CompetitionPage({ params }: PageProps) {
               </div>
             </div>
           </section>
-
-          {/* Sub Events */}
-          {event.subEvents && event.subEvents.length > 0 && (
-            <section className="w-full bg-yellow-100 rounded-md p-4 md:col-span-1 xl:col-span-2">
-              <h2 className="text-2xl font-bold mb-4 text-center">
-                Sub Events (Main Event)
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {event.subEvents.map((subEvent: any) => {
-                  // Determine the route based on event type
-                  const eventType = subEvent.type || "competition";
-                  const eventRoute =
-                    eventType === "workshop"
-                      ? `/workshops/${subEvent.id}`
-                      : eventType === "session"
-                      ? `/sessions/${subEvent.id}`
-                      : `/competitions/${subEvent.id}`;
-
-                  // Convert subEvent to EventCard format
-                  const eventCard: EventCard = {
-                    id: subEvent.id,
-                    title: subEvent.title || "",
-                    imageUrl: subEvent.poster?.url,
-                    date: subEvent.startDate || "",
-                    city: subEvent.city?.name || "",
-                    cityId: subEvent.city?.id,
-                    styles: subEvent.styles || [],
-                  };
-
-                  return (
-                    <Eventcard
-                      key={subEvent.id}
-                      id={eventCard.id}
-                      title={eventCard.title}
-                      imageUrl={eventCard.imageUrl}
-                      date={eventCard.date}
-                      city={eventCard.city}
-                      cityId={eventCard.cityId}
-                      styles={eventCard.styles}
-                      href={eventRoute}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          )}
 
           {/* Photo Gallery */}
           {event.gallery.length > 0 && (

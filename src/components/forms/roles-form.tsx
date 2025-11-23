@@ -1,7 +1,7 @@
 "use client";
 
 import { Control, UseFormSetValue } from "react-hook-form";
-import { FormValues } from "./competition-form";
+import { FormValues } from "./event-form";
 import { Role } from "@/types/event";
 import { Button } from "../ui/button";
 import {
@@ -126,8 +126,8 @@ export default function RolesForm({
               )}
             />
 
-            <DebouncedSearchSelect<UserSearchItem>
-              control={control}
+            <DebouncedSearchSelect<UserSearchItem, FormValues>
+              control={control as any}
               name={`roles.${index}.user`}
               onSearch={getUserSearchItems}
               placeholder="Search..."

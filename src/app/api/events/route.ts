@@ -1,4 +1,4 @@
-import { searchEvents } from "@/db/queries/competition";
+import { searchEvents } from "@/db/queries/event";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

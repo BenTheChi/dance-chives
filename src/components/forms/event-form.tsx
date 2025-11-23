@@ -15,17 +15,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
-import { Section, CompetitionDetails, Role } from "@/types/event";
+import { Section, EventDetails, Role } from "@/types/event";
 import { Image } from "@/types/image";
-import { CompetitionDetailsForm } from "./competition-details-form";
+import { Video } from "@/types/video";
+import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
-import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
 import UploadFile from "../ui/uploadfile";
-import { addCompetition, editCompetition } from "@/lib/server_actions/competition_actions";
+import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { VideoForm } from "./video-form";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -74,6 +73,7 @@ const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
   description: z.preprocess((val) => val ?? "", z.string()),
+  sectionType: z.enum(["Battle", "Tournament", "Competition", "Performance", "Showcase", "Class", "Session", "Mixed"]).optional(),
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
@@ -100,13 +100,45 @@ const eventDetailsSchema = z.object({
     population: z.number(),
   }),
   // The year of this date should be between 1900 and 2300
+  // Required - all events must have a startDate, and can also have recurring dates
   startDate: z
     .string()
-    .min(1, "Start date is required")
     .regex(
       /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
       "Event date must be in a valid format"
-    ), // switch to min for all non-optional
+    )
+    .min(1, "Start date is required"),
+  // Recurring dates array - for events with multiple dates
+  dates: z
+    .array(
+      z
+        .object({
+          date: z
+            .string()
+            .min(1, "Date is required")
+            .regex(
+              /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
+              "Date must be in MM/DD/YYYY format"
+            ),
+          startTime: z.string().min(1, "Start time is required"),
+          endTime: z.string().min(1, "End time is required"),
+        })
+        .refine(
+          (data) => {
+            if (!data.startTime || !data.endTime) return true;
+            const [startHours, startMinutes] = data.startTime.split(":").map(Number);
+            const [endHours, endMinutes] = data.endTime.split(":").map(Number);
+            const startTotal = startHours * 60 + startMinutes;
+            const endTotal = endHours * 60 + endMinutes;
+            return endTotal > startTotal;
+          },
+          {
+            message: "End time must be after start time",
+            path: ["endTime"],
+          }
+        )
+    )
+    .optional(),
   description: z.preprocess((val) => val ?? "", z.string()),
   schedule: z.preprocess((val) => val ?? "", z.string()),
   address: z.string().optional(),
@@ -114,7 +146,21 @@ const eventDetailsSchema = z.object({
   endTime: z.string().optional(),
   prize: z.string().optional(),
   entryCost: z.string().optional(),
+  cost: z.string().optional(), // For Workshop/Session events
   poster: imageSchema.nullable().optional(),
+  eventType: z
+    .enum([
+      "Battle",
+      "Competition",
+      "Class",
+      "Workshop",
+      "Session",
+      "Party",
+      "Festival",
+      "Performance",
+    ])
+    .optional(),
+  styles: z.array(z.string()).optional(),
 });
 
 const roleSchema = z.object({
@@ -127,18 +173,6 @@ const roleSchema = z.object({
       `Role must be one of: ${AVAILABLE_ROLES.join(", ")}`
     ),
   user: userSearchItemSchema.nullable(),
-});
-
-// Subevent schema - now just references to existing events
-const subEventSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  type: z.enum(["competition", "workshop", "session"]),
-  imageUrl: z.string().optional(),
-  date: z.preprocess((val) => val ?? "", z.string()),
-  city: z.preprocess((val) => val ?? "", z.string()),
-  cityId: z.number().optional(),
-  styles: z.array(z.string()).optional(),
 });
 
 const formSchema = z.object({
@@ -154,7 +188,7 @@ const formSchema = z.object({
     }
   ),
   roles: z.array(roleSchema).optional(),
-  subEvents: z.array(subEventSchema),
+  videos: z.array(videoSchema).optional(), // Event-level video gallery
   gallery: z.array(imageSchema),
 });
 
@@ -168,40 +202,6 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
   }));
 }
 
-// Helper function to normalize subevents for form - convert from BaseEvent[] to form format
-function normalizeSubEventsForForm(
-  subEvents?: Array<{
-    id: string;
-    title: string;
-    type?: string;
-    imageUrl?: string;
-    date?: string;
-    city?: string | { name?: string; id?: number };
-    cityId?: number;
-    styles?: string[];
-  }>
-): FormValues["subEvents"] {
-  if (!subEvents) return [];
-  return subEvents.map((subEvent) => ({
-    id: subEvent.id,
-    title: subEvent.title,
-    type:
-      (subEvent.type as "competition" | "workshop" | "session") ||
-      "competition",
-    imageUrl: subEvent.imageUrl,
-    date: subEvent.date || "",
-    city:
-      typeof subEvent.city === "string"
-        ? subEvent.city
-        : subEvent.city?.name || "",
-    cityId:
-      subEvent.cityId ||
-      (typeof subEvent.city === "object" && subEvent.city?.id) ||
-      undefined,
-    styles: subEvent.styles || [],
-  }));
-}
-
 interface EventFormProps {
   initialData?: FormValues;
 }
@@ -210,12 +210,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
-  // Extract current event ID from pathname (e.g., /competitions/[competition]/edit or /competitions/[competition])
-  const currentEventId = pathname[1] === "competitions" && pathname[2] ? pathname[2] : undefined;
+  // Extract current event ID from pathname (e.g., /events/[event]/edit or /events/[event])
+  const currentEventId = (pathname[1] === "events" || pathname[1] === "competitions") && pathname[2] ? pathname[2] : undefined;
 
   const [activeMainTab, setActiveMainTab] = useState("Event Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
-  const [activeSubEventId, setActiveSubEventId] = useState("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
   //TODO: set up logic for next buttons to use the active tab index
 
@@ -235,6 +234,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           population: 0,
         },
         startDate: "",
+        dates: undefined,
         description: "",
         schedule: "",
         address: "",
@@ -242,11 +242,13 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         endTime: "",
         prize: "",
         entryCost: "",
+        cost: "",
         poster: null,
+        eventType: undefined,
       },
       sections: [],
       roles: [],
-      subEvents: [],
+      videos: [],
       gallery: [],
     },
   });
@@ -263,23 +265,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
   const sections = watch("sections") ?? [];
   const eventDetails = watch("eventDetails");
-  const subEvents = watch("subEvents") ?? [];
-  const parentEvent = eventDetails?.parentEvent;
-
-  // Helper function to get parent event route
-  const getParentEventRoute = (type?: string, id?: string) => {
-    if (!id) return "#";
-    switch (type) {
-      case "workshop":
-        return `/workshops/${id}`;
-      case "session":
-        return `/sessions/${id}`;
-      case "competition":
-      default:
-        return `/competitions/${id}`;
-    }
-  };
   const roles = watch("roles") ?? [];
+  const videos = watch("videos") ?? [];
   const galleryRaw = watch("gallery") ?? [];
   // Normalize gallery to ensure all images have the type property
   const gallery: Image[] = galleryRaw.map((img) => ({
@@ -287,15 +274,31 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     type: ((img as any).type || "gallery") as "gallery" | "profile" | "poster",
   }));
   const activeSection = sections.find((s) => s.id === activeSectionId);
-  const activeSubEvent = subEvents.find((s) => s.id === activeSubEventId);
 
   const mainTabs = [
     "Event Details",
     "Roles",
-    "Subevents",
     "Sections",
+    "Videos",
     "Photo Gallery",
   ];
+
+  const addVideo = () => {
+    const newVideo: Video = {
+      id: Date.now().toString(),
+      title: `Video ${videos.length + 1}`,
+      src: "https://example.com/video",
+      type: "battle",
+    };
+    setValue("videos", [...videos, newVideo]);
+  };
+
+  const removeVideo = (videoId: string) => {
+    setValue(
+      "videos",
+      videos.filter((v) => v.id !== videoId)
+    );
+  };
 
   const addSection = () => {
     const newSection: Section = {
@@ -320,11 +323,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     if (activeSectionId === sectionId && updatedSections.length > 0) {
       setActiveSectionId(updatedSections[0].id);
     }
-  };
-
-  // Subevent selection handler - using DebouncedSearchMultiSelect
-  const handleSubEventChange = (selectedEvents: FormValues["subEvents"]) => {
-    setValue("subEvents", selectedEvents);
   };
 
   // extract field names from validation errors
@@ -368,12 +366,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
       let response;
       if (isEditing) {
-        response = await editCompetition(
+        response = await editEvent(
           pathname[pathname.length - 2],
           normalizedData
         );
       } else {
-        response = await addCompetition(normalizedData);
+        response = await addEvent(normalizedData);
       }
 
       if (response.error) {
@@ -393,7 +391,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.status === 200) {
-            router.push(`/competitions/${pathname[pathname.length - 2]}`);
+            router.push(`/events/${pathname[pathname.length - 2]}`);
           } else {
             toast.error("Failed to update event", {
               description: "Please try again.",
@@ -405,7 +403,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.event) {
-            router.push(`/competitions/${response.event.id}`);
+            router.push(`/events/${response.event.id}`);
           } else {
             toast.error("Failed to submit event", {
               description: "Please try again.",
@@ -438,7 +436,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     const tabMap: { [key: string]: string } = {
       eventDetails: "Event Details",
       sections: "Sections",
-      subEvents: "SubEvents",
       roles: "Roles",
       gallery: "Photo Gallery",
     };
@@ -456,8 +453,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       "sections.brackets.title": "Bracket Title",
       "sections.brackets.videos.title": "Bracket Video Title",
       "sections.brackets.videos.src": "Bracket Video Source",
-      "subEvents.title": "Title",
-      "subEvents.startDate": "Date",
       "roles.title": "Role",
       "roles.user": "User",
     };
@@ -536,10 +531,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     (s) => s.id === activeSectionId
   );
 
-  const activeSubEventIndex = subEvents.findIndex(
-    (s) => s.id === activeSubEventId
-  );
-
   // Find the index of the active tab
   const activeTabIndex = mainTabs.findIndex((tab) => tab === activeMainTab);
 
@@ -584,10 +575,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {/* Tab Content */}
           {activeMainTab === "Event Details" && (
-            <CompetitionDetailsForm
+            <EventDetailsForm
               control={control}
               setValue={setValue}
-              eventDetails={eventDetails as CompetitionDetails}
+              eventDetails={eventDetails as EventDetails}
               register={register}
             />
           )}
@@ -598,129 +589,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               setValue={setValue}
               roles={roles as Role[]}
             />
-          )}
-
-          {activeMainTab === "Subevents" && (
-            <div className="space-y-6">
-              {isEditing && parentEvent ? (
-                <Alert>
-                  <AlertDescription>
-                    This event is already the subevent of{" "}
-                    <Link
-                      href={getParentEventRoute(parentEvent.type, parentEvent.id)}
-                      className="font-semibold text-primary hover:underline"
-                    >
-                      {parentEvent.title}
-                    </Link>
-                    . Remove this event as a subevent if you would like to make this the main event.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-              <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Sub Events (Main Event)
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select existing events to be subevents of this main event.
-                  Subevents cannot have their own subevents.
-                </p>
-
-                <DebouncedSearchMultiSelect<
-                  FormValues["subEvents"][0] & {
-                    displayName: string;
-                    username: string;
-                  }
-                >
-                  value={subEvents.map((se) => ({
-                    ...se,
-                    displayName: se.title,
-                    username: se.id,
-                  }))}
-                  onChange={(values) => {
-                    handleSubEventChange(
-                      values.map((v) => ({
-                        id: v.id,
-                        title: v.title,
-                        type: v.type,
-                        imageUrl: v.imageUrl,
-                        date: v.date,
-                        city: v.city,
-                        cityId: v.cityId,
-                        styles: v.styles,
-                      }))
-                    );
-                  }}
-                  onSearch={async (keyword: string) => {
-                    const url = new URL("/api/events/subevents", window.location.origin);
-                    url.searchParams.set("keyword", keyword);
-                    if (currentEventId) {
-                      url.searchParams.set("excludeEventId", currentEventId);
-                    }
-                    const response = await fetch(url.toString());
-                    const data = await response.json();
-                    return (data.data || []).map(
-                      (item: FormValues["subEvents"][0]) => ({
-                        ...item,
-                        displayName: item.title,
-                        username: item.id,
-                      })
-                    );
-                  }}
-                  getDisplayValue={(item) => item.title}
-                  getItemId={(item) => item.id}
-                  name="subEvents"
-                  placeholder="Search for events to add as subevents..."
-                  className="mb-6"
-                />
-
-                {/* Event Card Previews */}
-                {subEvents.length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="text-md font-semibold mb-4">
-                      Selected Subevents
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {subEvents.map((subEvent) => (
-                        <div
-                          key={subEvent.id}
-                          className="border rounded-lg p-4"
-                        >
-                          <div className="relative aspect-video overflow-hidden rounded-lg mb-3">
-                            <img
-                              src={subEvent.imageUrl || "/exploreEvents.jpg"}
-                              alt={subEvent.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <h5 className="font-semibold text-sm mb-1">
-                            {subEvent.title}
-                          </h5>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            {subEvent.date} •{" "}
-                            {typeof subEvent.city === "string"
-                              ? subEvent.city
-                              : (subEvent.city as any)?.name || ""}
-                          </p>
-                          {subEvent.styles && subEvent.styles.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {subEvent.styles.slice(0, 3).map((style) => (
-                                <span
-                                  key={style}
-                                  className="text-xs px-2 py-0.5 bg-secondary rounded"
-                                >
-                                  {style}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
           )}
 
           {activeMainTab === "Sections" && (
@@ -771,6 +639,39 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   }
                 />
               )}
+            </div>
+          )}
+
+          {activeMainTab === "Videos" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Videos</h3>
+                <Button
+                  type="button"
+                  onClick={addVideo}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Video
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {videos.map((video, videoIndex) => (
+                  <VideoForm
+                    key={video.id}
+                    control={control}
+                    setValue={setValue}
+                    getValues={getValues}
+                    video={video}
+                    videoIndex={videoIndex}
+                    context="event"
+                    onRemove={() => removeVideo(video.id)}
+                    eventId={isEditing ? pathname[pathname.length - 2] : undefined}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

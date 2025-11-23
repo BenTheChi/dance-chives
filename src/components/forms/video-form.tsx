@@ -16,7 +16,7 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
 } from "react-hook-form";
-import { FormValues } from "./competition-form";
+import { FormValues } from "./event-form";
 import { Section } from "@/types/event";
 import { Video } from "@/types/video";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
@@ -37,11 +37,11 @@ import {
 interface VideoFormProps {
   video: Video;
   videoIndex: number;
-  sectionIndex: number;
-  sections: Section[];
-  activeSectionId: string;
-  activeBracketId?: string;
-  context: "section" | "bracket";
+  sectionIndex?: number; // Optional for event-level videos
+  sections?: Section[]; // Optional for event-level videos
+  activeSectionId?: string; // Optional for event-level videos
+  activeBracketId?: string; // Optional for event-level videos
+  context: "section" | "bracket" | "event"; // Added "event" context
   onRemove: () => void;
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
@@ -89,9 +89,12 @@ export function VideoForm({
   getValues,
   eventId,
 }: VideoFormProps) {
-  const bracketIndex = sections[sectionIndex].brackets.findIndex(
-    (b) => b.id === activeBracketId
-  );
+  const bracketIndex =
+    context === "bracket" && sections && sectionIndex !== undefined
+      ? sections[sectionIndex].brackets.findIndex(
+          (b) => b.id === activeBracketId
+        )
+      : -1;
   const [videoWinners, setVideoWinners] = useState<UserSearchItem[]>([]);
   const [videoDancers, setVideoDancers] = useState<UserSearchItem[]>([]);
   const [videoChoreographers, setVideoChoreographers] = useState<
@@ -120,7 +123,6 @@ export function VideoForm({
 
   const updateTaggedDancers = (dancers: UserSearchItem[]) => {
     console.log("🟢 [updateTaggedDancers] Updating tagged dancers:", dancers);
-    const currentSections = getValues("sections") || [];
 
     // Find users that were removed from dancers list
     const currentDancerUsernames = new Set(videoDancers.map((d) => d.username));
@@ -142,6 +144,21 @@ export function VideoForm({
       }
     }
 
+    // Handle event-level videos
+    if (context === "event") {
+      const currentVideos = getValues("videos") || [];
+      const updatedVideos = currentVideos.map((v) =>
+        v.id === video.id
+          ? { ...v, taggedDancers: dancers, taggedWinners: winnersToUpdate }
+          : v
+      );
+      setValue("videos", updatedVideos);
+      setVideoDancers(dancers);
+      return;
+    }
+
+    // Handle section/bracket videos
+    const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -183,7 +200,6 @@ export function VideoForm({
 
   const updateTaggedWinners = (winners: UserSearchItem[]) => {
     console.log("🟢 [updateTaggedWinners] Updating tagged winners:", winners);
-    const currentSections = getValues("sections") || [];
 
     // Find users that were added to winners list
     const currentWinnerUsernames = new Set(videoWinners.map((w) => w.username));
@@ -215,6 +231,21 @@ export function VideoForm({
       }
     }
 
+    // Handle event-level videos
+    if (context === "event") {
+      const currentVideos = getValues("videos") || [];
+      const updatedVideos = currentVideos.map((v) =>
+        v.id === video.id
+          ? { ...v, taggedWinners: winners, taggedDancers: dancersToUpdate }
+          : v
+      );
+      setValue("videos", updatedVideos);
+      setVideoWinners(winners);
+      return;
+    }
+
+    // Handle section/bracket videos
+    const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -272,7 +303,17 @@ export function VideoForm({
   };
 
   const updateVideoStyles = (styles: string[]) => {
-    // Read current form state to ensure we have the latest data
+    // Handle event-level videos
+    if (context === "event") {
+      const currentVideos = getValues("videos") || [];
+      const updatedVideos = currentVideos.map((v) =>
+        v.id === video.id ? { ...v, styles } : v
+      );
+      setValue("videos", updatedVideos);
+      return;
+    }
+
+    // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
@@ -307,6 +348,17 @@ export function VideoForm({
   const updateVideoType = (
     type: "battle" | "freestyle" | "choreography" | "class"
   ) => {
+    // Handle event-level videos
+    if (context === "event") {
+      const currentVideos = getValues("videos") || [];
+      const updatedVideos = currentVideos.map((v) =>
+        v.id === video.id ? { ...v, type } : v
+      );
+      setValue("videos", updatedVideos);
+      return;
+    }
+
+    // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
@@ -339,6 +391,18 @@ export function VideoForm({
   };
 
   const updateTaggedChoreographers = (choreographers: UserSearchItem[]) => {
+    // Handle event-level videos
+    if (context === "event") {
+      const currentVideos = getValues("videos") || [];
+      const updatedVideos = currentVideos.map((v) =>
+        v.id === video.id ? { ...v, taggedChoreographers: choreographers } : v
+      );
+      setValue("videos", updatedVideos);
+      setVideoChoreographers(choreographers);
+      return;
+    }
+
+    // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
@@ -376,6 +440,18 @@ export function VideoForm({
   };
 
   const updateTaggedTeachers = (teachers: UserSearchItem[]) => {
+    // Handle event-level videos
+    if (context === "event") {
+      const currentVideos = getValues("videos") || [];
+      const updatedVideos = currentVideos.map((v) =>
+        v.id === video.id ? { ...v, taggedTeachers: teachers } : v
+      );
+      setValue("videos", updatedVideos);
+      setVideoTeachers(teachers);
+      return;
+    }
+
+    // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
@@ -409,8 +485,9 @@ export function VideoForm({
   };
 
   // Check if styles should be disabled (when section has applyStylesToVideos enabled)
-  const activeSection = sections.find((s) => s.id === activeSectionId);
-  const isStylesDisabled = activeSection?.applyStylesToVideos || false;
+  const activeSection = sections?.find((s) => s.id === activeSectionId);
+  const isStylesDisabled =
+    (activeSection?.applyStylesToVideos || false) && context !== "event";
 
   return (
     <Card className="group">
@@ -427,9 +504,11 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            context === "bracket"
+            (context === "event"
+              ? `videos.${videoIndex}.title`
+              : context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.title`
-              : `sections.${sectionIndex}.videos.${videoIndex}.title`
+              : `sections.${sectionIndex}.videos.${videoIndex}.title`) as any
           }
           render={({ field }) => (
             <FormItem>
@@ -450,9 +529,11 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            context === "bracket"
+            (context === "event"
+              ? `videos.${videoIndex}.src`
+              : context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.src`
-              : `sections.${sectionIndex}.videos.${videoIndex}.src`
+              : `sections.${sectionIndex}.videos.${videoIndex}.src`) as any
           }
           render={({ field }) => (
             <FormItem>
@@ -468,16 +549,18 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            context === "bracket"
+            (context === "event"
+              ? `videos.${videoIndex}.type`
+              : context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.type`
-              : `sections.${sectionIndex}.videos.${videoIndex}.type`
+              : `sections.${sectionIndex}.videos.${videoIndex}.type`) as any
           }
           render={({ field }) => (
             <FormItem>
               <FormLabel>Video Type</FormLabel>
               <FormControl>
                 <Select
-                  value={field.value || "battle"}
+                  value={(field.value as string) || "battle"}
                   onValueChange={(value) => {
                     const type = value as
                       | "battle"
@@ -519,9 +602,11 @@ export function VideoForm({
           <FormField
             control={control}
             name={
-              context === "bracket"
+              (context === "event"
+                ? `videos.${videoIndex}.taggedWinners`
+                : context === "bracket"
                 ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.taggedWinners`
-                : `sections.${sectionIndex}.videos.${videoIndex}.taggedWinners`
+                : `sections.${sectionIndex}.videos.${videoIndex}.taggedWinners`) as any
             }
             render={({ field }) => (
               <FormItem>
@@ -538,7 +623,7 @@ export function VideoForm({
                       // updateTaggedWinners will automatically add new winners to dancers list
                       updateTaggedWinners(users);
                     }}
-                    value={field.value || []}
+                    value={(field.value as UserSearchItem[]) || []}
                     name="Tagged Winners"
                   />
                 </FormControl>
@@ -577,9 +662,11 @@ export function VideoForm({
         <FormField
           control={control}
           name={
-            context === "bracket"
+            (context === "event"
+              ? `videos.${videoIndex}.styles`
+              : context === "bracket"
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.styles`
-              : `sections.${sectionIndex}.videos.${videoIndex}.styles`
+              : `sections.${sectionIndex}.videos.${videoIndex}.styles`) as any
           }
           render={({ field }) => (
             <FormItem>
@@ -591,7 +678,7 @@ export function VideoForm({
               )}
               <FormControl>
                 <StyleMultiSelect
-                  value={field.value || []}
+                  value={(field.value as string[]) || []}
                   onChange={(styles) => {
                     field.onChange(styles);
                     updateVideoStyles(styles);

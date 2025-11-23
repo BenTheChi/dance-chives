@@ -48,47 +48,10 @@ export function CalendarEventPopover({
     return "All Day";
   };
 
-  // Get link URL based on type
+  // Get link URL - all events use the unified /events/ route
   const getLinkUrl = () => {
-    switch (type) {
-      case "event":
-        return `/competitions/${originalData.id}`;
-      case "workshop":
-        return `/workshops/${originalData.id}`;
-      case "session":
-        return `/sessions/${originalData.id}`;
-      default:
-        return "#";
-    }
+    return `/events/${originalData.id}`;
   };
-
-  // Get parent event route based on parent event type
-  const getParentEventRoute = (parentId?: string) => {
-    if (!parentId) return "#";
-    const parentEventType = resource.parentEventType;
-    switch (parentEventType) {
-      case "workshop":
-        return `/workshops/${parentId}`;
-      case "session":
-        return `/sessions/${parentId}`;
-      case "competition":
-      default:
-        return `/competitions/${parentId}`;
-    }
-  };
-
-  // Get parent event link if applicable (for subevents)
-  const getParentEventLink = () => {
-    if (resource.parentEventId && resource.parentEventTitle) {
-      return {
-        id: resource.parentEventId,
-        title: resource.parentEventTitle,
-      };
-    }
-    return null;
-  };
-
-  const parentEvent = getParentEventLink();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,20 +99,6 @@ export function CalendarEventPopover({
           <div className="text-sm text-gray-600">
             <span className="font-medium">Time:</span> {formatTime()}
           </div>
-
-          {/* Parent event link */}
-          {parentEvent && (
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">Main Event:</span>{" "}
-              <Link
-                href={getParentEventRoute(parentEvent.id)}
-                className="text-blue-600 hover:underline"
-                onClick={() => onOpenChange(false)}
-              >
-                {parentEvent.title}
-              </Link>
-            </div>
-          )}
 
           {/* Dance style tags */}
           {styles && styles.length > 0 && (

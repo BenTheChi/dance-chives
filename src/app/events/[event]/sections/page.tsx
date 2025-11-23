@@ -1,5 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getCompetitionSections } from "@/db/queries/competition";
+import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -8,12 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Section } from "@/types/event";
 
 type PageProps = {
-  params: Promise<{ competition: string }>;
+  params: Promise<{ event: string }>;
 };
 
-// Helper function to validate competition ID format
-function isValidCompetitionId(id: string): boolean {
-  // Competition IDs should not contain file extensions or be static asset names
+// Helper function to validate event ID format
+function isValidEventId(id: string): boolean {
   const invalidPatterns = [
     /\.(svg|png|jpg|jpeg|gif|ico|css|js|json|xml|txt|pdf|doc|docx)$/i,
     /^(logo|favicon|robots|sitemap|manifest)/i,
@@ -25,12 +24,14 @@ function isValidCompetitionId(id: string): boolean {
 export default async function SectionsPage({ params }: PageProps) {
   const paramResult = await params;
 
-  // Validate the competition ID before trying to fetch it
-  if (!isValidCompetitionId(paramResult.competition)) {
+  // Validate the event ID before trying to fetch it
+  if (!isValidEventId(paramResult.event)) {
     notFound();
   }
 
-  const { sections, title } = await getCompetitionSections(paramResult.competition);
+  const event = await getEvent(paramResult.event);
+  const sections = event.sections;
+  const title = event.eventDetails.title;
 
   return (
     <>
@@ -42,7 +43,7 @@ export default async function SectionsPage({ params }: PageProps) {
             variant="secondary"
             className="hover:bg-gray-300 hover:shadow-none hover:cursor-pointer shadow-md"
           >
-            <Link href={`/competitions/${paramResult.competition}`}>Back to {title}</Link>
+            <Link href={`/events/${paramResult.event}`}>Back to {title}</Link>
           </Button>
           <h1 className="text-3xl font-bold">Sections</h1>
         </div>
@@ -63,7 +64,7 @@ export default async function SectionsPage({ params }: PageProps) {
               >
                 <div className="flex justify-between items-center mb-2">
                   <Link
-                    href={`/competitions/${paramResult.competition}/sections/${section.id}`}
+                    href={`/events/${paramResult.event}/sections/${section.id}`}
                     className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
                   >
                     {section.title}

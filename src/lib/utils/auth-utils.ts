@@ -202,22 +202,22 @@ export function canUpdateCompetition(
   context: EventPermissionContext,
   userId: string
 ): boolean {
-  // Admins can update any competitions
+  // Admins can update any events
   if (canUpdateAnyEvents(authLevel)) {
     return true;
   }
 
-  // Moderators can update any competitions
+  // Moderators can update any events
   if (canUpdateAnyEventsInCity(authLevel)) {
     return true;
   }
 
-  // Creators can update their own competitions
+  // Creators can update their own events
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
     return true;
   }
 
-  // Team members can update competitions
+  // Team members can update events
   if (context.isTeamMember) {
     return true;
   }
@@ -225,28 +225,34 @@ export function canUpdateCompetition(
   return false;
 }
 
+// Generic alias for unified event system
+export const canUpdateEvent = canUpdateCompetition;
+
 export function canDeleteCompetition(
   authLevel: number,
   context: EventPermissionContext,
   userId: string
 ): boolean {
-  // Admins can delete any competitions
+  // Admins can delete any events
   if (canDeleteAnyEvents(authLevel)) {
     return true;
   }
 
-  // Moderators can delete any competitions
+  // Moderators can delete any events
   if (canDeleteAnyEventsInCity(authLevel)) {
     return true;
   }
 
-  // Creators can delete their own competitions
+  // Creators can delete their own events
   if (authLevel >= AUTH_LEVELS.CREATOR && context.eventCreatorId === userId) {
     return true;
   }
 
   return false;
 }
+
+// Generic alias for unified event system
+export const canDeleteEvent = canDeleteCompetition;
 
 // Workshop Permissions
 export function canCreateWorkshops(authLevel: number): boolean {

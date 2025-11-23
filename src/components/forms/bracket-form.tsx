@@ -17,7 +17,7 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import { VideoForm } from "./video-form";
-import { FormValues } from "./competition-form";
+import { FormValues } from "./event-form";
 import { Section, Bracket, Video } from "@/types/event";
 
 // Helper function to normalize sections for form (ensures description is always string)
@@ -53,14 +53,34 @@ export function BracketForm({
   activeBracketId,
   eventId,
 }: BracketFormProps) {
+  // Get default video type based on section type
+  const getDefaultVideoType = (sectionType?: string): Video["type"] => {
+    switch (sectionType) {
+      case "Battle":
+        return "battle";
+      case "Competition":
+      case "Performance":
+        return "choreography";
+      case "Showcase":
+      case "Session":
+        return "freestyle";
+      case "Class":
+        return "class";
+      default:
+        return "battle"; // Default for Tournament, Mixed, or undefined
+    }
+  };
+
   const addVideoToBracket = () => {
+    const activeSection = sections.find((s) => s.id === activeSectionId);
+    const defaultVideoType = getDefaultVideoType(activeSection?.sectionType);
+
     const newVideo: Video = {
       id: Date.now().toString(),
       title: `Video ${bracket.videos.length + 1}`,
       src: "https://example.com/video",
-      taggedWinners: [],
-      taggedDancers: [],
-    };
+      type: defaultVideoType,
+    } as any; // Type assertion needed since Video is a union type
 
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId

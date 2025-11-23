@@ -2,21 +2,15 @@ import { City } from "./city";
 import { UserSearchItem } from "./user";
 import { Image } from "./image";
 import { Video } from "./video";
-import { BaseEvent, BaseEventDetails, Role } from "./event";
+import { Event, EventDetails, Role } from "./event";
 
 // Re-export for convenience
 export type { Image, Video };
 
-// Workshop EventDetails - extends BaseEventDetails
-export interface WorkshopDetails extends BaseEventDetails {
-  startDate: string; // Single date for workshop
-}
-
-// Workshop Event - extends BaseEvent, no sections, only video gallery
-export interface Workshop extends BaseEvent {
-  eventDetails: WorkshopDetails;
-  videos: Video[]; // Video gallery at event level only
-}
+// Legacy types - kept for backward compatibility
+// All events now use Event and EventDetails
+export type WorkshopDetails = EventDetails;
+export type Workshop = Event;
 
 // WorkshopRole - same as Role but kept for backward compatibility
 export interface WorkshopRole extends Role {

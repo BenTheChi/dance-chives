@@ -1,16 +1,13 @@
-import { searchAccessibleEvents } from "@/db/queries/competition";
+import { searchAccessibleEvents } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/primsa";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -40,4 +37,3 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
-

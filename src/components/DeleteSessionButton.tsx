@@ -22,11 +22,11 @@ export const DeleteSessionButton = ({ sessionId }: { sessionId: string }) => {
       });
 
       if (response.status === 200) {
-        toast.success("Session deleted");
-        router.push("/sessions");
+        toast.success("Event deleted");
+        router.push("/events");
       } else {
         console.error(response.statusText);
-        toast.error("Failed to delete session");
+        toast.error("Failed to delete event");
       }
     } catch (error) {
       console.error("Error deleting session:", error);

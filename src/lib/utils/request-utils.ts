@@ -5,7 +5,6 @@ import {
   getEventCreator,
   getSessionTeamMembers,
 } from "@/db/queries/team-member";
-import { getSessionCreator } from "@/db/queries/session";
 
 export const REQUEST_TYPES = {
   TAGGING: "TAGGING",
@@ -83,8 +82,8 @@ export async function getTaggingRequestApproversForSession(
 ): Promise<string[]> {
   const approverIds: Set<string> = new Set();
 
-  // Get session creator from Neo4j
-  const creatorId = await getSessionCreator(sessionId);
+  // Get session creator from Neo4j (sessions are now events)
+  const creatorId = await getEventCreator(sessionId);
   if (creatorId) {
     approverIds.add(creatorId);
   }

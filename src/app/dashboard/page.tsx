@@ -153,17 +153,9 @@ export default function DashboardPage() {
                 <div className="flex gap-2 mt-4">
                   {user?.auth !== undefined &&
                     user.auth >= AUTH_LEVELS.CREATOR && (
-                      <>
                         <Button asChild>
-                          <Link href="/add-competition">Add Competition</Link>
+                        <Link href="/add-event">Add Event</Link>
                         </Button>
-                        <Button asChild>
-                          <Link href="/add-workshop">Add Workshop</Link>
-                        </Button>
-                        <Button asChild>
-                          <Link href="/add-session">Add Session</Link>
-                        </Button>
-                      </>
                     )}
                   {user?.username && (
                     <>
@@ -339,7 +331,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/competitions/${event.eventId}`}>View</a>
+                      <a href={`/events/${event.eventId}`}>View</a>
                     </Button>
                   </div>
                 ))}
@@ -374,7 +366,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <Button variant="outline" size="sm" asChild>
-                      <a href={`/competitions/${membership.eventId}`}>View</a>
+                      <a href={`/events/${membership.eventId}`}>View</a>
                     </Button>
                   </div>
                 ))}

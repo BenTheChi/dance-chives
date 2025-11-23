@@ -1,5 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getAllCities } from "@/db/queries/competition";
+import { getAllCities } from "@/db/queries/event";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 

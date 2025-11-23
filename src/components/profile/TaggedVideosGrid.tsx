@@ -91,7 +91,7 @@ export function TaggedVideosGrid({
                   user.role.toUpperCase() === VIDEO_ROLE_DANCER
               ),
             }}
-            eventLink={`/competitions/${video.eventId}`}
+            eventLink={`/events/${video.eventId}`}
             eventTitle={video.eventTitle}
             sectionTitle={video.sectionTitle}
             onClick={() => handleVideoSelect(index)}
@@ -121,7 +121,7 @@ export function TaggedVideosGrid({
           hasPrev={videos.length > 1}
           currentIndex={selectedVideoIndex}
           totalVideos={videos.length}
-          eventLink={`/competitions/${videos[selectedVideoIndex].eventId}`}
+          eventLink={`/events/${videos[selectedVideoIndex].eventId}`}
           eventTitle={videos[selectedVideoIndex].eventTitle}
           eventId={videos[selectedVideoIndex].eventId}
           sectionTitle={videos[selectedVideoIndex].sectionTitle}

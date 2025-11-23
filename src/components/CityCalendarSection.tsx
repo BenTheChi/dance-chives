@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getCitySchedule } from "@/db/queries/competition";
+import { getCitySchedule } from "@/db/queries/event";
 import { CityCalendar } from "./CityCalendar";
 import {
   Card,

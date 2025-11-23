@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteCompetition, getCompetitionPictures, getCompetition as getCompetitionQuery } from "@/db/queries/competition";
+import { deleteEvent, getEventImages } from "@/db/queries/event";
+import { getEvent } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { deleteFromR2 } from "@/lib/R2";
 import { prisma } from "@/lib/primsa";
-import { canDeleteCompetition } from "@/lib/utils/auth-utils";
+import { canDeleteEvent } from "@/lib/utils/auth-utils";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -14,22 +15,22 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json(
-      { message: "Competition ID is required" },
+      { message: "Event ID is required" },
       { status: 400 }
     );
   }
 
   try {
-    // Check authorization - get competition to check creator ID
-    const competition = await getCompetitionQuery(id);
-    if (!competition) {
+    // Check authorization - get event to check creator ID
+    const event = await getEvent(id);
+    if (!event) {
       return NextResponse.json(
-        { message: "Competition not found" },
+        { message: "Event not found" },
         { status: 404 }
       );
     }
 
-    // Check if user has permission to delete this competition
+    // Check if user has permission to delete this event
     if (!session.user.auth) {
       return NextResponse.json(
         { message: "User authorization level not found" },
@@ -37,24 +38,24 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const hasPermission = canDeleteCompetition(
+    const hasPermission = canDeleteEvent(
       session.user.auth,
       {
         eventId: id,
-        eventCreatorId: competition.eventDetails.creatorId,
+        eventCreatorId: event.eventDetails.creatorId,
       },
       session.user.id
     );
 
     if (!hasPermission) {
       return NextResponse.json(
-        { message: "You do not have permission to delete this competition" },
+        { message: "You do not have permission to delete this event" },
         { status: 403 }
       );
     }
 
-    // First delete all the pictures associated with the competition
-    const pictures = await getCompetitionPictures(id);
+    // First delete all the pictures associated with the event
+    const pictures = await getEventImages(id);
 
     await Promise.all(
       pictures.map(async (url) => {
@@ -62,11 +63,11 @@ export async function DELETE(request: NextRequest) {
       })
     );
 
-    const result = await deleteCompetition(id);
+    const result = await deleteEvent(id);
 
     if (!result) {
       return NextResponse.json(
-        { message: "Failed to delete competition" },
+        { message: "Failed to delete event" },
         { status: 500 }
       );
     }
@@ -77,11 +78,11 @@ export async function DELETE(request: NextRequest) {
       where: { eventId: id },
     });
 
-    return NextResponse.json({ message: "Competition deleted" }, { status: 200 });
+    return NextResponse.json({ message: "Event deleted" }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { message: "Failed to delete competition" },
+      { message: "Failed to delete event" },
       { status: 500 }
     );
   }

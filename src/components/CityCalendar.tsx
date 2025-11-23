@@ -21,10 +21,7 @@ import {
 } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import {
-  CalendarEventData,
-  CalendarSessionData,
-} from "@/db/queries/competition";
+import { CalendarEventData, CalendarSessionData } from "@/db/queries/event";
 import {
   convertEventToCalendarEvent,
   convertSessionToCalendarEvents,
@@ -61,7 +58,6 @@ interface CityCalendarProps {
 // Predefined colors for each event type
 const EVENT_COLORS = {
   event: "#3b82f6", // Blue for competitions
-  subevent: "#6b7280", // Gray for subevents (default color)
   workshop: "#f59e0b", // Orange for workshops
   session: "#8b5cf6", // Purple for sessions
 };
@@ -252,10 +248,7 @@ function CustomToolbar({
   );
 }
 
-export function CityCalendar({
-  events,
-  sessions,
-}: CityCalendarProps) {
+export function CityCalendar({ events, sessions }: CityCalendarProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
@@ -287,9 +280,10 @@ export function CityCalendar({
   // Style events by type
   const eventPropGetter = (event: CalendarEvent) => {
     // Use the event type for coloring (competition, workshop, session)
-    // Subevents are still colored by their own type, not separately
-    const eventType = event.resource.type === "event" ? "event" : event.resource.type;
-    const color = EVENT_COLORS[eventType] || EVENT_COLORS.event;
+    const eventType = event.resource.type;
+    const color =
+      EVENT_COLORS[eventType as keyof typeof EVENT_COLORS] ||
+      EVENT_COLORS.event;
     return {
       style: {
         backgroundColor: color,
@@ -343,7 +337,8 @@ export function CityCalendar({
             <div
               className="w-4 h-4 rounded"
               style={{
-                backgroundColor: EVENT_COLORS[type as keyof typeof EVENT_COLORS],
+                backgroundColor:
+                  EVENT_COLORS[type as keyof typeof EVENT_COLORS],
               }}
             />
             <span className="text-sm text-muted-foreground">{label}</span>

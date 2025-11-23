@@ -14,7 +14,7 @@ export const DeleteCompetitionButton = ({ competitionId }: { competitionId: stri
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/competition?id=${competitionId}`, {
+      const response = await fetch(`/api/event?id=${competitionId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -22,15 +22,15 @@ export const DeleteCompetitionButton = ({ competitionId }: { competitionId: stri
       });
 
       if (response.status === 200) {
-        toast.success("Competition deleted");
-        router.push("/competitions");
+        toast.success("Event deleted");
+        router.push("/events");
       } else {
         console.error(response.statusText);
-        toast.error("Failed to delete competition");
+        toast.error("Failed to delete event");
       }
     } catch (error) {
-      console.error("Error deleting competition:", error);
-      toast.error("Failed to delete competition");
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event");
     } finally {
       setIsDeleting(false);
     }

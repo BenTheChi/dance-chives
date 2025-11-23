@@ -24,12 +24,19 @@ import { Section, Bracket } from "@/types/event";
 import { BattleVideo, Video } from "@/types/video";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
-import { FormValues } from "./competition-form";
+import { FormValues } from "./event-form";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
 import { SECTION_ROLE_WINNER } from "@/lib/utils/roles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
   return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
@@ -143,17 +150,113 @@ export function SectionForm({
     }
   };
 
+  // Get default video type based on section type
+  const getDefaultVideoType = (sectionType?: string): Video["type"] => {
+    switch (sectionType) {
+      case "Battle":
+        return "battle";
+      case "Competition":
+      case "Performance":
+        return "choreography";
+      case "Showcase":
+      case "Session":
+        return "freestyle";
+      case "Class":
+        return "class";
+      default:
+        return "battle"; // Default for Tournament, Mixed, or undefined
+    }
+  };
+
+  // Check if section type supports winners
+  const sectionTypeSupportsWinners = (sectionType?: string): boolean => {
+    return ["Battle", "Tournament", "Competition"].includes(sectionType || "");
+  };
+
+  // Check if section type requires brackets
+  const sectionTypeRequiresBrackets = (sectionType?: string): boolean => {
+    return ["Battle", "Tournament"].includes(sectionType || "");
+  };
+
+  // Handle section type change
+  const handleSectionTypeChange = (newType: string | undefined) => {
+    const updatedSections = sections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      const requiresBrackets = sectionTypeRequiresBrackets(newType);
+      const supportsWinners = sectionTypeSupportsWinners(newType);
+      const defaultVideoType = getDefaultVideoType(newType);
+
+      // If changing to a type that doesn't support winners, remove winners
+      const winners = supportsWinners ? section.winners || [] : [];
+
+      // If changing to a type that requires brackets, ensure hasBrackets is true
+      // If changing to a type that doesn't require brackets, keep current hasBrackets (user can still enable)
+      const hasBrackets = requiresBrackets ? true : section.hasBrackets;
+
+      // Handle brackets based on section type and hasBrackets setting:
+      // - If type requires brackets OR hasBrackets is true: keep brackets, update video types
+      // - If type doesn't require brackets AND hasBrackets is false: clear brackets (cascade delete)
+      const updatedBrackets =
+        requiresBrackets || hasBrackets
+          ? section.brackets.map((bracket) => ({
+              ...bracket,
+              videos: bracket.videos.map((video) => ({
+                ...video,
+                type: defaultVideoType,
+              })),
+            }))
+          : []; // Clear brackets if section type doesn't require them and hasBrackets is false
+
+      // Update all existing videos to use the default video type for this section type
+      const updatedVideos = section.videos.map((video) => ({
+        ...video,
+        type: defaultVideoType,
+      }));
+
+      return {
+        ...section,
+        sectionType: newType as Section["sectionType"],
+        hasBrackets,
+        winners,
+        videos: updatedVideos,
+        brackets: updatedBrackets,
+      };
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections));
+
+    // Update local winners state if winners were removed
+    if (!sectionTypeSupportsWinners(newType)) {
+      setSectionWinners([]);
+    }
+
+    // If brackets were cleared, reset active bracket ID
+    const updatedSection = updatedSections.find(
+      (s) => s.id === activeSectionId
+    );
+    if (updatedSection && updatedSection.brackets.length === 0) {
+      setActiveBracketId("");
+    } else if (updatedSection && updatedSection.brackets.length > 0) {
+      // If brackets still exist, ensure active bracket ID is valid
+      const bracketIds = updatedSection.brackets.map((b) => b.id);
+      if (!bracketIds.includes(activeBracketId)) {
+        setActiveBracketId(updatedSection.brackets[0].id);
+      }
+    }
+  };
+
   const addVideoToSection = () => {
     if (!activeSection) return;
 
-    const newVideo: BattleVideo = {
+    const defaultVideoType = getDefaultVideoType(activeSection.sectionType);
+
+    const newVideo: Video = {
       id: Date.now().toString(),
       title: `Video ${activeSection.videos.length + 1}`,
       src: "https://example.com/video",
-      type: "battle",
-      taggedWinners: [],
-      taggedDancers: [],
-    };
+      type: defaultVideoType,
+    } as any; // Type assertion needed since Video is a union type
 
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId
@@ -357,6 +460,41 @@ export function SectionForm({
         />
 
         <FormField
+          key={`sectionType-${activeSectionId}`}
+          control={control}
+          name={`sections.${activeSectionIndex}.sectionType`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Section Type</FormLabel>
+              <Select
+                value={field.value || ""}
+                onValueChange={(value) => {
+                  field.onChange(value || undefined);
+                  handleSectionTypeChange(value || undefined);
+                }}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select section type (optional)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Battle">Battle</SelectItem>
+                  <SelectItem value="Tournament">Tournament</SelectItem>
+                  <SelectItem value="Competition">Competition</SelectItem>
+                  <SelectItem value="Performance">Performance</SelectItem>
+                  <SelectItem value="Showcase">Showcase</SelectItem>
+                  <SelectItem value="Class">Class</SelectItem>
+                  <SelectItem value="Session">Session</SelectItem>
+                  <SelectItem value="Mixed">Mixed</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
           key={`description-${activeSectionId}`}
           control={control}
           name={`sections.${activeSectionIndex}.description`}
@@ -371,61 +509,65 @@ export function SectionForm({
           )}
         />
 
-        {/* Section Winners */}
-        <div className="space-y-2">
-          <DebouncedSearchMultiSelect<UserSearchItem>
-            onSearch={searchUsers}
-            placeholder="Search users to mark as section winners..."
-            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
-            getItemId={(item) => item.username}
-            onChange={(users) => {
-              // Update section winners in form state with the complete list
-              const updatedSections = sections.map((section) => {
-                if (section.id !== activeSectionId) return section;
-                return {
-                  ...section,
-                  winners: users,
-                };
-              });
+        {/* Section Winners - only show if section type supports winners */}
+        {sectionTypeSupportsWinners(activeSection.sectionType) && (
+          <div className="space-y-2">
+            <DebouncedSearchMultiSelect<UserSearchItem>
+              onSearch={searchUsers}
+              placeholder="Search users to mark as section winners..."
+              getDisplayValue={(item) =>
+                `${item.displayName} (${item.username})`
+              }
+              getItemId={(item) => item.username}
+              onChange={(users) => {
+                // Update section winners in form state with the complete list
+                const updatedSections = sections.map((section) => {
+                  if (section.id !== activeSectionId) return section;
+                  return {
+                    ...section,
+                    winners: users,
+                  };
+                });
 
-              setValue("sections", normalizeSectionsForForm(updatedSections));
+                setValue("sections", normalizeSectionsForForm(updatedSections));
 
-              // Update local winners state for display
-              setSectionWinners(users);
-            }}
-            value={sectionWinners}
-            name="Section Winners"
-          />
-          {sectionWinners.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {sectionWinners
-                .filter((winner) => winner && winner.username) // Filter out any invalid entries
-                .map((winner) => {
-                  return (
-                    <Badge
-                      key={winner.username}
-                      variant="default"
-                      className="bg-yellow-500 hover:bg-yellow-600"
-                    >
-                      <Trophy className="w-3 h-3 mr-1" />
-                      {winner.displayName}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleRemoveSectionWinner(winner.username)
-                        }
-                        className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
+                // Update local winners state for display
+                setSectionWinners(users);
+              }}
+              value={sectionWinners}
+              name="Section Winners"
+            />
+            {sectionWinners.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {sectionWinners
+                  .filter((winner) => winner && winner.username) // Filter out any invalid entries
+                  .map((winner) => {
+                    return (
+                      <Badge
+                        key={winner.username}
+                        variant="default"
+                        className="bg-yellow-500 hover:bg-yellow-600"
                       >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </Badge>
-                  );
-                })}
-            </div>
-          )}
-        </div>
+                        <Trophy className="w-3 h-3 mr-1" />
+                        {winner.displayName}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleRemoveSectionWinner(winner.username)
+                          }
+                          className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
 
         <FormField
           key={`applyStylesToVideos-${activeSectionId}`}
@@ -477,20 +619,37 @@ export function SectionForm({
           key={`hasBrackets-${activeSectionId}`}
           control={control}
           name={`sections.${activeSectionIndex}.hasBrackets`}
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center space-x-2">
-                <FormControl>
-                  <Switch
-                    checked={field.value || false}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Has Brackets</FormLabel>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const requiresBrackets = sectionTypeRequiresBrackets(
+              activeSection.sectionType
+            );
+            const isDisabled = requiresBrackets; // Disable if section type requires brackets
+
+            return (
+              <FormItem>
+                <div className="flex items-center space-x-2">
+                  <FormControl>
+                    <Switch
+                      checked={field.value || false}
+                      disabled={isDisabled}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel>
+                    Use Brackets
+                    {requiresBrackets && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        (Required for {activeSection.sectionType} sections)
+                      </span>
+                    )}
+                  </FormLabel>
+                </div>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
         {/* Videos Section - Always shown */}
         <div className="space-y-4">

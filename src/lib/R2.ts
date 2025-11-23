@@ -62,14 +62,7 @@ function generateR2Path(
       return `events/${entityId}/posters/${uniqueFilename}`;
     case "event-gallery":
       return `events/${entityId}/gallery/${uniqueFilename}`;
-    case "workshop-poster":
-      return `workshops/${entityId}/posters/${uniqueFilename}`;
-    case "workshop-gallery":
-      return `workshops/${entityId}/gallery/${uniqueFilename}`;
-    case "session-poster":
-      return `sessions/${entityId}/posters/${uniqueFilename}`;
-    case "session-gallery":
-      return `sessions/${entityId}/gallery/${uniqueFilename}`;
+    // Legacy types - map to generic events path for unified event system
     default:
       throw new Error(`Unknown image type: ${type}`);
   }

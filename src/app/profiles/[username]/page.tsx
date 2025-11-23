@@ -159,13 +159,8 @@ export default async function ProfilePage({ params }: PageProps) {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {profile.eventsCreated.map((event: any) => {
-                  const eventType = event.eventType || "competition";
-                  const eventRoute =
-                    eventType === "workshop"
-                      ? `/workshops/${event.eventId}`
-                      : eventType === "session"
-                      ? `/sessions/${event.eventId}`
-                      : `/competitions/${event.eventId}`;
+                  // All events use the unified /events/ route
+                  const eventRoute = `/events/${event.eventId}`;
 
                   return (
                     <Eventcard
@@ -198,13 +193,8 @@ export default async function ProfilePage({ params }: PageProps) {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {profile.eventsWithRoles.map((event: any) => {
-                  const eventType = event.eventType || "competition";
-                  const eventRoute =
-                    eventType === "workshop"
-                      ? `/workshops/${event.eventId}`
-                      : eventType === "session"
-                      ? `/sessions/${event.eventId}`
-                      : `/competitions/${event.eventId}`;
+                  // All events use the unified /events/ route
+                  const eventRoute = `/events/${event.eventId}`;
 
                   return (
                     <Eventcard

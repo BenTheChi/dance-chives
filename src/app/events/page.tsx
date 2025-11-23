@@ -1,16 +1,17 @@
 import Eventcard from "@/components/cards";
 import { AppNavbar } from "@/components/AppNavbar";
-import { getEvents } from "@/db/queries/competition";
+import { getAllEvents } from "@/db/queries/event";
 import { EventCard } from "@/types/event";
 
-export default async function CompetitionsPage() {
-  const events = await getEvents();
+export default async function EventsPage() {
+  const events = await getAllEvents();
 
   return (
     <>
       <main>
         <AppNavbar />
         <div className="container mx-auto px-4 py-8">
+          <h1 className="text-3xl font-bold mb-6">All Events</h1>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {events.map((event: EventCard) => (
               <Eventcard
@@ -26,9 +27,13 @@ export default async function CompetitionsPage() {
               />
             ))}
           </div>
+          {events.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No events found.</p>
+            </div>
+          )}
         </div>
       </main>
     </>
   );
 }
-

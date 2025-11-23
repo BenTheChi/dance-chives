@@ -187,7 +187,7 @@ export async function getEventCreator(eventId: string): Promise<string | null> {
 /**
  * Check if a user is a team member of an event
  * Team members have edit access, separate from roles
- * NOTE: Creators are NOT team members - use isCompetitionCreator() to check for creators
+ * NOTE: Creators are NOT team members - use isEventCreator() to check for creators
  */
 export async function isTeamMember(
   eventId: string,
@@ -214,6 +214,28 @@ export async function isTeamMember(
 /**
  * Check if a user is the creator of an event
  */
+// Generic function to check if user is event creator (works for all event types)
+export async function isEventCreator(
+  eventId: string,
+  userId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (e:Event {id: $eventId})<-[:CREATED]-(u:User {id: $userId})
+      RETURN count(e) as count
+      `,
+      { eventId, userId }
+    );
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+// Legacy alias for backwards compatibility
 export async function isCompetitionCreator(
   competitionId: string,
   userId: string
@@ -980,6 +1002,46 @@ export async function getEventTitle(
     }
 
     return result.records[0].get("title");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get event type from Neo4j
+ */
+export async function getEventType(eventId: string): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (e:Event {id: $eventId})
+      WITH [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+      RETURN CASE 
+        WHEN size(eventTypeLabels) > 0 THEN 
+          CASE eventTypeLabels[0]
+            WHEN 'BattleEvent' THEN 'Battle'
+            WHEN 'CompetitionEvent' THEN 'Competition'
+            WHEN 'ClassEvent' THEN 'Class'
+            WHEN 'WorkshopEvent' THEN 'Workshop'
+            WHEN 'SessionEvent' THEN 'Session'
+            WHEN 'PartyEvent' THEN 'Party'
+            WHEN 'FestivalEvent' THEN 'Festival'
+            WHEN 'PerformanceEvent' THEN 'Performance'
+            ELSE null
+          END
+        ELSE null 
+      END as eventType
+      LIMIT 1
+      `,
+      { eventId }
+    );
+
+    if (result.records.length === 0) {
+      return null;
+    }
+
+    return result.records[0].get("eventType");
   } finally {
     await session.close();
   }

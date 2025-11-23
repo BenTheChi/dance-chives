@@ -7,6 +7,10 @@ export interface Video {
   src: string;
   styles?: string[];
   type: "battle" | "freestyle" | "choreography" | "class";
+  taggedDancers?: UserSearchItem[];
+  taggedWinners?: UserSearchItem[];
+  taggedChoreographers?: UserSearchItem[];
+  taggedTeachers?: UserSearchItem[];
 }
 
 // Battle Video - has dancers and winners
