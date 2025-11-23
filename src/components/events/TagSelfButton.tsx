@@ -18,7 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AVAILABLE_ROLES, SECTION_ROLE_WINNER, VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
+import {
+  AVAILABLE_ROLES,
+  SECTION_ROLE_WINNER,
+  VIDEO_ROLE_DANCER,
+  VIDEO_ROLE_WINNER,
+} from "@/lib/utils/roles";
 import {
   tagSelfWithRole,
   tagSelfInSection,
@@ -93,27 +98,33 @@ export function TagSelfButton({
     if (target === "video") {
       // Video roles based on video type
       const videoRoles: string[] = [];
-      
+
       // Dancer is available for all video types
       if (!currentVideoRoles.includes(VIDEO_ROLE_DANCER)) {
         videoRoles.push(VIDEO_ROLE_DANCER);
       }
-      
+
       // Winner is only available for battle videos
-      if (videoType === "battle" && !currentVideoRoles.includes(VIDEO_ROLE_WINNER)) {
+      if (
+        videoType === "battle" &&
+        !currentVideoRoles.includes(VIDEO_ROLE_WINNER)
+      ) {
         videoRoles.push(VIDEO_ROLE_WINNER);
       }
-      
+
       // Choreographer is only available for choreography videos
-      if (videoType === "choreography" && !currentVideoRoles.includes("Choreographer")) {
+      if (
+        videoType === "choreography" &&
+        !currentVideoRoles.includes("Choreographer")
+      ) {
         videoRoles.push("Choreographer");
       }
-      
+
       // Teacher is only available for class videos
       if (videoType === "class" && !currentVideoRoles.includes("Teacher")) {
         videoRoles.push("Teacher");
       }
-      
+
       return videoRoles;
     }
     // Event-level: filter out roles already assigned
@@ -122,7 +133,14 @@ export function TagSelfButton({
         !safeCurrentUserRoles.includes(role) &&
         !(role === "Team Member" && isTeamMember)
     );
-  }, [target, isUserTagged, safeCurrentUserRoles, isTeamMember, videoType, currentVideoRoles]);
+  }, [
+    target,
+    isUserTagged,
+    safeCurrentUserRoles,
+    isTeamMember,
+    videoType,
+    currentVideoRoles,
+  ]);
 
   // Check for pending requests for all available roles in a single GET request
   useEffect(() => {
@@ -139,14 +157,14 @@ export function TagSelfButton({
         const params = new URLSearchParams({
           eventId: eventId,
         });
-        
+
         if (target === "section" && targetId) {
           params.append("sectionId", targetId);
         }
         if (target === "video" && targetId) {
           params.append("videoId", targetId);
         }
-        
+
         if (availableRoles.length > 0) {
           params.append("roles", availableRoles.join(","));
         }
@@ -165,7 +183,7 @@ export function TagSelfButton({
         // Convert object to Set of roles that have pending requests
         const pendingSet = new Set<string>(Object.keys(data || {}));
         setPendingRoles(pendingSet);
-        
+
         // Notify parent component of pending roles (only if callback exists)
         if (onPendingRolesChange) {
           onPendingRolesChange(Array.from(pendingSet));
@@ -182,10 +200,20 @@ export function TagSelfButton({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, target, targetId, currentUserId, session?.user?.id, availableRoles.join(",")]);
+  }, [
+    eventId,
+    target,
+    targetId,
+    currentUserId,
+    session?.user?.id,
+    availableRoles.join(","),
+  ]);
 
   // Check if user is logged in
-  const userId = target === "section" || target === "video" ? currentUserId : session?.user?.id;
+  const userId =
+    target === "section" || target === "video"
+      ? currentUserId
+      : session?.user?.id;
   if (!userId) {
     return null;
   }
@@ -308,9 +336,12 @@ export function TagSelfButton({
   };
 
   // Determine if user can tag directly (for section-level, check canTagDirectly or use session)
-  const canTag = target === "section" 
-    ? (canTagDirectly !== undefined ? canTagDirectly : (session?.user?.auth ?? 0) >= 2) // Default to moderator level for sections
-    : canTagDirectly;
+  const canTag =
+    target === "section"
+      ? canTagDirectly !== undefined
+        ? canTagDirectly
+        : (session?.user?.auth ?? 0) >= 2 // Default to moderator level for sections
+      : canTagDirectly;
 
   return (
     <div className="flex flex-col gap-2 mt-2">
@@ -325,7 +356,11 @@ export function TagSelfButton({
       {pendingRoles.size > 0 && (
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (
-            <Badge key={role} variant="outline" className="w-fit bg-gray-200 text-black hover:bg-gray-300">
+            <Badge
+              key={role}
+              variant="outline"
+              className="w-fit bg-gray-200 text-black hover:bg-gray-300"
+            >
               {role} tag request pending
             </Badge>
           ))}

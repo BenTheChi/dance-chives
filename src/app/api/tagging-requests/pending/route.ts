@@ -53,7 +53,10 @@ export async function GET(request: NextRequest) {
 
     // If roles are provided, filter by them
     if (rolesParam) {
-      const roles = rolesParam.split(",").map((r) => r.trim()).filter(Boolean);
+      const roles = rolesParam
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
       if (roles.length > 0) {
         whereClause.role = { in: roles };
       }
@@ -90,10 +93,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "Failed to fetch pending requests",
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch pending requests",
       },
       { status: 500 }
     );
   }
 }
-

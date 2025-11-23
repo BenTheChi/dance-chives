@@ -46,30 +46,34 @@ export default async function StylePage({ params }: PageProps) {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">{displayStyleName}</h1>
         <p className="text-muted-foreground mb-8">
-          Explore events, videos, users, workshops, and sessions tagged with this dance style
+          Explore events, videos, users, workshops, and sessions tagged with
+          this dance style
         </p>
 
         {/* Events in Your City Section */}
-        {styleData.cityFilteredEvents && styleData.cityFilteredEvents.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6">Events in Your City</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {styleData.cityFilteredEvents.map((event) => (
-                <Eventcard
-                  key={event.id}
-                  id={event.id}
-                  title={event.title}
-                  series={event.series}
-                  imageUrl={event.imageUrl}
-                  date={event.date}
-                  city={event.city}
-                  cityId={event.cityId}
-                  styles={event.styles}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {styleData.cityFilteredEvents &&
+          styleData.cityFilteredEvents.length > 0 && (
+            <section className="mb-12">
+              <h2 className="text-2xl font-semibold mb-6">
+                Events in Your City
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {styleData.cityFilteredEvents.map((event) => (
+                  <Eventcard
+                    key={event.id}
+                    id={event.id}
+                    title={event.title}
+                    series={event.series}
+                    imageUrl={event.imageUrl}
+                    date={event.date}
+                    city={event.city}
+                    cityId={event.cityId}
+                    styles={event.styles}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
         {/* Videos Section */}
         {styleData.videos.length > 0 && (
@@ -80,23 +84,26 @@ export default async function StylePage({ params }: PageProps) {
         )}
 
         {/* Users in Your City Section */}
-        {styleData.cityFilteredUsers && styleData.cityFilteredUsers.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-6">Users in Your City</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {styleData.cityFilteredUsers.map((user) => (
-                <UserCard
-                  key={user.id}
-                  id={user.id}
-                  displayName={user.displayName}
-                  username={user.username}
-                  image={user.image}
-                  styles={user.styles}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {styleData.cityFilteredUsers &&
+          styleData.cityFilteredUsers.length > 0 && (
+            <section className="mb-12">
+              <h2 className="text-2xl font-semibold mb-6">
+                Users in Your City
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {styleData.cityFilteredUsers.map((user) => (
+                  <UserCard
+                    key={user.id}
+                    id={user.id}
+                    displayName={user.displayName}
+                    username={user.username}
+                    image={user.image}
+                    styles={user.styles}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
         {/* Workshops Section */}
         {styleData.workshops.length > 0 && (
@@ -230,14 +237,17 @@ export default async function StylePage({ params }: PageProps) {
           </section>
         )}
 
-        {(!styleData.cityFilteredEvents || styleData.cityFilteredEvents.length === 0) &&
-          (!styleData.cityFilteredUsers || styleData.cityFilteredUsers.length === 0) &&
+        {(!styleData.cityFilteredEvents ||
+          styleData.cityFilteredEvents.length === 0) &&
+          (!styleData.cityFilteredUsers ||
+            styleData.cityFilteredUsers.length === 0) &&
           styleData.videos.length === 0 &&
           styleData.workshops.length === 0 &&
           styleData.sessions.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
-                No events, videos, users, workshops, or sessions found for this style.
+                No events, videos, users, workshops, or sessions found for this
+                style.
               </p>
             </div>
           )}
