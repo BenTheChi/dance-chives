@@ -23,7 +23,7 @@ import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { CalendarEventData, CalendarSessionData } from "@/db/queries/event";
 import {
-  convertEventToCalendarEvent,
+  convertEventToCalendarEvents,
   convertSessionToCalendarEvents,
   CalendarEvent,
 } from "@/lib/utils/calendar-utils";
@@ -261,11 +261,13 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
   const calendarEvents = useMemo(() => {
     const allEvents: CalendarEvent[] = [];
 
-    // Convert events (includes competitions and workshops, filter out those with null dates)
+    // Convert events (includes competitions and workshops, filter out those with no dates)
+    // Returns array since events can have multiple dates
     events
-      .filter((event) => event.startDate)
+      .filter((event) => (event.dates && event.dates.length > 0) || event.startDate)
       .forEach((event) => {
-        allEvents.push(convertEventToCalendarEvent(event));
+        const eventCalendarEvents = convertEventToCalendarEvents(event);
+        allEvents.push(...eventCalendarEvents);
       });
 
     // Convert sessions (returns array, so we spread it)

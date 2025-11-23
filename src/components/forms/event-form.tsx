@@ -73,7 +73,18 @@ const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
   description: z.preprocess((val) => val ?? "", z.string()),
-  sectionType: z.enum(["Battle", "Tournament", "Competition", "Performance", "Showcase", "Class", "Session", "Mixed"]).optional(),
+  sectionType: z
+    .enum([
+      "Battle",
+      "Tournament",
+      "Competition",
+      "Performance",
+      "Showcase",
+      "Class",
+      "Session",
+      "Mixed",
+    ])
+    .optional(),
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
@@ -99,16 +110,8 @@ const eventDetailsSchema = z.object({
     region: z.string().min(1, "Region is required"),
     population: z.number(),
   }),
+  // Dates array - required, must have at least one entry
   // The year of this date should be between 1900 and 2300
-  // Required - all events must have a startDate, and can also have recurring dates
-  startDate: z
-    .string()
-    .regex(
-      /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
-      "Event date must be in a valid format"
-    )
-    .min(1, "Start date is required"),
-  // Recurring dates array - for events with multiple dates
   dates: z
     .array(
       z
@@ -126,7 +129,9 @@ const eventDetailsSchema = z.object({
         .refine(
           (data) => {
             if (!data.startTime || !data.endTime) return true;
-            const [startHours, startMinutes] = data.startTime.split(":").map(Number);
+            const [startHours, startMinutes] = data.startTime
+              .split(":")
+              .map(Number);
             const [endHours, endMinutes] = data.endTime.split(":").map(Number);
             const startTotal = startHours * 60 + startMinutes;
             const endTotal = endHours * 60 + endMinutes;
@@ -138,15 +143,25 @@ const eventDetailsSchema = z.object({
           }
         )
     )
-    .optional(),
+    .min(1, "At least one event date is required"),
   description: z.preprocess((val) => val ?? "", z.string()),
   schedule: z.preprocess((val) => val ?? "", z.string()),
-  address: z.string().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  prize: z.string().optional(),
-  entryCost: z.string().optional(),
-  cost: z.string().optional(), // For Workshop/Session events
+  address: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.string().optional()
+  ),
+  prize: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.string().optional()
+  ),
+  entryCost: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.string().optional()
+  ),
+  cost: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.string().optional()
+  ), // For Workshop/Session events
   poster: imageSchema.nullable().optional(),
   eventType: z
     .enum([
@@ -211,7 +226,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
   // Extract current event ID from pathname (e.g., /events/[event]/edit or /events/[event])
-  const currentEventId = (pathname[1] === "events" || pathname[1] === "competitions") && pathname[2] ? pathname[2] : undefined;
+  const currentEventId =
+    (pathname[1] === "events" || pathname[1] === "competitions") && pathname[2]
+      ? pathname[2]
+      : undefined;
 
   const [activeMainTab, setActiveMainTab] = useState("Event Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
@@ -233,13 +251,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           region: "",
           population: 0,
         },
-        startDate: "",
-        dates: undefined,
+        dates: [
+          {
+            date: "",
+            startTime: "",
+            endTime: "",
+          },
+        ],
         description: "",
         schedule: "",
         address: "",
-        startTime: "",
-        endTime: "",
         prize: "",
         entryCost: "",
         cost: "",
@@ -274,6 +295,17 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     type: ((img as any).type || "gallery") as "gallery" | "profile" | "poster",
   }));
   const activeSection = sections.find((s) => s.id === activeSectionId);
+
+  // Auto-select first section when Sections tab is active and no section is selected
+  useEffect(() => {
+    if (activeMainTab === "Sections" && sections.length > 0) {
+      // Check if current activeSectionId is invalid (doesn't match any section or is "0")
+      const isValidSection = sections.some((s) => s.id === activeSectionId);
+      if (!isValidSection || activeSectionId === "0") {
+        setActiveSectionId(sections[0].id);
+      }
+    }
+  }, [activeMainTab, sections, activeSectionId]);
 
   const mainTabs = [
     "Event Details",
@@ -443,7 +475,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     // Map required fields to user-friendly names, including dynamic array fields
     const fieldDisplayNames: { [key: string]: string } = {
       "eventDetails.title": "Event Title",
-      "eventDetails.startDate": "Event Date",
+      "eventDetails.dates": "Event Dates",
+      "eventDetails.dates.date": "Event Date",
+      "eventDetails.dates.startTime": "Start Time",
+      "eventDetails.dates.endTime": "End Time",
       "eventDetails.city.name": "City Name",
       "eventDetails.city.countryCode": "Country Code",
       "eventDetails.city.region": "Region",
@@ -491,8 +526,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               displayName = fieldDisplayNames["sections.brackets.title"];
           } else if (genericField.includes("title")) {
             displayName = fieldDisplayNames[`${tabKey}.title`];
-          } else if (genericField.includes("startDate")) {
-            displayName = fieldDisplayNames[`${tabKey}.startDate`];
+          } else if (genericField.includes("dates")) {
+            if (genericField.endsWith(".date")) {
+              displayName = fieldDisplayNames["eventDetails.dates.date"];
+            } else if (genericField.endsWith(".startTime")) {
+              displayName = fieldDisplayNames["eventDetails.dates.startTime"];
+            } else if (genericField.endsWith(".endTime")) {
+              displayName = fieldDisplayNames["eventDetails.dates.endTime"];
+            } else {
+              displayName = fieldDisplayNames["eventDetails.dates"];
+            }
           } else if (genericField.includes("user")) {
             displayName = fieldDisplayNames[`${tabKey}.user`];
           }
@@ -668,7 +711,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     videoIndex={videoIndex}
                     context="event"
                     onRemove={() => removeVideo(video.id)}
-                    eventId={isEditing ? pathname[pathname.length - 2] : undefined}
+                    eventId={
+                      isEditing ? pathname[pathname.length - 2] : undefined
+                    }
                   />
                 ))}
               </div>
@@ -714,7 +759,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {/* Bottom Navigation */}
           <div className="flex justify-center gap-4 mt-8">
-            <Button type="button" variant="destructive" onClick={() => router.back()}>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => router.back()}
+            >
               Cancel
             </Button>
             <Button

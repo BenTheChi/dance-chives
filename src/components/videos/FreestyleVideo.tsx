@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardWithPoster, CardContent } from "@/components/ui/card";
 import { FreestyleVideo as FreestyleVideoType } from "@/types/video";
 import { Play } from "lucide-react";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -44,7 +44,7 @@ export function FreestyleVideo({
   const displayStyles = styles || video.styles || [];
 
   return (
-    <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-2 border-green-500">
+    <CardWithPoster className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-2 border-green-500">
       <CardContent className="p-0">
         <div className="relative aspect-video overflow-hidden rounded-t-lg">
           <Image
@@ -100,7 +100,7 @@ export function FreestyleVideo({
           )}
         </div>
       </CardContent>
-    </Card>
+    </CardWithPoster>
   );
 }
 

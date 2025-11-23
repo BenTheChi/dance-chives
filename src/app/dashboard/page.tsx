@@ -151,12 +151,6 @@ export default function DashboardPage() {
                   </div>
                 </CardDescription>
                 <div className="flex gap-2 mt-4">
-                  {user?.auth !== undefined &&
-                    user.auth >= AUTH_LEVELS.CREATOR && (
-                        <Button asChild>
-                        <Link href="/add-event">Add Event</Link>
-                        </Button>
-                    )}
                   {user?.username && (
                     <>
                       <Button variant="outline" asChild>

@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MapPin } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface WinningSection {
   sectionId: string;
   sectionTitle: string;
+  sectionType?: string;
   eventId: string;
   eventTitle: string;
-  startDate?: string;
+  startDate?: string; // Keep for backward compatibility
+  dates?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
   imageUrl?: string;
   city?: string;
   cityId?: number;
@@ -23,9 +30,16 @@ export function WinningSectionCard({ section }: WinningSectionCardProps) {
       <CardContent className="p-4">
         <div className="space-y-3">
           <div>
-            <h3 className="font-semibold text-lg mb-1">
-              {section.sectionTitle}
-            </h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-lg">
+                {section.sectionTitle}
+              </h3>
+              {section.sectionType && (
+                <Badge variant="outline" className="text-xs">
+                  {section.sectionType}
+                </Badge>
+              )}
+            </div>
             <Link
               href={`/events/${section.eventId}`}
               className="text-sm text-blue-600 hover:underline"
@@ -35,10 +49,16 @@ export function WinningSectionCard({ section }: WinningSectionCardProps) {
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-            {section.startDate && (
+            {(section.dates && section.dates.length > 0 ? section.dates[0].date : section.startDate) && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>{new Date(section.startDate).toLocaleDateString()}</span>
+                <span>
+                  {new Date(
+                    section.dates && section.dates.length > 0 
+                      ? section.dates[0].date 
+                      : section.startDate || ""
+                  ).toLocaleDateString()}
+                </span>
               </div>
             )}
             {section.city && (

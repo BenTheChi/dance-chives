@@ -7,7 +7,7 @@ import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 import { UserCard } from "@/components/user-card";
 import Link from "next/link";
 import Image from "next/image";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardWithPoster, CardContent } from "@/components/ui/card";
 import { normalizeYouTubeThumbnailUrl } from "@/lib/utils";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { auth } from "@/auth";
@@ -111,7 +111,7 @@ export default async function StylePage({ params }: PageProps) {
             <h2 className="text-2xl font-semibold mb-6">Workshops</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {styleData.workshops.map((workshop) => (
-                <Card
+                <CardWithPoster
                   key={workshop.id}
                   className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                 >
@@ -165,7 +165,7 @@ export default async function StylePage({ params }: PageProps) {
                       )}
                     </div>
                   </CardContent>
-                </Card>
+                </CardWithPoster>
               ))}
             </div>
           </section>
@@ -177,7 +177,7 @@ export default async function StylePage({ params }: PageProps) {
             <h2 className="text-2xl font-semibold mb-6">Sessions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {styleData.sessions.map((session) => (
-                <Card
+                <CardWithPoster
                   key={session.id}
                   className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
                 >
@@ -231,7 +231,7 @@ export default async function StylePage({ params }: PageProps) {
                       )}
                     </div>
                   </CardContent>
-                </Card>
+                </CardWithPoster>
               ))}
             </div>
           </section>

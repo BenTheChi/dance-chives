@@ -269,7 +269,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
-      RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate,
+      RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate, e.dates as dates,
              e.createdAt as createdAt, poster.url as imageUrl, c.name as city, c.id as cityId,
              collect(DISTINCT s.name) as styles,
              CASE
@@ -283,15 +283,26 @@ export async function getUserProfile(userIdOrUsername: string) {
       { userId }
     );
 
-    const eventsCreated = eventsCreatedResult.records.map((record) => ({
-      eventId: record.get("eventId"),
-      eventTitle: record.get("eventTitle") || "Untitled Event",
-      startDate: record.get("startDate"),
-      createdAt: record.get("createdAt"),
-      imageUrl: record.get("imageUrl"),
-      city: record.get("city"),
-      cityId: record.get("cityId") as number | undefined,
-      styles: record.get("styles") || [],
+    const eventsCreated = eventsCreatedResult.records.map((record) => {
+      const dates = record.get("dates");
+      let parsedDates: any[] = [];
+      if (dates) {
+        try {
+          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+        } catch (e) {
+          parsedDates = [];
+        }
+      }
+      return {
+        eventId: record.get("eventId"),
+        eventTitle: record.get("eventTitle") || "Untitled Event",
+        startDate: record.get("startDate"), // Keep for backward compatibility
+        dates: Array.isArray(parsedDates) ? parsedDates : [],
+        createdAt: record.get("createdAt"),
+        imageUrl: record.get("imageUrl"),
+        city: record.get("city"),
+        cityId: record.get("cityId") as number | undefined,
+        styles: record.get("styles") || [],
       eventType: record.get("eventType") as
         | "competition"
         | "workshop"
@@ -326,16 +337,27 @@ export async function getUserProfile(userIdOrUsername: string) {
       { userId, validRoles: validRoleFormats }
     );
 
-    const eventsWithRoles = eventsWithRolesResult.records.map((record) => ({
-      eventId: record.get("eventId"),
-      eventTitle: record.get("eventTitle") || "Untitled Event",
-      roles: record.get("roles") || [],
-      createdAt: record.get("createdAt"),
-      startDate: record.get("startDate"),
-      imageUrl: record.get("imageUrl"),
-      city: record.get("city"),
-      cityId: record.get("cityId") as number | undefined,
-      styles: record.get("styles") || [],
+    const eventsWithRoles = eventsWithRolesResult.records.map((record) => {
+      const dates = record.get("dates");
+      let parsedDates: any[] = [];
+      if (dates) {
+        try {
+          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+        } catch (e) {
+          parsedDates = [];
+        }
+      }
+      return {
+        eventId: record.get("eventId"),
+        eventTitle: record.get("eventTitle") || "Untitled Event",
+        roles: record.get("roles") || [],
+        createdAt: record.get("createdAt"),
+        startDate: record.get("startDate"), // Keep for backward compatibility
+        dates: Array.isArray(parsedDates) ? parsedDates : [],
+        imageUrl: record.get("imageUrl"),
+        city: record.get("city"),
+        cityId: record.get("cityId") as number | undefined,
+        styles: record.get("styles") || [],
       eventType: record.get("eventType") as
         | "competition"
         | "workshop"
@@ -386,8 +408,25 @@ export async function getUserProfile(userIdOrUsername: string) {
       MATCH (s)-[:IN]->(e:Event)
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      WITH s, e, c, poster,
+           [label IN labels(s) WHERE label IN ['BattleSection', 'TournamentSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'MixedSection']] as sectionTypeLabels
       RETURN s.id as sectionId, s.title as sectionTitle,
-             e.id as eventId, e.title as eventTitle, e.startDate as startDate,
+             CASE 
+               WHEN size(sectionTypeLabels) > 0 THEN 
+                 CASE sectionTypeLabels[0]
+                   WHEN 'BattleSection' THEN 'Battle'
+                   WHEN 'TournamentSection' THEN 'Tournament'
+                   WHEN 'CompetitionSection' THEN 'Competition'
+                   WHEN 'PerformanceSection' THEN 'Performance'
+                   WHEN 'ShowcaseSection' THEN 'Showcase'
+                   WHEN 'ClassSection' THEN 'Class'
+                   WHEN 'SessionSection' THEN 'Session'
+                   WHEN 'MixedSection' THEN 'Mixed'
+                   ELSE null
+                 END
+               ELSE null 
+             END as sectionType,
+             e.id as eventId, e.title as eventTitle, e.startDate as startDate, e.dates as dates,
              e.createdAt as eventCreatedAt, poster.url as imageUrl,
              c.name as city, c.id as cityId
       ORDER BY eventCreatedAt DESC
@@ -489,17 +528,30 @@ export async function getUserProfile(userIdOrUsername: string) {
       taggedUsers: winningVideoUsersMap.get(record.get("videoId")) || [],
     }));
 
-    const winningSections = winningSectionsResult.records.map((record) => ({
-      sectionId: record.get("sectionId"),
-      sectionTitle: record.get("sectionTitle") || "Untitled Section",
-      eventId: record.get("eventId"),
-      eventTitle: record.get("eventTitle") || "Untitled Event",
-      startDate: record.get("startDate"),
-      createdAt: record.get("eventCreatedAt"),
-      imageUrl: record.get("imageUrl"),
-      city: record.get("city"),
-      cityId: record.get("cityId") as number | undefined,
-    }));
+    const winningSections = winningSectionsResult.records.map((record) => {
+      const dates = record.get("dates");
+      let parsedDates: any[] = [];
+      if (dates) {
+        try {
+          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+        } catch (e) {
+          parsedDates = [];
+        }
+      }
+      return {
+        sectionId: record.get("sectionId"),
+        sectionTitle: record.get("sectionTitle") || "Untitled Section",
+        sectionType: record.get("sectionType"),
+        eventId: record.get("eventId"),
+        eventTitle: record.get("eventTitle") || "Untitled Event",
+        startDate: record.get("startDate"), // Keep for backward compatibility
+        dates: Array.isArray(parsedDates) ? parsedDates : [],
+        createdAt: record.get("eventCreatedAt"),
+        imageUrl: record.get("imageUrl"),
+        city: record.get("city"),
+        cityId: record.get("cityId") as number | undefined,
+      };
+    });
 
     session.close();
 

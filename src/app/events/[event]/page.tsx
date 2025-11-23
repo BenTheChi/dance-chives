@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Event } from "@/types/event";
 import {
+  Award,
   Building,
   Calendar,
   Clock,
@@ -108,8 +109,15 @@ export default async function EventPage({ params }: PageProps) {
     .map((role) => fromNeo4jRoleFormat(role.title))
     .filter((role): role is string => role !== null);
 
-  // Aggregate all unique styles from sections and videos
+  // Aggregate all unique styles from event, sections, and videos
   const allStyles = new Set<string>();
+  
+  // Add event-level styles first
+  if (event.eventDetails.styles && event.eventDetails.styles.length > 0) {
+    event.eventDetails.styles.forEach((style) => allStyles.add(style));
+  }
+  
+  // Then aggregate from sections and videos
   event.sections.forEach((section) => {
     // If applyStylesToVideos is true, use section styles
     if (section.applyStylesToVideos && section.styles) {
@@ -154,9 +162,11 @@ export default async function EventPage({ params }: PageProps) {
     (member): member is NonNullable<typeof member> => member !== null
   );
 
-  // Determine date to display
-  const eventDetails = event.eventDetails as any;
-  const displayDate = eventDetails.startDate || (eventDetails.dates && Array.isArray(eventDetails.dates) && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : "");
+  // Get all dates to display
+  const eventDetails = event.eventDetails;
+  const eventDates = eventDetails.dates && eventDetails.dates.length > 0 
+    ? eventDetails.dates 
+    : [];
 
   return (
     <>
@@ -184,11 +194,28 @@ export default async function EventPage({ params }: PageProps) {
             {/* Event Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
-              {displayDate && (
+              {event.eventDetails.eventType && (
                 <div className="flex flex-row gap-2">
-                  <Calendar />
-                  <b>Date:</b>
-                  {displayDate}
+                  <Award />
+                  <b>Type:</b> {event.eventDetails.eventType}
+                </div>
+              )}
+              {eventDates.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {eventDates.map((dateEntry, index) => (
+                    <div key={index} className="flex flex-row gap-2">
+                      <Calendar />
+                      <b>Date {eventDates.length > 1 ? `${index + 1}:` : ":"}</b>
+                      <span>
+                        {dateEntry.date}
+                        {dateEntry.startTime && dateEntry.endTime && (
+                          <span className="ml-2">
+                            ({formatTimeToAMPM(dateEntry.startTime)} - {formatTimeToAMPM(dateEntry.endTime)})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="flex flex-row gap-2">
@@ -220,13 +247,6 @@ export default async function EventPage({ params }: PageProps) {
                   <div className="whitespace-pre-wrap">
                     {event.eventDetails.address}
                   </div>
-                </div>
-              )}
-              {event.eventDetails.startTime && event.eventDetails.endTime && (
-                <div className="flex flex-row gap-2">
-                  <Clock />
-                  <b>Time:</b> {formatTimeToAMPM(event.eventDetails.startTime)}{" "}
-                  - {formatTimeToAMPM(event.eventDetails.endTime)}
                 </div>
               )}
               {eventDetails.prize && (
@@ -362,27 +382,35 @@ export default async function EventPage({ params }: PageProps) {
           )}
 
           {/* Sections */}
-          <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md hover:bg-green-200 hover:cursor-pointer hover:shadow-none">
-            <div className="w-full">
-              <Link href={`/events/${event.id}/sections`} className="w-full">
-                <h2 className="text-2xl font-bold mb-4 text-center">
-                  Sections
-                </h2>
-              </Link>
+          {event.sections && event.sections.length > 0 && (
+            <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md">
+              <div className="w-full">
+                <Link href={`/events/${event.id}/sections`} className="w-full">
+                  <h2 className="text-2xl font-bold mb-4 text-center">
+                    Sections
+                  </h2>
+                </Link>
 
-              <div className="flex flex-col gap-4">
-                {event.sections.map((section) => (
+                <div className="flex flex-col gap-4">
+                  {event.sections.map((section) => (
                   <div
                     key={section.id}
                     className="bg-white rounded-lg p-4 shadow-sm"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <Link
-                        href={`/events/${event.id}/sections/${section.id}`}
-                        className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
-                      >
-                        {section.title}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/events/${event.id}/sections/${section.id}`}
+                          className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+                        >
+                          {section.title}
+                        </Link>
+                        {section.sectionType && (
+                          <Badge variant="outline" className="text-xs">
+                            {section.sectionType}
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-sm text-gray-500">
                         {section.videos.length}{" "}
                         {section.videos.length === 1 ? "video" : "videos"}
@@ -494,6 +522,7 @@ export default async function EventPage({ params }: PageProps) {
               </div>
             </div>
           </section>
+          )}
 
           {/* Photo Gallery */}
           {event.gallery.length > 0 && (

@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { Control, UseFormRegister, UseFormSetValue, useFieldArray } from "react-hook-form";
+import { useEffect, useRef } from "react";
+import {
+  Control,
+  UseFormRegister,
+  UseFormSetValue,
+  useFieldArray,
+} from "react-hook-form";
 import { FormValues } from "./event-form";
 import { EventDetails } from "@/types/event";
 import { Image } from "@/types/image";
@@ -71,21 +76,32 @@ export function EventDetailsForm({
     control,
     name: "eventDetails.dates",
   });
+  const hasInitialized = useRef(false);
 
-  // Initialize with one date entry if empty and no startDate
+  // Always initialize with one date entry if empty
   useEffect(() => {
-    const eventDetailsAny = eventDetails as any;
-    if (fields.length === 0 && !eventDetailsAny.startDate) {
-      append({
-        date: "",
-        startTime: "",
-        endTime: "",
-      });
+    if (!hasInitialized.current) {
+      if (fields.length === 0) {
+        // Initialize with one entry if empty
+        append({
+          date: "",
+          startTime: "",
+          endTime: "",
+        });
+        hasInitialized.current = true;
+      } else if (fields.length > 1) {
+        // If there are more than one entries on mount, reduce to one
+        // Remove from the end, working backwards to avoid index issues
+        for (let i = fields.length - 1; i > 0; i--) {
+          remove(i);
+        }
+        hasInitialized.current = true;
+      } else if (fields.length === 1) {
+        // Already has exactly one entry, mark as initialized
+        hasInitialized.current = true;
+      }
     }
-  }, [fields.length, append, eventDetails]);
-
-  const eventDetailsAny = eventDetails as any;
-  const hasRecurringDates = eventDetailsAny.dates && eventDetailsAny.dates.length > 0;
+  }, [fields.length, append, remove]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -112,10 +128,7 @@ export function EventDetailsForm({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Event Type</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              value={field.value || ""}
-            >
+            <Select onValueChange={field.onChange} value={field.value || ""}>
               <FormControl>
                 <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Select event type (optional)" />
@@ -167,6 +180,7 @@ export function EventDetailsForm({
               <FormControl>
                 <Input
                   {...field}
+                  value={field.value ?? ""}
                   className="bg-white"
                   placeholder="Enter Address"
                 />
@@ -176,153 +190,99 @@ export function EventDetailsForm({
           )}
         />
       </div>
-      {/* Single Date or Recurring Dates */}
-      {!hasRecurringDates ? (
-        <div className="flex flex-col sm:flex-row gap-5">
-          {/* Date Field - for single date events */}
-          <DateInput
-            control={control}
-            name="eventDetails.startDate"
-            label="Date"
-          />
+      {/* Event Dates Section - Always shown */}
+      <div className="mb-6">
+        <FormLabel className="text-base mb-4 block">Event Dates</FormLabel>
+        {fields.map((field, index) => (
+          <div className="flex items-end gap-5 mb-4" key={field.id}>
+            {/* Remove date button */}
+            {fields.length > 1 && (
+              <Button
+                onClick={() => remove(index)}
+                variant="outline"
+                size="icon"
+                className="rounded-full hover:bg-red-200"
+                type="button"
+              >
+                <MinusIcon />
+              </Button>
+            )}
 
-          {/* Time Fields */}
-          <div className="w-1/2">
-            <FormField
-              control={control}
-              name="eventDetails.startTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Start Time</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="time"
-                      {...field}
-                      className="bg-white"
-                      placeholder="2:00 PM"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="w-1/2">
-            <FormField
-              control={control}
-              name="eventDetails.endTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>End Time</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="time"
-                      {...field}
-                      className="bg-white"
-                      placeholder="2:00 PM"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-      ) : (
-        /* Multiple Dates Section - for recurring events */
-        <div className="mb-6">
-          <FormLabel className="text-base mb-4 block">Event Dates</FormLabel>
-          {fields.map((field, index) => (
-            <div className="flex items-end gap-5 mb-4" key={field.id}>
-              {/* Remove date button */}
-              {fields.length > 1 && (
-                <Button
-                  onClick={() => remove(index)}
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full hover:bg-red-200"
-                  type="button"
-                >
-                  <MinusIcon />
-                </Button>
-              )}
+            {/* Date and Time Fields */}
+            <div className="flex flex-col sm:flex-row gap-5 w-full">
+              {/* Date Field */}
+              <div className="w-full sm:w-1/3">
+                <DateInput
+                  control={control as any}
+                  name={`eventDetails.dates.${index}.date` as any}
+                  label="Date"
+                />
+              </div>
 
-              {/* Date and Time Fields */}
-              <div className="flex flex-col sm:flex-row gap-5 w-full">
-                {/* Date Field */}
-                <div className="w-full sm:w-1/3">
-                  <DateInput
-                    control={control as any}
-                    name={`eventDetails.dates.${index}.date` as any}
-                    label="Date"
-                  />
-                </div>
+              {/* Start Time Field */}
+              <div className="w-full sm:w-1/3">
+                <FormField
+                  control={control}
+                  name={`eventDetails.dates.${index}.startTime`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Time</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="time"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="bg-white"
+                          placeholder="2:00 PM"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-                {/* Start Time Field */}
-                <div className="w-full sm:w-1/3">
-                  <FormField
-                    control={control}
-                    name={`eventDetails.dates.${index}.startTime`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            {...field}
-                            value={field.value ?? ""}
-                            className="bg-white"
-                            placeholder="2:00 PM"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* End Time Field */}
-                <div className="w-full sm:w-1/3">
-                  <FormField
-                    control={control}
-                    name={`eventDetails.dates.${index}.endTime`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            {...field}
-                            value={field.value ?? ""}
-                            className="bg-white"
-                            placeholder="4:00 PM"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              {/* End Time Field */}
+              <div className="w-full sm:w-1/3">
+                <FormField
+                  control={control}
+                  name={`eventDetails.dates.${index}.endTime`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Time</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="time"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="bg-white"
+                          placeholder="4:00 PM"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
-          ))}
+          </div>
+        ))}
 
-          <Button
-            className="border-2 px-4 py-2 rounded-lg hover:bg-[#B4D4F7] mt-5"
-            onClick={() =>
-              append({
-                date: "",
-                startTime: "",
-                endTime: "",
-              })
-            }
-            type="button"
-          >
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Add Another Date
-          </Button>
-        </div>
-      )}
+        <Button
+          className="border-2 px-4 py-2 rounded-lg hover:bg-[#B4D4F7] mt-5"
+          onClick={() =>
+            append({
+              date: "",
+              startTime: "",
+              endTime: "",
+            })
+          }
+          type="button"
+        >
+          <PlusIcon className="mr-2 h-4 w-4" />
+          Add Another Date
+        </Button>
+      </div>
       <FormField
         control={control}
         name="eventDetails.description"
@@ -366,7 +326,12 @@ export function EventDetailsForm({
             <FormItem className="w-full">
               <FormLabel>Entry Cost</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" placeholder="Optional" />
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  className="bg-white"
+                  placeholder="Optional"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -380,7 +345,12 @@ export function EventDetailsForm({
             <FormItem className="w-full">
               <FormLabel>Prize Pool ($)</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" placeholder="Optional" />
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  className="bg-white"
+                  placeholder="Optional"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -394,7 +364,12 @@ export function EventDetailsForm({
             <FormItem className="w-full">
               <FormLabel>Cost</FormLabel>
               <FormControl>
-                <Input {...field} className="bg-white" placeholder="Optional" />
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  className="bg-white"
+                  placeholder="Optional"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -449,4 +424,3 @@ export function EventDetailsForm({
     </div>
   );
 }
-

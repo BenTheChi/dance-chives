@@ -23,12 +23,13 @@ export function CalendarEventPopover({
   onOpenChange,
 }: CalendarEventPopoverProps) {
   const { resource } = event;
-  const { type, originalData, poster, styles } = resource;
+  const { type, originalData, poster, styles, eventType, dateEntry } = resource;
 
   // Format time display
   const formatTime = () => {
-    if (resource.type === "session" && resource.dateEntry) {
-      const { startTime, endTime } = resource.dateEntry;
+    // For events and sessions with dateEntry (multiple dates), use dateEntry
+    if ((resource.type === "event" || resource.type === "session") && dateEntry) {
+      const { startTime, endTime } = dateEntry;
       if (startTime && endTime) {
         return `${formatTimeToAMPM(startTime)} - ${formatTimeToAMPM(endTime)}`;
       } else if (startTime) {
@@ -37,6 +38,7 @@ export function CalendarEventPopover({
       return "All Day";
     }
 
+    // Fallback to originalData for backward compatibility
     const startTime = originalData.startTime;
     const endTime = originalData.endTime;
 
@@ -81,6 +83,13 @@ export function CalendarEventPopover({
           ) : (
             <div className="w-full h-48 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
               No poster
+            </div>
+          )}
+
+          {/* Event Type */}
+          {eventType && (
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Type:</span> {eventType}
             </div>
           )}
 

@@ -5,8 +5,6 @@ import {
   SearchIcon,
   Tag,
   MapPin,
-  GraduationCap,
-  Clock,
   Users,
 } from "lucide-react";
 import {
@@ -28,9 +26,7 @@ import { usePathname } from "next/navigation";
 const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
   { title: "Styles", url: "/styles", icon: Tag },
-  { title: "Competitions", url: "/competitions", icon: CalendarIcon },
-  { title: "Workshops", url: "/workshops", icon: GraduationCap },
-  { title: "Sessions", url: "/sessions", icon: Clock },
+  { title: "Events", url: "/events", icon: CalendarIcon },
   { title: "Cities", url: "/cities", icon: MapPin },
   { title: "Profiles", url: "/profiles", icon: Users },
 ];

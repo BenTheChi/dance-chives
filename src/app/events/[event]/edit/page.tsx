@@ -65,9 +65,15 @@ export default async function EditEventPage({
     };
   });
 
-  //Add null values to eventDetails objects
+  //Add null values to eventDetails objects and normalize optional string fields
   const formattedEventDetails = {
     ...currEvent.eventDetails,
+    description: currEvent.eventDetails.description ?? "",
+    schedule: currEvent.eventDetails.schedule ?? "",
+    address: currEvent.eventDetails.address ?? "",
+    prize: currEvent.eventDetails.prize ?? "",
+    entryCost: currEvent.eventDetails.entryCost ?? "",
+    cost: currEvent.eventDetails.cost ?? "",
     poster: currEvent.eventDetails.poster
       ? {
           ...currEvent.eventDetails.poster,
@@ -78,7 +84,7 @@ export default async function EditEventPage({
   };
 
   //Convert event to FormValues
-  // Note: Zod's preprocess will convert undefined/null to "" for description/schedule fields
+  // Note: Optional string fields are normalized to empty strings to avoid null values
   const eventFormValues = {
     eventDetails: formattedEventDetails,
     sections: currEvent.sections,

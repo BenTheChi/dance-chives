@@ -668,27 +668,44 @@ export function VideoForm({
               ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.styles`
               : `sections.${sectionIndex}.videos.${videoIndex}.styles`) as any
           }
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Dance Styles</FormLabel>
-              {isStylesDisabled && (
-                <p className="text-sm text-muted-foreground mb-2">
-                  Styles inherited from section
-                </p>
-              )}
-              <FormControl>
-                <StyleMultiSelect
-                  value={(field.value as string[]) || []}
-                  onChange={(styles) => {
-                    field.onChange(styles);
-                    updateVideoStyles(styles);
-                  }}
-                  disabled={isStylesDisabled}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const sectionStyles = activeSection?.styles || [];
+            
+            return (
+              <FormItem>
+                <FormLabel>
+                  Dance Styles{isStylesDisabled && " (from section)"}
+                </FormLabel>
+                {isStylesDisabled ? (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {sectionStyles.length > 0 ? (
+                      sectionStyles.map((style) => (
+                        <Badge key={style} variant="secondary">
+                          {style}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No styles set for this section
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <FormControl>
+                    <StyleMultiSelect
+                      value={(field.value as string[]) || []}
+                      onChange={(styles) => {
+                        field.onChange(styles);
+                        updateVideoStyles(styles);
+                      }}
+                      disabled={isStylesDisabled}
+                    />
+                  </FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
       </CardContent>
     </Card>

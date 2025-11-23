@@ -219,8 +219,6 @@ export const getEvent = async (id: string): Promise<Event> => {
       entryCost: e.entryCost,
       startDate: e.startDate,
       dates: e.dates,
-      startTime: e.startTime,
-      endTime: e.endTime,
       schedule: e.schedule,
       creatorId: creator.id
     } as event,
@@ -311,6 +309,13 @@ export const getEvent = async (id: string): Promise<Event> => {
         id: v.id,
         title: v.title,
         src: v.src,
+        type: CASE 
+          WHEN 'BattleVideo' IN labels(v) THEN 'battle'
+          WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
+          WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
+          WHEN 'ClassVideo' IN labels(v) THEN 'class'
+          ELSE 'battle'
+        END,
         taggedUsers: []
       }],
       brackets: [b in brackets | {
@@ -330,7 +335,14 @@ export const getEvent = async (id: string): Promise<Event> => {
     RETURN s.id as sectionId, b.id as bracketId, collect({
       id: v.id,
       title: v.title,
-      src: v.src
+      src: v.src,
+      type: CASE 
+        WHEN 'BattleVideo' IN labels(v) THEN 'battle'
+        WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
+        WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
+        WHEN 'ClassVideo' IN labels(v) THEN 'class'
+        ELSE 'battle'
+      END
     }) as videos
   `,
     { id }
@@ -796,14 +808,15 @@ export const getEvent = async (id: string): Promise<Event> => {
     return result;
   });
 
-  // Parse dates if it's a JSON string (for Session events)
-  let dates: SessionDate[] | undefined = undefined;
+  // Parse dates - must be an array (required)
+  let dates: SessionDate[] = [];
   if (eventData.dates) {
     try {
-      dates =
+      const parsedDates =
         typeof eventData.dates === "string"
           ? JSON.parse(eventData.dates)
           : eventData.dates;
+      dates = Array.isArray(parsedDates) ? parsedDates : [];
     } catch (error) {
       console.error("Error parsing dates array:", error);
       dates = [];
@@ -811,21 +824,17 @@ export const getEvent = async (id: string): Promise<Event> => {
   }
 
   // Build eventDetails object with all possible properties
-  // startDate is required - use the first date from dates array if startDate is not present
+  // Derive startDate from first date in dates array for database storage
   const startDate =
-    eventData.startDate ||
-    (dates && dates.length > 0
+    dates && dates.length > 0
       ? dates[0].date
-      : new Date().toISOString().split("T")[0]);
+      : new Date().toISOString().split("T")[0];
 
   const eventDetails: EventDetails = {
     title: eventData.title,
     description: eventData.description,
     address: eventData.address,
     cost: eventData.cost,
-    startDate: startDate, // Required
-    startTime: eventData.startTime,
-    endTime: eventData.endTime,
     schedule: eventData.schedule,
     creatorId: eventData.creatorId,
     poster: poster || null,
@@ -836,11 +845,11 @@ export const getEvent = async (id: string): Promise<Event> => {
       region: "",
       population: 0,
     },
+    dates: dates || [],
     styles: eventStyles,
     ...(eventType && { eventType: eventType as EventType }),
     ...(eventData.prize && { prize: eventData.prize }),
     ...(eventData.entryCost && { entryCost: eventData.entryCost }),
-    ...(dates && dates.length > 0 && { dates }),
   };
 
   // Build the result object
@@ -1193,6 +1202,7 @@ const createSections = async (eventId: string, sections: any[]) => {
     for (const sec of sections) {
       // Get section type label (if provided)
       const sectionType = sec.sectionType;
+      const sectionTypeLabel = getSectionTypeLabel(sectionType);
 
       // Create section
       await session.run(
@@ -1208,7 +1218,7 @@ const createSections = async (eventId: string, sections: any[]) => {
            s.applyStylesToVideos = $applyStylesToVideos
          WITH s, e
          // Remove old section type labels if section type changed
-         CALL apoc.create.removeLabels(s, ['Battle', 'Tournament', 'Competition', 'Performance', 'Showcase', 'Class', 'Session', 'Mixed']) YIELD node as removedNode
+         CALL apoc.create.removeLabels(s, $sectionTypeLabels) YIELD node as removedNode
          WITH removedNode as s, e
          MERGE (s)-[:IN]->(e)`,
         {
@@ -1217,18 +1227,19 @@ const createSections = async (eventId: string, sections: any[]) => {
           title: sec.title,
           description: sec.description || null,
           applyStylesToVideos: sec.applyStylesToVideos || false,
+          sectionTypeLabels: getAllSectionTypeLabels(),
         }
       );
 
       // Add section type label if provided
-      if (sectionType) {
+      if (sectionTypeLabel) {
         await session.run(
           `MATCH (s:Section {id: $sectionId})
            CALL apoc.create.addLabels(s, [$sectionTypeLabel]) YIELD node
            RETURN node`,
           {
             sectionId: sec.id,
-            sectionTypeLabel: sectionType,
+            sectionTypeLabel: sectionTypeLabel,
           }
         );
       }
@@ -1659,8 +1670,6 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         e.cost = $cost,
         e.startDate = $startDate,
         e.dates = $dates,
-        e.startTime = $startTime,
-        e.endTime = $endTime,
         e.schedule = $schedule,
         e.createdAt = $createdAt,
         e.updatedAt = $updatedAt
@@ -1673,8 +1682,6 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         e.cost = $cost,
         e.startDate = $startDate,
         e.dates = $dates,
-        e.startTime = $startTime,
-        e.endTime = $endTime,
         e.schedule = $schedule,
         e.updatedAt = $updatedAt
 
@@ -1693,10 +1700,9 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         prize: eventDetails.prize || null,
         entryCost: eventDetails.entryCost || null,
         cost: eventDetails.cost || null,
-        startDate: eventDetails.startDate || null,
+        // Derive startDate from first date in dates array for database storage
+        startDate: eventDetails.dates && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : null,
         dates: datesJson,
-        startTime: eventDetails.startTime || null,
-        endTime: eventDetails.endTime || null,
         schedule: eventDetails.schedule || null,
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
@@ -1775,10 +1781,9 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         prize: eventDetails.prize || null,
         entryCost: eventDetails.entryCost || null,
         cost: eventDetails.cost || null,
-        startDate: eventDetails.startDate || null,
+        // Derive startDate from first date in dates array for database storage
+        startDate: eventDetails.dates && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : null,
         dates: datesJson,
-        startTime: eventDetails.startTime || null,
-        endTime: eventDetails.endTime || null,
         schedule: eventDetails.schedule || null,
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
@@ -1793,6 +1798,21 @@ export const insertEvent = async (event: Event): Promise<Event> => {
       await session.close();
       throw new Error(
         `Failed to create event ${event.id}: No records returned from query`
+      );
+    }
+
+    // Create event styles
+    if (eventDetails.styles && eventDetails.styles.length > 0) {
+      const normalizedStyles = normalizeStyleNames(eventDetails.styles);
+      await session.run(
+        `
+        MATCH (e:Event {id: $eventId})
+        WITH e, $styles AS styles
+        UNWIND styles AS styleName
+        MERGE (style:Style {name: styleName})
+        MERGE (e)-[:STYLE]->(style)
+        `,
+        { eventId: event.id, styles: normalizedStyles }
       );
     }
 
@@ -1913,8 +1933,6 @@ export const editEvent = async (event: Event): Promise<Event> => {
            e.cost = $cost,
            e.startDate = $startDate,
            e.dates = $dates,
-           e.startTime = $startTime,
-           e.endTime = $endTime,
            e.schedule = $schedule,
            e.updatedAt = $updatedAt`,
       {
@@ -1925,10 +1943,9 @@ export const editEvent = async (event: Event): Promise<Event> => {
         prize: eventDetailsAny.prize || null,
         entryCost: eventDetailsAny.entryCost || null,
         cost: eventDetailsAny.cost || null,
-        startDate: eventDetailsAny.startDate || null,
+        // Derive startDate from first date in dates array for database storage
+        startDate: eventDetails.dates && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : null,
         dates: datesJson,
-        startTime: eventDetails.startTime || null,
-        endTime: eventDetails.endTime || null,
         schedule: eventDetails.schedule || null,
         updatedAt: event.updatedAt.toISOString(),
       }
@@ -2239,9 +2256,15 @@ export interface CityData {
 export interface CalendarEventData {
   id: string;
   title: string;
-  startDate: string;
-  startTime?: string;
-  endTime?: string;
+  startDate?: string; // Kept for backward compatibility, prefer dates[0].date
+  startTime?: string; // Kept for backward compatibility, prefer dates[0].startTime
+  endTime?: string; // Kept for backward compatibility, prefer dates[0].endTime
+  dates?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
+  eventType?: EventType;
   poster?: {
     id: string;
     title: string;
@@ -2981,8 +3004,11 @@ export const getCitySchedule = async (
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+       WITH e, poster,
+            [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']][0] as eventTypeLabel
        RETURN e.id as id, e.title as title, e.startDate as startDate,
-              e.startTime as startTime, e.endTime as endTime,
+              e.startTime as startTime, e.endTime as endTime, e.dates as dates,
+              eventTypeLabel,
               CASE WHEN poster IS NOT NULL THEN {
                 id: poster.id,
                 title: poster.title,
@@ -2992,22 +3018,25 @@ export const getCitySchedule = async (
       { cityId }
     );
 
-    // Get event styles
+    // Get event styles (including event-level styles)
     const eventStylesResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
        WITH e.id as eventId,
+            collect(DISTINCT eventStyle.name) as eventStyles,
             collect(DISTINCT sectionStyle.name) as sectionStyles,
             collect(DISTINCT videoStyle.name) as videoStyles,
             collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
        WITH eventId,
+            [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
             [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
             [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
             [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
        RETURN eventId,
-              filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
+              filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
       { cityId }
     );
 
@@ -3029,12 +3058,24 @@ export const getCitySchedule = async (
     // Build events array
     const events: CalendarEventData[] = eventsResult.records.map((record) => {
       const eventId = record.get("id");
+      const dates = record.get("dates");
+      const eventTypeLabel = record.get("eventTypeLabel");
+      let parsedDates: any[] = [];
+      if (dates) {
+        try {
+          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+        } catch (e) {
+          parsedDates = [];
+        }
+      }
       return {
         id: eventId,
         title: record.get("title"),
-        startDate: record.get("startDate"),
+        startDate: record.get("startDate"), // Keep for backward compatibility
         startTime: record.get("startTime") || undefined,
         endTime: record.get("endTime") || undefined,
+        dates: Array.isArray(parsedDates) ? parsedDates : undefined,
+        eventType: eventTypeLabel ? getEventTypeFromLabel(eventTypeLabel) : undefined,
         poster: record.get("poster") || null,
         styles: eventStylesMap.get(eventId) || [],
       };

@@ -74,28 +74,68 @@ function parseDateTime(
 }
 
 /**
- * Convert Event to calendar event format
+ * Convert Event to calendar events (returns array since events can have multiple dates)
+ */
+export function convertEventToCalendarEvents(
+  event: CalendarEventData
+): CalendarEvent[] {
+  // If event has multiple dates, create a calendar event for each date
+  if (event.dates && event.dates.length > 0) {
+    return event.dates.map((dateEntry, index) => {
+      const start = parseDateTime(dateEntry.date, dateEntry.startTime);
+      const end = dateEntry.endTime
+        ? parseDateTime(dateEntry.date, dateEntry.endTime)
+        : parseDateTime(dateEntry.date, "23:59");
+
+      return {
+        id: `${event.id}-${index}`,
+        title: event.title,
+        start,
+        end,
+        resource: {
+          type: "event",
+          originalData: event,
+          dateEntry: dateEntry, // Store the specific date entry
+          eventType: event.eventType,
+          poster: event.poster,
+          styles: event.styles,
+        },
+      };
+    });
+  }
+
+  // Fall back to startDate for backward compatibility (single date)
+  const start = parseDateTime(event.startDate, event.startTime);
+  const end = event.endTime
+    ? parseDateTime(event.startDate, event.endTime)
+    : parseDateTime(event.startDate || "", "23:59");
+
+  return [
+    {
+      id: event.id,
+      title: event.title,
+      start,
+      end,
+      resource: {
+        type: "event",
+        originalData: event,
+        eventType: event.eventType,
+        poster: event.poster,
+        styles: event.styles,
+      },
+    },
+  ];
+}
+
+/**
+ * Convert Event to calendar event format (single event - kept for backward compatibility)
+ * @deprecated Use convertEventToCalendarEvents instead
  */
 export function convertEventToCalendarEvent(
   event: CalendarEventData
 ): CalendarEvent {
-  const start = parseDateTime(event.startDate, event.startTime);
-  const end = event.endTime
-    ? parseDateTime(event.startDate, event.endTime)
-    : parseDateTime(event.startDate, "23:59"); // Default to end of day if no end time
-
-  return {
-    id: event.id,
-    title: event.title,
-    start,
-    end,
-    resource: {
-      type: "event",
-      originalData: event,
-      poster: event.poster,
-      styles: event.styles,
-    },
-  };
+  const events = convertEventToCalendarEvents(event);
+  return events[0];
 }
 
 /**

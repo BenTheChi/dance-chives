@@ -168,7 +168,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       id={event.eventId}
                       title={event.eventTitle}
                       imageUrl={event.imageUrl}
-                      date={event.startDate || ""}
+                      date={event.dates && event.dates.length > 0 ? event.dates[0].date : (event.startDate || "")}
                       city={event.city || ""}
                       cityId={event.cityId}
                       styles={event.styles || []}
@@ -202,7 +202,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       id={event.eventId}
                       title={event.eventTitle}
                       imageUrl={event.imageUrl}
-                      date={event.startDate || ""}
+                      date={event.dates && event.dates.length > 0 ? event.dates[0].date : (event.startDate || "")}
                       city={event.city || ""}
                       cityId={event.cityId}
                       styles={event.styles || []}

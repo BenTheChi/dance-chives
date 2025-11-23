@@ -110,6 +110,11 @@ export function SectionForm({
 
   const addBracket = () => {
     if (!activeSection) return;
+    
+    // Prevent adding brackets if section type disallows them
+    if (sectionTypeDisallowsBrackets(activeSection.sectionType)) {
+      return;
+    }
 
     const newBracket: Bracket = {
       id: Date.now().toString(),
@@ -178,12 +183,18 @@ export function SectionForm({
     return ["Battle", "Tournament"].includes(sectionType || "");
   };
 
+  // Check if section type disallows brackets (for performance reasons)
+  const sectionTypeDisallowsBrackets = (sectionType?: string): boolean => {
+    return ["Showcase", "Class", "Session", "Performance"].includes(sectionType || "");
+  };
+
   // Handle section type change
   const handleSectionTypeChange = (newType: string | undefined) => {
     const updatedSections = sections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
       const requiresBrackets = sectionTypeRequiresBrackets(newType);
+      const disallowsBrackets = sectionTypeDisallowsBrackets(newType);
       const supportsWinners = sectionTypeSupportsWinners(newType);
       const defaultVideoType = getDefaultVideoType(newType);
 
@@ -191,14 +202,26 @@ export function SectionForm({
       const winners = supportsWinners ? section.winners || [] : [];
 
       // If changing to a type that requires brackets, ensure hasBrackets is true
-      // If changing to a type that doesn't require brackets, keep current hasBrackets (user can still enable)
-      const hasBrackets = requiresBrackets ? true : section.hasBrackets;
+      // If changing to a type that disallows brackets, ensure hasBrackets is false
+      // Otherwise, keep current hasBrackets (user can still enable/disable)
+      const hasBrackets = requiresBrackets ? true : disallowsBrackets ? false : section.hasBrackets;
 
       // Handle brackets based on section type and hasBrackets setting:
-      // - If type requires brackets OR hasBrackets is true: keep brackets, update video types
-      // - If type doesn't require brackets AND hasBrackets is false: clear brackets (cascade delete)
-      const updatedBrackets =
-        requiresBrackets || hasBrackets
+      // - If type requires brackets OR (hasBrackets is true AND type doesn't disallow): keep brackets, update video types
+      // - If type disallows brackets OR (type doesn't require brackets AND hasBrackets is false): clear brackets
+      const shouldKeepBrackets = requiresBrackets || (hasBrackets && !disallowsBrackets);
+      
+      // Collect videos from brackets if we're clearing them (to preserve them)
+      const videosFromBrackets = disallowsBrackets && section.brackets.length > 0
+        ? section.brackets.flatMap((bracket) =>
+            bracket.videos.map((video) => ({
+              ...video,
+              type: defaultVideoType,
+            }))
+          )
+        : [];
+
+      const updatedBrackets = shouldKeepBrackets
           ? section.brackets.map((bracket) => ({
               ...bracket,
               videos: bracket.videos.map((video) => ({
@@ -206,13 +229,17 @@ export function SectionForm({
                 type: defaultVideoType,
               })),
             }))
-          : []; // Clear brackets if section type doesn't require them and hasBrackets is false
+          : []; // Clear brackets if section type disallows them or doesn't require them and hasBrackets is false
 
       // Update all existing videos to use the default video type for this section type
-      const updatedVideos = section.videos.map((video) => ({
-        ...video,
-        type: defaultVideoType,
-      }));
+      // If brackets are being cleared, merge videos from brackets into direct videos
+      const updatedVideos = [
+        ...section.videos.map((video) => ({
+          ...video,
+          type: defaultVideoType,
+        })),
+        ...videosFromBrackets,
+      ];
 
       return {
         ...section,
@@ -623,7 +650,10 @@ export function SectionForm({
             const requiresBrackets = sectionTypeRequiresBrackets(
               activeSection.sectionType
             );
-            const isDisabled = requiresBrackets; // Disable if section type requires brackets
+            const disallowsBrackets = sectionTypeDisallowsBrackets(
+              activeSection.sectionType
+            );
+            const isDisabled = requiresBrackets || disallowsBrackets; // Disable if section type requires or disallows brackets
 
             return (
               <FormItem>
@@ -642,6 +672,11 @@ export function SectionForm({
                     {requiresBrackets && (
                       <span className="text-sm text-muted-foreground ml-2">
                         (Required for {activeSection.sectionType} sections)
+                      </span>
+                    )}
+                    {disallowsBrackets && (
+                      <span className="text-sm text-muted-foreground ml-2">
+                        (Not available for {activeSection.sectionType} sections)
                       </span>
                     )}
                   </FormLabel>

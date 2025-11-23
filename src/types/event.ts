@@ -29,14 +29,11 @@ export interface EventDetails {
   description?: string;
   schedule?: string;
   address?: string; // location
-  startTime?: string;
-  endTime?: string;
   creatorId: string;
   cost?: string;
   prize?: string; // Prize information (can be used by any event type)
   entryCost?: string; // Entry cost (can be used by any event type)
-  startDate: string; // Required: Single date for events
-  dates?: SessionDate[]; // Optional: Array of dates for recurring events
+  dates: SessionDate[]; // Required: Array of dates for events (at least one)
   poster?: Image | null;
   city: City;
   styles?: string[]; // danceStyleTags

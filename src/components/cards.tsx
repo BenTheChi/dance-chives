@@ -2,7 +2,7 @@ import Image from "next/image";
 import React from "react";
 import Link from "next/link";
 import { EventCard } from "@/types/event";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardWithPoster, CardContent } from "@/components/ui/card";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
@@ -27,7 +27,7 @@ const Eventcard = ({
   const titleHref = href || `/events/${id}`;
 
   return (
-    <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
+    <CardWithPoster className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
       <CardContent className="p-0">
         <div className="relative aspect-video overflow-hidden rounded-t-lg">
           <Image
@@ -76,7 +76,7 @@ const Eventcard = ({
           )}
         </div>
       </CardContent>
-    </Card>
+    </CardWithPoster>
   );
 };
 

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardWithPoster, CardContent } from "@/components/ui/card";
 import { BattleVideo as BattleVideoType } from "@/types/video";
 import { Play } from "lucide-react";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -51,7 +51,7 @@ export function BattleVideo({
   const displayStyles = styles || video.styles || [];
 
   return (
-    <Card
+    <CardWithPoster
       className={`group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-2 border-red-500 ${
         isWinner ? "shadow-md" : ""
       }`}
@@ -116,7 +116,7 @@ export function BattleVideo({
           )}
         </div>
       </CardContent>
-    </Card>
+    </CardWithPoster>
   );
 }
 

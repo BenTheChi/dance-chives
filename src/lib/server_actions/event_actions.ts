@@ -36,9 +36,8 @@ interface addEventProps {
       region: string;
       population: number;
     };
-    startDate?: string; // For single-date events
-    dates?: {
-      // For recurring events (sessions)
+    dates: {
+      // Required: Array of dates for events (at least one)
       date: string;
       startTime: string;
       endTime: string;
@@ -46,8 +45,6 @@ interface addEventProps {
     description?: string;
     schedule?: string;
     address?: string;
-    startTime?: string;
-    endTime?: string;
     prize?: string;
     entryCost?: string;
     cost?: string;
@@ -299,11 +296,12 @@ export async function addEvent(props: addEventProps): Promise<response> {
       cost: props.eventDetails.cost,
       prize: props.eventDetails.prize,
       entryCost: props.eventDetails.entryCost,
+      // Derive startDate from first date in dates array for database compatibility
       startDate:
-        props.eventDetails.startDate || new Date().toISOString().split("T")[0], // Required: use provided or default to today
+        props.eventDetails.dates && props.eventDetails.dates.length > 0
+          ? props.eventDetails.dates[0].date
+          : new Date().toISOString().split("T")[0],
       dates: props.eventDetails.dates,
-      startTime: props.eventDetails.startTime,
-      endTime: props.eventDetails.endTime,
       schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Image | null,
       eventType: props.eventDetails.eventType,
@@ -517,11 +515,14 @@ export async function editEvent(
       cost: editedEvent.eventDetails.cost,
       prize: editedEvent.eventDetails.prize,
       entryCost: editedEvent.eventDetails.entryCost,
+      // Derive startDate from first date in dates array for database compatibility
       startDate:
-        editedEvent.eventDetails.startDate || oldEvent.eventDetails.startDate, // Required: use provided or keep existing
+        editedEvent.eventDetails.dates && editedEvent.eventDetails.dates.length > 0
+          ? editedEvent.eventDetails.dates[0].date
+          : (oldEvent.eventDetails.dates && oldEvent.eventDetails.dates.length > 0
+              ? oldEvent.eventDetails.dates[0].date
+              : new Date().toISOString().split("T")[0]),
       dates: editedEvent.eventDetails.dates,
-      startTime: editedEvent.eventDetails.startTime,
-      endTime: editedEvent.eventDetails.endTime,
       schedule: editedEvent.eventDetails.schedule ?? "",
       poster: editedEvent.eventDetails.poster as Image | null,
       eventType: editedEvent.eventDetails.eventType,
