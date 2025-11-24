@@ -542,12 +542,7 @@ export async function editEvent(
             const oldVideo = oldSection?.videos.find(
               (v) => v.id === newVideo.id
             );
-            await processVideoTagDiffs(
-              newVideo,
-              oldVideo as Video,
-              eventId,
-              getUserId
-            );
+            await processVideoTagDiffs(newVideo, oldVideo, eventId, getUserId);
           }
 
           // Process bracket videos
@@ -562,7 +557,7 @@ export async function editEvent(
               );
               await processVideoTagDiffs(
                 newVideo,
-                oldVideo as Video,
+                oldVideo,
                 eventId,
                 getUserId
               );
@@ -663,14 +658,14 @@ export async function editEvent(
 // Helper function to process video tag diffs
 async function processVideoTagDiffs(
   newVideo: Video,
-  oldVideo: Video,
+  oldVideo: Video | undefined,
   eventId: string,
   getUserId: (user: UserSearchItem) => Promise<string>
 ): Promise<void> {
-  const oldTaggedWinners = oldVideo.taggedWinners || [];
-  const oldTaggedDancers = oldVideo.taggedDancers || [];
-  const oldTaggedChoreographers = oldVideo.taggedChoreographers || [];
-  const oldTaggedTeachers = oldVideo.taggedTeachers || [];
+  const oldTaggedWinners = oldVideo?.taggedWinners || [];
+  const oldTaggedDancers = oldVideo?.taggedDancers || [];
+  const oldTaggedChoreographers = oldVideo?.taggedChoreographers || [];
+  const oldTaggedTeachers = oldVideo?.taggedTeachers || [];
   const newTaggedWinners = newVideo.taggedWinners || [];
   const newTaggedDancers = newVideo.taggedDancers || [];
   const newTaggedChoreographers = newVideo.taggedChoreographers || [];
