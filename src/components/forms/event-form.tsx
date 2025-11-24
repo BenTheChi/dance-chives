@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -17,14 +17,12 @@ import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role } from "@/types/event";
 import { Image } from "@/types/image";
-import { Video } from "@/types/video";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
-import { AVAILABLE_ROLES } from "@/lib/utils/roles";
+import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
-import { VideoForm } from "./video-form";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -184,7 +182,7 @@ const roleSchema = z.object({
     .string()
     .min(1, "Role title is required")
     .refine(
-      (val) => AVAILABLE_ROLES.includes(val as any),
+      (val) => AVAILABLE_ROLES.includes(val as RoleTitle),
       `Role must be one of: ${AVAILABLE_ROLES.join(", ")}`
     ),
   user: userSearchItemSchema.nullable(),
@@ -224,11 +222,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
-  // Extract current event ID from pathname (e.g., /events/[event]/edit or /events/[event])
-  const currentEventId =
-    (pathname[1] === "events" || pathname[1] === "competitions") && pathname[2]
-      ? pathname[2]
-      : undefined;
 
   const [activeMainTab, setActiveMainTab] = useState("Event Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
@@ -272,45 +265,38 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     },
   });
 
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    getValues,
-    register,
-    watch,
-    trigger,
-  } = form;
+  const { control, handleSubmit, setValue, getValues, register, watch } = form;
 
-  const sections = watch("sections") ?? [];
+  const sectionsRaw = watch("sections");
+  const sections = sectionsRaw ?? [];
   const eventDetails = watch("eventDetails");
   const roles = watch("roles") ?? [];
   const galleryRaw = watch("gallery") ?? [];
   // Normalize gallery to ensure all images have the type property
   const gallery: Image[] = galleryRaw.map((img) => ({
     ...img,
-    type: ((img as any).type || "gallery") as "gallery" | "profile" | "poster",
+    type: ((img as Image).type || "gallery") as
+      | "gallery"
+      | "profile"
+      | "poster",
   }));
   const activeSection = sections.find((s) => s.id === activeSectionId);
 
+  // Memoize sections to prevent unnecessary re-renders
+  const sectionsMemo = useMemo(() => sections, [sectionsRaw]);
+
   // Auto-select first section when Sections tab is active and no section is selected
   useEffect(() => {
-    if (activeMainTab === "Sections" && sections.length > 0) {
+    if (activeMainTab === "Sections" && sectionsMemo.length > 0) {
       // Check if current activeSectionId is invalid (doesn't match any section or is "0")
-      const isValidSection = sections.some((s) => s.id === activeSectionId);
+      const isValidSection = sectionsMemo.some((s) => s.id === activeSectionId);
       if (!isValidSection || activeSectionId === "0") {
-        setActiveSectionId(sections[0].id);
+        setActiveSectionId(sectionsMemo[0].id);
       }
     }
-  }, [activeMainTab, sections, activeSectionId]);
+  }, [activeMainTab, sectionsMemo, activeSectionId]);
 
-  const mainTabs = [
-    "Event Details",
-    "Roles",
-    "Sections",
-    "Photo Gallery",
-  ];
-
+  const mainTabs = ["Event Details", "Roles", "Sections", "Photo Gallery"];
 
   const addSection = () => {
     const newSection: Section = {

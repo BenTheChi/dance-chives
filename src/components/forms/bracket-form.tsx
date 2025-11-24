@@ -80,7 +80,7 @@ export function BracketForm({
       title: `Video ${bracket.videos.length + 1}`,
       src: "https://example.com/video",
       type: defaultVideoType,
-    } as any; // Type assertion needed since Video is a union type
+    };
 
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId

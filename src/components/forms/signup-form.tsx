@@ -130,7 +130,7 @@ export default function SignUpForm({
           displayName: "",
           username: "",
           date: "",
-          city: undefined as any, // Required field, will be validated on submit
+          city: undefined as City | undefined, // Required field, will be validated on submit
           styles: [],
         },
   });

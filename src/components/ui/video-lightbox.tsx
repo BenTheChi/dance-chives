@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { X, ChevronLeft, ChevronRight, Users } from "lucide-react";
-import { Video } from "@/types/video";
+import {
+  BattleVideo,
+  ChoreographyVideo,
+  ClassVideo,
+  Video,
+} from "@/types/video";
 import { UserSearchItem } from "@/types/user";
 import Link from "next/link";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
@@ -91,55 +96,6 @@ function UserBadgeWithRemove({
   );
 }
 
-// Helper component for displaying user tags
-function UserTagList({
-  users,
-  title,
-  icon: Icon,
-  iconClassName,
-  badgeClassName,
-  eventId,
-  videoId,
-  currentUserId,
-}: {
-  users: UserSearchItem[];
-  title: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  iconClassName?: string;
-  badgeClassName?: string;
-  eventId: string;
-  videoId: string;
-  currentUserId?: string;
-}) {
-  if (users.length === 0) return null;
-
-  return (
-    <div className="space-y-2 sm:space-y-3">
-      <div className="flex items-center">
-        {Icon && (
-          <Icon
-            className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${iconClassName || ""}`}
-          />
-        )}
-        <h3 className="font-semibold text-sm sm:text-base">{title}</h3>
-      </div>
-      <div className="flex flex-wrap gap-1 sm:gap-2">
-        {users.map((user: UserSearchItem, index: number) => (
-          <UserBadgeWithRemove
-            key={user.username || index}
-            user={user}
-            eventId={eventId}
-            videoId={videoId}
-            currentUserId={currentUserId}
-            badgeClassName={badgeClassName}
-            icon={Icon}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 interface VideoLightboxProps {
   video: Video;
   isOpen: boolean;
@@ -211,37 +167,18 @@ export function VideoLightbox({
 
   // Get tagged users based on video type
   const winners =
-    (videoType === "battle" && (video as any)?.taggedWinners) || [];
-  const dancers = (video as any)?.taggedDancers || [];
+    (videoType === "battle" && (video as BattleVideo)?.taggedWinners) || [];
+  const dancers = (video as Video)?.taggedDancers || [];
   const choreographers =
-    (videoType === "choreography" && (video as any)?.taggedChoreographers) ||
+    (videoType === "choreography" &&
+      (video as ChoreographyVideo)?.taggedChoreographers) ||
     [];
   const teachers =
-    (videoType === "class" && (video as any)?.taggedTeachers) || [];
-
-  // Combine all participants (winners are also dancers, so we deduplicate)
-  const allParticipantsSet = new Map<string, UserSearchItem>();
-  dancers.forEach((user: UserSearchItem) => {
-    if (user && user.username) {
-      allParticipantsSet.set(user.username, user);
-    }
-  });
-  winners.forEach((user: UserSearchItem) => {
-    if (user && user.username) {
-      allParticipantsSet.set(user.username, user);
-    }
-  });
-  const allParticipants = Array.from(allParticipantsSet.values());
+    (videoType === "class" && (video as ClassVideo)?.taggedTeachers) || [];
 
   // For user comparisons, we need to check by username if currentUserId is a username
   // or by id if currentUserId is an id. Since currentUserId comes from session, it's likely an id.
   // But we'll check both username and id for compatibility
-  const isUserTagged = currentUserId
-    ? allParticipants.some(
-        (user: UserSearchItem) =>
-          user.id === currentUserId || user.username === currentUserId
-      )
-    : false;
   const isUserWinner =
     currentUserId && videoType === "battle"
       ? winners.some(
@@ -269,9 +206,6 @@ export function VideoLightbox({
             user.id === currentUserId || user.username === currentUserId
         )
       : false;
-
-  // Determine if winner self-tagging should be shown (only for battle videos)
-  const showWinnerSelfTagging = videoType === "battle";
 
   // Determine which styles to display: section styles if applyStylesToVideos is true, otherwise video styles
   const displayStyles = useMemo(() => {

@@ -5,10 +5,9 @@ import {
   AVAILABLE_ROLES,
   VIDEO_ROLE_DANCER,
   isValidVideoRole,
-  isValidSectionRole,
-  SECTION_ROLE_WINNER,
   VIDEO_ROLE_WINNER,
 } from "@/lib/utils/roles";
+import { getAllEventTypeLabels, getEventTypeFromLabel } from "./event";
 
 /**
  * Get team members (users with edit access) for an event from Neo4j
@@ -1013,35 +1012,28 @@ export async function getEventTitle(
 export async function getEventType(eventId: string): Promise<string | null> {
   const session = driver.session();
   try {
+    const allEventTypeLabels = getAllEventTypeLabels();
     const result = await session.run(
       `
       MATCH (e:Event {id: $eventId})
-      WITH [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
-      RETURN CASE 
-        WHEN size(eventTypeLabels) > 0 THEN 
-          CASE eventTypeLabels[0]
-            WHEN 'BattleEvent' THEN 'Battle'
-            WHEN 'CompetitionEvent' THEN 'Competition'
-            WHEN 'ClassEvent' THEN 'Class'
-            WHEN 'WorkshopEvent' THEN 'Workshop'
-            WHEN 'SessionEvent' THEN 'Session'
-            WHEN 'PartyEvent' THEN 'Party'
-            WHEN 'FestivalEvent' THEN 'Festival'
-            WHEN 'PerformanceEvent' THEN 'Performance'
-            ELSE null
-          END
-        ELSE null 
-      END as eventType
+      WITH [label IN labels(e) WHERE label IN $allEventTypeLabels][0] as eventTypeLabel
+      RETURN eventTypeLabel
       LIMIT 1
       `,
-      { eventId }
+      { eventId, allEventTypeLabels }
     );
 
     if (result.records.length === 0) {
       return null;
     }
 
-    return result.records[0].get("eventType");
+    const eventTypeLabel = result.records[0].get("eventTypeLabel");
+    if (!eventTypeLabel) {
+      return null;
+    }
+
+    // Convert label to EventType using helper function
+    return getEventTypeFromLabel(eventTypeLabel);
   } finally {
     await session.close();
   }

@@ -10,11 +10,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { X, Trophy } from "lucide-react";
+import { X } from "lucide-react";
 import type {
   Control,
   UseFormSetValue,
   UseFormGetValues,
+  Path,
 } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Section } from "@/types/event";
@@ -25,7 +26,6 @@ import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 import {
   Select,
   SelectContent,
@@ -87,7 +87,6 @@ export function VideoForm({
   control,
   setValue,
   getValues,
-  eventId,
 }: VideoFormProps) {
   const bracketIndex =
     context === "bracket" && sections && sectionIndex !== undefined
@@ -97,26 +96,12 @@ export function VideoForm({
       : -1;
   const [videoWinners, setVideoWinners] = useState<UserSearchItem[]>([]);
   const [videoDancers, setVideoDancers] = useState<UserSearchItem[]>([]);
-  const [videoChoreographers, setVideoChoreographers] = useState<
-    UserSearchItem[]
-  >([]);
-  const [videoTeachers, setVideoTeachers] = useState<UserSearchItem[]>([]);
 
   // Load existing tagged users from separate arrays
-  // Use type assertion since Video is a union type and properties are on specific types
-  const videoAny = video as any;
   useEffect(() => {
-    setVideoWinners(videoAny.taggedWinners || []);
-    setVideoDancers(videoAny.taggedDancers || []);
-    setVideoChoreographers(videoAny.taggedChoreographers || []);
-    setVideoTeachers(videoAny.taggedTeachers || []);
-  }, [
-    videoAny.taggedWinners,
-    videoAny.taggedDancers,
-    videoAny.taggedChoreographers,
-    videoAny.taggedTeachers,
-    video.id,
-  ]);
+    setVideoWinners(video.taggedWinners || []);
+    setVideoDancers(video.taggedDancers || []);
+  }, [video.taggedWinners, video.taggedDancers, video.id]);
 
   // Get current video type
   const videoType = video.type || "battle";
@@ -259,23 +244,6 @@ export function VideoForm({
     setVideoWinners(winners);
   };
 
-  const handleMarkAsVideoWinner = (user: UserSearchItem) => {
-    // Prevent duplicate submissions
-    if (videoWinners.find((w) => w.username === user.username)) {
-      return;
-    }
-
-    // Add to winners list - updateTaggedWinners will automatically add to dancers if needed
-    const newWinners = [...videoWinners, user];
-    updateTaggedWinners(newWinners);
-  };
-
-  const handleRemoveVideoWinner = (username: string) => {
-    // Remove from winners but keep in dancers
-    const newWinners = videoWinners.filter((w) => w.username !== username);
-    updateTaggedWinners(newWinners);
-  };
-
   const updateVideoStyles = (styles: string[]) => {
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
@@ -379,7 +347,6 @@ export function VideoForm({
     });
 
     setValue("sections", normalizeSectionsForForm(updatedSections));
-    setVideoChoreographers(choreographers);
   };
 
   const updateTaggedTeachers = (teachers: UserSearchItem[]) => {
@@ -413,12 +380,49 @@ export function VideoForm({
     });
 
     setValue("sections", normalizeSectionsForForm(updatedSections));
-    setVideoTeachers(teachers);
   };
 
   // Check if styles should be disabled (when section has applyStylesToVideos enabled)
   const activeSection = sections?.find((s) => s.id === activeSectionId);
   const isStylesDisabled = activeSection?.applyStylesToVideos || false;
+
+  // Helper function to construct form field path with proper typing
+  const getVideoFieldPath = (
+    field: "title" | "src" | "type" | "taggedWinners" | "styles"
+  ): Path<FormValues> => {
+    if (sectionIndex === undefined) {
+      throw new Error("sectionIndex is required for form field paths");
+    }
+    if (context === "bracket") {
+      if (bracketIndex === -1) {
+        throw new Error("bracketIndex is required for bracket context");
+      }
+      return `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.${field}` as Path<FormValues>;
+    }
+    return `sections.${sectionIndex}.videos.${videoIndex}.${field}` as Path<FormValues>;
+  };
+
+  // Type guard functions
+  const isUserSearchItemArray = (value: unknown): value is UserSearchItem[] => {
+    return (
+      Array.isArray(value) &&
+      value.every(
+        (item) =>
+          typeof item === "object" &&
+          item !== null &&
+          "username" in item &&
+          "displayName" in item &&
+          typeof item.username === "string" &&
+          typeof item.displayName === "string"
+      )
+    );
+  };
+
+  const isStringArray = (value: unknown): value is string[] => {
+    return (
+      Array.isArray(value) && value.every((item) => typeof item === "string")
+    );
+  };
 
   return (
     <Card className="group">
@@ -434,16 +438,15 @@ export function VideoForm({
         </Button>
         <FormField
           control={control}
-          name={
-            (context === "bracket"
-              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.title`
-              : `sections.${sectionIndex}.videos.${videoIndex}.title`) as any
-          }
+          name={getVideoFieldPath("title")}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input
+                  {...field}
+                  value={typeof field.value === "string" ? field.value : ""}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -457,16 +460,15 @@ export function VideoForm({
 
         <FormField
           control={control}
-          name={
-            (context === "bracket"
-              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.src`
-              : `sections.${sectionIndex}.videos.${videoIndex}.src`) as any
-          }
+          name={getVideoFieldPath("src")}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Source</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input
+                  {...field}
+                  value={typeof field.value === "string" ? field.value : ""}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -475,17 +477,15 @@ export function VideoForm({
 
         <FormField
           control={control}
-          name={
-            (context === "bracket"
-              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.type`
-              : `sections.${sectionIndex}.videos.${videoIndex}.type`) as any
-          }
+          name={getVideoFieldPath("type")}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Video Type</FormLabel>
               <FormControl>
                 <Select
-                  value={(field.value as string) || "battle"}
+                  value={
+                    typeof field.value === "string" ? field.value : "battle"
+                  }
                   onValueChange={(value) => {
                     const type = value as
                       | "battle"
@@ -518,7 +518,7 @@ export function VideoForm({
           getDisplayValue={(item) => `${item.displayName} (${item.username})`}
           getItemId={(item) => item.username}
           onChange={updateTaggedDancers}
-          value={videoAny.taggedDancers ?? []}
+          value={video.taggedDancers ?? []}
           name="Tagged Dancers"
         />
 
@@ -526,11 +526,7 @@ export function VideoForm({
         {videoType === "battle" && (
           <FormField
             control={control}
-            name={
-              (context === "bracket"
-                ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.taggedWinners`
-                : `sections.${sectionIndex}.videos.${videoIndex}.taggedWinners`) as any
-            }
+            name={getVideoFieldPath("taggedWinners")}
             render={({ field }) => (
               <FormItem>
                 <FormControl>
@@ -546,7 +542,9 @@ export function VideoForm({
                       // updateTaggedWinners will automatically add new winners to dancers list
                       updateTaggedWinners(users);
                     }}
-                    value={(field.value as UserSearchItem[]) || []}
+                    value={
+                      isUserSearchItemArray(field.value) ? field.value : []
+                    }
                     name="Tagged Winners"
                   />
                 </FormControl>
@@ -564,7 +562,7 @@ export function VideoForm({
             getDisplayValue={(item) => `${item.displayName} (${item.username})`}
             getItemId={(item) => item.username}
             onChange={updateTaggedChoreographers}
-            value={videoAny.taggedChoreographers ?? []}
+            value={video.taggedChoreographers ?? []}
             name="Tagged Choreographers"
           />
         )}
@@ -577,21 +575,17 @@ export function VideoForm({
             getDisplayValue={(item) => `${item.displayName} (${item.username})`}
             getItemId={(item) => item.username}
             onChange={updateTaggedTeachers}
-            value={videoAny.taggedTeachers ?? []}
+            value={video.taggedTeachers ?? []}
             name="Tagged Teachers"
           />
         )}
 
         <FormField
           control={control}
-          name={
-            (context === "bracket"
-              ? `sections.${sectionIndex}.brackets.${bracketIndex}.videos.${videoIndex}.styles`
-              : `sections.${sectionIndex}.videos.${videoIndex}.styles`) as any
-          }
+          name={getVideoFieldPath("styles")}
           render={({ field }) => {
             const sectionStyles = activeSection?.styles || [];
-            
+
             return (
               <FormItem>
                 <FormLabel>
@@ -614,7 +608,7 @@ export function VideoForm({
                 ) : (
                   <FormControl>
                     <StyleMultiSelect
-                      value={(field.value as string[]) || []}
+                      value={isStringArray(field.value) ? field.value : []}
                       onChange={(styles) => {
                         field.onChange(styles);
                         updateVideoStyles(styles);

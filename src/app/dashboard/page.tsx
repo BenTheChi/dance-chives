@@ -25,8 +25,79 @@ import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
 import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
 
+interface DashboardUser {
+  name?: string | null;
+  email?: string | null;
+  auth?: number | null;
+  displayName?: string | null;
+  username?: string | null;
+}
+
+interface DashboardRequest {
+  id: string;
+  type: string;
+  sender?: { id?: string; name?: string | null; email: string };
+  targetUser?: { id?: string; name?: string | null; email: string };
+  eventId?: string | null;
+  eventTitle?: string | null;
+  eventType?: string | null;
+  videoId?: string | null;
+  videoTitle?: string | null;
+  sectionId?: string | null;
+  sectionTitle?: string | null;
+  role?: string;
+  status: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  requestedLevel?: number;
+  currentLevel?: number;
+  message?: string;
+}
+
+interface DashboardNotification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  relatedRequestType?: string | null;
+  relatedRequestId?: string | null;
+  read: boolean;
+  createdAt: Date;
+}
+
+interface UserEvent {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  createdAt: string | null;
+}
+
+interface TeamMembership {
+  eventId: string;
+  eventTitle: string;
+  createdAt: Date;
+}
+
+interface DashboardRequests {
+  tagging: DashboardRequest[];
+  teamMember: DashboardRequest[];
+  authLevelChange: DashboardRequest[];
+}
+
+interface DashboardData {
+  user: DashboardUser;
+  incomingRequests: DashboardRequests;
+  outgoingRequests: DashboardRequests;
+  notifications: DashboardNotification[];
+  userEvents: UserEvent[];
+  teamMemberships: TeamMembership[];
+}
+
 export default function DashboardPage() {
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -47,8 +118,8 @@ export default function DashboardPage() {
     if (!dashboardData) return;
 
     // Update the request status in the dashboard data
-    const updateRequestInArray = (requests: any[]) => {
-      return requests.map((req: any) => {
+    const updateRequestInArray = (requests: DashboardRequest[]) => {
+      return requests.map((req: DashboardRequest) => {
         if (req.id === requestId) {
           return { ...req, status: newStatus };
         }
@@ -105,8 +176,18 @@ export default function DashboardPage() {
   }
 
   const user = dashboardData?.user;
-  const incomingRequests = dashboardData?.incomingRequests || {};
-  const outgoingRequests = dashboardData?.outgoingRequests || {};
+  const incomingRequests: DashboardRequests =
+    dashboardData?.incomingRequests || {
+      tagging: [],
+      teamMember: [],
+      authLevelChange: [],
+    };
+  const outgoingRequests: DashboardRequests =
+    dashboardData?.outgoingRequests || {
+      tagging: [],
+      teamMember: [],
+      authLevelChange: [],
+    };
   const notifications = dashboardData?.notifications || [];
   const userEvents = dashboardData?.userEvents || [];
   const teamMemberships = dashboardData?.teamMemberships || [];
@@ -125,10 +206,10 @@ export default function DashboardPage() {
 
   // Separate pending and non-pending outgoing requests
   const pendingOutgoing = allOutgoing.filter(
-    (request: any) => request.status === "PENDING"
+    (request: DashboardRequest) => request.status === "PENDING"
   );
   const requestHistory = allOutgoing.filter(
-    (request: any) => request.status !== "PENDING"
+    (request: DashboardRequest) => request.status !== "PENDING"
   );
 
   return (
@@ -182,15 +263,19 @@ export default function DashboardPage() {
         </Card>
 
         {/* Authorization Level Manager - Admin/SuperAdmin Only */}
-        {user?.auth >= AUTH_LEVELS.ADMIN && <AuthorizationChanger />}
+        {user?.auth !== undefined &&
+          user.auth !== null &&
+          user.auth >= AUTH_LEVELS.ADMIN && <AuthorizationChanger />}
 
         {/* Authorization Request Form - Base Users, Creators, and Moderators Only */}
-        {user?.auth !== undefined && user.auth < AUTH_LEVELS.ADMIN && (
-          <AuthorizationRequestForm
-            currentUserAuthLevel={user.auth ?? 0}
-            onRequestSubmitted={loadDashboard}
-          />
-        )}
+        {user?.auth !== undefined &&
+          user.auth !== null &&
+          user.auth < AUTH_LEVELS.ADMIN && (
+            <AuthorizationRequestForm
+              currentUserAuthLevel={user.auth ?? 0}
+              onRequestSubmitted={loadDashboard}
+            />
+          )}
 
         {/* Notifications Section */}
         {notifications.length > 0 && (
@@ -200,29 +285,31 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {notifications.slice(0, 5).map((notification: any) => (
-                  <div
-                    key={notification.id}
-                    className={`rounded-lg border p-3 ${
-                      !notification.read ? "bg-blue-50 dark:bg-blue-950" : ""
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {notification.message}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {new Date(notification.createdAt).toLocaleString()}
-                        </p>
+                {notifications
+                  .slice(0, 5)
+                  .map((notification: DashboardNotification) => (
+                    <div
+                      key={notification.id}
+                      className={`rounded-lg border p-3 ${
+                        !notification.read ? "bg-blue-50 dark:bg-blue-950" : ""
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{notification.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {notification.message}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {!notification.read && (
+                          <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        )}
                       </div>
-                      {!notification.read && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                      )}
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>
@@ -239,7 +326,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {allIncoming.map((request: any) => (
+                {allIncoming.map((request: DashboardRequest) => (
                   <IncomingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
@@ -262,7 +349,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pendingOutgoing.map((request: any) => (
+                {pendingOutgoing.map((request: DashboardRequest) => (
                   <OutgoingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
@@ -285,7 +372,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {requestHistory.map((request: any) => (
+                {requestHistory.map((request: DashboardRequest) => (
                   <OutgoingRequestCard
                     key={`${request.type}-${request.id}`}
                     request={request}
@@ -308,7 +395,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {userEvents.map((event: any) => (
+                {userEvents.map((event: UserEvent) => (
                   <div
                     key={event.id}
                     className="flex items-center justify-between rounded-lg border p-3"
@@ -345,7 +432,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {teamMemberships.map((membership: any) => (
+                {teamMemberships.map((membership: TeamMembership) => (
                   <div
                     key={membership.eventId}
                     className="flex items-center justify-between rounded-lg border p-3"

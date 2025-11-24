@@ -65,7 +65,9 @@ export function TestLoginDropdown() {
   const [selectedUser, setSelectedUser] = useState<string>("");
 
   // Only render in development
-  if (process.env.NODE_ENV !== "development") {
+  const isDevelopment = process.env.NODE_ENV === "development";
+
+  if (!isDevelopment) {
     return null;
   }
 

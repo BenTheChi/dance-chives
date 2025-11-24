@@ -1,23 +1,28 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { signIn, signOut } from "@/auth";
 import {
   signupUser,
   getUser,
   getUserByUsername,
   getUserWithStyles,
-  getUserEvents,
   updateUser,
+  UpdateUserInput,
 } from "@/db/queries/user";
 import { uploadProfilePictureToR2, deleteFromR2 } from "@/lib/R2";
 import { getNeo4jRoleFormats } from "@/lib/utils/roles";
 import driver from "@/db/driver";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
-import crypto from "crypto";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
 import { City } from "@/types/city";
+import { signIn, signOut } from "@/auth";
+import { EventDate, EventType } from "@/types/event";
+import {
+  getEventTypeFromLabel,
+  getAllEventTypeLabels,
+} from "@/db/queries/event";
+import { UserSearchItem } from "@/types/user";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -91,12 +96,20 @@ export async function signup(formData: FormData) {
     let imageUrl: string | null = null;
     const profilePicture = formData.get("profilePicture") as File | null;
     if (profilePicture && profilePicture.size > 0) {
-      const uploadResult = await uploadProfilePictureToR2(
-        profilePicture,
-        session.user.id
-      );
-      if (uploadResult.success && uploadResult.url) {
-        imageUrl = uploadResult.url;
+      // Use username for R2 paths (public-facing identifier)
+      const username = adminUser
+        ? adminUser.defaultData.username
+        : (formData.get("username") as string);
+      if (!username) {
+        console.error("Username is required for profile picture upload");
+      } else {
+        const uploadResult = await uploadProfilePictureToR2(
+          profilePicture,
+          username
+        );
+        if (uploadResult.success && uploadResult.url) {
+          imageUrl = uploadResult.url;
+        }
       }
     }
 
@@ -261,6 +274,7 @@ export async function getUserProfile(userIdOrUsername: string) {
     }
 
     const userId = userWithStyles.id;
+    const allEventTypeLabels = getAllEventTypeLabels();
 
     // Get events created by user with full event data
     const eventsCreatedResult = await session.run(
@@ -269,27 +283,24 @@ export async function getUserProfile(userIdOrUsername: string) {
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
+      WITH e, c, poster, s,
+           [label IN labels(e) WHERE label IN $allEventTypeLabels][0] as eventTypeLabel
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate, e.dates as dates,
              e.createdAt as createdAt, poster.url as imageUrl, c.name as city, c.id as cityId,
-             collect(DISTINCT s.name) as styles,
-             CASE
-               WHEN 'Competition' IN labels(e) THEN 'competition'
-               WHEN 'Workshop' IN labels(e) THEN 'workshop'
-               WHEN 'Session' IN labels(e) THEN 'session'
-               ELSE 'competition'
-             END as eventType
+             collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
-      { userId }
+      { userId, allEventTypeLabels }
     );
 
     const eventsCreated = eventsCreatedResult.records.map((record) => {
       const dates = record.get("dates");
-      let parsedDates: any[] = [];
+      const eventTypeLabel = record.get("eventTypeLabel");
+      let parsedDates: EventDate[] = [];
       if (dates) {
         try {
           parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch (e) {
+        } catch {
           parsedDates = [];
         }
       }
@@ -303,11 +314,11 @@ export async function getUserProfile(userIdOrUsername: string) {
         city: record.get("city"),
         cityId: record.get("cityId") as number | undefined,
         styles: record.get("styles") || [],
-      eventType: record.get("eventType") as
-        | "competition"
-        | "workshop"
-        | "session",
-    }));
+        eventType: eventTypeLabel
+          ? (getEventTypeFromLabel(eventTypeLabel) as EventType | undefined)
+          : undefined,
+      };
+    });
 
     // Get events where user has roles with full event data (collecting all roles)
     const validRoleFormats = getNeo4jRoleFormats();
@@ -318,32 +329,28 @@ export async function getUserProfile(userIdOrUsername: string) {
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
-      WITH e, c, poster, s, type(roleRel) as role
+      WITH e, c, poster, s, type(roleRel) as role,
+           [label IN labels(e) WHERE label IN $allEventTypeLabels][0] as eventTypeLabel
       RETURN e.id as eventId, e.title as eventTitle, 
              collect(DISTINCT role) as roles,
              e.createdAt as createdAt, e.startDate as startDate,
              head(collect(DISTINCT poster.url)) as imageUrl, 
              head(collect(DISTINCT c.name)) as city,
              head(collect(DISTINCT c.id)) as cityId,
-             collect(DISTINCT s.name) as styles,
-             CASE
-               WHEN 'Competition' IN labels(e) THEN 'competition'
-               WHEN 'Workshop' IN labels(e) THEN 'workshop'
-               WHEN 'Session' IN labels(e) THEN 'session'
-               ELSE 'competition'
-             END as eventType
+             collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
-      { userId, validRoles: validRoleFormats }
+      { userId, validRoles: validRoleFormats, allEventTypeLabels }
     );
 
     const eventsWithRoles = eventsWithRolesResult.records.map((record) => {
       const dates = record.get("dates");
-      let parsedDates: any[] = [];
+      const eventTypeLabel = record.get("eventTypeLabel");
+      let parsedDates: EventDate[] = [];
       if (dates) {
         try {
           parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch (e) {
+        } catch {
           parsedDates = [];
         }
       }
@@ -358,11 +365,11 @@ export async function getUserProfile(userIdOrUsername: string) {
         city: record.get("city"),
         cityId: record.get("cityId") as number | undefined,
         styles: record.get("styles") || [],
-      eventType: record.get("eventType") as
-        | "competition"
-        | "workshop"
-        | "session",
-    }));
+        eventType: eventTypeLabel
+          ? (getEventTypeFromLabel(eventTypeLabel) as EventType | undefined)
+          : undefined,
+      };
+    });
 
     // Get videos where user is tagged with full video data (collecting all roles)
     // Use relationship types :DANCER and :WINNER
@@ -438,7 +445,7 @@ export async function getUserProfile(userIdOrUsername: string) {
     const videoIds = taggedVideosResult.records.map((record) =>
       record.get("videoId")
     );
-    const taggedUsersMap = new Map<string, any[]>();
+    const taggedUsersMap = new Map<string, UserSearchItem[]>();
 
     if (videoIds.length > 0) {
       const taggedUsersResult = await session.run(
@@ -459,7 +466,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       taggedUsersResult.records.forEach((record) => {
         const videoId = record.get("videoId");
         const taggedUsers = (record.get("taggedUsers") || []).filter(
-          (tu: any) => tu.id !== null && tu.id !== undefined
+          (tu: UserSearchItem) => tu.id !== null && tu.id !== undefined
         );
         taggedUsersMap.set(videoId, taggedUsers);
       });
@@ -482,7 +489,7 @@ export async function getUserProfile(userIdOrUsername: string) {
     const winningVideoIds = winningVideosResult.records.map((record) =>
       record.get("videoId")
     );
-    const winningVideoUsersMap = new Map<string, any[]>();
+    const winningVideoUsersMap = new Map<string, UserSearchItem[]>();
 
     if (winningVideoIds.length > 0) {
       const winningVideoUsersResult = await session.run(
@@ -510,7 +517,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       winningVideoUsersResult.records.forEach((record) => {
         const videoId = record.get("videoId");
         const taggedUsers = (record.get("taggedUsers") || []).filter(
-          (tu: any) => tu.id !== null && tu.id !== undefined
+          (tu: UserSearchItem) => tu.id !== null && tu.id !== undefined
         );
         winningVideoUsersMap.set(videoId, taggedUsers);
       });
@@ -530,11 +537,11 @@ export async function getUserProfile(userIdOrUsername: string) {
 
     const winningSections = winningSectionsResult.records.map((record) => {
       const dates = record.get("dates");
-      let parsedDates: any[] = [];
+      let parsedDates: EventDate[] = [];
       if (dates) {
         try {
           parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch (e) {
+        } catch {
           parsedDates = [];
         }
       }
@@ -556,7 +563,8 @@ export async function getUserProfile(userIdOrUsername: string) {
     session.close();
 
     // Exclude id from being sent to client
-    const { id, ...userWithoutId } = userWithStyles || {};
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _, ...userWithoutId } = userWithStyles || {};
 
     return {
       success: true,
@@ -647,17 +655,23 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         await deleteFromR2(currentUser.image);
       }
 
-      const uploadResult = await uploadProfilePictureToR2(
-        profilePicture,
-        userId
-      );
-      if (uploadResult.success && uploadResult.url) {
-        imageUrl = uploadResult.url;
+      // Use username for R2 paths (public-facing identifier)
+      const username = currentUser.username;
+      if (!username) {
+        console.error("Username is required for profile picture upload");
+      } else {
+        const uploadResult = await uploadProfilePictureToR2(
+          profilePicture,
+          username
+        );
+        if (uploadResult.success && uploadResult.url) {
+          imageUrl = uploadResult.url;
+        }
       }
     }
 
     // Build user update object (preserve username, don't update it)
-    const userUpdate: { [key: string]: any } = {
+    const userUpdate: UpdateUserInput = {
       id: userId,
       username: currentUser.username, // Preserve username
       displayName,

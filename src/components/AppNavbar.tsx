@@ -7,9 +7,19 @@ import { useSession } from "next-auth/react";
 import { SidebarTrigger } from "./ui/sidebar";
 import { TestLoginDropdown } from "./TestLoginDropdown";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { useEffect } from "react";
 
 export function AppNavbar() {
   const { data: session } = useSession();
+
+  // Log client-side environment (only once on mount)
+  useEffect(() => {
+    const showTestLogin = process.env.NODE_ENV === "development";
+    console.log("🌐 [CLIENT] Environment:", {
+      NODE_ENV: process.env.NODE_ENV,
+      showTestLogin,
+    });
+  }, []);
 
   const user = session?.user;
   const authLevel = user?.auth ?? 0;

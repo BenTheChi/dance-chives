@@ -2,6 +2,19 @@ import driver from "../driver";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { City } from "@/types/city";
 
+export interface UpdateUserInput {
+  id?: string;
+  username?: string;
+  displayName?: string;
+  date?: string;
+  city?: City | string;
+  bio?: string | null;
+  instagram?: string | null;
+  website?: string | null;
+  image?: string | null;
+  [key: string]: unknown; // Allow additional properties for flexibility
+}
+
 export const getUser = async (id: string) => {
   const session = driver.session();
   try {
@@ -13,7 +26,7 @@ export const getUser = async (id: string) => {
       `,
       { id }
     );
-    
+
     if (result.records.length === 0) {
       return null;
     }
@@ -165,8 +178,8 @@ export const signupUser = async (
       MERGE (u)-[:LOCATED_IN]->(c)
       RETURN u
       `,
-      { 
-        id, 
+      {
+        id,
         user: {
           displayName: user.displayName,
           username: user.username,
@@ -176,7 +189,7 @@ export const signupUser = async (
           website: user.website,
           image: user.image,
         },
-        city: cityData
+        city: cityData,
       }
     );
 
@@ -203,7 +216,7 @@ export const signupUser = async (
 
 export const updateUser = async (
   id: string,
-  user: { [key: string]: any },
+  user: UpdateUserInput,
   styles?: string[]
 ) => {
   const session = driver.session();
@@ -211,7 +224,7 @@ export const updateUser = async (
     // Extract city from user object if present
     let cityData: City | null = null;
     const userWithoutCity = { ...user };
-    
+
     if (user.city) {
       if (typeof user.city === "string") {
         try {
@@ -325,7 +338,7 @@ export const getUserWithStyles = async (id: string) => {
 
     return {
       ...user,
-      styles: styles.filter((s: any) => s !== null),
+      styles: styles.filter((s: string) => s !== null),
       city: city,
     };
   } finally {
@@ -380,7 +393,7 @@ export const getAllUsers = async () => {
       city: record.get("cityName") || null,
       cityId: record.get("cityId") || null,
       styles: (record.get("styles") || []).filter(
-        (s: any) => s !== null && s !== undefined
+        (s: string) => s !== null && s !== undefined
       ) as string[],
     }));
   } catch (error) {

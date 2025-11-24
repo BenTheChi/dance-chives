@@ -65,9 +65,7 @@ export function TagSelfButton({
   target,
   targetId,
   currentUserId,
-  role,
   isUserTagged = false,
-  showRemoveButton = false,
   buttonLabel = "Tag Myself",
   pendingLabel,
   successLabel,
@@ -82,10 +80,11 @@ export function TagSelfButton({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
 
-  // Ensure currentUserRoles is always an array
-  const safeCurrentUserRoles = Array.isArray(currentUserRoles)
-    ? currentUserRoles
-    : [];
+  // Ensure currentUserRoles is always an array (memoized to prevent unnecessary re-renders)
+  const safeCurrentUserRoles = useMemo(
+    () => (Array.isArray(currentUserRoles) ? currentUserRoles : []),
+    [currentUserRoles]
+  );
 
   // For section-level tagging, only show "Winner" role
   // For video-level tagging, show roles based on video type
@@ -142,6 +141,12 @@ export function TagSelfButton({
     currentVideoRoles,
   ]);
 
+  // Memoize the available roles string for dependency tracking
+  const availableRolesString = useMemo(
+    () => availableRoles.join(","),
+    [availableRoles]
+  );
+
   // Check for pending requests for all available roles in a single GET request
   useEffect(() => {
     const userId = target === "section" ? currentUserId : session?.user?.id;
@@ -166,7 +171,7 @@ export function TagSelfButton({
         }
 
         if (availableRoles.length > 0) {
-          params.append("roles", availableRoles.join(","));
+          params.append("roles", availableRolesString);
         }
 
         const response = await fetch(
@@ -199,14 +204,15 @@ export function TagSelfButton({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     eventId,
     target,
     targetId,
     currentUserId,
     session?.user?.id,
-    availableRoles.join(","),
+    availableRolesString,
+    availableRoles.length,
+    onPendingRolesChange,
   ]);
 
   // Check if user is logged in

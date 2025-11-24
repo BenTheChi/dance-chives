@@ -8,7 +8,6 @@ import { StyleBadge } from "./ui/style-badge";
 import { useSession } from "next-auth/react";
 import VideoGallery from "./VideoGallery";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
-import { SECTION_ROLE_WINNER } from "@/lib/utils/roles";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 

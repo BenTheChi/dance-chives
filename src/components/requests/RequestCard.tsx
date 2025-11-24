@@ -21,18 +21,19 @@ interface RequestCardProps {
   request: {
     id: string;
     type: string;
-    sender?: { name?: string; email: string };
-    targetUser?: { name?: string; email: string };
-    eventId?: string;
-    eventTitle?: string;
+    sender?: { id?: string; name?: string | null; email: string };
+    targetUser?: { id?: string; name?: string | null; email: string };
+    eventId?: string | null;
+    eventTitle?: string | null;
     eventType?: string | null;
-    videoId?: string;
+    videoId?: string | null;
     videoTitle?: string | null;
-    sectionId?: string;
+    sectionId?: string | null;
     sectionTitle?: string | null;
     role?: string;
     status: string;
     createdAt: Date;
+    updatedAt?: Date;
     requestedLevel?: number;
     currentLevel?: number;
     message?: string;
@@ -41,19 +42,19 @@ interface RequestCardProps {
 }
 
 // Request type to action handler mapping
-const APPROVE_HANDLERS: Record<string, (id: string) => Promise<any>> = {
+const APPROVE_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
   TAGGING: approveTaggingRequest,
   TEAM_MEMBER: approveTeamMemberRequest,
   AUTH_LEVEL_CHANGE: approveAuthLevelChangeRequest,
 };
 
-const DENY_HANDLERS: Record<string, (id: string) => Promise<any>> = {
+const DENY_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
   TAGGING: denyTaggingRequest,
   TEAM_MEMBER: denyTeamMemberRequest,
   AUTH_LEVEL_CHANGE: denyAuthLevelChangeRequest,
 };
 
-const CANCEL_HANDLERS: Record<string, (id: string) => Promise<any>> = {
+const CANCEL_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
   TAGGING: cancelTaggingRequest,
   TEAM_MEMBER: cancelTeamMemberRequest,
   AUTH_LEVEL_CHANGE: cancelAuthLevelChangeRequest,
@@ -65,9 +66,9 @@ const CANCEL_HANDLERS: Record<string, (id: string) => Promise<any>> = {
 function getRequestTitle(
   type: string,
   videoTitle?: string | null,
-  videoId?: string,
+  videoId?: string | null,
   sectionTitle?: string | null,
-  sectionId?: string,
+  sectionId?: string | null,
   role?: string
 ): string {
   if (type === "TAGGING") {

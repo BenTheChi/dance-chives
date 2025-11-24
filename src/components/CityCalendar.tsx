@@ -24,9 +24,9 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 import { CalendarEventData, CalendarSessionData } from "@/db/queries/event";
 import {
   convertEventToCalendarEvents,
-  convertSessionToCalendarEvents,
   CalendarEvent,
 } from "@/lib/utils/calendar-utils";
+import { EventType, EventDate } from "@/types/event";
 import { CalendarEventPopover } from "./CalendarEventPopover";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,22 +51,34 @@ const localizer = dateFnsLocalizer({
 });
 
 interface CityCalendarProps {
-  events: CalendarEventData[]; // Includes competitions and workshops
-  sessions: CalendarSessionData[];
+  events: CalendarEventData[]; // Includes all event types (competitions, workshops, sessions, etc.)
+  sessions?: CalendarSessionData[]; // Optional for backward compatibility, but events array should contain all
 }
 
 // Predefined colors for each event type
-const EVENT_COLORS = {
-  event: "#3b82f6", // Blue for competitions
-  workshop: "#f59e0b", // Orange for workshops
-  session: "#8b5cf6", // Purple for sessions
+const EVENT_COLORS: Record<EventType | "event", string> = {
+  Battle: "#ef4444", // Red
+  Competition: "#3b82f6", // Blue
+  Class: "#10b981", // Green
+  Workshop: "#f59e0b", // Orange
+  Session: "#8b5cf6", // Purple
+  Party: "#ec4899", // Pink
+  Festival: "#f97316", // Orange-red
+  Performance: "#6366f1", // Indigo
+  event: "#3b82f6", // Default blue for backward compatibility
 };
 
 // Event type labels for legend
-const EVENT_TYPE_LABELS = {
-  event: "Competition",
-  workshop: "Workshop",
-  session: "Session",
+const EVENT_TYPE_LABELS: Record<EventType | "event", string> = {
+  Battle: "Battle",
+  Competition: "Competition",
+  Class: "Class",
+  Workshop: "Workshop",
+  Session: "Session",
+  Party: "Party",
+  Festival: "Festival",
+  Performance: "Performance",
+  event: "Event", // Default label for backward compatibility
 };
 
 // Month names for dropdown
@@ -129,7 +141,7 @@ function CustomToolbar({
     if (onDateChange) {
       onDateChange(newDate);
     } else {
-      onNavigate(newDate as any);
+      onNavigate(Navigate.DATE, newDate);
     }
   };
 
@@ -138,7 +150,7 @@ function CustomToolbar({
     if (onDateChange) {
       onDateChange(newDate);
     } else {
-      onNavigate(newDate as any);
+      onNavigate(Navigate.DATE, newDate);
     }
   };
 
@@ -261,31 +273,64 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
   const calendarEvents = useMemo(() => {
     const allEvents: CalendarEvent[] = [];
 
-    // Convert events (includes competitions and workshops, filter out those with no dates)
+    // Convert events (includes all event types: competitions, workshops, sessions, etc.)
     // Returns array since events can have multiple dates
     events
-      .filter((event) => (event.dates && event.dates.length > 0) || event.startDate)
+      .filter(
+        (event) => (event.dates && event.dates.length > 0) || event.startDate
+      )
       .forEach((event) => {
         const eventCalendarEvents = convertEventToCalendarEvents(event);
         allEvents.push(...eventCalendarEvents);
       });
 
-    // Convert sessions (returns array, so we spread it)
-    sessions.forEach((session) => {
-      const sessionEvents = convertSessionToCalendarEvents(session);
-      allEvents.push(...sessionEvents);
-    });
+    // Convert sessions for backward compatibility (if sessions array is provided separately)
+    // Note: Sessions should now be included in the events array with eventType="Session"
+    // This converts CalendarSessionData to CalendarEventData format
+    if (sessions && sessions.length > 0) {
+      sessions.forEach((session) => {
+        // Parse JSON dates array from session
+        let parsedDates: EventDate[] = [];
+        try {
+          const datesStr = session.dates || "[]";
+          parsedDates =
+            typeof datesStr === "string" ? JSON.parse(datesStr) : datesStr;
+        } catch (error) {
+          console.error("Error parsing session dates:", error);
+          parsedDates = [];
+        }
+
+        // Convert session to CalendarEventData format
+        const sessionEventData: CalendarEventData = {
+          id: session.id,
+          title: session.title,
+          dates:
+            Array.isArray(parsedDates) && parsedDates.length > 0
+              ? parsedDates
+              : undefined,
+          eventType: "Session" as EventType,
+          poster: session.poster,
+          styles: session.styles,
+        };
+
+        // Convert to calendar events using the generic function
+        const sessionCalendarEvents =
+          convertEventToCalendarEvents(sessionEventData);
+        allEvents.push(...sessionCalendarEvents);
+      });
+    }
 
     return allEvents;
   }, [events, sessions]);
 
   // Style events by type
   const eventPropGetter = (event: CalendarEvent) => {
-    // Use the event type for coloring (competition, workshop, session)
-    const eventType = event.resource.type;
+    // Use eventType from resource
+    const eventType = event.resource.eventType;
     const color =
-      EVENT_COLORS[eventType as keyof typeof EVENT_COLORS] ||
-      EVENT_COLORS.event;
+      eventType && EVENT_COLORS[eventType]
+        ? EVENT_COLORS[eventType]
+        : EVENT_COLORS.event;
     return {
       style: {
         backgroundColor: color,
@@ -334,18 +379,21 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
       {/* Legend */}
       <div className="mb-4 flex flex-wrap gap-4 items-center">
         <span className="text-sm font-medium">Event Types:</span>
-        {Object.entries(EVENT_TYPE_LABELS).map(([type, label]) => (
-          <div key={type} className="flex items-center gap-2">
-            <div
-              className="w-4 h-4 rounded"
-              style={{
-                backgroundColor:
-                  EVENT_COLORS[type as keyof typeof EVENT_COLORS],
-              }}
-            />
-            <span className="text-sm text-muted-foreground">{label}</span>
-          </div>
-        ))}
+        {(Object.keys(EVENT_TYPE_LABELS) as Array<EventType | "event">)
+          .filter((type) => type !== "event") // Exclude "event" from legend as it's just a fallback
+          .map((type) => (
+            <div key={type} className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded"
+                style={{
+                  backgroundColor: EVENT_COLORS[type],
+                }}
+              />
+              <span className="text-sm text-muted-foreground">
+                {EVENT_TYPE_LABELS[type]}
+              </span>
+            </div>
+          ))}
       </div>
       <Calendar
         localizer={localizer}

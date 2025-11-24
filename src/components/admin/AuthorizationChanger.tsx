@@ -173,7 +173,7 @@ export function AuthorizationChanger() {
 
   // Auth level options
   const authLevelOptions = Object.entries(AUTH_LEVELS)
-    .map(([name, value]) => ({
+    .map(([, value]) => ({
       name: getAuthLevelName(value),
       value,
     }))

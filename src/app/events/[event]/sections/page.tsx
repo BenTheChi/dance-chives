@@ -5,7 +5,8 @@ import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Section } from "@/types/event";
+import { Bracket, Section, Video } from "@/types/event";
+import { UserSearchItem } from "@/types/user";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -88,10 +89,10 @@ export default async function SectionsPage({ params }: PageProps) {
                     {Array.from(
                       new Map(
                         section.winners
-                          .filter((w: any) => w && w.id)
-                          .map((w: any) => [w.id, w])
+                          .filter((w: UserSearchItem) => w && w.id)
+                          .map((w: UserSearchItem) => [w.id, w])
                       ).values()
-                    ).map((winner: any) => (
+                    ).map((winner: UserSearchItem) => (
                       <Badge
                         key={winner.id}
                         variant="secondary"
@@ -123,15 +124,15 @@ export default async function SectionsPage({ params }: PageProps) {
                 {!section.applyStylesToVideos &&
                   (() => {
                     const videoStyles = new Set<string>();
-                    section.videos.forEach((video: any) => {
+                    section.videos.forEach((video: Video) => {
                       if (video.styles) {
                         video.styles.forEach((style: string) =>
                           videoStyles.add(style)
                         );
                       }
                     });
-                    section.brackets.forEach((bracket: any) => {
-                      bracket.videos.forEach((video: any) => {
+                    section.brackets.forEach((bracket: Bracket) => {
+                      bracket.videos.forEach((video: Video) => {
                         if (video.styles) {
                           video.styles.forEach((style: string) =>
                             videoStyles.add(style)
@@ -156,7 +157,7 @@ export default async function SectionsPage({ params }: PageProps) {
                 {section.brackets.length > 0 ? (
                   <div className="space-y-2">
                     <div className="text-sm text-gray-600 mb-2">Brackets:</div>
-                    {section.brackets.map((bracket: any) => (
+                    {section.brackets.map((bracket: Bracket) => (
                       <div
                         key={bracket.id}
                         className="bg-gray-50 rounded p-2 flex justify-between items-center"
@@ -194,4 +195,3 @@ export default async function SectionsPage({ params }: PageProps) {
     </>
   );
 }
-

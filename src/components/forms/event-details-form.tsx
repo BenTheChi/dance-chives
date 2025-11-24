@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import {
   Control,
+  FieldPath,
   UseFormRegister,
   UseFormSetValue,
   useFieldArray,
@@ -213,8 +214,10 @@ export function EventDetailsForm({
               {/* Date Field */}
               <div className="w-full sm:w-1/3">
                 <DateInput
-                  control={control as any}
-                  name={`eventDetails.dates.${index}.date` as any}
+                  control={control as Control<FormValues>}
+                  name={
+                    `eventDetails.dates.${index}.date` as FieldPath<FormValues>
+                  }
                   label="Date"
                 />
               </div>

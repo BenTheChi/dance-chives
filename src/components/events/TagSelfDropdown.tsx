@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -37,10 +37,20 @@ export function TagSelfDropdown({
 
   // Filter out roles already assigned to the current user
   // Also filter out "Team Member" if user is already a team member
-  const availableRoles = AVAILABLE_ROLES.filter(
-    (role) =>
-      !currentUserRoles.includes(role) &&
-      !(role === "Team Member" && isTeamMember)
+  const availableRoles = useMemo(
+    () =>
+      AVAILABLE_ROLES.filter(
+        (role) =>
+          !currentUserRoles.includes(role) &&
+          !(role === "Team Member" && isTeamMember)
+      ),
+    [currentUserRoles, isTeamMember]
+  );
+
+  // Memoize the available roles string for dependency tracking
+  const availableRolesString = useMemo(
+    () => availableRoles.join(","),
+    [availableRoles]
   );
 
   // Check for pending requests for all available roles in a single GET request
@@ -52,9 +62,10 @@ export function TagSelfDropdown({
     const checkPendingRequests = async () => {
       try {
         // Fetch all pending requests for all available roles in a single GET request
-        const rolesParam = availableRoles.join(",");
         const response = await fetch(
-          `/api/tagging-requests/pending?eventId=${encodeURIComponent(eventId)}&roles=${encodeURIComponent(rolesParam)}`
+          `/api/tagging-requests/pending?eventId=${encodeURIComponent(
+            eventId
+          )}&roles=${encodeURIComponent(availableRolesString)}`
         );
 
         if (!response.ok) {
@@ -71,7 +82,7 @@ export function TagSelfDropdown({
     };
 
     checkPendingRequests();
-  }, [eventId, session?.user?.id, availableRoles.join(",")]);
+  }, [eventId, session?.user?.id, availableRoles, availableRolesString]);
 
   // Don't show the dropdown if user is not logged in or all roles are taken
   if (!session?.user?.id || availableRoles.length === 0) {

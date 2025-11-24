@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { CalendarEvent, formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { EventDate } from "@/types/event";
 
 interface CalendarEventPopoverProps {
   event: CalendarEvent;
@@ -23,13 +24,13 @@ export function CalendarEventPopover({
   onOpenChange,
 }: CalendarEventPopoverProps) {
   const { resource } = event;
-  const { type, originalData, poster, styles, eventType, dateEntry } = resource;
+  const { originalData, poster, styles, eventType, dateEntry } = resource;
 
   // Format time display
   const formatTime = () => {
     // For events and sessions with dateEntry (multiple dates), use dateEntry
-    if ((resource.type === "event" || resource.type === "session") && dateEntry) {
-      const { startTime, endTime } = dateEntry;
+    if (dateEntry as EventDate) {
+      const { startTime, endTime } = dateEntry as EventDate;
       if (startTime && endTime) {
         return `${formatTimeToAMPM(startTime)} - ${formatTimeToAMPM(endTime)}`;
       } else if (startTime) {

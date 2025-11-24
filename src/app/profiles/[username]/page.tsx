@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
-import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import Eventcard from "@/components/cards";
 import { TaggedVideosGrid } from "@/components/profile/TaggedVideosGrid";
-import { WinningSectionCard } from "@/components/profile/WinningSectionCard";
+import {
+  WinningSectionCard,
+  type WinningSection,
+} from "@/components/profile/WinningSectionCard";
+import { Event, Role } from "@/types/event";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -158,20 +161,25 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.eventsCreated.map((event: any) => {
+                {profile.eventsCreated.map((event: Event) => {
                   // All events use the unified /events/ route
-                  const eventRoute = `/events/${event.eventId}`;
+                  const eventRoute = `/events/${event.id}`;
 
                   return (
                     <Eventcard
-                      key={event.eventId}
-                      id={event.eventId}
-                      title={event.eventTitle}
-                      imageUrl={event.imageUrl}
-                      date={event.dates && event.dates.length > 0 ? event.dates[0].date : (event.startDate || "")}
-                      city={event.city || ""}
-                      cityId={event.cityId}
-                      styles={event.styles || []}
+                      key={event.id}
+                      id={event.id}
+                      title={event.eventDetails.title}
+                      imageUrl={event.eventDetails.poster?.url}
+                      date={
+                        event.eventDetails.dates &&
+                        event.eventDetails.dates.length > 0
+                          ? event.eventDetails.dates[0].date
+                          : event.eventDetails.dates[0].date || ""
+                      }
+                      city={event.eventDetails.city.name || ""}
+                      cityId={event.eventDetails.city.id}
+                      styles={event.eventDetails.styles || []}
                       href={eventRoute}
                     />
                   );
@@ -192,21 +200,26 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.eventsWithRoles.map((event: any) => {
+                {profile.eventsWithRoles.map((event: Event) => {
                   // All events use the unified /events/ route
-                  const eventRoute = `/events/${event.eventId}`;
+                  const eventRoute = `/events/${event.id}`;
 
                   return (
                     <Eventcard
-                      key={event.eventId}
-                      id={event.eventId}
-                      title={event.eventTitle}
-                      imageUrl={event.imageUrl}
-                      date={event.dates && event.dates.length > 0 ? event.dates[0].date : (event.startDate || "")}
-                      city={event.city || ""}
-                      cityId={event.cityId}
-                      styles={event.styles || []}
-                      roles={event.roles || []}
+                      key={event.id}
+                      id={event.id}
+                      title={event.eventDetails.title}
+                      imageUrl={event.eventDetails.poster?.url}
+                      date={
+                        event.eventDetails.dates &&
+                        event.eventDetails.dates.length > 0
+                          ? event.eventDetails.dates[0].date
+                          : event.eventDetails.dates[0].date || ""
+                      }
+                      city={event.eventDetails.city.name || ""}
+                      cityId={event.eventDetails.city.id}
+                      styles={event.eventDetails.styles || []}
+                      roles={event.roles.map((role: Role) => role.title)}
                       href={eventRoute}
                     />
                   );
@@ -260,7 +273,7 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.winningSections.map((section: any) => (
+                {profile.winningSections.map((section: WinningSection) => (
                   <WinningSectionCard
                     key={section.sectionId}
                     section={section}

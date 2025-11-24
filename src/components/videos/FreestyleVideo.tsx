@@ -30,7 +30,6 @@ export function FreestyleVideo({
   bracketTitle,
   onClick,
   styles,
-  currentUserId,
 }: FreestyleVideoProps) {
   // Parse youtube id from src and generate thumbnail URL
   const youtubeId = extractYouTubeVideoId(video.src);
@@ -74,7 +73,10 @@ export function FreestyleVideo({
             </h3>
           </div>
 
-          <Link href={eventLink} className="text-sm text-muted-foreground hover:text-blue-600">
+          <Link
+            href={eventLink}
+            className="text-sm text-muted-foreground hover:text-blue-600"
+          >
             {eventTitle}
           </Link>
 
@@ -103,4 +105,3 @@ export function FreestyleVideo({
     </CardWithPoster>
   );
 }
-

@@ -4,8 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "db:migrate:staging": "NODE_ENV=staging npx prisma migrate deploy",
+    "db:push:staging": "NODE_ENV=staging npx prisma db push",
     "build": "next build",
+    "build:staging": "NODE_ENV=staging next build",
     "start": "next start",
+    "start:staging": "NODE_ENV=staging next start",
+    "staging": "npm run build:staging && npm run start:staging",
     "lint": "next lint",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",

@@ -10,11 +10,11 @@ import {
   editEvent as editEventQuery,
   getEvent as getEventQuery,
 } from "@/db/queries/event";
-import { Event, EventDetails, Section } from "@/types/event";
+import { Event, EventDetails, Section, Video } from "@/types/event";
 import { Image } from "@/types/image";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
-import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
+import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import {
   setVideoRoles,
   setSectionWinners,
@@ -268,11 +268,6 @@ export async function addEvent(props: addEventProps): Promise<response> {
       cost: props.eventDetails.cost,
       prize: props.eventDetails.prize,
       entryCost: props.eventDetails.entryCost,
-      // Derive startDate from first date in dates array for database compatibility
-      startDate:
-        props.eventDetails.dates && props.eventDetails.dates.length > 0
-          ? props.eventDetails.dates[0].date
-          : new Date().toISOString().split("T")[0],
       dates: props.eventDetails.dates,
       schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Image | null,
@@ -292,7 +287,6 @@ export async function addEvent(props: addEventProps): Promise<response> {
       eventDetails: eventDetails,
       roles: props.roles || [],
       sections: processedSections,
-      videos: props.videos || [],
       gallery: props.gallery as Image[],
     };
 
@@ -488,12 +482,6 @@ export async function editEvent(
       prize: editedEvent.eventDetails.prize,
       entryCost: editedEvent.eventDetails.entryCost,
       // Derive startDate from first date in dates array for database compatibility
-      startDate:
-        editedEvent.eventDetails.dates && editedEvent.eventDetails.dates.length > 0
-          ? editedEvent.eventDetails.dates[0].date
-          : (oldEvent.eventDetails.dates && oldEvent.eventDetails.dates.length > 0
-              ? oldEvent.eventDetails.dates[0].date
-              : new Date().toISOString().split("T")[0]),
       dates: editedEvent.eventDetails.dates,
       schedule: editedEvent.eventDetails.schedule ?? "",
       poster: editedEvent.eventDetails.poster as Image | null,
@@ -554,7 +542,12 @@ export async function editEvent(
             const oldVideo = oldSection?.videos.find(
               (v) => v.id === newVideo.id
             );
-            await processVideoTagDiffs(newVideo, oldVideo, eventId, getUserId);
+            await processVideoTagDiffs(
+              newVideo,
+              oldVideo as Video,
+              eventId,
+              getUserId
+            );
           }
 
           // Process bracket videos
@@ -569,7 +562,7 @@ export async function editEvent(
               );
               await processVideoTagDiffs(
                 newVideo,
-                oldVideo,
+                oldVideo as Video,
                 eventId,
                 getUserId
               );
@@ -669,47 +662,51 @@ export async function editEvent(
 
 // Helper function to process video tag diffs
 async function processVideoTagDiffs(
-  newVideo: any,
-  oldVideo: any,
+  newVideo: Video,
+  oldVideo: Video,
   eventId: string,
   getUserId: (user: UserSearchItem) => Promise<string>
 ): Promise<void> {
-  const oldVideoAny = oldVideo as any;
-  const newVideoAny = newVideo as any;
-  const oldTaggedWinners = oldVideoAny?.taggedWinners || [];
-  const oldTaggedDancers = oldVideoAny?.taggedDancers || [];
-  const oldTaggedChoreographers = oldVideoAny?.taggedChoreographers || [];
-  const oldTaggedTeachers = oldVideoAny?.taggedTeachers || [];
-  const newTaggedWinners = newVideoAny?.taggedWinners || [];
-  const newTaggedDancers = newVideoAny?.taggedDancers || [];
-  const newTaggedChoreographers = newVideoAny?.taggedChoreographers || [];
-  const newTaggedTeachers = newVideoAny?.taggedTeachers || [];
+  const oldTaggedWinners = oldVideo.taggedWinners || [];
+  const oldTaggedDancers = oldVideo.taggedDancers || [];
+  const oldTaggedChoreographers = oldVideo.taggedChoreographers || [];
+  const oldTaggedTeachers = oldVideo.taggedTeachers || [];
+  const newTaggedWinners = newVideo.taggedWinners || [];
+  const newTaggedDancers = newVideo.taggedDancers || [];
+  const newTaggedChoreographers = newVideo.taggedChoreographers || [];
+  const newTaggedTeachers = newVideo.taggedTeachers || [];
 
   const allOldUsers = new Set(
     [
-      ...oldTaggedWinners.map((u: any) => u.username),
-      ...oldTaggedDancers.map((u: any) => u.username),
-      ...oldTaggedChoreographers.map((u: any) => u.username),
-      ...oldTaggedTeachers.map((u: any) => u.username),
+      ...oldTaggedWinners.map((u: UserSearchItem) => u.username),
+      ...oldTaggedDancers.map((u: UserSearchItem) => u.username),
+      ...oldTaggedChoreographers.map((u: UserSearchItem) => u.username),
+      ...oldTaggedTeachers.map((u: UserSearchItem) => u.username),
     ].filter(Boolean)
   );
   const allNewUsers = new Set(
     [
-      ...newTaggedWinners.map((u: any) => u.username),
-      ...newTaggedDancers.map((u: any) => u.username),
-      ...newTaggedChoreographers.map((u: any) => u.username),
-      ...newTaggedTeachers.map((u: any) => u.username),
+      ...newTaggedWinners.map((u: UserSearchItem) => u.username),
+      ...newTaggedDancers.map((u: UserSearchItem) => u.username),
+      ...newTaggedChoreographers.map((u: UserSearchItem) => u.username),
+      ...newTaggedTeachers.map((u: UserSearchItem) => u.username),
     ].filter(Boolean)
   );
 
   // Process all users in the new set
   for (const username of allNewUsers) {
-    const winner = newTaggedWinners.find((u: any) => u.username === username);
-    const dancer = newTaggedDancers.find((u: any) => u.username === username);
-    const choreographer = newTaggedChoreographers.find(
-      (u: any) => u.username === username
+    const winner = newTaggedWinners.find(
+      (u: UserSearchItem) => u.username === username
     );
-    const teacher = newTaggedTeachers.find((u: any) => u.username === username);
+    const dancer = newTaggedDancers.find(
+      (u: UserSearchItem) => u.username === username
+    );
+    const choreographer = newTaggedChoreographers.find(
+      (u: UserSearchItem) => u.username === username
+    );
+    const teacher = newTaggedTeachers.find(
+      (u: UserSearchItem) => u.username === username
+    );
     const user = winner || dancer || choreographer || teacher;
 
     if (!user) continue;
@@ -736,10 +733,12 @@ async function processVideoTagDiffs(
   for (const username of allOldUsers) {
     if (!allNewUsers.has(username)) {
       const oldUser =
-        oldTaggedWinners.find((u: any) => u.username === username) ||
-        oldTaggedDancers.find((u: any) => u.username === username) ||
-        oldTaggedChoreographers.find((u: any) => u.username === username) ||
-        oldTaggedTeachers.find((u: any) => u.username === username);
+        oldTaggedWinners.find((u: UserSearchItem) => u.username === username) ||
+        oldTaggedDancers.find((u: UserSearchItem) => u.username === username) ||
+        oldTaggedChoreographers.find(
+          (u: UserSearchItem) => u.username === username
+        ) ||
+        oldTaggedTeachers.find((u: UserSearchItem) => u.username === username);
       if (oldUser) {
         const userId = await getUserId(oldUser);
         await setVideoRoles(eventId, newVideo.id, userId, []);

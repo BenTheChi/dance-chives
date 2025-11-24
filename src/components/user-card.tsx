@@ -15,7 +15,6 @@ interface UserCardProps {
 }
 
 export function UserCard({
-  id,
   displayName,
   username,
   image,

@@ -7,8 +7,13 @@ import {
   EventCard,
   EventType,
 } from "../../types/event";
-import { Video } from "../../types/video";
-import { Image } from "../../types/image";
+import {
+  Video,
+  BattleVideo,
+  FreestyleVideo,
+  ChoreographyVideo,
+  ClassVideo,
+} from "../../types/video";
 import { UserSearchItem } from "../../types/user";
 import { City } from "../../types/city";
 import {
@@ -16,15 +21,15 @@ import {
   isValidRole,
   AVAILABLE_ROLES,
 } from "@/lib/utils/roles";
-import { SessionDate } from "../../types/event";
+import { EventDate } from "../../types/event";
 import {
   normalizeStyleNames,
   normalizeStyleName,
 } from "@/lib/utils/style-utils";
 import { getUserByUsername } from "./user";
-import { WorkshopCard } from "../../types/workshop";
-import { SessionCard } from "../../types/session";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { Image } from "../../types/image";
+import { type Record as Neo4jRecord } from "neo4j-driver";
 
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
@@ -179,14 +184,13 @@ interface BracketVideoUserRecord {
   taggedTeachers?: UserSearchItem[];
 }
 
-interface SectionVideoUserRecord {
-  sectionId: string;
-  videoId: string;
-  videoType: string;
-  taggedWinners?: UserSearchItem[];
-  taggedDancers?: UserSearchItem[];
-  taggedChoreographers?: UserSearchItem[];
-  taggedTeachers?: UserSearchItem[];
+// Neo4j result record type
+type Neo4jResultRecord = Neo4jRecord;
+
+// Search params interface
+interface SearchParams {
+  keyword?: string;
+  userId?: string;
 }
 
 /**
@@ -501,7 +505,6 @@ export const getEvent = async (id: string): Promise<Event> => {
     { id }
   );
 
-
   // Get event styles
   const eventStylesResult = await session.run(
     `
@@ -591,11 +594,11 @@ export const getEvent = async (id: string): Promise<Event> => {
   });
 
   // Create map of section winners
-  const sectionWinnersMap = new Map<string, any[]>();
+  const sectionWinnersMap = new Map<string, UserSearchItem[]>();
   sectionWinnersResult.records.forEach((record) => {
     const sectionId = record.get("sectionId");
     const winners = (record.get("winners") || []).filter(
-      (w: any) => w.id !== null && w.id !== undefined
+      (w: UserSearchItem) => w.id !== null && w.id !== undefined
     );
     sectionWinnersMap.set(sectionId, winners);
   });
@@ -617,23 +620,23 @@ export const getEvent = async (id: string): Promise<Event> => {
       const videoType = video.type || "battle";
 
       if (userData) {
-        (video as any).taggedWinners = userData.get("taggedWinners") || [];
-        (video as any).taggedDancers = userData.get("taggedDancers") || [];
+        video.taggedWinners = userData.get("taggedWinners") || [];
+        video.taggedDancers = userData.get("taggedDancers") || [];
         if (videoType === "choreography") {
-          (video as any).taggedChoreographers =
+          video.taggedChoreographers =
             userData.get("taggedChoreographers") || [];
         }
         if (videoType === "class") {
-          (video as any).taggedTeachers = userData.get("taggedTeachers") || [];
+          video.taggedTeachers = userData.get("taggedTeachers") || [];
         }
       } else {
-        (video as any).taggedWinners = [];
-        (video as any).taggedDancers = [];
+        video.taggedWinners = [];
+        video.taggedDancers = [];
         if (videoType === "choreography") {
-          (video as any).taggedChoreographers = [];
+          video.taggedChoreographers = [];
         }
         if (videoType === "class") {
-          (video as any).taggedTeachers = [];
+          video.taggedTeachers = [];
         }
       }
 
@@ -659,23 +662,22 @@ export const getEvent = async (id: string): Promise<Event> => {
           const videoType = video.type || "battle";
 
           if (userData) {
-            (video as any).taggedWinners = userData.taggedWinners || [];
-            (video as any).taggedDancers = userData.taggedDancers || [];
+            video.taggedWinners = userData.taggedWinners || [];
+            video.taggedDancers = userData.taggedDancers || [];
             if (videoType === "choreography") {
-              (video as any).taggedChoreographers =
-                userData.taggedChoreographers || [];
+              video.taggedChoreographers = userData.taggedChoreographers || [];
             }
             if (videoType === "class") {
-              (video as any).taggedTeachers = userData.taggedTeachers || [];
+              video.taggedTeachers = userData.taggedTeachers || [];
             }
           } else {
-            (video as any).taggedWinners = [];
-            (video as any).taggedDancers = [];
+            video.taggedWinners = [];
+            video.taggedDancers = [];
             if (videoType === "choreography") {
-              (video as any).taggedChoreographers = [];
+              video.taggedChoreographers = [];
             }
             if (videoType === "class") {
-              (video as any).taggedTeachers = [];
+              video.taggedTeachers = [];
             }
           }
 
@@ -688,9 +690,8 @@ export const getEvent = async (id: string): Promise<Event> => {
     });
   });
 
-
   // Parse dates - must be an array (required)
-  let dates: SessionDate[] = [];
+  let dates: EventDate[] = [];
   if (eventData.dates) {
     try {
       const parsedDates =
@@ -705,12 +706,6 @@ export const getEvent = async (id: string): Promise<Event> => {
   }
 
   // Build eventDetails object with all possible properties
-  // Derive startDate from first date in dates array for database storage
-  const startDate =
-    dates && dates.length > 0
-      ? dates[0].date
-      : new Date().toISOString().split("T")[0];
-
   const eventDetails: EventDetails = {
     title: eventData.title,
     description: eventData.description,
@@ -734,7 +729,7 @@ export const getEvent = async (id: string): Promise<Event> => {
   };
 
   // Build the result object
-  const result: any = {
+  const result: Event = {
     id: eventData.id,
     createdAt: new Date(eventData.createdAt),
     updatedAt: new Date(eventData.updatedAt),
@@ -744,7 +739,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     gallery,
   };
 
-  return result as Event;
+  return result;
 };
 
 /**
@@ -907,7 +902,7 @@ async function createVideoUserRelationships(
   const session = driver.session();
   try {
     if (video.type === "battle") {
-      const battleVideo = video as any;
+      const battleVideo = video as BattleVideo;
       // Create DANCER relationships
       if (battleVideo.taggedDancers && battleVideo.taggedDancers.length > 0) {
         for (const dancer of battleVideo.taggedDancers) {
@@ -933,7 +928,7 @@ async function createVideoUserRelationships(
         }
       }
     } else if (video.type === "freestyle") {
-      const freestyleVideo = video as any;
+      const freestyleVideo = video as FreestyleVideo;
       // Create DANCER relationships
       if (
         freestyleVideo.taggedDancers &&
@@ -950,7 +945,7 @@ async function createVideoUserRelationships(
         }
       }
     } else if (video.type === "choreography") {
-      const choreographyVideo = video as any;
+      const choreographyVideo = video as ChoreographyVideo;
       // Create CHOREOGRAPHER relationships
       if (
         choreographyVideo.taggedChoreographers &&
@@ -982,7 +977,7 @@ async function createVideoUserRelationships(
         }
       }
     } else if (video.type === "class") {
-      const classVideo = video as any;
+      const classVideo = video as ClassVideo;
       // Create TEACHER relationships
       if (classVideo.taggedTeachers && classVideo.taggedTeachers.length > 0) {
         for (const teacher of classVideo.taggedTeachers) {
@@ -1016,7 +1011,7 @@ async function createVideoUserRelationships(
 /**
  * Helper function to create gallery photos
  */
-const createGalleryPhotos = async (eventId: string, gallery: any[]) => {
+const createGalleryPhotos = async (eventId: string, gallery: Image[]) => {
   if (gallery.length === 0) return;
   const session = driver.session();
   try {
@@ -1047,7 +1042,7 @@ const createGalleryPhotos = async (eventId: string, gallery: any[]) => {
 /**
  * Helper function to create sections
  */
-const createSections = async (eventId: string, sections: any[]) => {
+const createSections = async (eventId: string, sections: Section[]) => {
   if (sections.length === 0) return;
   const session = driver.session();
   try {
@@ -1141,7 +1136,7 @@ const createSections = async (eventId: string, sections: any[]) => {
 /**
  * Helper function to create brackets
  */
-const createBrackets = async (sections: any[]) => {
+const createBrackets = async (sections: Section[]) => {
   const sectionsWithBrackets = sections.filter(
     (s) => s.hasBrackets && s.brackets?.length > 0
   );
@@ -1171,7 +1166,7 @@ const createBrackets = async (sections: any[]) => {
 /**
  * Helper function to create videos in brackets
  */
-const createBracketVideos = async (sections: any[]) => {
+const createBracketVideos = async (sections: Section[]) => {
   const sectionsWithBrackets = sections.filter(
     (s) => s.hasBrackets && s.brackets?.length > 0
   );
@@ -1240,7 +1235,7 @@ const createBracketVideos = async (sections: any[]) => {
 /**
  * Helper function to create videos directly in sections
  */
-const createSectionVideos = async (sections: any[]) => {
+const createSectionVideos = async (sections: Section[]) => {
   const sectionsWithVideos = sections.filter(
     (s) => !s.hasBrackets && s.videos?.length > 0
   );
@@ -1304,120 +1299,6 @@ const createSectionVideos = async (sections: any[]) => {
   }
 };
 
-
-/**
- * Helper function to update video user relationships
- */
-async function updateVideoUserRelationships(
-  video: Video,
-  videoId: string,
-  tx: any
-): Promise<void> {
-  // Delete existing relationships
-  await tx.run(
-    `MATCH (v:Video {id: $videoId})<-[r:DANCER|WINNER|CHOREOGRAPHER|TEACHER]-(:User)
-     DELETE r`,
-    { videoId }
-  );
-
-  // Create new relationships based on video type
-  if (video.type === "battle") {
-    const battleVideo = video as any;
-    if (battleVideo.taggedDancers && battleVideo.taggedDancers.length > 0) {
-      for (const dancer of battleVideo.taggedDancers) {
-        const userId = await getUserIdFromUserSearchItem(dancer);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:DANCER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-    if (battleVideo.taggedWinners && battleVideo.taggedWinners.length > 0) {
-      for (const winner of battleVideo.taggedWinners) {
-        const userId = await getUserIdFromUserSearchItem(winner);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:WINNER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-  } else if (video.type === "freestyle") {
-    const freestyleVideo = video as any;
-    if (
-      freestyleVideo.taggedDancers &&
-      freestyleVideo.taggedDancers.length > 0
-    ) {
-      for (const dancer of freestyleVideo.taggedDancers) {
-        const userId = await getUserIdFromUserSearchItem(dancer);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:DANCER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-  } else if (video.type === "choreography") {
-    const choreographyVideo = video as any;
-    if (
-      choreographyVideo.taggedChoreographers &&
-      choreographyVideo.taggedChoreographers.length > 0
-    ) {
-      for (const choreographer of choreographyVideo.taggedChoreographers) {
-        const userId = await getUserIdFromUserSearchItem(choreographer);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:CHOREOGRAPHER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-    if (
-      choreographyVideo.taggedDancers &&
-      choreographyVideo.taggedDancers.length > 0
-    ) {
-      for (const dancer of choreographyVideo.taggedDancers) {
-        const userId = await getUserIdFromUserSearchItem(dancer);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:DANCER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-  } else if (video.type === "class") {
-    const classVideo = video as any;
-    if (classVideo.taggedTeachers && classVideo.taggedTeachers.length > 0) {
-      for (const teacher of classVideo.taggedTeachers) {
-        const userId = await getUserIdFromUserSearchItem(teacher);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:TEACHER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-    if (classVideo.taggedDancers && classVideo.taggedDancers.length > 0) {
-      for (const dancer of classVideo.taggedDancers) {
-        const userId = await getUserIdFromUserSearchItem(dancer);
-        await tx.run(
-          `MATCH (v:Video {id: $videoId})
-           MERGE (u:User {id: $userId})
-           MERGE (u)-[:DANCER]->(v)`,
-          { videoId, userId }
-        );
-      }
-    }
-  }
-}
-
 /**
  * Unified function to insert any event
  * Handles event type labels dynamically based on eventDetails.eventType
@@ -1458,12 +1339,11 @@ export const insertEvent = async (event: Event): Promise<Event> => {
   }
 
   const session = driver.session();
-  const eventDetails = (event as any).eventDetails;
+  const eventDetails = event.eventDetails;
   const eventType = eventDetails?.eventType;
 
-  // Build labels string - always include Event, optionally include eventType label
+  // Build event type label if specified
   const eventTypeLabel = getEventTypeLabel(eventType);
-  const labels = eventTypeLabel ? `Event:${eventTypeLabel}` : "Event";
 
   // Handle dates array for Session events
   const datesJson = eventDetails.dates
@@ -1514,7 +1394,10 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         entryCost: eventDetails.entryCost || null,
         cost: eventDetails.cost || null,
         // Derive startDate from first date in dates array for database storage
-        startDate: eventDetails.dates && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : null,
+        startDate:
+          eventDetails.dates && eventDetails.dates.length > 0
+            ? eventDetails.dates[0].date
+            : null,
         dates: datesJson,
         schedule: eventDetails.schedule || null,
         createdAt: event.createdAt.toISOString(),
@@ -1595,7 +1478,10 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         entryCost: eventDetails.entryCost || null,
         cost: eventDetails.cost || null,
         // Derive startDate from first date in dates array for database storage
-        startDate: eventDetails.dates && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : null,
+        startDate:
+          eventDetails.dates && eventDetails.dates.length > 0
+            ? eventDetails.dates[0].date
+            : null,
         dates: datesJson,
         schedule: eventDetails.schedule || null,
         createdAt: event.createdAt.toISOString(),
@@ -1671,7 +1557,7 @@ export const insertEvent = async (event: Event): Promise<Event> => {
  */
 export const editEvent = async (event: Event): Promise<Event> => {
   const { id } = event;
-  const eventDetails = (event as any).eventDetails;
+  const eventDetails = event.eventDetails;
 
   // Validate all roles before editing
   if (event.roles && event.roles.length > 0) {
@@ -1708,13 +1594,12 @@ export const editEvent = async (event: Event): Promise<Event> => {
   }
 
   const session = driver.session();
-  const eventDetailsAny = eventDetails as any;
-  const eventType = eventDetailsAny.eventType;
+  const eventType = eventDetails.eventType;
   const eventTypeLabel = getEventTypeLabel(eventType);
 
   // Handle dates array for Session events
-  const datesJson = eventDetailsAny.dates
-    ? JSON.stringify(eventDetailsAny.dates)
+  const datesJson = eventDetails.dates
+    ? JSON.stringify(eventDetails.dates)
     : null;
 
   try {
@@ -1752,11 +1637,14 @@ export const editEvent = async (event: Event): Promise<Event> => {
         title: eventDetails.title,
         description: eventDetails.description,
         address: eventDetails.address,
-        prize: eventDetailsAny.prize || null,
-        entryCost: eventDetailsAny.entryCost || null,
-        cost: eventDetailsAny.cost || null,
+        prize: eventDetails.prize || null,
+        entryCost: eventDetails.entryCost || null,
+        cost: eventDetails.cost || null,
         // Derive startDate from first date in dates array for database storage
-        startDate: eventDetails.dates && eventDetails.dates.length > 0 ? eventDetails.dates[0].date : null,
+        startDate:
+          eventDetails.dates && eventDetails.dates.length > 0
+            ? eventDetails.dates[0].date
+            : null,
         dates: datesJson,
         schedule: eventDetails.schedule || null,
         updatedAt: event.updatedAt.toISOString(),
@@ -1935,7 +1823,6 @@ export const editEvent = async (event: Event): Promise<Event> => {
       { id }
     );
 
-
     // Commit transaction
     await tx.commit();
     await session.close();
@@ -2041,8 +1928,6 @@ export interface StyleData {
     image?: string;
     styles: string[];
   }>;
-  workshops: WorkshopCard[];
-  sessions: SessionCard[];
 }
 
 export interface CityData {
@@ -2267,8 +2152,12 @@ export const getStyleData = async (
     );
 
     // Get city-filtered events with this style (if cityId is provided)
-    let cityFilteredEventsResult: any = null;
-    let cityFilteredEventStylesResult: any = null;
+    let cityFilteredEventsResult: Awaited<
+      ReturnType<typeof session.run>
+    > | null = null;
+    let cityFilteredEventStylesResult: Awaited<
+      ReturnType<typeof session.run>
+    > | null = null;
     if (cityId !== undefined) {
       cityFilteredEventsResult = await session.run(
         `MATCH (style:Style {name: $styleName})
@@ -2314,7 +2203,9 @@ export const getStyleData = async (
     }
 
     // Get city-filtered users with this style (if cityId is provided)
-    let cityFilteredUsersResult: any = null;
+    let cityFilteredUsersResult: Awaited<
+      ReturnType<typeof session.run>
+    > | null = null;
     if (cityId !== undefined) {
       cityFilteredUsersResult = await session.run(
         `MATCH (style:Style {name: $styleName})<-[:STYLE]-(u:User)-[:LOCATED_IN]->(c:City {id: $cityId})
@@ -2325,104 +2216,6 @@ export const getStyleData = async (
         { styleName: normalizedStyleName, cityId }
       );
     }
-
-    // Get workshops with this style (from workshop STYLE relationship or videos)
-    const workshopsResult = await session.run(
-      `MATCH (style:Style {name: $styleName})
-       OPTIONAL MATCH (style)<-[:STYLE]-(w:Workshop)
-       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(w2:Workshop)
-       WITH collect(DISTINCT w) as workshops1, collect(DISTINCT w2) as workshops2
-       WITH [w IN workshops1 + workshops2 WHERE w IS NOT NULL] as allWorkshops
-       UNWIND allWorkshops as workshop
-       WITH DISTINCT workshop
-       OPTIONAL MATCH (workshop)-[:IN]->(c:City)
-       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(workshop)
-       RETURN workshop.id as id, workshop.title as title, workshop.startDate as startDate,
-              workshop.cost as cost, c.name as city, c.id as cityId, poster.url as imageUrl`,
-      { styleName: normalizedStyleName }
-    );
-
-    // Get workshop styles
-    const workshopStylesResult = await session.run(
-      `MATCH (style:Style {name: $styleName})
-       OPTIONAL MATCH (style)<-[:STYLE]-(w:Workshop)
-       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(w2:Workshop)
-       WITH collect(DISTINCT w) as workshops1, collect(DISTINCT w2) as workshops2
-       WITH [w IN workshops1 + workshops2 WHERE w IS NOT NULL] as allWorkshops
-       UNWIND allWorkshops as workshop
-       WITH DISTINCT workshop
-       OPTIONAL MATCH (workshop)-[:STYLE]->(ws:Style)
-       OPTIONAL MATCH (workshop)<-[:IN]-(v:Video)-[:STYLE]->(vs:Style)
-       WITH workshop.id as workshopId,
-            collect(DISTINCT ws.name) as workshopStyles,
-            collect(DISTINCT vs.name) as videoStyles
-       RETURN workshopId,
-              [s IN workshopStyles WHERE s IS NOT NULL] + [s IN videoStyles WHERE s IS NOT NULL] as allStyles`,
-      { styleName: normalizedStyleName }
-    );
-
-    const workshopStylesMap = new Map<string, string[]>();
-    workshopStylesResult.records.forEach((record) => {
-      const workshopId = record.get("workshopId");
-      const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
-      );
-      workshopStylesMap.set(workshopId, uniqueStyles);
-    });
-
-    // Get sessions with this style (from session STYLE relationship or videos)
-    const sessionsResult = await session.run(
-      `MATCH (style:Style {name: $styleName})
-       OPTIONAL MATCH (style)<-[:STYLE]-(s:Session)
-       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Session)
-       WITH collect(DISTINCT s) as sessions1, collect(DISTINCT s2) as sessions2
-       WITH [s IN sessions1 + sessions2 WHERE s IS NOT NULL] as allSessions
-       UNWIND allSessions as session
-       WITH DISTINCT session
-       OPTIONAL MATCH (session)-[:IN]->(c:City)
-       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(session)
-       RETURN session.id as id, session.title as title, session.dates as dates,
-              session.cost as cost, c.name as city, c.id as cityId, poster.url as imageUrl`,
-      { styleName: normalizedStyleName }
-    );
-
-    // Get session styles
-    const sessionStylesResult = await session.run(
-      `MATCH (style:Style {name: $styleName})
-       OPTIONAL MATCH (style)<-[:STYLE]-(s:Session)
-       OPTIONAL MATCH (style)<-[:STYLE]-(v:Video)-[:IN]->(s2:Session)
-       WITH collect(DISTINCT s) as sessions1, collect(DISTINCT s2) as sessions2
-       WITH [s IN sessions1 + sessions2 WHERE s IS NOT NULL] as allSessions
-       UNWIND allSessions as session
-       WITH DISTINCT session
-       OPTIONAL MATCH (session)-[:STYLE]->(ss:Style)
-       OPTIONAL MATCH (session)<-[:IN]-(v:Video)-[:STYLE]->(vs:Style)
-       WITH session.id as sessionId,
-            collect(DISTINCT ss.name) as sessionStyles,
-            collect(DISTINCT vs.name) as videoStyles
-       RETURN sessionId,
-              [s IN sessionStyles WHERE s IS NOT NULL] + [s IN videoStyles WHERE s IS NOT NULL] as allStyles`,
-      { styleName: normalizedStyleName }
-    );
-
-    const sessionStylesMap = new Map<string, string[]>();
-    sessionStylesResult.records.forEach((record) => {
-      const sessionId = record.get("sessionId");
-      const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
-      );
-      sessionStylesMap.set(sessionId, uniqueStyles);
-    });
 
     await session.close();
 
@@ -2472,71 +2265,33 @@ export const getStyleData = async (
       username: record.get("username") || "",
       image: record.get("image"),
       styles: (record.get("styles") || []).filter(
-        (s: any) => s !== null && s !== undefined
+        (s: unknown): s is string =>
+          s !== null && s !== undefined && typeof s === "string"
       ) as string[],
     }));
-
-    // Build workshops array
-    const workshops: WorkshopCard[] = workshopsResult.records.map((record) => ({
-      id: record.get("id"),
-      title: record.get("title"),
-      date: record.get("startDate"),
-      cost: record.get("cost"),
-      city: record.get("city") || "",
-      cityId: record.get("cityId"),
-      imageUrl: record.get("imageUrl"),
-      styles: workshopStylesMap.get(record.get("id")) || [],
-    }));
-
-    // Build sessions array
-    const sessions: SessionCard[] = sessionsResult.records.map((record) => {
-      // Parse dates array and extract first date
-      let firstDate = "";
-      const dates = record.get("dates");
-      if (dates) {
-        try {
-          const parsedDates =
-            typeof dates === "string" ? JSON.parse(dates) : dates;
-          if (Array.isArray(parsedDates) && parsedDates.length > 0) {
-            firstDate = parsedDates[0].date || "";
-          }
-        } catch (error) {
-          console.error("Error parsing dates array:", error);
-        }
-      }
-
-      return {
-        id: record.get("id"),
-        title: record.get("title"),
-        date: firstDate,
-        cost: record.get("cost"),
-        city: record.get("city") || "",
-        cityId: record.get("cityId"),
-        imageUrl: record.get("imageUrl"),
-        styles: sessionStylesMap.get(record.get("id")) || [],
-      };
-    });
 
     // Build city-filtered events array (if cityId was provided)
     let cityFilteredEvents: EventCard[] = [];
     if (cityFilteredEventsResult && cityFilteredEventStylesResult) {
       // Create styles map for city-filtered events
       const cityFilteredEventStylesMap = new Map<string, string[]>();
-      cityFilteredEventStylesResult.records.forEach((record: any) => {
-        const eventId = record.get("eventId");
-        const allStyles = (record.get("allStyles") || []) as unknown[];
-        const uniqueStyles = Array.from(
-          new Set(
-            allStyles.filter(
-              (s): s is string => typeof s === "string" && s !== null
+      cityFilteredEventStylesResult.records.forEach(
+        (record: Neo4jResultRecord) => {
+          const eventId = record.get("eventId");
+          const allStyles = (record.get("allStyles") || []) as unknown[];
+          const uniqueStyles = Array.from(
+            new Set(
+              allStyles.filter(
+                (s): s is string => typeof s === "string" && s !== null
+              )
             )
-          )
-        );
-        cityFilteredEventStylesMap.set(eventId, uniqueStyles);
-      });
+          );
+          cityFilteredEventStylesMap.set(eventId, uniqueStyles);
+        }
+      );
 
       cityFilteredEvents = cityFilteredEventsResult.records.map(
-        (record: any) => {
+        (record: Neo4jResultRecord) => {
           const eventId = record.get("eventId");
           return {
             id: eventId,
@@ -2562,13 +2317,14 @@ export const getStyleData = async (
     }> = [];
     if (cityFilteredUsersResult) {
       cityFilteredUsers = cityFilteredUsersResult.records.map(
-        (record: any) => ({
+        (record: Neo4jResultRecord) => ({
           id: record.get("id"),
           displayName: record.get("displayName") || "",
           username: record.get("username") || "",
           image: record.get("image"),
           styles: (record.get("styles") || []).filter(
-            (s: any) => s !== null && s !== undefined
+            (s: unknown): s is string =>
+              s !== null && s !== undefined && typeof s === "string"
           ) as string[],
         })
       );
@@ -2584,8 +2340,6 @@ export const getStyleData = async (
       users,
       cityFilteredUsers:
         cityFilteredUsers.length > 0 ? cityFilteredUsers : undefined,
-      workshops,
-      sessions,
     };
   } catch (error) {
     console.error("Error fetching style data:", error);
@@ -2780,7 +2534,8 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
       username: record.get("username") || "",
       image: record.get("image"),
       styles: (record.get("styles") || []).filter(
-        (s: any) => s !== null && s !== undefined
+        (s: unknown): s is string =>
+          s !== null && s !== undefined && typeof s === "string"
       ) as string[],
     }));
 
@@ -2864,11 +2619,11 @@ export const getCitySchedule = async (
       const eventId = record.get("id");
       const dates = record.get("dates");
       const eventTypeLabel = record.get("eventTypeLabel");
-      let parsedDates: any[] = [];
+      let parsedDates: EventDate[] = [];
       if (dates) {
         try {
           parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch (e) {
+        } catch {
           parsedDates = [];
         }
       }
@@ -2879,7 +2634,9 @@ export const getCitySchedule = async (
         startTime: record.get("startTime") || undefined,
         endTime: record.get("endTime") || undefined,
         dates: Array.isArray(parsedDates) ? parsedDates : undefined,
-        eventType: eventTypeLabel ? getEventTypeFromLabel(eventTypeLabel) : undefined,
+        eventType: eventTypeLabel
+          ? getEventTypeFromLabel(eventTypeLabel) || undefined
+          : undefined,
         poster: record.get("poster") || null,
         styles: eventStylesMap.get(eventId) || [],
       };
@@ -2934,7 +2691,31 @@ export const getCitySchedule = async (
       );
     });
 
-    // Build workshops array
+    // Convert workshops to CalendarEventData format and add to events array
+    const workshopEvents: CalendarEventData[] = workshopsResult.records.map(
+      (record) => {
+        const workshopId = record.get("id");
+        const workshopStyles = workshopStylesMap.get(workshopId) || [];
+        const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
+        const allStyles = Array.from(
+          new Set([...workshopStyles, ...videoStyles])
+        );
+
+        return {
+          id: workshopId,
+          title: record.get("title"),
+          startDate: record.get("startDate"),
+          startTime: record.get("startTime") || undefined,
+          endTime: record.get("endTime") || undefined,
+          dates: undefined, // Workshops use single date
+          eventType: "Workshop" as EventType,
+          poster: record.get("poster") || null,
+          styles: allStyles,
+        };
+      }
+    );
+
+    // Build workshops array for backward compatibility
     const workshops: CalendarWorkshopData[] = workshopsResult.records.map(
       (record) => {
         const workshopId = record.get("id");
@@ -3001,7 +2782,44 @@ export const getCitySchedule = async (
       );
     });
 
-    // Build sessions array
+    // Convert sessions to CalendarEventData format and add to events array
+    const sessionEvents: CalendarEventData[] = sessionsResult.records.map(
+      (record) => {
+        const sessionId = record.get("id");
+        const sessionStyles = sessionStylesMap.get(sessionId) || [];
+        const videoStyles = sessionVideoStylesMap.get(sessionId) || [];
+        const allStyles = Array.from(
+          new Set([...sessionStyles, ...videoStyles])
+        );
+
+        const datesStr = record.get("dates") || "[]";
+        let parsedDates: EventDate[] = [];
+        try {
+          parsedDates =
+            typeof datesStr === "string" ? JSON.parse(datesStr) : datesStr;
+        } catch {
+          parsedDates = [];
+        }
+
+        return {
+          id: sessionId,
+          title: record.get("title"),
+          startDate: parsedDates.length > 0 ? parsedDates[0].date : undefined,
+          startTime:
+            parsedDates.length > 0 ? parsedDates[0].startTime : undefined,
+          endTime: parsedDates.length > 0 ? parsedDates[0].endTime : undefined,
+          dates:
+            Array.isArray(parsedDates) && parsedDates.length > 0
+              ? parsedDates
+              : undefined,
+          eventType: "Session" as EventType,
+          poster: record.get("poster") || null,
+          styles: allStyles,
+        };
+      }
+    );
+
+    // Build sessions array for backward compatibility
     const sessions: CalendarSessionData[] = sessionsResult.records.map(
       (record) => {
         const sessionId = record.get("id");
@@ -3023,10 +2841,13 @@ export const getCitySchedule = async (
 
     await session.close();
 
+    // Merge all events into a single array
+    const allEvents = [...events, ...workshopEvents, ...sessionEvents];
+
     return {
-      events,
-      workshops,
-      sessions,
+      events: allEvents, // All events including workshops and sessions
+      workshops, // Kept for backward compatibility
+      sessions, // Kept for backward compatibility
     };
   } catch (error) {
     console.error("Error fetching city schedule:", error);
@@ -3042,7 +2863,7 @@ export const searchEvents = async (
 
   try {
     let query = `MATCH (e:Event)`;
-    const params: any = {};
+    const params: SearchParams = {};
 
     if (keyword && keyword.trim()) {
       query += ` WHERE toLower(e.title) CONTAINS toLower($keyword)`;
@@ -3075,7 +2896,7 @@ export const searchAccessibleEvents = async (
 
   try {
     let query = ``;
-    const params: any = { userId };
+    const params: SearchParams & { userId: string } = { userId };
 
     // If user is moderator, admin, or super_admin, they can see all events
     if (authLevel >= AUTH_LEVELS.MODERATOR) {

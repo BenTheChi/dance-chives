@@ -20,8 +20,7 @@ export type RequestType = (typeof REQUEST_TYPES)[keyof typeof REQUEST_TYPES];
  * Returns: event creator, team members, moderators, admins
  */
 export async function getTaggingRequestApprovers(
-  eventId: string,
-  eventCityId?: string
+  eventId: string
 ): Promise<string[]> {
   const approverIds: Set<string> = new Set();
 
@@ -64,13 +63,12 @@ export async function getTaggingRequestApprovers(
 
 /**
  * Get users who can approve team member requests for an event
- * Returns: event creator, existing team members, city moderators, admins
+ * Returns: event creator, existing team members, moderators, admins
  */
 export async function getTeamMemberRequestApprovers(
-  eventId: string,
-  eventCityId?: string
+  eventId: string
 ): Promise<string[]> {
-  return getTaggingRequestApprovers(eventId, eventCityId); // Same approvers
+  return getTaggingRequestApprovers(eventId); // Same approvers
 }
 
 /**
@@ -144,7 +142,6 @@ export async function canUserApproveRequest(
   requestType: RequestType,
   context?: {
     eventId?: string;
-    eventCityId?: string;
   }
 ): Promise<boolean> {
   const user = await prisma.user.findUnique({

@@ -1,6 +1,12 @@
 "use client";
 
-import { Video } from "@/types/video";
+import {
+  Video,
+  BattleVideo as BattleVideoType,
+  FreestyleVideo as FreestyleVideoType,
+  ChoreographyVideo as ChoreographyVideoType,
+  ClassVideo as ClassVideoType,
+} from "@/types/video";
 import { BattleVideo } from "./BattleVideo";
 import { FreestyleVideo } from "./FreestyleVideo";
 import { ChoreographyVideo } from "./ChoreographyVideo";
@@ -29,8 +35,7 @@ export function VideoCard({
 }: VideoCardProps) {
   const videoType = video.type || "battle";
 
-  const commonProps = {
-    video: video as any,
+  const baseProps = {
     eventLink,
     eventTitle,
     sectionTitle,
@@ -42,16 +47,22 @@ export function VideoCard({
 
   switch (videoType) {
     case "battle":
-      return <BattleVideo {...commonProps} />;
+      return <BattleVideo {...baseProps} video={video as BattleVideoType} />;
     case "freestyle":
-      return <FreestyleVideo {...commonProps} />;
+      return (
+        <FreestyleVideo {...baseProps} video={video as FreestyleVideoType} />
+      );
     case "choreography":
-      return <ChoreographyVideo {...commonProps} />;
+      return (
+        <ChoreographyVideo
+          {...baseProps}
+          video={video as ChoreographyVideoType}
+        />
+      );
     case "class":
-      return <ClassVideo {...commonProps} />;
+      return <ClassVideo {...baseProps} video={video as ClassVideoType} />;
     default:
       // Default to BattleVideo for backwards compatibility
-      return <BattleVideo {...commonProps} />;
+      return <BattleVideo {...baseProps} video={video as BattleVideoType} />;
   }
 }
-

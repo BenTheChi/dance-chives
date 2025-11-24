@@ -21,7 +21,7 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import { Section, Bracket } from "@/types/event";
-import { BattleVideo, Video } from "@/types/video";
+import { Video } from "@/types/video";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
 import { FormValues } from "./event-form";
@@ -29,7 +29,6 @@ import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
-import { SECTION_ROLE_WINNER } from "@/lib/utils/roles";
 import {
   Select,
   SelectContent,
@@ -110,7 +109,7 @@ export function SectionForm({
 
   const addBracket = () => {
     if (!activeSection) return;
-    
+
     // Prevent adding brackets if section type disallows them
     if (sectionTypeDisallowsBrackets(activeSection.sectionType)) {
       return;
@@ -185,7 +184,9 @@ export function SectionForm({
 
   // Check if section type disallows brackets (for performance reasons)
   const sectionTypeDisallowsBrackets = (sectionType?: string): boolean => {
-    return ["Showcase", "Class", "Session", "Performance"].includes(sectionType || "");
+    return ["Showcase", "Class", "Session", "Performance"].includes(
+      sectionType || ""
+    );
   };
 
   // Handle section type change
@@ -204,32 +205,38 @@ export function SectionForm({
       // If changing to a type that requires brackets, ensure hasBrackets is true
       // If changing to a type that disallows brackets, ensure hasBrackets is false
       // Otherwise, keep current hasBrackets (user can still enable/disable)
-      const hasBrackets = requiresBrackets ? true : disallowsBrackets ? false : section.hasBrackets;
+      const hasBrackets = requiresBrackets
+        ? true
+        : disallowsBrackets
+        ? false
+        : section.hasBrackets;
 
       // Handle brackets based on section type and hasBrackets setting:
       // - If type requires brackets OR (hasBrackets is true AND type doesn't disallow): keep brackets, update video types
       // - If type disallows brackets OR (type doesn't require brackets AND hasBrackets is false): clear brackets
-      const shouldKeepBrackets = requiresBrackets || (hasBrackets && !disallowsBrackets);
-      
-      // Collect videos from brackets if we're clearing them (to preserve them)
-      const videosFromBrackets = disallowsBrackets && section.brackets.length > 0
-        ? section.brackets.flatMap((bracket) =>
-            bracket.videos.map((video) => ({
-              ...video,
-              type: defaultVideoType,
-            }))
-          )
-        : [];
+      const shouldKeepBrackets =
+        requiresBrackets || (hasBrackets && !disallowsBrackets);
 
-      const updatedBrackets = shouldKeepBrackets
-          ? section.brackets.map((bracket) => ({
-              ...bracket,
-              videos: bracket.videos.map((video) => ({
+      // Collect videos from brackets if we're clearing them (to preserve them)
+      const videosFromBrackets =
+        disallowsBrackets && section.brackets.length > 0
+          ? section.brackets.flatMap((bracket) =>
+              bracket.videos.map((video) => ({
                 ...video,
                 type: defaultVideoType,
-              })),
-            }))
-          : []; // Clear brackets if section type disallows them or doesn't require them and hasBrackets is false
+              }))
+            )
+          : [];
+
+      const updatedBrackets = shouldKeepBrackets
+        ? section.brackets.map((bracket) => ({
+            ...bracket,
+            videos: bracket.videos.map((video) => ({
+              ...video,
+              type: defaultVideoType,
+            })),
+          }))
+        : []; // Clear brackets if section type disallows them or doesn't require them and hasBrackets is false
 
       // Update all existing videos to use the default video type for this section type
       // If brackets are being cleared, merge videos from brackets into direct videos
@@ -283,7 +290,7 @@ export function SectionForm({
       title: `Video ${activeSection.videos.length + 1}`,
       src: "https://example.com/video",
       type: defaultVideoType,
-    } as any; // Type assertion needed since Video is a union type
+    } as Video; // Type assertion needed since Video is a union type
 
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId
@@ -406,41 +413,6 @@ export function SectionForm({
     });
 
     setValue("sections", normalizeSectionsForForm(updatedSections));
-  };
-
-  const handleMarkAsSectionWinner = (user: UserSearchItem) => {
-    // Prevent duplicate submissions
-    if (sectionWinners.find((w) => w.username === user.username)) {
-      return;
-    }
-
-    // Update section winners in form state
-    const updatedSections = sections.map((section) => {
-      if (section.id !== activeSectionId) return section;
-
-      const currentWinners = section.winners || [];
-      const isAlreadyWinner = currentWinners.some(
-        (w) => w.username === user.username
-      );
-
-      if (!isAlreadyWinner) {
-        return {
-          ...section,
-          winners: [...currentWinners, user],
-        };
-      }
-      return section;
-    });
-
-    setValue("sections", normalizeSectionsForForm(updatedSections));
-
-    // Update local winners state for display
-    setSectionWinners((prev) => {
-      if (prev.find((w) => w.username === user.username)) {
-        return prev;
-      }
-      return [...prev, user];
-    });
   };
 
   const handleRemoveSectionWinner = (username: string) => {

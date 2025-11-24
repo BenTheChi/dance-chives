@@ -6,7 +6,7 @@ import { getUserByUsername } from "@/db/queries/user";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ username: string }> | { username: string } }
+  { params }: { params: Promise<{ username: string }> }
 ) {
   const session = await auth();
 
@@ -15,8 +15,7 @@ export async function GET(
   }
 
   try {
-    const resolvedParams = params instanceof Promise ? await params : params;
-    const username = resolvedParams.username;
+    const { username } = await params;
 
     if (!username) {
       return NextResponse.json(
@@ -77,4 +76,3 @@ export async function GET(
     );
   }
 }
-

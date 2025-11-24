@@ -89,7 +89,7 @@ export function AccountVerificationGuard({
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
               <p>
-                You've successfully signed in with OAuth, but you need to
+                You&apos;ve successfully signed in with OAuth, but you need to
                 complete your registration to access all features.
               </p>
             </div>

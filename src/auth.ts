@@ -1,8 +1,6 @@
 import NextAuth, { type DefaultSession } from "next-auth";
-import { Neo4jAdapter } from "@auth/neo4j-adapter";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import driver from "./db/driver";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./lib/primsa";
 
@@ -21,13 +19,6 @@ declare module "next-auth" {
     } & DefaultSession["user"];
   }
 }
-
-// const neo4jSession = driver.session();
-
-// export const { handlers, auth, signIn, signOut } = NextAuth({
-//   providers: [Google],
-//   adapter: Neo4jAdapter(neo4jSession),
-// });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -98,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         let neo4jUser = null;
         try {
           neo4jUser = await getUser(token.sub);
-        } catch (error) {
+        } catch {
           // User might not have a Neo4j profile yet
           console.log("No Neo4j profile found for user:", token.sub);
         }

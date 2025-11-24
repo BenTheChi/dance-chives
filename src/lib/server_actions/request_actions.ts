@@ -4,7 +4,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import {
   getTaggingRequestApprovers,
-  getTaggingRequestApproversForSession,
   getTeamMemberRequestApprovers,
   getAuthLevelChangeRequestApprovers,
   canUserApproveRequest,
@@ -15,20 +14,14 @@ import {
 import {
   isTeamMember,
   addTeamMember,
-  addWorkshopTeamMember,
-  addSessionTeamMember,
   setVideoRoles,
   setSectionWinner,
   setSectionWinners,
   getSectionWinnerIds,
   setEventRoles, // Still needed for event roles (not part of this refactor)
-  setWorkshopRoles,
-  setSessionRoles,
   getUserTeamMemberships,
   eventExists,
   videoExistsInEvent,
-  videoBelongsToWorkshop,
-  videoBelongsToSession,
   sectionExistsInEvent,
   isUserTaggedInVideo,
   isUserTaggedInVideoWithRole,
@@ -37,13 +30,8 @@ import {
   getEventTitle,
   getEventType,
   getVideoTitle,
-  getSessionTitle,
   getEventCreator,
-  isCompetitionCreator,
-  getEventTeamMembers,
-  isWorkshopTeamMember,
-  isSessionTeamMember,
-  getSessionTeamMembers,
+  isEventCreator,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
 import { getUser, getUserByUsername } from "@/db/queries/user";
@@ -52,14 +40,13 @@ import {
   AVAILABLE_ROLES,
   isValidVideoRole,
   isValidSectionRole,
-  isValidWorkshopRole,
-  WORKSHOP_ROLES,
   VIDEO_ROLE_DANCER,
   VIDEO_ROLE_WINNER,
   SECTION_ROLE_WINNER,
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { Prisma } from "@prisma/client";
 
 // ============================================================================
 // Helper Functions
@@ -1115,9 +1102,6 @@ export async function approveAuthLevelChangeRequest(
     "APPROVED"
   );
 
-  // Admins and SuperAdmins always have allCityAccess
-  const shouldHaveAllCityAccess = request.requestedLevel >= AUTH_LEVELS.ADMIN;
-
   // Update user's authorization level
   await prisma.user.update({
     where: { id: request.targetUserId },
@@ -1609,7 +1593,8 @@ export async function getDashboardData() {
   );
 
   // Destructure to exclude id from being sent to client
-  const { id, ...userWithoutId } = user || {};
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _, ...userWithoutId } = user || {};
 
   return {
     user: {
@@ -1654,7 +1639,7 @@ export async function tagSelfWithRole(eventId: string, role: string) {
     const authLevel = session?.user?.auth || 0;
     const canAddDirectly =
       authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-      (await isCompetitionCreator(eventId, userId));
+      (await isEventCreator(eventId, userId));
 
     if (canAddDirectly) {
       // User has permission - add team member directly
@@ -1693,7 +1678,7 @@ export async function tagSelfWithRole(eventId: string, role: string) {
   const canTagDirectly =
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
-    (await isCompetitionCreator(eventId, userId));
+    (await isEventCreator(eventId, userId));
 
   if (canTagDirectly) {
     // User has permission - tag directly
@@ -1728,109 +1713,6 @@ export async function tagSelfWithRole(eventId: string, role: string) {
       );
       throw error;
     }
-  }
-}
-
-/**
- * Tag self with a role in a workshop
- * If user has permission (admin, super admin, moderator, or workshop creator), tags directly
- * Otherwise, creates a tagging request (note: workshop team member requests not yet supported in DB)
- * Special handling: "TEAM_MEMBER" role creates a TEAM_MEMBER relationship instead of a role relationship
- */
-export async function tagSelfWithRoleForWorkshop(
-  workshopId: string,
-  role: string
-) {
-  const userId = await requireAuth();
-  const session = await auth();
-
-  // Import event creator check (workshops are now events)
-  const { isEventCreator } = await import("@/db/queries/team-member");
-
-  // Validate role
-  if (!isValidWorkshopRole(role)) {
-    throw new Error(
-      `Invalid role: ${role}. Must be one of: ${WORKSHOP_ROLES.join(", ")}`
-    );
-  }
-
-  // Validate workshop exists and get associated event ID
-  const workshopSession = driver.session();
-  let associatedEventId: string | null = null;
-  try {
-    const workshopCheck = await workshopSession.run(
-      `
-      MATCH (w:Workshop {id: $workshopId})
-      OPTIONAL MATCH (w)-[:IN]->(e:Event)
-      RETURN w, e.id as eventId
-      `,
-      { workshopId }
-    );
-    if (workshopCheck.records.length === 0) {
-      throw new Error("Workshop not found");
-    }
-    associatedEventId = workshopCheck.records[0]?.get("eventId") || null;
-  } finally {
-    await workshopSession.close();
-  }
-
-  // Check if user is event team member (if workshop has associated event)
-  let isEventTeamMember = false;
-  if (associatedEventId) {
-    isEventTeamMember = await isTeamMember(associatedEventId, userId);
-  }
-
-  // Special handling for "TEAM_MEMBER" role
-  if (role === "TEAM_MEMBER") {
-    // Check if user has permission to add team member directly
-    const authLevel = session?.user?.auth || 0;
-    const canAddDirectly =
-      authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-      (await isEventCreator(workshopId, userId)) ||
-      isEventTeamMember; // Event team members can add themselves as workshop team members
-
-    if (canAddDirectly) {
-      // User has permission - add team member directly
-      try {
-        await addWorkshopTeamMember(workshopId, userId);
-        return { success: true, directTag: true };
-      } catch (error) {
-        console.error("Error adding workshop team member:", error);
-        throw error;
-      }
-    } else {
-      // User doesn't have permission - for now, throw error since workshop team member requests aren't supported
-      // TODO: Add workshop team member request support when database schema is updated
-      throw new Error(
-        "You do not have permission to add yourself as a team member. Workshop team member requests are not yet supported."
-      );
-    }
-  }
-
-  // Regular role handling (non-TEAM_MEMBER roles)
-  // Check if user has permission to tag directly
-  const authLevel = session?.user?.auth || 0;
-  const canTagDirectly =
-    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-    (await isWorkshopTeamMember(workshopId, userId)) || // This now also checks event team membership
-    (await isEventCreator(workshopId, userId)) ||
-    isEventTeamMember; // Event team members can tag themselves in workshops
-
-  if (canTagDirectly) {
-    // User has permission - tag directly
-    try {
-      await setWorkshopRoles(workshopId, userId, role);
-      return { success: true, directTag: true };
-    } catch (error) {
-      console.error("Error tagging self with workshop role:", error);
-      throw error;
-    }
-  } else {
-    // User doesn't have permission - for workshops, we don't have tagging requests yet
-    // TODO: Add workshop tagging request support when needed
-    throw new Error(
-      "You do not have permission to tag yourself with this role. Workshop tagging requests are not yet supported."
-    );
   }
 }
 
@@ -1897,7 +1779,7 @@ export async function tagSelfInVideo(
 
   // If tagging as Winner, check if user is already tagged as Dancer
   // If not, we'll also tag them as Dancer
-  let rolesToTag = [role];
+  const rolesToTag = [role];
   if (role === VIDEO_ROLE_WINNER) {
     const isDancer = await isUserTaggedInVideoWithRole(
       eventId,
@@ -1918,7 +1800,7 @@ export async function tagSelfInVideo(
   const canTagDirectly =
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
-    (await isCompetitionCreator(eventId, userId));
+    (await isEventCreator(eventId, userId));
 
   if (canTagDirectly) {
     console.log("Applying tag in Neo4j");
@@ -2085,7 +1967,7 @@ export async function tagSelfInSection(
   const canTagDirectly =
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
-    (await isCompetitionCreator(eventId, userId));
+    (await isEventCreator(eventId, userId));
 
   if (canTagDirectly) {
     console.log("Applying section tag in Neo4j");
@@ -2171,7 +2053,7 @@ export async function removeTagFromVideo(
     currentUserId === userId || // User removing their own tag
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, currentUserId)) ||
-    (await isCompetitionCreator(eventId, currentUserId));
+    (await isEventCreator(eventId, currentUserId));
 
   if (canRemoveDirectly) {
     // User has permission - remove directly by setting empty roles
@@ -2219,7 +2101,7 @@ export async function removeTagFromSection(
     currentUserId === userId || // User removing their own tag
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, currentUserId)) ||
-    (await isCompetitionCreator(eventId, currentUserId));
+    (await isEventCreator(eventId, currentUserId));
 
   if (canRemoveDirectly) {
     // User has permission - remove directly by setting winner to null
@@ -2267,7 +2149,7 @@ export async function markUserAsVideoWinner(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isCompetitionCreator(eventId, editorId));
+    (await isEventCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2348,7 +2230,7 @@ export async function markUserAsSectionWinner(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isCompetitionCreator(eventId, editorId));
+    (await isEventCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2410,7 +2292,7 @@ export async function removeVideoWinnerTag(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isCompetitionCreator(eventId, editorId));
+    (await isEventCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2441,8 +2323,7 @@ export async function removeVideoWinnerTag(
  */
 export async function removeSectionWinnerTag(
   eventId: string,
-  sectionId: string,
-  userId: string
+  sectionId: string
 ): Promise<{ success: true }> {
   const editorId = await requireAuth();
   const session = await auth();
@@ -2452,7 +2333,7 @@ export async function removeSectionWinnerTag(
   const canEdit =
     authLevel >= AUTH_LEVELS.MODERATOR ||
     (await isTeamMember(eventId, editorId)) ||
-    (await isCompetitionCreator(eventId, editorId));
+    (await isEventCreator(eventId, editorId));
 
   if (!canEdit) {
     throw new Error(
@@ -2483,7 +2364,7 @@ export async function getPendingTagRequest(
   // If userId is not provided, use the authenticated user
   const targetUserId = userId || (await requireAuth());
 
-  const whereClause: any = {
+  const whereClause: Prisma.TaggingRequestWhereInput = {
     eventId,
     senderId: targetUserId,
     targetUserId: targetUserId,
@@ -2525,7 +2406,7 @@ export async function getAllPendingTagRequestsForEvent(
 ): Promise<Map<string, { id: string; status: string; createdAt: Date }>> {
   const targetUserId = userId || (await requireAuth());
 
-  const whereClause: any = {
+  const whereClause: Prisma.TaggingRequestWhereInput = {
     eventId,
     senderId: targetUserId,
     targetUserId: targetUserId,
@@ -2565,177 +2446,4 @@ export async function getAllPendingTagRequestsForEvent(
   });
 
   return requestMap;
-}
-
-/**
- * Get pending tagging request for a workshop
- * Note: Workshop tagging requests may not be fully supported in the database schema yet
- * This function will return null if workshop requests are not supported
- */
-export async function getPendingTagRequestForWorkshop(
-  workshopId: string,
-  userId?: string,
-  role?: string
-): Promise<{
-  id: string;
-  status: string;
-  createdAt: Date;
-} | null> {
-  // If userId is not provided, use the authenticated user
-  const targetUserId = userId || (await requireAuth());
-
-  // Note: Workshop tagging requests may not be supported in the database schema yet
-  // The TaggingRequest model only has eventId, not workshopId
-  // For now, return null - this can be updated when the schema supports workshop requests
-  // TODO: Update when workshop tagging requests are added to the database schema
-  return null;
-}
-
-/**
- * Tag self with a role in a session
- * If user has permission (admin, super admin, moderator, or session creator), tags directly
- * Otherwise, creates a tagging request (note: session team member requests not yet supported in DB)
- * Special handling: "Team Member" role creates a TEAM_MEMBER relationship instead of a role relationship
- */
-export async function tagSelfWithRoleForSession(
-  sessionId: string,
-  role: string
-) {
-  const userId = await requireAuth();
-  const session = await auth();
-
-  // Import event creator check (sessions are now events)
-  const { isEventCreator } = await import("@/db/queries/team-member");
-
-  // Validate role (sessions use Event roles)
-  if (!isValidRole(role)) {
-    throw new Error(
-      `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
-    );
-  }
-
-  // Validate session exists
-  const sessionDriver = driver.session();
-  try {
-    const sessionCheck = await sessionDriver.run(
-      `
-      MATCH (s:Session {id: $sessionId})
-      RETURN s
-      `,
-      { sessionId }
-    );
-    if (sessionCheck.records.length === 0) {
-      throw new Error("Session not found");
-    }
-  } finally {
-    await sessionDriver.close();
-  }
-
-  // Special handling for "Team Member" role
-  if (role === "Team Member") {
-    // Check if user has permission to add team member directly
-    const authLevel = session?.user?.auth || 0;
-    const canAddDirectly =
-      authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-      (await isEventCreator(sessionId, userId));
-
-    if (canAddDirectly) {
-      // User has permission - add team member directly
-      try {
-        await addSessionTeamMember(sessionId, userId);
-        return { success: true, directTag: true };
-      } catch (error) {
-        console.error("Error adding session team member:", error);
-        throw error;
-      }
-    } else {
-      // User doesn't have permission - for now, throw error since session team member requests aren't supported
-      // TODO: Add session team member request support when database schema is updated
-      throw new Error(
-        "You do not have permission to add yourself as a team member. Session team member requests are not yet supported."
-      );
-    }
-  }
-
-  // Regular role handling (non-Team Member roles)
-  // Check if user has permission to tag directly
-  const authLevel = session?.user?.auth || 0;
-  const canTagDirectly =
-    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-    (await isSessionTeamMember(sessionId, userId)) ||
-    (await isEventCreator(sessionId, userId));
-
-  if (canTagDirectly) {
-    // User has permission - tag directly
-    try {
-      await setSessionRoles(sessionId, userId, role);
-      return { success: true, directTag: true };
-    } catch (error) {
-      console.error("Error tagging self with session role:", error);
-      throw error;
-    }
-  } else {
-    // User doesn't have permission - create a tagging request
-    console.log(
-      "🔵 [tagSelfWithRoleForSession] User doesn't have permission, creating request..."
-    );
-    try {
-      const result = await createTaggingRequest(
-        sessionId,
-        undefined,
-        undefined,
-        role
-      );
-      console.log(
-        "✅ [tagSelfWithRoleForSession] Request created successfully:",
-        result.request.id
-      );
-      return { success: true, directTag: false, request: result.request };
-    } catch (error) {
-      console.error(
-        "❌ [tagSelfWithRoleForSession] Error creating tagging request:",
-        error
-      );
-      throw error;
-    }
-  }
-}
-
-/**
- * Get pending tagging request for an event (sessions are now events)
- */
-export async function getPendingTagRequestForSession(
-  eventId: string,
-  userId?: string,
-  role?: string
-): Promise<{
-  id: string;
-  status: string;
-  createdAt: Date;
-} | null> {
-  // If userId is not provided, use the authenticated user
-  const targetUserId = userId || (await requireAuth());
-
-  const whereClause: any = {
-    eventId,
-    senderId: targetUserId,
-    targetUserId: targetUserId,
-    status: "PENDING",
-  };
-
-  // Add role to the where clause if provided
-  if (role !== undefined) {
-    whereClause.role = role || null;
-  }
-
-  const request = await prisma.taggingRequest.findFirst({
-    where: whereClause,
-    select: {
-      id: true,
-      status: true,
-      createdAt: true,
-    },
-  });
-
-  return request;
 }

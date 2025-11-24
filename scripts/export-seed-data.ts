@@ -1,8 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import driver from "../src/db/driver";
 import { getEvent } from "../src/db/queries/event";
-import { getWorkshop } from "../src/db/queries/workshop";
-import { getSession } from "../src/db/queries/session";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -337,9 +335,10 @@ async function extractNeo4jData() {
     });
     console.log(`  ✅ Extracted ${data.cities.length} cities`);
 
-    // Get all event IDs first
+    // Get all event IDs first (excluding workshops and sessions which are handled separately)
     const eventIdsResult = await session.run(`
       MATCH (e:Event)
+      WHERE NOT ('WorkshopEvent' IN labels(e) OR 'SessionEvent' IN labels(e))
       RETURN e.id as eventId
       ORDER BY e.id
     `);
@@ -359,51 +358,55 @@ async function extractNeo4jData() {
     }
     console.log(`  ✅ Extracted ${data.events.length} events`);
 
-    // Get all workshop IDs first
+    // Get all workshop event IDs (Events with WorkshopEvent label)
     const workshopIdsResult = await session.run(`
-      MATCH (w:Workshop)
-      RETURN w.id as workshopId
-      ORDER BY w.id
+      MATCH (e:Event:WorkshopEvent)
+      RETURN e.id as eventId
+      ORDER BY e.id
     `);
 
-    const workshopIds = workshopIdsResult.records.map((r) =>
-      r.get("workshopId")
-    );
-    console.log(`  📋 Found ${workshopIds.length} workshops to extract`);
+    const workshopIds = workshopIdsResult.records.map((r) => r.get("eventId"));
+    console.log(`  📋 Found ${workshopIds.length} workshop events to extract`);
 
-    // Extract Workshops using existing getWorkshop function
+    // Extract Workshop events using getEvent function
     data.workshops = [];
     for (const workshopId of workshopIds) {
       try {
-        const workshop = await getWorkshop(workshopId);
+        const workshop = await getEvent(workshopId);
         data.workshops.push(workshop);
       } catch (error) {
-        console.error(`  ⚠️  Error extracting workshop ${workshopId}:`, error);
+        console.error(
+          `  ⚠️  Error extracting workshop event ${workshopId}:`,
+          error
+        );
       }
     }
-    console.log(`  ✅ Extracted ${data.workshops.length} workshops`);
+    console.log(`  ✅ Extracted ${data.workshops.length} workshop events`);
 
-    // Get all session IDs first
+    // Get all session event IDs (Events with SessionEvent label)
     const sessionIdsResult = await session.run(`
-      MATCH (s:Session)
-      RETURN s.id as sessionId
-      ORDER BY s.id
+      MATCH (e:Event:SessionEvent)
+      RETURN e.id as eventId
+      ORDER BY e.id
     `);
 
-    const sessionIds = sessionIdsResult.records.map((r) => r.get("sessionId"));
-    console.log(`  📋 Found ${sessionIds.length} sessions to extract`);
+    const sessionIds = sessionIdsResult.records.map((r) => r.get("eventId"));
+    console.log(`  📋 Found ${sessionIds.length} session events to extract`);
 
-    // Extract Sessions using existing getSession function
+    // Extract Session events using getEvent function
     data.sessions = [];
     for (const sessionId of sessionIds) {
       try {
-        const session = await getSession(sessionId);
+        const session = await getEvent(sessionId);
         data.sessions.push(session);
       } catch (error) {
-        console.error(`  ⚠️  Error extracting session ${sessionId}:`, error);
+        console.error(
+          `  ⚠️  Error extracting session event ${sessionId}:`,
+          error
+        );
       }
     }
-    console.log(`  ✅ Extracted ${data.sessions.length} sessions`);
+    console.log(`  ✅ Extracted ${data.sessions.length} session events`);
 
     // Extract video roles (DANCER, WINNER relationships)
     const videoRolesResult = await session.run(`
@@ -444,11 +447,15 @@ async function extractNeo4jData() {
       `  ✅ Extracted ${data.sectionWinners.length} section winner relationships`
     );
 
-    // Extract team members
+    // Extract team members (all events including workshops and sessions are Event nodes)
     const teamMembersResult = await session.run(`
-      MATCH (u:User)-[r:TEAM_MEMBER]->(target)
-      WHERE target:Event OR target:Workshop OR target:Session
-      RETURN u.id as userId, target.id as targetId, labels(target)[0] as targetType
+      MATCH (u:User)-[r:TEAM_MEMBER]->(target:Event)
+      RETURN u.id as userId, target.id as targetId, 
+             CASE 
+               WHEN 'WorkshopEvent' IN labels(target) THEN 'Workshop'
+               WHEN 'SessionEvent' IN labels(target) THEN 'Session'
+               ELSE 'Event'
+             END as targetType
     `);
 
     data.teamMembers = teamMembersResult.records.map((r) => ({
@@ -523,12 +530,8 @@ function generatePostgreSQLSeedCode(pgData: any): string {
   if (!Array.isArray(pgData.authenticators)) pgData.authenticators = [];
   let code = `import { PrismaClient } from "@prisma/client";
 import { insertEvent } from "../src/db/queries/event";
-import { insertWorkshop } from "../src/db/queries/workshop";
-import { insertSession } from "../src/db/queries/session";
 import { signupUser } from "../src/db/queries/user";
 import { Event } from "../src/types/event";
-import { Workshop } from "../src/types/workshop";
-import { Session } from "../src/types/session";
 import { City } from "../src/types/city";
 import driver from "../src/db/driver";
 import {
@@ -536,8 +539,6 @@ import {
   setSectionWinner,
   setEventRoles,
   addTeamMember,
-  addWorkshopTeamMember,
-  addSessionTeamMember,
 } from "../src/db/queries/team-member";
 
 const prisma = new PrismaClient();
@@ -809,18 +810,18 @@ async function main() {
   }
 
   if (pgData.neo4jWorkshops && pgData.neo4jWorkshops.length > 0) {
-    code += `  // Create Workshops in Neo4j
+    code += `  // Create Workshop events in Neo4j
   console.log(\`🌱 Creating \${${
     pgData.neo4jWorkshops.length
-  }} workshops in Neo4j...\`);
+  }} workshop events in Neo4j...\`);
   const workshops = ${formatValue(pgData.neo4jWorkshops, 2)};
 
   for (const workshop of workshops) {
     try {
-      await insertWorkshop(workshop);
-      console.log(\`✅ Created workshop: \${workshop.workshopDetails.title}\`);
+      await insertEvent(workshop);
+      console.log(\`✅ Created workshop event: \${workshop.eventDetails.title}\`);
     } catch (error) {
-      console.error(\`⚠️  Error creating workshop \${workshop.id}:\`, error);
+      console.error(\`⚠️  Error creating workshop event \${workshop.id}:\`, error);
     }
   }
 
@@ -828,18 +829,18 @@ async function main() {
   }
 
   if (pgData.neo4jSessions && pgData.neo4jSessions.length > 0) {
-    code += `  // Create Sessions in Neo4j
+    code += `  // Create Session events in Neo4j
   console.log(\`🌱 Creating \${${
     pgData.neo4jSessions.length
-  }} sessions in Neo4j...\`);
+  }} session events in Neo4j...\`);
   const sessions = ${formatValue(pgData.neo4jSessions, 2)};
 
   for (const session of sessions) {
     try {
-      await insertSession(session);
-      console.log(\`✅ Created session: \${session.sessionDetails.title}\`);
+      await insertEvent(session);
+      console.log(\`✅ Created session event: \${session.eventDetails.title}\`);
     } catch (error) {
-      console.error(\`⚠️  Error creating session \${session.id}:\`, error);
+      console.error(\`⚠️  Error creating session event \${session.id}:\`, error);
     }
   }
 
@@ -914,13 +915,8 @@ async function main() {
 
   for (const teamMember of teamMembers) {
     try {
-      if (teamMember.targetType === "Event") {
-        await addTeamMember(teamMember.targetId, teamMember.userId);
-      } else if (teamMember.targetType === "Workshop") {
-        await addWorkshopTeamMember(teamMember.targetId, teamMember.userId);
-      } else if (teamMember.targetType === "Session") {
-        await addSessionTeamMember(teamMember.targetId, teamMember.userId);
-      }
+      // All events (including workshops and sessions) use the unified addTeamMember function
+      await addTeamMember(teamMember.targetId, teamMember.userId);
     } catch (error) {
       console.error(\`⚠️  Error adding team member \${teamMember.userId} to \${teamMember.targetType} \${teamMember.targetId}:\`, error);
     }
@@ -1080,15 +1076,23 @@ async function main() {
       })),
       subEvents: (event.subEvents || []).map((se: any) => ({
         ...se,
-        poster: se.poster ? { ...se.poster, file: null } : null,
+        eventDetails: se.eventDetails
+          ? {
+              ...se.eventDetails,
+              poster: se.eventDetails.poster
+                ? { ...se.eventDetails.poster, file: null }
+                : null,
+            }
+          : null,
+        gallery: (se.gallery || []).map((pic: any) => ({ ...pic, file: null })),
       })),
       workshops: (event.workshops || []).map((w: any) => ({
         ...w,
-        workshopDetails: w.workshopDetails
+        eventDetails: w.eventDetails
           ? {
-              ...w.workshopDetails,
-              poster: w.workshopDetails.poster
-                ? { ...w.workshopDetails.poster, file: null }
+              ...w.eventDetails,
+              poster: w.eventDetails.poster
+                ? { ...w.eventDetails.poster, file: null }
                 : null,
             }
           : null,
@@ -1099,11 +1103,11 @@ async function main() {
     pgData.neo4jWorkshops = (neo4jData.workshops || []).map(
       (workshop: any) => ({
         ...workshop,
-        workshopDetails: workshop.workshopDetails
+        eventDetails: workshop.eventDetails
           ? {
-              ...workshop.workshopDetails,
-              poster: workshop.workshopDetails.poster
-                ? { ...workshop.workshopDetails.poster, file: null }
+              ...workshop.eventDetails,
+              poster: workshop.eventDetails.poster
+                ? { ...workshop.eventDetails.poster, file: null }
                 : null,
             }
           : null,
@@ -1116,11 +1120,11 @@ async function main() {
 
     pgData.neo4jSessions = (neo4jData.sessions || []).map((session: any) => ({
       ...session,
-      sessionDetails: session.sessionDetails
+      eventDetails: session.eventDetails
         ? {
-            ...session.sessionDetails,
-            poster: session.sessionDetails.poster
-              ? { ...session.sessionDetails.poster, file: null }
+            ...session.eventDetails,
+            poster: session.eventDetails.poster
+              ? { ...session.eventDetails.poster, file: null }
               : null,
           }
         : null,

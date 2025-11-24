@@ -17,7 +17,7 @@ export type EventType =
   | "Festival"
   | "Performance";
 
-export interface SessionDate {
+export interface EventDate {
   date: string;
   startTime: string;
   endTime: string;
@@ -33,7 +33,7 @@ export interface EventDetails {
   cost?: string;
   prize?: string; // Prize information (can be used by any event type)
   entryCost?: string; // Entry cost (can be used by any event type)
-  dates: SessionDate[]; // Required: Array of dates for events (at least one)
+  dates: EventDate[]; // Required: Array of dates for events (at least one)
   poster?: Image | null;
   city: City;
   styles?: string[]; // danceStyleTags

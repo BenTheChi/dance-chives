@@ -1,9 +1,6 @@
-import { parse } from "date-fns";
-import {
-  CalendarEventData,
-  CalendarWorkshopData,
-  CalendarSessionData,
-} from "@/db/queries/event";
+import { parse, isValid } from "date-fns";
+import { CalendarEventData } from "@/db/queries/event";
+import { EventType, EventDate } from "@/types/event";
 
 /**
  * Convert 24-hour time string (HH:mm) to 12-hour AM/PM format
@@ -33,14 +30,25 @@ export interface CalendarEvent {
   start: Date;
   end: Date;
   resource: {
-    type: "event" | "workshop" | "session";
-    originalData: any;
-    [key: string]: any;
+    eventType?: EventType; // The event type from the data (optional)
+    originalData: CalendarEventData;
+    dateEntry?: EventDate; // The specific date entry for multi-date events
+    poster?: {
+      id: string;
+      title: string;
+      url: string;
+      type: string;
+    } | null;
+    styles?: string[];
+    [key: string]: unknown;
   };
 }
 
 /**
- * Parse MM/DD/YYYY date string and HH:mm time string into a Date object
+ * Parse date string (supports MM/DD/YYYY and ISO formats) and HH:mm time string into a Date object
+ * @param dateStr - Date string in MM/DD/YYYY or ISO format (e.g., "12/25/2024" or "2024-12-25")
+ * @param timeStr - Time string in HH:mm format (24-hour, e.g., "14:30")
+ * @returns Date object with parsed date and time
  */
 function parseDateTime(
   dateStr: string | null | undefined,
@@ -54,11 +62,33 @@ function parseDateTime(
     return fallbackDate;
   }
 
-  // Parse date in MM/DD/YYYY format
-  const date = parse(dateStr, "MM/dd/yyyy", new Date());
+  let date: Date;
 
+  // Try to parse as ISO format first (YYYY-MM-DD or full ISO string)
+  if (dateStr.includes("-")) {
+    const isoDate = new Date(dateStr);
+    if (isValid(isoDate)) {
+      date = isoDate;
+    } else {
+      // Try parsing just the date part (YYYY-MM-DD)
+      const dateOnly = dateStr.split("T")[0].split(" ")[0];
+      const parsed = parse(dateOnly, "yyyy-MM-dd", new Date());
+      date = isValid(parsed) ? parsed : new Date();
+    }
+  } else {
+    // Try parsing as MM/DD/YYYY format
+    const parsed = parse(dateStr, "MM/dd/yyyy", new Date());
+    date = isValid(parsed) ? parsed : new Date(dateStr);
+  }
+
+  // Validate the parsed date
+  if (!isValid(date)) {
+    // If all parsing fails, use current date as fallback
+    date = new Date();
+  }
+
+  // Parse and set time if provided
   if (timeStr) {
-    // Parse time in HH:mm format (24-hour)
     const [hours, minutes] = timeStr.split(":").map(Number);
     if (!isNaN(hours) && !isNaN(minutes)) {
       date.setHours(hours, minutes, 0, 0);
@@ -75,11 +105,12 @@ function parseDateTime(
 
 /**
  * Convert Event to calendar events (returns array since events can have multiple dates)
+ * Uses the generic event structure with eventType and dates array
  */
 export function convertEventToCalendarEvents(
   event: CalendarEventData
 ): CalendarEvent[] {
-  // If event has multiple dates, create a calendar event for each date
+  // Primary path: use dates array if available
   if (event.dates && event.dates.length > 0) {
     return event.dates.map((dateEntry, index) => {
       const start = parseDateTime(dateEntry.date, dateEntry.startTime);
@@ -93,10 +124,9 @@ export function convertEventToCalendarEvents(
         start,
         end,
         resource: {
-          type: "event",
+          eventType: event.eventType, // Use eventType if available
           originalData: event,
-          dateEntry: dateEntry, // Store the specific date entry
-          eventType: event.eventType,
+          dateEntry: dateEntry, // Store the specific date entry for reference
           poster: event.poster,
           styles: event.styles,
         },
@@ -104,107 +134,56 @@ export function convertEventToCalendarEvents(
     });
   }
 
-  // Fall back to startDate for backward compatibility (single date)
-  const start = parseDateTime(event.startDate, event.startTime);
-  const end = event.endTime
-    ? parseDateTime(event.startDate, event.endTime)
-    : parseDateTime(event.startDate || "", "23:59");
+  // Fallback: use startDate for backward compatibility (single date events)
+  if (event.startDate) {
+    const start = parseDateTime(event.startDate, event.startTime);
+    const end = event.endTime
+      ? parseDateTime(event.startDate, event.endTime)
+      : parseDateTime(event.startDate, "23:59");
 
-  return [
-    {
-      id: event.id,
-      title: event.title,
-      start,
-      end,
-      resource: {
-        type: "event",
-        originalData: event,
-        eventType: event.eventType,
-        poster: event.poster,
-        styles: event.styles,
+    return [
+      {
+        id: event.id,
+        title: event.title,
+        start,
+        end,
+        resource: {
+          eventType: event.eventType, // Use eventType if available
+          originalData: event,
+          poster: event.poster,
+          styles: event.styles,
+        },
       },
-    },
-  ];
+    ];
+  }
+
+  // If no dates available, return empty array
+  console.warn(`Event ${event.id} has no dates available`);
+  return [];
 }
 
 /**
  * Convert Event to calendar event format (single event - kept for backward compatibility)
- * @deprecated Use convertEventToCalendarEvents instead
+ * @deprecated Use convertEventToCalendarEvents instead, which handles multi-date events properly
  */
 export function convertEventToCalendarEvent(
   event: CalendarEventData
 ): CalendarEvent {
   const events = convertEventToCalendarEvents(event);
-  return events[0];
-}
-
-/**
- * Convert Workshop to calendar event format
- */
-export function convertWorkshopToCalendarEvent(
-  workshop: CalendarWorkshopData
-): CalendarEvent {
-  const start = parseDateTime(workshop.startDate, workshop.startTime);
-  const end = workshop.endTime
-    ? parseDateTime(workshop.startDate, workshop.endTime)
-    : parseDateTime(workshop.startDate, "23:59");
-
-  return {
-    id: workshop.id,
-    title: workshop.title,
-    start,
-    end,
-    resource: {
-      type: "workshop",
-      originalData: workshop,
-      poster: workshop.poster,
-      styles: workshop.styles,
-    },
-  };
-}
-
-/**
- * Convert Session to calendar events (returns array since sessions have multiple dates)
- */
-export function convertSessionToCalendarEvents(
-  session: CalendarSessionData
-): CalendarEvent[] {
-  // Parse JSON dates array
-  let datesArray: Array<{
-    date: string;
-    startTime?: string;
-    endTime?: string;
-  }> = [];
-  try {
-    const parsed = JSON.parse(session.dates || "[]");
-    datesArray = Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Error parsing session dates:", error);
-    return [];
-  }
-
-  // Create separate calendar event for each date entry
-  return datesArray.map((dateEntry, index) => {
-    const start = parseDateTime(
-      dateEntry.date,
-      dateEntry.startTime || undefined
-    );
-    const end = dateEntry.endTime
-      ? parseDateTime(dateEntry.date, dateEntry.endTime)
-      : parseDateTime(dateEntry.date, "23:59");
-
+  if (events.length === 0) {
+    // Return a fallback event if no dates are available
     return {
-      id: `${session.id}-${index}`,
-      title: session.title,
-      start,
-      end,
+      id: event.id,
+      title: event.title,
+      start: new Date(),
+      end: new Date(),
       resource: {
-        type: "session",
-        originalData: session,
-        dateEntry: dateEntry, // Store the specific date entry
-        poster: session.poster,
-        styles: session.styles,
+        eventType: event.eventType, // Use eventType if available
+        originalData: event,
+        poster: event.poster,
+        styles: event.styles,
       },
     };
-  });
+  }
+  return events[0];
 }

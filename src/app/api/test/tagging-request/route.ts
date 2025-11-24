@@ -7,12 +7,29 @@ import {
   tagSelfInVideo,
 } from "@/lib/server_actions/request_actions";
 import driver from "@/db/driver";
+import type { Session, Record } from "neo4j-driver";
+
+interface TaggedUser {
+  displayName: string | null;
+  username: string | null;
+  role: string | null;
+  userId?: string | null;
+}
+
+interface VideoTaggedUser {
+  videoId: string;
+  videoTitle: string | null;
+  eventId: string | null;
+  sectionId: string | null;
+  bracketId: string | null;
+  taggedUsers: TaggedUser[];
+}
 
 /**
  * GET: Check tagging requests in database
  * POST: Test creating a tagging request
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -43,12 +60,12 @@ export async function GET(request: NextRequest) {
     };
 
     // Get all tagged users in videos from Neo4j
-    const neo4jSession = driver.session();
-    let videoTaggedUsers: any[] = [];
+    const neo4jSession: Session = driver.session();
+    let videoTaggedUsers: VideoTaggedUser[] = [];
     try {
       // Query all videos with their tagged users and roles
       // First get all videos and their context (event, section, bracket)
-      const videoTagsResult = await (neo4jSession as any).run(
+      const videoTagsResult = await neo4jSession.run(
         `
         MATCH (v:Video)
         OPTIONAL MATCH (v)-[:IN]->(s:Section)-[:IN]->(e:Event)
@@ -72,20 +89,20 @@ export async function GET(request: NextRequest) {
         `
       );
 
-      videoTaggedUsers = videoTagsResult.records.map((record: any) => ({
+      videoTaggedUsers = videoTagsResult.records.map((record: Record) => ({
         videoId: record.get("videoId"),
         videoTitle: record.get("videoTitle"),
         eventId: record.get("eventId"),
         sectionId: record.get("sectionId"),
         bracketId: record.get("bracketId"),
         taggedUsers: (record.get("taggedUsers") || []).filter(
-          (tu: any) => tu.userId !== null
+          (tu: TaggedUser) => tu.userId !== null
         ),
       }));
     } catch (error) {
       console.error("Error fetching video tagged users from Neo4j:", error);
     } finally {
-      await (neo4jSession as any).close();
+      await neo4jSession.close();
     }
 
     return NextResponse.json({

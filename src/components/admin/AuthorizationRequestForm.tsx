@@ -105,12 +105,12 @@ export function AuthorizationRequestForm({
   // Auth level options - show all levels higher than current user's level
   const getAvailableLevels = () => {
     return Object.entries(AUTH_LEVELS)
-      .map(([name, value]) => ({
-        name: getAuthLevelName(value),
+      .map(([value]) => ({
+        name: getAuthLevelName(Number(value)),
         value,
       }))
-      .filter((option) => option.value > currentUserAuthLevel)
-      .sort((a, b) => a.value - b.value);
+      .filter((option) => Number(option.value) > Number(currentUserAuthLevel))
+      .sort((a, b) => Number(a.value) - Number(b.value));
   };
 
   const availableLevels = getAvailableLevels();

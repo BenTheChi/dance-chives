@@ -3,13 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface WinningSection {
+export interface WinningSection {
   sectionId: string;
   sectionTitle: string;
   sectionType?: string;
   eventId: string;
   eventTitle: string;
-  startDate?: string; // Keep for backward compatibility
   dates?: Array<{
     date: string;
     startTime: string;
@@ -31,9 +30,7 @@ export function WinningSectionCard({ section }: WinningSectionCardProps) {
         <div className="space-y-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-lg">
-                {section.sectionTitle}
-              </h3>
+              <h3 className="font-semibold text-lg">{section.sectionTitle}</h3>
               {section.sectionType && (
                 <Badge variant="outline" className="text-xs">
                   {section.sectionType}
@@ -49,14 +46,16 @@ export function WinningSectionCard({ section }: WinningSectionCardProps) {
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-            {(section.dates && section.dates.length > 0 ? section.dates[0].date : section.startDate) && (
+            {(section.dates && section.dates.length > 0
+              ? section.dates[0].date
+              : section.dates?.[0]?.date) && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>
                   {new Date(
-                    section.dates && section.dates.length > 0 
-                      ? section.dates[0].date 
-                      : section.startDate || ""
+                    section.dates && section.dates.length > 0
+                      ? section.dates[0].date
+                      : section.dates?.[0]?.date || ""
                   ).toLocaleDateString()}
                 </span>
               </div>

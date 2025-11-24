@@ -127,7 +127,7 @@ export default function RolesForm({
             />
 
             <DebouncedSearchSelect<UserSearchItem, FormValues>
-              control={control as any}
+              control={control as Control<FormValues>}
               name={`roles.${index}.user`}
               onSearch={getUserSearchItems}
               placeholder="Search..."

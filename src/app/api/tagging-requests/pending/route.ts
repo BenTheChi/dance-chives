@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
+import { Prisma } from "@prisma/client";
 
 /**
  * GET: Fetch all pending tagging requests for an event for the authenticated user
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const whereClause: any = {
+    const whereClause: Prisma.TaggingRequestWhereInput = {
       eventId,
       senderId: session.user.id,
       targetUserId: session.user.id,

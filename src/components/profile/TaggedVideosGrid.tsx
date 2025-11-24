@@ -18,6 +18,7 @@ interface TaggedVideo {
   sectionTitle: string;
   roles?: string[];
   styles: string[];
+  type?: "battle" | "freestyle" | "choreography" | "class";
   taggedUsers?: UserSearchItem[];
 }
 
@@ -26,10 +27,7 @@ interface TaggedVideosGridProps {
   isWinner?: boolean;
 }
 
-export function TaggedVideosGrid({
-  videos,
-  isWinner = false,
-}: TaggedVideosGridProps) {
+export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
   const { data: session } = useSession();
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
     null
@@ -61,7 +59,7 @@ export function TaggedVideosGrid({
       title: taggedVideo.videoTitle,
       src: taggedVideo.videoSrc || "",
       styles: taggedVideo.styles || [],
-      type: (taggedVideo as any).type || "battle", // Include type if available, default to battle
+      type: taggedVideo.type || "battle",
       taggedWinners: winners,
       taggedDancers: dancers,
     };
@@ -78,7 +76,7 @@ export function TaggedVideosGrid({
               title: video.videoTitle,
               src: video.videoSrc || "",
               styles: video.styles || [],
-              type: (video as any).type || "battle", // Include type if available, default to battle
+              type: video.type || "battle",
               taggedWinners: (video.taggedUsers || []).filter(
                 (user) =>
                   user?.role?.toUpperCase() === "WINNER" ||
