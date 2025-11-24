@@ -17,8 +17,20 @@ import {
 } from "@/lib/server_actions/request_actions";
 import { cn } from "@/lib/utils";
 
+interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  relatedRequestType?: string | null;
+  relatedRequestId?: string | null;
+  read: boolean;
+  createdAt: Date;
+}
+
 export function NotificationPopover() {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -193,4 +205,3 @@ export function NotificationPopover() {
     </Popover>
   );
 }
-

@@ -184,7 +184,6 @@ export default function DashboardPage() {
       teamMember: [],
       authLevelChange: [],
     };
-  const notifications = dashboardData?.notifications || [];
   const userEvents = dashboardData?.userEvents || [];
   const teamMemberships = dashboardData?.teamMemberships || [];
 
