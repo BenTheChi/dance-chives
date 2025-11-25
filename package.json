@@ -26,7 +26,8 @@
     "export:seed": "dotenv -e .env.local -e .env -- tsx scripts/export-seed-data.ts",
     "dev:setup": "npm run docker:up && sleep 10 && npm run dev",
     "db:setup": "docker-compose up prisma-setup",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "nuke": "NODE_ENV=staging tsx scripts/nuke-staging.ts"
   },
   "dependencies": {
     "@auth/neo4j-adapter": "^2.8.0",

@@ -94,7 +94,6 @@ export default function SignUpForm({
   userId,
 }: SignUpFormProps = {}) {
   const { data: session, update } = useSession();
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profilePicturePreview, setProfilePicturePreview] = useState<
     string | null
