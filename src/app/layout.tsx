@@ -30,21 +30,6 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
 
-  // Log server-side environment
-  const nodeEnv = process.env.NODE_ENV || "development";
-  const vercelEnv = process.env.VERCEL_ENV;
-  const appEnv = process.env.APP_ENV;
-
-  // Determine actual environment (staging vs production)
-  // Note: NODE_ENV can be "staging" even though TypeScript types don't include it
-  const nodeEnvStr = String(nodeEnv);
-  const actualEnv =
-    vercelEnv === "preview" || nodeEnvStr === "staging" || appEnv === "staging"
-      ? "staging"
-      : nodeEnvStr === "production" || vercelEnv === "production"
-      ? "production"
-      : "development";
-
   return (
     <html lang="en">
       <head>
