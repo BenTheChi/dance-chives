@@ -195,14 +195,16 @@ export default function SignUpForm({
                     // Refresh the session to get updated user data
                     await update();
                     toast.success("Profile updated successfully!");
+                    // Small delay to show toast before redirect
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    // Use hard redirect to ensure session is fully refreshed
                     // Get username from currentUser to redirect
                     const username = currentUser?.username;
                     if (username) {
-                      router.push(`/profiles/${username}`);
+                      window.location.href = `/profiles/${username}`;
                     } else {
-                      router.push("/dashboard");
+                      window.location.href = "/dashboard";
                     }
-                    router.refresh();
                   } else {
                     toast.error(result.error || "Failed to update profile");
                   }
