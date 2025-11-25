@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Image from "next/image";
 import { CitySearchInput } from "@/components/CitySearchInput";
