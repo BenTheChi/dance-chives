@@ -93,7 +93,7 @@ export default function SignUpForm({
   currentUser,
   userId,
 }: SignUpFormProps = {}) {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profilePicturePreview, setProfilePicturePreview] = useState<
@@ -192,6 +192,8 @@ export default function SignUpForm({
                   const result = await updateUserProfile(userId, formData);
 
                   if (result.success) {
+                    // Refresh the session to get updated user data
+                    await update();
                     toast.success("Profile updated successfully!");
                     // Get username from currentUser to redirect
                     const username = currentUser?.username;
