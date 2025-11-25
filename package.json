@@ -6,8 +6,8 @@
     "dev": "next dev --turbopack",
     "db:migrate:staging": "NODE_ENV=staging npx prisma migrate deploy",
     "db:push:staging": "NODE_ENV=staging npx prisma db push",
-    "build": "next build",
-    "build:staging": "NODE_ENV=staging next build",
+    "build": "prisma generate && next build",
+    "build:staging": "NODE_ENV=staging prisma generate && NODE_ENV=staging next build",
     "start": "next start",
     "start:staging": "NODE_ENV=staging next start",
     "staging": "npm run build:staging && npm run start:staging",
@@ -25,7 +25,8 @@
     "neo4j:seed": "dotenv -e .env.local -e .env -- tsx scripts/seed-neo4j.ts",
     "export:seed": "dotenv -e .env.local -e .env -- tsx scripts/export-seed-data.ts",
     "dev:setup": "npm run docker:up && sleep 10 && npm run dev",
-    "db:setup": "docker-compose up prisma-setup"
+    "db:setup": "docker-compose up prisma-setup",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/neo4j-adapter": "^2.8.0",
