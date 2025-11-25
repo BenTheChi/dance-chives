@@ -52,7 +52,7 @@ export type PageAuthHandler<T = ReactNode> = (
  */
 async function getSessionWithRetry(
   maxRetries: number = 3,
-  retryDelay: number = 100
+  retryDelay: number = 500
 ): Promise<Session | null> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const session = await auth();
