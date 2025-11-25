@@ -45,16 +45,6 @@ export default async function RootLayout({
       ? "production"
       : "development";
 
-  console.log("🔧 [SERVER] Environment:", {
-    NODE_ENV: nodeEnv,
-    VERCEL_ENV: vercelEnv || "not set",
-    APP_ENV: appEnv || "not set",
-    actualEnv,
-    DATABASE_URL: process.env.DATABASE_URL ? "✅ Set" : "❌ Not set",
-    DEV_DATABASE_URL: process.env.DEV_DATABASE_URL ? "✅ Set" : "❌ Not set",
-    usingDevDb: actualEnv === "development",
-  });
-
   return (
     <html lang="en">
       <head>

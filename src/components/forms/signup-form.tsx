@@ -26,6 +26,7 @@ import { signup, updateUserProfile } from "@/lib/server_actions/auth_actions";
 import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
+import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ const signupSchema = z.object({
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
+  isCreator: z.boolean().optional(),
 });
 
 const editSchema = z.object({
@@ -132,6 +134,7 @@ export default function SignUpForm({
           date: "",
           city: undefined as City | undefined, // Required field, will be validated on submit
           styles: [],
+          isCreator: false,
         },
   });
 
@@ -223,6 +226,9 @@ export default function SignUpForm({
                   if (styles.length > 0) {
                     formData.set("Dance Styles", JSON.stringify(styles));
                   }
+                  // Get isCreator from form state and add to formData
+                  const isCreator = form.getValues("isCreator") || false;
+                  formData.set("isCreator", isCreator.toString());
                   await signup(formData);
                 }
               } catch (error) {
@@ -376,6 +382,34 @@ export default function SignUpForm({
                 </FormItem>
               )}
             />
+
+            {/* Event Creator Switch - only show on first-time signup (not in edit mode) */}
+            {!isEditMode && (
+              <FormField
+                control={form.control}
+                name="isCreator"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Do you want to create events?</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-muted-foreground">
+                          No
+                        </span>
+                        <Switch
+                          checked={field.value || false}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          Yes
+                        </span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Bio field */}
             <FormField

@@ -156,7 +156,14 @@ export async function signup(formData: FormData) {
     const userResult = await signupUser(session.user.id, profileData);
 
     // Determine auth level
-    const authLevel = adminUser ? adminUser.authLevel : AUTH_LEVELS.BASE_USER; // Base user level
+    let authLevel: number;
+    if (adminUser) {
+      authLevel = adminUser.authLevel;
+    } else {
+      // Check if user wants to be a creator (one-time decision during signup)
+      const isCreator = formData.get("isCreator") === "true";
+      authLevel = isCreator ? AUTH_LEVELS.CREATOR : AUTH_LEVELS.BASE_USER;
+    }
 
     // Mark account as verified in PostgreSQL (user completed registration)
     await prisma.user.update({
