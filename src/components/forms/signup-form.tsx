@@ -92,7 +92,7 @@ export default function SignUpForm({
   currentUser,
   userId,
 }: SignUpFormProps = {}) {
-  const { data: session, update } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profilePicturePreview, setProfilePicturePreview] = useState<
     string | null
@@ -192,6 +192,8 @@ export default function SignUpForm({
                   console.log("result", result);
 
                   if (result.success) {
+                    // Refresh the session to get updated user data
+                    await updateSession();
                     toast.success("Profile updated successfully!");
                     console.log("currentUser", currentUser);
 
@@ -226,6 +228,8 @@ export default function SignUpForm({
                   formData.set("isCreator", isCreator.toString());
                   const result = await signup(formData);
                   if (result.success) {
+                    // Refresh the session to get updated user data (username, displayName, accountVerified, etc.)
+                    await updateSession();
                     toast.success("Account created successfully!");
                     window.location.href = "/dashboard";
                   } else {

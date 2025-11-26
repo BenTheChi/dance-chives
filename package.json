@@ -9,7 +9,7 @@
     "db:migrate:production": "dotenv -e .env.production -- npx prisma migrate deploy",
     "db:push:production": "dotenv -e .env.production -- npx prisma db push",
     "build": "dotenv -e .env.production -- prisma generate && next build",
-    "build:staging": "dotenv -e .env.staging -- prisma generate && dotenv -e .env.staging -- APP_ENV=staging next build",
+    "build:staging": "dotenv -e .env.staging -- prisma generate && APP_ENV=staging dotenv -e .env.staging -- next build",
     "start": "next start",
     "start:staging": "APP_ENV=staging next start",
     "staging": "npm run build:staging && npm run start:staging",

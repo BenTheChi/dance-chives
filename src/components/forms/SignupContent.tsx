@@ -12,17 +12,11 @@ export function SignupContent() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // useEffect(() => {
-  //   if (session?.user.username) {
-  //     router.push("/dashboard");
-  //   }
-  // }, [session, router]);
-
-  // User is already logged in and registered
-  // if (session?.user.username) {
-  //   return null;
-  // }
-  console.log("session", session);
+  useEffect(() => {
+    if (session?.user.username) {
+      router.push("/dashboard");
+    }
+  }, [session, router]);
 
   // User is neither logged in nor registered, show OAuth options
   if (!session) {
