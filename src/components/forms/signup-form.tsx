@@ -20,7 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import DateInput from "../ui/dateinput";
+import { DatePicker } from "../ui/date-picker";
 import { z } from "zod";
 import { signup, updateUserProfile } from "@/lib/server_actions/auth_actions";
 import { useSession } from "next-auth/react";
@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { CitySearchInput } from "@/components/CitySearchInput";
 import { City } from "@/types/city";
+import { FieldErrors } from "react-hook-form";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -49,23 +50,36 @@ const citySchema = z.object({
 const signupSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
   username: z.string().min(1, "Username is required"),
-  date: z.string().min(1, "Date of birth is required"),
+  date: z
+    .string()
+    .min(1, "Date of birth is required")
+    .regex(/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/, {
+      message: "Date must be in MM/DD/YYYY format",
+    }),
   city: citySchema,
   styles: z.array(z.string()).optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
   isCreator: z.boolean().optional(),
+  profilePicture: z.instanceof(File).nullable().optional(),
 });
 
 const editSchema = z.object({
   displayName: z.string().min(1, "Display name is required"),
-  date: z.string().optional(),
+  date: z
+    .string()
+    .regex(/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/, {
+      message: "Date must be in MM/DD/YYYY format",
+    })
+    .optional()
+    .or(z.literal("")),
   city: citySchema,
   styles: z.array(z.string()).optional(),
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
+  profilePicture: z.instanceof(File).nullable().optional(),
 });
 
 interface SignUpFormProps {
@@ -125,6 +139,7 @@ export default function SignUpForm({
           bio: currentUser?.bio || "",
           instagram: currentUser?.instagram || "",
           website: currentUser?.website || "",
+          profilePicture: null,
         }
       : {
           displayName: "",
@@ -133,11 +148,106 @@ export default function SignUpForm({
           city: undefined as City | undefined, // Required field, will be validated on submit
           styles: [],
           isCreator: false,
+          profilePicture: null,
         },
   });
 
+  const { handleSubmit } = form;
+
   // Check if this is an admin user
   const isAdminUser = session?.user?.email === "benthechi@gmail.com";
+
+  // Convert form data to FormData in the same format as before
+  const convertToFormData = (data: z.infer<typeof schema>): FormData => {
+    const formData = new FormData();
+
+    // Add basic fields
+    formData.set("displayName", data.displayName);
+    if (!isEditMode && "username" in data) {
+      formData.set("username", data.username);
+    }
+    if (data.date) {
+      formData.set("date", data.date);
+    }
+    if (data.city) {
+      formData.set("city", JSON.stringify(data.city));
+    }
+
+    // Add optional fields
+    if (data.bio) {
+      formData.set("bio", data.bio);
+    }
+    if (data.instagram) {
+      formData.set("instagram", data.instagram);
+    }
+    if (data.website) {
+      formData.set("website", data.website);
+    }
+
+    // Add styles as JSON string
+    if (data.styles && data.styles.length > 0) {
+      formData.set("Dance Styles", JSON.stringify(data.styles));
+    }
+
+    // Add isCreator (only for signup)
+    if (!isEditMode && "isCreator" in data) {
+      formData.set("isCreator", (data.isCreator || false).toString());
+    }
+
+    // Add profile picture if provided
+    if (data.profilePicture && data.profilePicture instanceof File) {
+      formData.set("profilePicture", data.profilePicture);
+    }
+
+    return formData;
+  };
+
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    setIsSubmitting(true);
+    try {
+      const formData = convertToFormData(data);
+
+      if (isEditMode) {
+        // Edit mode - use updateUserProfile
+        if (!userId) {
+          toast.error("User ID is required");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const result = await updateUserProfile(userId, formData);
+
+        if (result.success) {
+          // Refresh the session to get updated user data
+          await updateSession();
+          toast.success("Profile updated successfully!");
+          window.location.href = "/dashboard";
+        } else {
+          toast.error(result.error || "Failed to update profile");
+        }
+      } else {
+        // Signup mode - use signup
+        const result = await signup(formData);
+        if (result.success) {
+          // Refresh the session to get updated user data
+          await updateSession();
+          toast.success("Account created successfully!");
+          window.location.href = "/dashboard";
+        } else {
+          toast.error(result.error || "Failed to create account");
+        }
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onError = (errors: FieldErrors<z.infer<typeof schema>>) => {
+    console.error("Form validation errors:", errors);
+    toast.error("Please fix the errors in the form");
+  };
 
   return (
     <Card className={isEditMode ? "w-full max-w-2xl" : "w-full max-w-2xl"}>
@@ -163,87 +273,7 @@ export default function SignUpForm({
         <Form {...form}>
           <form
             className="space-y-3"
-            action={async (formData: FormData) => {
-              // Validate form before submission
-              const isValid = await form.trigger();
-              if (!isValid) {
-                setIsSubmitting(false);
-                toast.error("Please fill in all required fields");
-                return;
-              }
-
-              setIsSubmitting(true);
-              try {
-                if (isEditMode) {
-                  // Edit mode - use updateUserProfile
-                  if (!userId) {
-                    toast.error("User ID is required");
-                    return;
-                  }
-
-                  // Get styles from form state and add to formData
-                  const styles = form.getValues("styles") || [];
-                  if (styles.length > 0) {
-                    formData.set("Dance Styles", JSON.stringify(styles));
-                  }
-
-                  const result = await updateUserProfile(userId, formData);
-
-                  console.log("result", result);
-
-                  if (result.success) {
-                    // Refresh the session to get updated user data
-                    await updateSession();
-                    toast.success("Profile updated successfully!");
-                    console.log("currentUser", currentUser);
-
-                    window.location.href = "/dashboard";
-                  } else {
-                    toast.error(result.error || "Failed to update profile");
-                  }
-                } else {
-                  // Signup mode - use signup
-                  // Get the date value from the form
-                  const date = formData.get("date") as string;
-                  // Validate the date format
-                  if (
-                    !date ||
-                    !/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/.test(
-                      date
-                    )
-                  ) {
-                    form.setError("date", {
-                      type: "manual",
-                      message: "Please enter a valid date in MM/DD/YYYY format",
-                    });
-                    return;
-                  }
-                  // Get styles from form state and add to formData
-                  const styles = form.getValues("styles") || [];
-                  if (styles.length > 0) {
-                    formData.set("Dance Styles", JSON.stringify(styles));
-                  }
-                  // Get isCreator from form state and add to formData
-                  const isCreator = form.getValues("isCreator") || false;
-                  formData.set("isCreator", isCreator.toString());
-                  const result = await signup(formData);
-                  if (result.success) {
-                    // Refresh the session to get updated user data (username, displayName, accountVerified, etc.)
-                    await updateSession();
-                    toast.success("Account created successfully!");
-                    window.location.href = "/dashboard";
-                  } else {
-                    toast.error(result.error || "Failed to create account");
-                  }
-                }
-              } catch (error) {
-                toast.error(
-                  error instanceof Error ? error.message : "An error occurred"
-                );
-              } finally {
-                setIsSubmitting(false);
-              }
-            }}
+            onSubmit={handleSubmit(onSubmit, onError)}
           >
             {/* Username field - only show in signup mode */}
             {!isEditMode && (
@@ -279,56 +309,70 @@ export default function SignUpForm({
             )}
 
             {/* Profile Picture */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Profile Picture {isEditMode ? "" : "(Optional)"}
-              </label>
-              {profilePicturePreview && (
-                <div className="mb-2">
-                  <Image
-                    src={profilePicturePreview}
-                    alt="Profile preview"
-                    width={80}
-                    height={80}
-                    className="w-20 h-20 rounded-full object-cover"
-                    unoptimized
-                  />
-                </div>
+            <FormField
+              control={form.control}
+              name="profilePicture"
+              render={({ field: { onChange, value, ...field } }) => (
+                <FormItem>
+                  <FormLabel>
+                    Profile Picture {isEditMode ? "" : "(Optional)"}
+                  </FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      {profilePicturePreview && (
+                        <div className="mb-2">
+                          <Image
+                            src={profilePicturePreview}
+                            alt="Profile preview"
+                            width={80}
+                            height={80}
+                            className="w-20 h-20 rounded-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      {!isEditMode &&
+                        session?.user?.image &&
+                        !profilePicturePreview && (
+                          <div className="mb-2">
+                            <Image
+                              src={session.user.image}
+                              alt="Current OAuth profile"
+                              width={80}
+                              height={80}
+                              className="w-20 h-20 rounded-full object-cover"
+                              unoptimized
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Current profile picture from OAuth
+                            </p>
+                          </div>
+                        )}
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        {...field}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          onChange(file);
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProfilePicturePreview(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          } else {
+                            setProfilePicturePreview(null);
+                          }
+                        }}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-              {!isEditMode &&
-                session?.user?.image &&
-                !profilePicturePreview && (
-                  <div className="mb-2">
-                    <Image
-                      src={session.user.image}
-                      alt="Current OAuth profile"
-                      width={80}
-                      height={80}
-                      className="w-20 h-20 rounded-full object-cover"
-                      unoptimized
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Current profile picture from OAuth
-                    </p>
-                  </div>
-                )}
-              <Input
-                type="file"
-                name="profilePicture"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setProfilePicturePreview(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
-                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
-              />
-            </div>
+            />
             <FormField
               control={form.control}
               name="displayName"
@@ -351,25 +395,11 @@ export default function SignUpForm({
               label="City"
               placeholder="Search for a city..."
               required
-              value={form.watch("city")}
-              onChange={(city) => {
-                if (city !== null && city !== undefined) {
-                  form.setValue("city", city);
-                }
-              }}
             />
-            <FormField
+            <DatePicker
               control={form.control}
               name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date of Birth</FormLabel>
-                  <FormControl>
-                    <DateInput {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Date of Birth"
             />
             <FormField
               control={form.control}

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CalendarIcon,
-  SearchIcon,
-  Tag,
-  MapPin,
-  Users,
-} from "lucide-react";
+import { CalendarIcon, SearchIcon, Tag, MapPin, Users } from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,
@@ -25,10 +19,10 @@ import { usePathname } from "next/navigation";
 
 const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
-  { title: "Styles", url: "/styles", icon: Tag },
   { title: "Events", url: "/events", icon: CalendarIcon },
   { title: "Cities", url: "/cities", icon: MapPin },
-  { title: "Profiles", url: "/profiles", icon: Users },
+  { title: "Styles", url: "/styles", icon: Tag },
+  { title: "Community", url: "/profiles", icon: Users },
 ];
 
 export function AppSidebar() {

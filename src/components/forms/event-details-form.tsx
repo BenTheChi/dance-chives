@@ -22,7 +22,7 @@ import {
 import { Input } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import UploadFile from "../ui/uploadfile";
-import DateInput from "../DateInput";
+import { DatePicker } from "../ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -213,7 +213,7 @@ export function EventDetailsForm({
             <div className="flex flex-col sm:flex-row gap-5 w-full">
               {/* Date Field */}
               <div className="w-full sm:w-1/3">
-                <DateInput
+                <DatePicker
                   control={control as Control<FormValues>}
                   name={
                     `eventDetails.dates.${index}.date` as FieldPath<FormValues>
