@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env.staging if APP_ENV=staging (Next.js doesn't auto-load this)
+if (process.env.APP_ENV === "staging") {
+  config({ path: resolve(process.cwd(), ".env.staging") });
+}
 
 const nextConfig: NextConfig = {
   experimental: {

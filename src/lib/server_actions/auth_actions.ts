@@ -39,12 +39,14 @@ export async function signOutAccount() {
   await signOut({ redirectTo: "/" });
 }
 
-export async function signup(formData: FormData) {
+export async function signup(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
   const session = await auth();
 
   if (!session) {
     console.error("No user session found");
-    return;
+    return { success: false, error: "No user session found" };
   }
 
   if (
@@ -54,7 +56,7 @@ export async function signup(formData: FormData) {
     !formData.get("city")
   ) {
     console.error("Missing required fields");
-    return;
+    return { success: false, error: "Missing required fields" };
   }
 
   try {
@@ -184,12 +186,11 @@ export async function signup(formData: FormData) {
 
     console.log("✅ User registration completed:", userResult);
     console.log("✅ Account marked as verified in PostgreSQL");
+    return { success: true };
   } catch (error) {
     console.error("❌ Signup failed:", error);
-    throw error;
+    return { success: false, error: "Failed to signup" };
   }
-
-  redirect("/dashboard");
 }
 
 /**

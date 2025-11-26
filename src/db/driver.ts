@@ -1,20 +1,12 @@
 import neo4j from "neo4j-driver";
 
-const nodeEnv = process.env.NODE_ENV || "development";
+const appEnv = process.env.APP_ENV || process.env.NODE_ENV || "development";
 
-// Helper function to get the appropriate environment variable
-// Uses DEV_ prefixed variables in development, standard variables otherwise
-const getEnvVar = (devVar: string, standardVar: string): string | undefined => {
-  if (nodeEnv === "development") {
-    return process.env[devVar] || process.env[standardVar];
-  }
-  return process.env[standardVar];
-};
-
+// All environments use the same variable names
 let uri =
-  getEnvVar("DEV_NEO4J_URI", "NEO4J_URI") ||
+  process.env.NEO4J_URI ||
   (() => {
-    throw new Error("NEO4J_URI or DEV_NEO4J_URI is not defined");
+    throw new Error("NEO4J_URI is not defined");
   })();
 
 // Remove any query parameters from URI to avoid conflicts with driver config
@@ -33,8 +25,8 @@ const isLocal =
   uri.includes("localhost") ||
   uri.includes("127.0.0.1") ||
   uri.includes("neo4j:7687") || // Docker service name
-  nodeEnv === "development" ||
-  getEnvVar("DEV_NEO4J_PASSWORD", "NEO4J_PASSWORD") === "dev_password"; // Docker dev password
+  appEnv === "development" ||
+  process.env.NEO4J_PASSWORD === "dev_password"; // Docker dev password
 
 // For cloud instances (Neo4j Aura), convert to secure protocol if not already
 // This ensures encryption is specified in the URI, not in config (avoiding conflicts)
@@ -51,30 +43,26 @@ if (!isLocal && !uriHasEncryptionInProtocol) {
 try {
   const url = new URL(uri.replace(/^(neo4j|bolt)(\+s)?:\/\//, "http://"));
   console.log(
-    `📊 [Neo4j] Using ${nodeEnv} database: ${url.hostname}:${
-      url.port || "7687"
-    }`
+    `📊 [Neo4j] Using ${appEnv} database: ${url.hostname}:${url.port || "7687"}`
   );
 } catch (error: unknown) {
   console.error(
-    `📊 [Neo4j] Using ${nodeEnv} database: ${uri.substring(0, 50)}...`,
+    `📊 [Neo4j] Using ${appEnv} database: ${uri.substring(0, 50)}...`,
     error
   );
 }
 
 const username =
-  getEnvVar("DEV_NEO4J_USERNAME", "NEO4J_USERNAME") ||
-  getEnvVar("DEV_NEO4J_USER", "NEO4J_USER") ||
+  process.env.NEO4J_USERNAME ||
+  process.env.NEO4J_USER ||
   (() => {
-    throw new Error(
-      "NEO4J_USERNAME/NEO4J_USER or DEV_NEO4J_USERNAME/DEV_NEO4J_USER is not defined"
-    );
+    throw new Error("NEO4J_USERNAME or NEO4J_USER is not defined");
   })();
 
 const password =
-  getEnvVar("DEV_NEO4J_PASSWORD", "NEO4J_PASSWORD") ||
+  process.env.NEO4J_PASSWORD ||
   (() => {
-    throw new Error("NEO4J_PASSWORD or DEV_NEO4J_PASSWORD is not defined");
+    throw new Error("NEO4J_PASSWORD is not defined");
   })();
 
 // Build driver config

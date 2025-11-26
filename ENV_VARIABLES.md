@@ -6,26 +6,39 @@ This document shows all environment variables needed for different environments.
 
 ### Development (Local Docker)
 
-Use these when `NODE_ENV="development"`:
-
 ```env
+APP_ENV="development"
 NODE_ENV="development"
 
 # Local Docker PostgreSQL (PostgreSQL 17)
-DEV_DATABASE_URL="postgresql://postgres:dev_password@localhost:5432/dance_chives_dev?schema=public"
+DATABASE_URL="postgresql://postgres:dev_password@localhost:5432/dance_chives_dev?schema=public"
 
 # Local Docker Neo4j
-DEV_NEO4J_URI="bolt://localhost:7687"
-DEV_NEO4J_USERNAME="neo4j"
-DEV_NEO4J_PASSWORD="dev_password"
+NEO4J_URI="bolt://localhost:7687"
+NEO4J_USERNAME="neo4j"
+NEO4J_PASSWORD="dev_password"
 ```
 
-### Staging/Production (Neon + Neo4j Aura)
-
-Use these when `NODE_ENV="staging"` or `NODE_ENV="production"`:
+### Staging (Neon + Neo4j Aura)
 
 ```env
-NODE_ENV="staging"  # or "production"
+APP_ENV="staging"
+NODE_ENV="production"
+
+# Neon PostgreSQL
+DATABASE_URL="postgresql://[user]:[password]@[endpoint]/[database]?sslmode=require"
+
+# Neo4j Aura
+NEO4J_URI="bolt://[your-instance].databases.neo4j.io:7687"
+NEO4J_USERNAME="neo4j"
+NEO4J_PASSWORD="[your-password]"
+```
+
+### Production (Neon + Neo4j Aura)
+
+```env
+APP_ENV="production"
+NODE_ENV="production"
 
 # Neon PostgreSQL
 DATABASE_URL="postgresql://[user]:[password]@[endpoint]/[database]?sslmode=require"
@@ -42,7 +55,14 @@ NEO4J_PASSWORD="[your-password]"
 
 ```env
 # Environment
-NODE_ENV="development" | "staging" | "production"
+APP_ENV="development" | "staging" | "production"
+NODE_ENV="development" | "production"  # Note: staging uses "production" for Next.js builds
+
+# Database
+DATABASE_URL="postgresql://[connection-string]"
+NEO4J_URI="bolt://[neo4j-uri]"
+NEO4J_USERNAME="neo4j"
+NEO4J_PASSWORD="[password]"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"  # or your production URL
@@ -51,52 +71,50 @@ NEXTAUTH_SECRET="your-secret-key-here"
 # Google OAuth
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Public URLs (for client-side usage)
+NEXT_PUBLIC_ORIGIN="http://localhost:3000"  # or your production URL
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
 ```
 
-### Development Only (when NODE_ENV="development")
+### Optional Variables
 
 ```env
-# Local Docker PostgreSQL
-DEV_DATABASE_URL="postgresql://postgres:dev_password@localhost:5432/dance_chives_dev?schema=public"
+# Cloudflare R2 (for file storage)
+CLOUDFLARE_R2_ACCOUNT_ID="your-account-id"
+CLOUDFLARE_R2_ACCESS_KEY_ID="your-access-key-id"
+CLOUDFLARE_R2_SECRET_ACCESS_KEY="your-secret-access-key"
+CLOUDFLARE_R2_PUBLIC_URL="https://your-r2-public-url.com"
 
-# Local Docker Neo4j
-DEV_NEO4J_URI="bolt://localhost:7687"
-DEV_NEO4J_USERNAME="neo4j"
-DEV_NEO4J_PASSWORD="dev_password"
-```
-
-### Staging/Production Only (when NODE_ENV="staging" or "production")
-
-```env
-# Neon PostgreSQL Connection String
-# Get from: Neon Dashboard → Project → Connection Details
-DATABASE_URL="postgresql://[user]:[password]@[endpoint]/[database]?sslmode=require"
-
-# Neo4j Aura Connection
-NEO4J_URI="bolt://[instance-id].databases.neo4j.io:7687"
-NEO4J_USERNAME="neo4j"
-NEO4J_PASSWORD="[your-neo4j-password]"
+# Google Cloud Storage (for file storage)
+GCP_SERVICE_ACCOUNT_B64="base64-encoded-service-account-json"
 ```
 
 ## How It Works
 
-The app automatically selects which variables to use based on `NODE_ENV`:
+**All environments use the same variable names** - there are no `DEV_*` prefixes anymore.
 
-- **Development**: Uses `DEV_*` prefixed variables (falls back to standard names if DEV\_ vars not set)
-- **Staging/Production**: Uses standard variable names (`DATABASE_URL`, `NEO4J_URI`, etc.)
+The app determines which environment it's in by checking `APP_ENV` first (which overrides `NODE_ENV`), then falling back to `NODE_ENV`:
+
+- **Development**: `APP_ENV="development"` or `NODE_ENV="development"`
+- **Staging**: `APP_ENV="staging"` (even when `NODE_ENV="production"` for Next.js builds)
+- **Production**: `APP_ENV="production"` or `NODE_ENV="production"`
+
+This approach allows staging to work correctly even when Next.js forces `NODE_ENV=production` during builds.
 
 ## Example Configurations
 
-### `.env.local` (Development - Git Ignored)
+### `.env.development` (Development - Git Ignored)
 
 ```env
+APP_ENV="development"
 NODE_ENV="development"
 
 # Local Docker
-DEV_DATABASE_URL="postgresql://postgres:dev_password@localhost:5432/dance_chives_dev?schema=public"
-DEV_NEO4J_URI="bolt://localhost:7687"
-DEV_NEO4J_USERNAME="neo4j"
-DEV_NEO4J_PASSWORD="dev_password"
+DATABASE_URL="postgresql://postgres:dev_password@localhost:5432/dance_chives_dev?schema=public"
+NEO4J_URI="bolt://localhost:7687"
+NEO4J_USERNAME="neo4j"
+NEO4J_PASSWORD="dev_password"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
@@ -105,12 +123,17 @@ NEXTAUTH_SECRET="dev-secret-key-change-in-production"
 # Google OAuth
 GOOGLE_CLIENT_ID="your-dev-client-id"
 GOOGLE_CLIENT_SECRET="your-dev-client-secret"
+
+# Public URLs
+NEXT_PUBLIC_ORIGIN="http://localhost:3000"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
 ```
 
-### `.env` (Staging - Git Ignored)
+### `.env.staging` (Staging - Git Ignored)
 
 ```env
-NODE_ENV="staging"
+APP_ENV="staging"
+NODE_ENV="production"
 
 # Neon PostgreSQL
 DATABASE_URL="postgresql://neondb_owner:abc123@ep-cool-name-123456.us-east-2.aws.neon.tech/neondb?sslmode=require"
@@ -127,11 +150,16 @@ NEXTAUTH_SECRET="staging-secret-key"
 # Google OAuth
 GOOGLE_CLIENT_ID="your-staging-client-id"
 GOOGLE_CLIENT_SECRET="your-staging-client-secret"
+
+# Public URLs
+NEXT_PUBLIC_ORIGIN="https://staging.yourdomain.com"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
 ```
 
-### Production (Set in Hosting Platform - Vercel/GCloud Run)
+### `.env.production` (Production - Set in Hosting Platform)
 
 ```env
+APP_ENV="production"
 NODE_ENV="production"
 
 # Neon PostgreSQL
@@ -149,6 +177,10 @@ NEXTAUTH_SECRET="production-secret-key-use-random-string"
 # Google OAuth
 GOOGLE_CLIENT_ID="your-production-client-id"
 GOOGLE_CLIENT_SECRET="your-production-client-secret"
+
+# Public URLs
+NEXT_PUBLIC_ORIGIN="https://yourdomain.com"
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your-google-maps-api-key"
 ```
 
 ## Getting Your Neon Connection String
@@ -166,7 +198,9 @@ GOOGLE_CLIENT_SECRET="your-production-client-secret"
 
 ## Notes
 
-- **Never commit `.env` or `.env.local` files** - they contain secrets
+- **Never commit `.env*` files** - they contain secrets
 - **Use different secrets** for development, staging, and production
 - **Neon requires SSL** - always include `?sslmode=require` in connection string
-- **DEV\_ variables are optional** - if not set, falls back to standard variable names
+- **All environments use the same variable names** - `DATABASE_URL`, `NEO4J_URI`, etc. (no `DEV_*` prefixes)
+- **`APP_ENV` overrides `NODE_ENV`** - This is how we distinguish staging from production when Next.js forces `NODE_ENV=production` for builds
+- **Staging uses `NODE_ENV=production`** - This is required by Next.js, but `APP_ENV=staging` tells the app it's staging

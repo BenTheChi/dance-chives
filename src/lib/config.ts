@@ -3,25 +3,30 @@
 
 /**
  * Get the actual environment, distinguishing between staging and production.
- * Checks VERCEL_ENV first (if on Vercel), then NODE_ENV, then APP_ENV.
+ * Checks APP_ENV first (set in .env files), then VERCEL_ENV, then NODE_ENV.
+ * APP_ENV overrides NODE_ENV which Next.js forces to "production" for builds.
  * VERCEL_ENV can be: "development", "preview" (staging), or "production"
  */
 export const getActualEnvironment = (): "development" | "staging" | "production" => {
-  const nodeEnv = String(process.env.NODE_ENV || "");
+  // Check APP_ENV first (set in .env files)
+  // This overrides NODE_ENV which Next.js forces to "production" for builds
+  if (process.env.APP_ENV) {
+    return process.env.APP_ENV as "development" | "staging" | "production";
+  }
   
-  // Check VERCEL_ENV first (Vercel sets this automatically)
+  // Check VERCEL_ENV (Vercel sets this automatically)
   // "preview" means staging/preview deployments
-  if (process.env.VERCEL_ENV === "preview" || nodeEnv === "staging") {
+  if (process.env.VERCEL_ENV === "preview") {
     return "staging";
   }
   
-  // Check custom APP_ENV variable (for non-Vercel deployments)
-  if (process.env.APP_ENV === "staging") {
-    return "staging";
+  if (process.env.VERCEL_ENV === "production") {
+    return "production";
   }
   
-  // Check if explicitly set to production
-  if (nodeEnv === "production" || process.env.VERCEL_ENV === "production") {
+  // Fall back to NODE_ENV
+  const nodeEnv = String(process.env.NODE_ENV || "");
+  if (nodeEnv === "production") {
     return "production";
   }
   
@@ -34,19 +39,10 @@ export const isDevelopment = actualEnv === "development";
 export const isStaging = actualEnv === "staging";
 export const isProduction = actualEnv === "production";
 
-// Helper function to get the appropriate environment variable
-// Uses DEV_ prefixed variables in development, standard variables otherwise
-const getEnvVar = (devVar: string, standardVar: string): string | undefined => {
-  if (isDevelopment) {
-    return process.env[devVar] || process.env[standardVar];
-  }
-  return process.env[standardVar];
-};
-
 // Database configuration detection
 export const isLocalDatabase = () => {
-  const dbUrl = getEnvVar("DEV_DATABASE_URL", "DATABASE_URL");
-  const neo4jUri = getEnvVar("DEV_NEO4J_URI", "NEO4J_URI");
+  const dbUrl = process.env.DATABASE_URL;
+  const neo4jUri = process.env.NEO4J_URI;
 
   return (
     dbUrl?.includes("localhost") ||
@@ -60,11 +56,10 @@ export const isCloudDatabase = () => !isLocalDatabase();
 
 // Database URLs with fallbacks
 export const getDatabaseConfig = () => {
-  const dbUrl = getEnvVar("DEV_DATABASE_URL", "DATABASE_URL") || "";
-  const neo4jUri = getEnvVar("DEV_NEO4J_URI", "NEO4J_URI") || "";
-  const neo4jUsername =
-    getEnvVar("DEV_NEO4J_USERNAME", "NEO4J_USERNAME") || "neo4j";
-  const neo4jPassword = getEnvVar("DEV_NEO4J_PASSWORD", "NEO4J_PASSWORD") || "";
+  const dbUrl = process.env.DATABASE_URL || "";
+  const neo4jUri = process.env.NEO4J_URI || "";
+  const neo4jUsername = process.env.NEO4J_USERNAME || "neo4j";
+  const neo4jPassword = process.env.NEO4J_PASSWORD || "";
 
   return {
     postgres: {
@@ -92,7 +87,7 @@ export const getEnvironmentInfo = () => {
     nodeEnv: process.env.NODE_ENV,
     vercelEnv: process.env.VERCEL_ENV,
     appEnv: process.env.APP_ENV,
-    actualEnv,
+    actualEnv: actualEnv,
     isDevelopment,
     isStaging,
     isProduction,

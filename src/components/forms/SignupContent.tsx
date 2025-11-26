@@ -12,16 +12,17 @@ export function SignupContent() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  useEffect(() => {
-    if (session?.user.username) {
-      router.push("/dashboard");
-    }
-  }, [session, router]);
+  // useEffect(() => {
+  //   if (session?.user.username) {
+  //     router.push("/dashboard");
+  //   }
+  // }, [session, router]);
 
   // User is already logged in and registered
-  if (session?.user.username) {
-    return null;
-  }
+  // if (session?.user.username) {
+  //   return null;
+  // }
+  console.log("session", session);
 
   // User is neither logged in nor registered, show OAuth options
   if (!session) {
@@ -46,7 +47,7 @@ export function SignupContent() {
 
   // If the user is logged in, but not registered show the signup form
   return (
-    <div className="flex items-center justify-center w-full">
+    <div className="flex items-start justify-center w-full max-w-4xl px-4">
       <SignUpForm />
     </div>
   );

@@ -140,7 +140,7 @@ export default function SignUpForm({
   const isAdminUser = session?.user?.email === "benthechi@gmail.com";
 
   return (
-    <Card className={isEditMode ? "w-full max-w-2xl" : "w-3/4"}>
+    <Card className={isEditMode ? "w-full max-w-2xl" : "w-full max-w-2xl"}>
       <CardHeader>
         <CardTitle className="text-xl">
           {isEditMode ? "Edit Profile" : "Complete Your Registration"}
@@ -162,7 +162,7 @@ export default function SignUpForm({
       <CardContent>
         <Form {...form}>
           <form
-            className="space-y-4"
+            className="space-y-3"
             action={async (formData: FormData) => {
               // Validate form before submission
               const isValid = await form.trigger();
@@ -189,20 +189,13 @@ export default function SignUpForm({
 
                   const result = await updateUserProfile(userId, formData);
 
+                  console.log("result", result);
+
                   if (result.success) {
-                    // Refresh the session to get updated user data
-                    await update();
                     toast.success("Profile updated successfully!");
-                    // Small delay to show toast before redirect
-                    await new Promise((resolve) => setTimeout(resolve, 500));
-                    // Use hard redirect to ensure session is fully refreshed
-                    // Get username from currentUser to redirect
-                    const username = currentUser?.username;
-                    if (username) {
-                      window.location.href = `/profiles/${username}`;
-                    } else {
-                      window.location.href = "/dashboard";
-                    }
+                    console.log("currentUser", currentUser);
+
+                    window.location.href = "/dashboard";
                   } else {
                     toast.error(result.error || "Failed to update profile");
                   }
@@ -231,7 +224,13 @@ export default function SignUpForm({
                   // Get isCreator from form state and add to formData
                   const isCreator = form.getValues("isCreator") || false;
                   formData.set("isCreator", isCreator.toString());
-                  await signup(formData);
+                  const result = await signup(formData);
+                  if (result.success) {
+                    toast.success("Account created successfully!");
+                    window.location.href = "/dashboard";
+                  } else {
+                    toast.error(result.error || "Failed to create account");
+                  }
                 }
               } catch (error) {
                 toast.error(
@@ -423,7 +422,8 @@ export default function SignUpForm({
                   <FormControl>
                     <Textarea
                       placeholder="Tell us about yourself..."
-                      className="resize-none"
+                      className="resize-none min-h-[80px]"
+                      rows={3}
                       {...field}
                     />
                   </FormControl>
