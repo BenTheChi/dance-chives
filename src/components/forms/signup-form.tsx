@@ -312,7 +312,7 @@ export default function SignUpForm({
             <FormField
               control={form.control}
               name="profilePicture"
-              render={({ field: { onChange, value, ...field } }) => (
+              render={({ field: { onChange, value: _, ...field } }) => (
                 <FormItem>
                   <FormLabel>
                     Profile Picture {isEditMode ? "" : "(Optional)"}
