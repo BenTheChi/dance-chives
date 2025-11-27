@@ -405,7 +405,8 @@ export default async function EventPage({ params }: PageProps) {
                       (sum: number, bracket) => sum + bracket.videos.length,
                       0
                     );
-                    const totalVideoCount = directVideoCount + bracketVideoCount;
+                    const totalVideoCount =
+                      directVideoCount + bracketVideoCount;
 
                     return (
                       <div
@@ -425,11 +426,13 @@ export default async function EventPage({ params }: PageProps) {
                               />
                             ) : (
                               <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-                                <span className="text-gray-400 text-sm">No poster</span>
+                                <span className="text-gray-400 text-sm">
+                                  No poster
+                                </span>
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Content on right - 1/2 width */}
                           <div className="w-1/2 flex flex-col gap-2">
                             <div className="flex items-center gap-2">
@@ -441,7 +444,10 @@ export default async function EventPage({ params }: PageProps) {
                               </Link>
                             </div>
                             {section.sectionType && (
-                              <Badge variant="outline" className="text-xs w-fit">
+                              <Badge
+                                variant="outline"
+                                className="text-xs w-fit"
+                              >
                                 {section.sectionType}
                               </Badge>
                             )}
@@ -499,7 +505,9 @@ export default async function EventPage({ params }: PageProps) {
                             {/* Display section winners */}
                             {section.winners && section.winners.length > 0 && (
                               <div className="flex flex-wrap gap-1 items-center mt-2">
-                                <span className="text-lg font-bold">Winner:</span>
+                                <span className="text-lg font-bold">
+                                  Winner:
+                                </span>
                                 {Array.from(
                                   new Map(
                                     section.winners
@@ -514,7 +522,9 @@ export default async function EventPage({ params }: PageProps) {
                                     asChild
                                   >
                                     {winner.username ? (
-                                      <Link href={`/profiles/${winner.username}`}>
+                                      <Link
+                                        href={`/profiles/${winner.username}`}
+                                      >
                                         {winner.displayName}
                                       </Link>
                                     ) : (
