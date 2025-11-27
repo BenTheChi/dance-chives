@@ -247,7 +247,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
 
-  const [activeMainTab, setActiveMainTab] = useState("Event Details");
+  const [activeMainTab, setActiveMainTab] = useState("Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
   //TODO: set up logic for next buttons to use the active tab index
@@ -327,7 +327,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   }, [activeMainTab, sectionsMemo, activeSectionId]);
 
-  const mainTabs = ["Event Details", "Roles", "Sections", "Photo Gallery"];
+  const mainTabs = ["Details", "Roles", "Sections", "Photo Gallery"];
 
   const addSection = () => {
     const newSection: Section = {
@@ -465,7 +465,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     console.log("Invalid field paths:", invalidFields);
 
     const tabMap: { [key: string]: string } = {
-      eventDetails: "Event Details",
+      eventDetails: "Details",
       sections: "Sections",
       roles: "Roles",
       gallery: "Photo Gallery",
@@ -590,7 +590,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto px-4 sm:px-6 py-6 max-w-full overflow-x-hidden">
       <h1 className="text-3xl font-bold text-center mb-8">
         {isEditing ? "Edit Event" : "New Event"}
       </h1>
@@ -616,7 +616,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           </div>
 
           {/* Tab Content */}
-          {activeMainTab === "Event Details" && (
+          {activeMainTab === "Details" && (
             <EventDetailsForm
               control={control}
               setValue={setValue}

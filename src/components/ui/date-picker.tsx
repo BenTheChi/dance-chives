@@ -24,8 +24,9 @@ import {
 interface DatePickerProps<T extends FieldValues> {
   control: Control<T>;
   name: FieldPath<T>;
-  label?: string;
+  label?: string | React.ReactNode;
   disabled?: boolean;
+  required?: boolean;
 }
 
 export function DatePicker<T extends FieldValues>({
@@ -33,6 +34,7 @@ export function DatePicker<T extends FieldValues>({
   name,
   label,
   disabled = false,
+  required = false,
 }: DatePickerProps<T>) {
   return (
     <FormField
@@ -72,7 +74,12 @@ export function DatePicker<T extends FieldValues>({
 
         return (
           <FormItem className="w-full">
-            {label && <FormLabel>{label}</FormLabel>}
+            {label && (
+              <FormLabel>
+                {label}
+                {required && <span className="text-red-500">*</span>}
+              </FormLabel>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <FormControl>

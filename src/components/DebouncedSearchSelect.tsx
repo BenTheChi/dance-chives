@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import { Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -30,7 +31,7 @@ interface DebouncedSearchSelectProps<
   TFormValues extends FieldValues = FieldValues
 > {
   control: Control<TFormValues>;
-  label: string;
+  label: string | React.ReactNode;
   value?: T | null;
   defaultValue?: T;
   onChange?: (value: T | null) => void;
@@ -175,7 +176,10 @@ function DebouncedSearchSelect<
 
           return (
             <FormItem>
-              <FormLabel>{label}</FormLabel>
+              <FormLabel>
+                {label}
+                {required && <span className="text-red-500">*</span>}
+              </FormLabel>
               <FormControl>
                 <div className="flex items-center border rounded-md bg-white">
                   <div className="flex items-center w-full">
