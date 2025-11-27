@@ -219,10 +219,8 @@ export const getEvent = async (id: string): Promise<Event> => {
       updatedAt: e.updatedAt,
       title: e.title,
       description: e.description,
-      address: e.address,
+      location: e.location,
       cost: e.cost,
-      prize: e.prize,
-      entryCost: e.entryCost,
       startDate: e.startDate,
       dates: e.dates,
       schedule: e.schedule,
@@ -719,7 +717,7 @@ export const getEvent = async (id: string): Promise<Event> => {
   const eventDetails: EventDetails = {
     title: eventData.title,
     description: eventData.description,
-    address: eventData.address,
+    location: eventData.location,
     cost: eventData.cost,
     schedule: eventData.schedule,
     creatorId: eventData.creatorId,
@@ -734,8 +732,6 @@ export const getEvent = async (id: string): Promise<Event> => {
     dates: dates || [],
     styles: eventStyles,
     eventType: (eventType as EventType) || "Other", // Always set eventType, default to "Other"
-    ...(eventData.prize && { prize: eventData.prize }),
-    ...(eventData.entryCost && { entryCost: eventData.entryCost }),
   };
 
   // Build the result object
@@ -1390,9 +1386,7 @@ export const insertEvent = async (event: Event): Promise<Event> => {
       ON CREATE SET 
         e.title = $title,
         e.description = $description,
-        e.address = $address,
-        e.prize = $prize,
-        e.entryCost = $entryCost,
+        e.location = $location,
         e.cost = $cost,
         e.startDate = $startDate,
         e.dates = $dates,
@@ -1402,9 +1396,7 @@ export const insertEvent = async (event: Event): Promise<Event> => {
       ON MATCH SET
         e.title = $title,
         e.description = $description,
-        e.address = $address,
-        e.prize = $prize,
-        e.entryCost = $entryCost,
+        e.location = $location,
         e.cost = $cost,
         e.startDate = $startDate,
         e.dates = $dates,
@@ -1422,9 +1414,7 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         creatorId: eventDetails.creatorId,
         title: eventDetails.title,
         description: eventDetails.description,
-        address: eventDetails.address,
-        prize: eventDetails.prize || null,
-        entryCost: eventDetails.entryCost || null,
+        location: eventDetails.location,
         cost: eventDetails.cost || null,
         // Derive startDate from first date in dates array for database storage
         startDate:
@@ -1506,9 +1496,7 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         creatorId: eventDetails.creatorId,
         title: eventDetails.title,
         description: eventDetails.description,
-        address: eventDetails.address,
-        prize: eventDetails.prize || null,
-        entryCost: eventDetails.entryCost || null,
+        location: eventDetails.location,
         cost: eventDetails.cost || null,
         // Derive startDate from first date in dates array for database storage
         startDate:
@@ -1658,9 +1646,7 @@ export const editEvent = async (event: Event): Promise<Event> => {
       `MATCH (e:Event {id: $id})
        SET e.title = $title,
            e.description = $description,
-           e.address = $address,
-           e.prize = $prize,
-           e.entryCost = $entryCost,
+           e.location = $location,
            e.cost = $cost,
            e.startDate = $startDate,
            e.dates = $dates,
@@ -1670,9 +1656,7 @@ export const editEvent = async (event: Event): Promise<Event> => {
         id,
         title: eventDetails.title,
         description: eventDetails.description,
-        address: eventDetails.address,
-        prize: eventDetails.prize || null,
-        entryCost: eventDetails.entryCost || null,
+        location: eventDetails.location,
         cost: eventDetails.cost || null,
         // Derive startDate from first date in dates array for database storage
         startDate:

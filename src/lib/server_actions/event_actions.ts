@@ -48,8 +48,6 @@ interface addEventProps {
     description?: string;
     schedule?: string;
     address?: string;
-    prize?: string;
-    entryCost?: string;
     cost?: string;
     poster?: {
       id: string;
@@ -325,10 +323,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
       creatorId: session.user.id,
       title: props.eventDetails.title,
       description: props.eventDetails.description ?? "",
-      address: props.eventDetails.address,
+      location: props.eventDetails.address,
       cost: props.eventDetails.cost,
-      prize: props.eventDetails.prize,
-      entryCost: props.eventDetails.entryCost,
       dates: normalizedDates,
       schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Image | null,
@@ -612,10 +608,8 @@ export async function editEvent(
       creatorId: oldEvent.eventDetails.creatorId,
       title: editedEvent.eventDetails.title,
       description: editedEvent.eventDetails.description ?? "",
-      address: editedEvent.eventDetails.address,
+      location: editedEvent.eventDetails.address,
       cost: editedEvent.eventDetails.cost,
-      prize: editedEvent.eventDetails.prize,
-      entryCost: editedEvent.eventDetails.entryCost,
       // Derive startDate from first date in dates array for database compatibility
       dates: normalizedDates,
       schedule: editedEvent.eventDetails.schedule ?? "",

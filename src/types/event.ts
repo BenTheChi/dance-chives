@@ -29,11 +29,9 @@ export interface EventDetails {
   title: string;
   description?: string;
   schedule?: string;
-  address?: string; // location
+  location?: string;
   creatorId: string;
   cost?: string;
-  prize?: string; // Prize information (can be used by any event type)
-  entryCost?: string; // Entry cost (can be used by any event type)
   dates: EventDate[]; // Required: Array of dates for events (at least one)
   poster?: Image | null;
   city: City;

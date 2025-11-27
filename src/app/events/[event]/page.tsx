@@ -6,7 +6,6 @@ import {
   Calendar,
   DollarSign,
   FileText,
-  Gift,
   MapPin,
   Tag,
 } from "lucide-react";
@@ -244,27 +243,15 @@ export default async function EventPage({ params }: PageProps) {
                   </>
                 )}
               </div>
-              {event.eventDetails.address && (
+              {event.eventDetails.location && (
                 <div className="flex flex-row gap-2">
                   <div className="flex flex-row gap-2">
                     <MapPin />
                     <b>Location:</b>
                   </div>
                   <div className="whitespace-pre-wrap">
-                    {event.eventDetails.address}
+                    {event.eventDetails.location}
                   </div>
-                </div>
-              )}
-              {eventDetails.prize && (
-                <div className="flex flex-row gap-2">
-                  <Gift />
-                  <b>Prize:</b> {eventDetails.prize}
-                </div>
-              )}
-              {eventDetails.entryCost && (
-                <div className="flex flex-row gap-2">
-                  <DollarSign />
-                  <b>Entry Cost:</b> {eventDetails.entryCost}
                 </div>
               )}
               {event.eventDetails.cost && (

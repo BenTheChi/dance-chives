@@ -170,22 +170,14 @@ const eventDetailsSchema = z.object({
     .min(1, "At least one event date is required"),
   description: z.preprocess((val) => val ?? "", z.string()),
   schedule: z.preprocess((val) => val ?? "", z.string()),
-  address: z.preprocess(
-    (val) => (val === null ? undefined : val),
-    z.string().optional()
-  ),
-  prize: z.preprocess(
-    (val) => (val === null ? undefined : val),
-    z.string().optional()
-  ),
-  entryCost: z.preprocess(
+  location: z.preprocess(
     (val) => (val === null ? undefined : val),
     z.string().optional()
   ),
   cost: z.preprocess(
     (val) => (val === null ? undefined : val),
     z.string().optional()
-  ), // For Workshop/Session events
+  ),
   poster: imageSchema.nullable().optional(),
   eventType: z.enum([
     "Battle",
@@ -285,9 +277,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         ],
         description: "",
         schedule: "",
-        address: "",
-        prize: "",
-        entryCost: "",
+        location: "",
         cost: "",
         poster: null,
         eventType: "Other",

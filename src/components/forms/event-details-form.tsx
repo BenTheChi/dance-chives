@@ -110,60 +110,62 @@ export function EventDetailsForm({
 
   return (
     <div className="flex flex-col gap-4">
-      <FormField
-        control={control}
-        name="eventDetails.title"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Event Title</FormLabel>
-            <FormControl>
-              <Input
-                {...field}
-                className="bg-white"
-                placeholder="Enter Event Title"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name="eventDetails.eventType"
-        render={({ field }) => {
-          // Ensure field.value is always set to a valid enum value
-          const value = field.value || "Other";
-          return (
-            <FormItem>
-              <FormLabel>Event Type</FormLabel>
-              <Select
-                onValueChange={(newValue) => {
-                  field.onChange(newValue);
-                }}
-                value={value}
-              >
-                <FormControl>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select event type" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Battle">Battle</SelectItem>
-                  <SelectItem value="Class">Class</SelectItem>
-                  <SelectItem value="Competition">Competition</SelectItem>
-                  <SelectItem value="Festival">Festival</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                  <SelectItem value="Party">Party</SelectItem>
-                  <SelectItem value="Performance">Performance</SelectItem>
-                  <SelectItem value="Session">Session</SelectItem>
-                  <SelectItem value="Workshop">Workshop</SelectItem>
-                </SelectContent>
-              </Select>
+      <div className="flex flex-col sm:flex-row gap-5">
+        <FormField
+          control={control}
+          name="eventDetails.eventType"
+          render={({ field }) => {
+            // Ensure field.value is always set to a valid enum value
+            const value = field.value || "Other";
+            return (
+              <FormItem className="w-full sm:w-auto sm:min-w-[200px]">
+                <FormLabel>Event Type</FormLabel>
+                <Select
+                  onValueChange={(newValue) => {
+                    field.onChange(newValue);
+                  }}
+                  value={value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="Select event type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Battle">Battle</SelectItem>
+                    <SelectItem value="Class">Class</SelectItem>
+                    <SelectItem value="Competition">Competition</SelectItem>
+                    <SelectItem value="Festival">Festival</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Party">Party</SelectItem>
+                    <SelectItem value="Performance">Performance</SelectItem>
+                    <SelectItem value="Session">Session</SelectItem>
+                    <SelectItem value="Workshop">Workshop</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
+        />
+        <FormField
+          control={control}
+          name="eventDetails.title"
+          render={({ field }) => (
+            <FormItem className="flex-1">
+              <FormLabel>Event Title</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  className="bg-white"
+                  placeholder="Enter Event Title"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
-          );
-        }}
-      />
+          )}
+        />
+      </div>
       <div className="flex flex-col sm:flex-row gap-5">
         {/* City Field */}
         <div className="w-1/2">
@@ -185,19 +187,19 @@ export function EventDetailsForm({
           />
         </div>
 
-        {/* Address Field */}
+        {/* Location Field */}
         <FormField
           control={control}
-          name="eventDetails.address"
+          name="eventDetails.location"
           render={({ field }) => (
             <FormItem className="w-full">
-              <FormLabel>Address</FormLabel>
+              <FormLabel>Location</FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   value={field.value ?? ""}
                   className="bg-white"
-                  placeholder="Enter Address"
+                  placeholder="Enter Location"
                 />
               </FormControl>
               <FormMessage />
@@ -225,9 +227,10 @@ export function EventDetailsForm({
 
             {/* Date and Time Fields */}
             <div className="flex flex-col gap-5 w-full">
-              {/* Date Field and All Day Toggle */}
-              <div className="flex flex-col sm:flex-row gap-5 items-end">
-                <div className="w-full sm:w-1/3">
+              {/* Date, All Day, Start Time, and End Time on same line (desktop) */}
+              <div className="flex flex-wrap md:flex-nowrap gap-5 items-end">
+                {/* Date Field */}
+                <div className="w-full md:w-auto md:min-w-[200px]">
                   <DatePicker
                     control={control as Control<FormValues>}
                     name={
@@ -236,6 +239,8 @@ export function EventDetailsForm({
                     label="Date"
                   />
                 </div>
+
+                {/* All Day Toggle */}
                 <FormField
                   control={control}
                   name={`eventDetails.dates.${index}.isAllDay`}
@@ -266,58 +271,58 @@ export function EventDetailsForm({
                     </FormItem>
                   )}
                 />
+
+                {/* Time Fields - Only show when not all-day */}
+                {dates?.[index]?.isAllDay === false && (
+                  <>
+                    {/* Start Time Field */}
+                    <div className="w-full md:w-auto md:min-w-[150px]">
+                      <FormField
+                        control={control}
+                        name={`eventDetails.dates.${index}.startTime`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Time</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="time"
+                                {...field}
+                                value={field.value ?? ""}
+                                className="bg-white"
+                                placeholder="2:00 PM"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* End Time Field */}
+                    <div className="w-full md:w-auto md:min-w-[150px]">
+                      <FormField
+                        control={control}
+                        name={`eventDetails.dates.${index}.endTime`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>End Time</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="time"
+                                {...field}
+                                value={field.value ?? ""}
+                                className="bg-white"
+                                placeholder="4:00 PM"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-
-              {/* Time Fields - Only show when not all-day */}
-              {dates?.[index]?.isAllDay === false && (
-                <div className="flex flex-col sm:flex-row gap-5">
-                  {/* Start Time Field */}
-                  <div className="w-full sm:w-1/2">
-                    <FormField
-                      control={control}
-                      name={`eventDetails.dates.${index}.startTime`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Start Time</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="time"
-                              {...field}
-                              value={field.value ?? ""}
-                              className="bg-white"
-                              placeholder="2:00 PM"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* End Time Field */}
-                  <div className="w-full sm:w-1/2">
-                    <FormField
-                      control={control}
-                      name={`eventDetails.dates.${index}.endTime`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>End Time</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="time"
-                              {...field}
-                              value={field.value ?? ""}
-                              className="bg-white"
-                              placeholder="4:00 PM"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         ))}
@@ -372,65 +377,24 @@ export function EventDetailsForm({
           </FormItem>
         )}
       />
-      <div className="flex gap-x-4">
-        {/* Entry Cost - for Competition events */}
-        <FormField
-          control={control}
-          name="eventDetails.entryCost"
-          render={({ field }) => (
-            <FormItem className="w-full">
-              <FormLabel>Entry Cost</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  className="bg-white"
-                  placeholder="Optional"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {/* Prize - for Competition events */}
-        <FormField
-          control={control}
-          name="eventDetails.prize"
-          render={({ field }) => (
-            <FormItem className="w-full">
-              <FormLabel>Prize Pool ($)</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  className="bg-white"
-                  placeholder="Optional"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {/* Cost - for Workshop/Session events */}
-        <FormField
-          control={control}
-          name="eventDetails.cost"
-          render={({ field }) => (
-            <FormItem className="w-full">
-              <FormLabel>Cost</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  value={field.value ?? ""}
-                  className="bg-white"
-                  placeholder="Optional"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
+      <FormField
+        control={control}
+        name="eventDetails.cost"
+        render={({ field }) => (
+          <FormItem className="w-full">
+            <FormLabel>Cost</FormLabel>
+            <FormControl>
+              <Input
+                {...field}
+                value={field.value ?? ""}
+                className="bg-white"
+                placeholder="Optional"
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <FormField
         control={control}
         name="eventDetails.styles"

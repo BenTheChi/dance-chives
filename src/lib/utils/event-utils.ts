@@ -19,6 +19,5 @@ export function isAllDayEvent(
  * Normalize time to empty string if empty, otherwise return trimmed value
  */
 export function normalizeTime(time: string | undefined | null): string {
-  return isTimeEmpty(time) ? "" : time.trim();
+  return isTimeEmpty(time) ? "" : time?.trim() ?? "";
 }
-
