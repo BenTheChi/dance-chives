@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bracket, Section, Video } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
+import NextImage from "next/image";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -63,28 +64,95 @@ export default async function SectionsPage({ params }: PageProps) {
                 key={section.id}
                 className="bg-white rounded-lg p-4 shadow-sm"
               >
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/events/${paramResult.event}/sections/${section.id}`}
-                      className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
-                    >
-                      {section.title}
-                    </Link>
+                <div className="flex gap-4">
+                  {/* Poster on left - 1/2 width */}
+                  <div className="w-1/2">
+                    {section.poster?.url ? (
+                      <NextImage
+                        src={section.poster.url}
+                        alt={section.poster.title || section.title}
+                        width={200}
+                        height={200}
+                        className="w-full h-auto object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">No poster</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content on right - 1/2 width */}
+                  <div className="w-1/2 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/events/${paramResult.event}/sections/${section.id}`}
+                        className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+                      >
+                        {section.title}
+                      </Link>
+                    </div>
                     {section.sectionType && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs w-fit">
                         {section.sectionType}
                       </Badge>
                     )}
+                    {/* Display section styles */}
+                    {section.applyStylesToVideos &&
+                      section.styles &&
+                      section.styles.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {section.styles.map((style: string) => (
+                            <StyleBadge
+                              key={style}
+                              style={style}
+                              asLink={false}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    {/* Display aggregated video styles if applyStylesToVideos is false */}
+                    {!section.applyStylesToVideos &&
+                      (() => {
+                        const videoStyles = new Set<string>();
+                        section.videos.forEach((video: Video) => {
+                          if (video.styles) {
+                            video.styles.forEach((style: string) =>
+                              videoStyles.add(style)
+                            );
+                          }
+                        });
+                        section.brackets.forEach((bracket: Bracket) => {
+                          bracket.videos.forEach((video: Video) => {
+                            if (video.styles) {
+                              video.styles.forEach((style: string) =>
+                                videoStyles.add(style)
+                              );
+                            }
+                          });
+                        });
+                        const stylesArray = Array.from(videoStyles);
+                        return stylesArray.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {stylesArray.map((style: string) => (
+                              <StyleBadge
+                                key={style}
+                                style={style}
+                                asLink={false}
+                              />
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
+                    <span className="text-sm text-gray-500">
+                      {totalVideoCount}{" "}
+                      {totalVideoCount === 1 ? "video" : "videos"}
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-500">
-                    {totalVideoCount}{" "}
-                    {totalVideoCount === 1 ? "video" : "videos"}
-                  </span>
                 </div>
                 {/* Display section winners */}
                 {section.winners && section.winners.length > 0 && (
-                  <div className="flex flex-wrap gap-1 items-center mb-2">
+                  <div className="flex flex-wrap gap-1 items-center mt-2">
                     <span className="text-lg font-bold">Winner:</span>
                     {Array.from(
                       new Map(
@@ -110,49 +178,6 @@ export default async function SectionsPage({ params }: PageProps) {
                     ))}
                   </div>
                 )}
-                {/* Display section styles */}
-                {section.applyStylesToVideos &&
-                  section.styles &&
-                  section.styles.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {section.styles.map((style: string) => (
-                        <StyleBadge key={style} style={style} asLink={false} />
-                      ))}
-                    </div>
-                  )}
-                {/* Display aggregated video styles if applyStylesToVideos is false */}
-                {!section.applyStylesToVideos &&
-                  (() => {
-                    const videoStyles = new Set<string>();
-                    section.videos.forEach((video: Video) => {
-                      if (video.styles) {
-                        video.styles.forEach((style: string) =>
-                          videoStyles.add(style)
-                        );
-                      }
-                    });
-                    section.brackets.forEach((bracket: Bracket) => {
-                      bracket.videos.forEach((video: Video) => {
-                        if (video.styles) {
-                          video.styles.forEach((style: string) =>
-                            videoStyles.add(style)
-                          );
-                        }
-                      });
-                    });
-                    const stylesArray = Array.from(videoStyles);
-                    return stylesArray.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {stylesArray.map((style: string) => (
-                          <StyleBadge
-                            key={style}
-                            style={style}
-                            asLink={false}
-                          />
-                        ))}
-                      </div>
-                    ) : null;
-                  })()}
 
                 {section.brackets.length > 0 ? (
                   <div className="space-y-2">

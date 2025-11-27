@@ -129,21 +129,25 @@ export function EventDetailsForm({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Event Type</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value || ""}>
+            <Select
+              onValueChange={field.onChange}
+              value={field.value || "Other"}
+            >
               <FormControl>
                 <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select event type (optional)" />
+                  <SelectValue placeholder="Select event type" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 <SelectItem value="Battle">Battle</SelectItem>
-                <SelectItem value="Competition">Competition</SelectItem>
                 <SelectItem value="Class">Class</SelectItem>
-                <SelectItem value="Workshop">Workshop</SelectItem>
-                <SelectItem value="Session">Session</SelectItem>
-                <SelectItem value="Party">Party</SelectItem>
+                <SelectItem value="Competition">Competition</SelectItem>
                 <SelectItem value="Festival">Festival</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Party">Party</SelectItem>
                 <SelectItem value="Performance">Performance</SelectItem>
+                <SelectItem value="Session">Session</SelectItem>
+                <SelectItem value="Workshop">Workshop</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />

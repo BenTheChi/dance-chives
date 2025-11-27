@@ -23,6 +23,7 @@ import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
+import NextImage from "next/image";
 import {
   canUpdateEvent,
   canDeleteEvent,
@@ -397,135 +398,169 @@ export default async function EventPage({ params }: PageProps) {
                 </Link>
 
                 <div className="flex flex-col gap-4">
-                  {event.sections.map((section) => (
-                    <div
-                      key={section.id}
-                      className="bg-white rounded-lg p-4 shadow-sm"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/events/${event.id}/sections/${section.id}`}
-                            className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
-                          >
-                            {section.title}
-                          </Link>
-                          {section.sectionType && (
-                            <Badge variant="outline" className="text-xs">
-                              {section.sectionType}
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {section.videos.length}{" "}
-                          {section.videos.length === 1 ? "video" : "videos"}
-                        </span>
-                      </div>
-                      {/* Display section winners */}
-                      {section.winners && section.winners.length > 0 && (
-                        <div className="flex flex-wrap gap-1 items-center mb-2">
-                          <span className="text-lg font-bold">Winner:</span>
-                          {Array.from(
-                            new Map(
-                              section.winners
-                                .filter((w) => w && w.id)
-                                .map((w) => [w.id, w])
-                            ).values()
-                          ).map((winner) => (
-                            <Badge
-                              key={winner.id}
-                              variant="secondary"
-                              className="text-xs"
-                              asChild
-                            >
-                              {winner.username ? (
-                                <Link href={`/profiles/${winner.username}`}>
-                                  {winner.displayName}
-                                </Link>
-                              ) : (
-                                <span>{winner.displayName}</span>
-                              )}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                      {/* Display section styles */}
-                      {section.applyStylesToVideos &&
-                        section.styles &&
-                        section.styles.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {section.styles.map((style) => (
-                              <StyleBadge
-                                key={style}
-                                style={style}
-                                asLink={false}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      {/* Display aggregated video styles if applyStylesToVideos is false */}
-                      {!section.applyStylesToVideos &&
-                        (() => {
-                          const videoStyles = new Set<string>();
-                          section.videos.forEach((video) => {
-                            if (video.styles) {
-                              video.styles.forEach((style) =>
-                                videoStyles.add(style)
-                              );
-                            }
-                          });
-                          section.brackets.forEach((bracket) => {
-                            bracket.videos.forEach((video) => {
-                              if (video.styles) {
-                                video.styles.forEach((style) =>
-                                  videoStyles.add(style)
-                                );
-                              }
-                            });
-                          });
-                          const stylesArray = Array.from(videoStyles);
-                          return stylesArray.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {stylesArray.map((style) => (
-                                <StyleBadge
-                                  key={style}
-                                  style={style}
-                                  asLink={false}
-                                />
-                              ))}
-                            </div>
-                          ) : null;
-                        })()}
+                  {event.sections.map((section) => {
+                    // Calculate total video count
+                    const directVideoCount = section.videos.length;
+                    const bracketVideoCount = section.brackets.reduce(
+                      (sum: number, bracket) => sum + bracket.videos.length,
+                      0
+                    );
+                    const totalVideoCount = directVideoCount + bracketVideoCount;
 
-                      {section.brackets.length > 0 ? (
-                        <div className="space-y-2">
-                          <div className="text-sm text-gray-600 mb-2">
-                            Brackets:
+                    return (
+                      <div
+                        key={section.id}
+                        className="bg-white rounded-lg p-4 shadow-sm"
+                      >
+                        <div className="flex gap-4">
+                          {/* Poster on left - 1/2 width */}
+                          <div className="w-1/2">
+                            {section.poster?.url ? (
+                              <NextImage
+                                src={section.poster.url}
+                                alt={section.poster.title || section.title}
+                                width={200}
+                                height={200}
+                                className="w-full h-auto object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
+                                <span className="text-gray-400 text-sm">No poster</span>
+                              </div>
+                            )}
                           </div>
-                          {section.brackets.map((bracket) => (
-                            <div
-                              key={bracket.id}
-                              className="bg-gray-50 rounded p-2 flex justify-between items-center"
-                            >
-                              <span className="font-medium text-gray-700">
-                                {bracket.title}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {bracket.videos.length}{" "}
-                                {bracket.videos.length === 1
-                                  ? "video"
-                                  : "videos"}
-                              </span>
+                          
+                          {/* Content on right - 1/2 width */}
+                          <div className="w-1/2 flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/events/${event.id}/sections/${section.id}`}
+                                className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
+                              >
+                                {section.title}
+                              </Link>
                             </div>
-                          ))}
+                            {section.sectionType && (
+                              <Badge variant="outline" className="text-xs w-fit">
+                                {section.sectionType}
+                              </Badge>
+                            )}
+                            {/* Display section styles */}
+                            {section.applyStylesToVideos &&
+                              section.styles &&
+                              section.styles.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {section.styles.map((style) => (
+                                    <StyleBadge
+                                      key={style}
+                                      style={style}
+                                      asLink={false}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            {/* Display aggregated video styles if applyStylesToVideos is false */}
+                            {!section.applyStylesToVideos &&
+                              (() => {
+                                const videoStyles = new Set<string>();
+                                section.videos.forEach((video) => {
+                                  if (video.styles) {
+                                    video.styles.forEach((style: string) =>
+                                      videoStyles.add(style)
+                                    );
+                                  }
+                                });
+                                section.brackets.forEach((bracket) => {
+                                  bracket.videos.forEach((video) => {
+                                    if (video.styles) {
+                                      video.styles.forEach((style: string) =>
+                                        videoStyles.add(style)
+                                      );
+                                    }
+                                  });
+                                });
+                                const stylesArray = Array.from(videoStyles);
+                                return stylesArray.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {stylesArray.map((style: string) => (
+                                      <StyleBadge
+                                        key={style}
+                                        style={style}
+                                        asLink={false}
+                                      />
+                                    ))}
+                                  </div>
+                                ) : null;
+                              })()}
+                            <span className="text-sm text-gray-500">
+                              {totalVideoCount}{" "}
+                              {totalVideoCount === 1 ? "video" : "videos"}
+                            </span>
+                            {/* Display section winners */}
+                            {section.winners && section.winners.length > 0 && (
+                              <div className="flex flex-wrap gap-1 items-center mt-2">
+                                <span className="text-lg font-bold">Winner:</span>
+                                {Array.from(
+                                  new Map(
+                                    section.winners
+                                      .filter((w) => w && w.id)
+                                      .map((w) => [w.id, w])
+                                  ).values()
+                                ).map((winner) => (
+                                  <Badge
+                                    key={winner.id}
+                                    variant="secondary"
+                                    className="text-xs"
+                                    asChild
+                                  >
+                                    {winner.username ? (
+                                      <Link href={`/profiles/${winner.username}`}>
+                                        {winner.displayName}
+                                      </Link>
+                                    ) : (
+                                      <span>{winner.displayName}</span>
+                                    )}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {section.brackets.length > 0 ? (
+                              <div className="space-y-2 mt-2">
+                                <div className="text-sm text-gray-600 mb-2">
+                                  Brackets:
+                                </div>
+                                {section.brackets.map((bracket) => (
+                                  <div
+                                    key={bracket.id}
+                                    className="bg-gray-50 rounded p-2 flex justify-between items-center"
+                                  >
+                                    <span className="font-medium text-gray-700">
+                                      {bracket.title}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      {bracket.videos.length}{" "}
+                                      {bracket.videos.length === 1
+                                        ? "video"
+                                        : "videos"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-600 italic mt-2">
+                                No brackets - direct video collection
+                              </div>
+                            )}
+                            {section.description && (
+                              <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                                {section.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="text-sm text-gray-600 italic">
-                          No brackets - direct video collection
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>

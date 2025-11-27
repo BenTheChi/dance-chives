@@ -67,35 +67,36 @@ const bracketSchema = z.object({
   videos: z.array(videoSchema),
 });
 
+const imageSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  url: z.string(),
+  type: z.enum(["gallery", "profile", "poster"]).default("poster"),
+  file: z.instanceof(File).nullable(),
+});
+
 const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
   description: z.preprocess((val) => val ?? "", z.string()),
-  sectionType: z
-    .enum([
-      "Battle",
-      "Tournament",
-      "Competition",
-      "Performance",
-      "Showcase",
-      "Class",
-      "Session",
-      "Mixed",
-    ])
-    .optional(),
+  sectionType: z.enum([
+    "Battle",
+    "Tournament",
+    "Competition",
+    "Performance",
+    "Showcase",
+    "Class",
+    "Session",
+    "Mixed",
+    "Other",
+  ]),
   hasBrackets: z.boolean(),
   videos: z.array(videoSchema),
   brackets: z.array(bracketSchema),
   styles: z.array(z.string()).optional(),
   applyStylesToVideos: z.boolean().optional(),
   winners: z.array(userSearchItemSchema).optional(),
-});
-
-const imageSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  url: z.string(),
-  file: z.instanceof(File).nullable(),
+  poster: imageSchema.nullable().optional(),
 });
 
 const eventDetailsSchema = z.object({
@@ -161,18 +162,17 @@ const eventDetailsSchema = z.object({
     z.string().optional()
   ), // For Workshop/Session events
   poster: imageSchema.nullable().optional(),
-  eventType: z
-    .enum([
-      "Battle",
-      "Competition",
-      "Class",
-      "Workshop",
-      "Session",
-      "Party",
-      "Festival",
-      "Performance",
-    ])
-    .optional(),
+  eventType: z.enum([
+    "Battle",
+    "Competition",
+    "Class",
+    "Workshop",
+    "Session",
+    "Party",
+    "Festival",
+    "Performance",
+    "Other",
+  ]),
   styles: z.array(z.string()).optional(),
 });
 
@@ -211,6 +211,13 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
   return sections.map((section) => ({
     ...section,
     description: section.description ?? "",
+    sectionType: section.sectionType ?? "Other",
+    poster: section.poster
+      ? {
+          ...section.poster,
+          type: (section.poster.type || "poster") as "poster",
+        }
+      : null,
   }));
 }
 
@@ -257,7 +264,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         entryCost: "",
         cost: "",
         poster: null,
-        eventType: undefined,
+        eventType: "Other",
       },
       sections: [],
       roles: [],
@@ -303,9 +310,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       id: crypto.randomUUID(),
       title: `New Section ${sections.length + 1}`,
       description: "",
+      sectionType: "Other",
       hasBrackets: false,
       videos: [],
       brackets: [],
+      poster: null,
     };
     setValue("sections", normalizeSectionsForForm([...sections, newSection]));
     setActiveSectionId(newSection.id);
@@ -639,6 +648,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   control={control}
                   setValue={setValue}
                   getValues={getValues}
+                  register={register}
                   activeSectionIndex={activeSectionIndex}
                   activeSection={activeSection}
                   sections={sections}

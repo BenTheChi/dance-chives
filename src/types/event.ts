@@ -15,7 +15,8 @@ export type EventType =
   | "Session"
   | "Party"
   | "Festival"
-  | "Performance";
+  | "Performance"
+  | "Other";
 
 export interface EventDate {
   date: string;
@@ -37,7 +38,7 @@ export interface EventDetails {
   poster?: Image | null;
   city: City;
   styles?: string[]; // danceStyleTags
-  eventType?: EventType; // Optional: for categorization only, stored as Neo4j label
+  eventType: EventType;
 }
 
 // Event interface - unified event structure for all event types
@@ -64,7 +65,7 @@ export interface Section {
   id: string;
   title: string;
   description?: string;
-  sectionType?:
+  sectionType:
     | "Battle"
     | "Tournament"
     | "Competition"
@@ -72,7 +73,8 @@ export interface Section {
     | "Showcase"
     | "Class"
     | "Session"
-    | "Mixed"; // Section type stored as Neo4j label
+    | "Mixed"
+    | "Other"; // Section type stored as Neo4j label
   hasBrackets: boolean; // Whether this section uses brackets (auto-set based on section type)
   videos: Video[]; // Direct videos in section (when hasBrackets is false)
   brackets: Bracket[]; // Brackets in section (when hasBrackets is true)
@@ -80,6 +82,7 @@ export interface Section {
   applyStylesToVideos?: boolean;
   applyVideoTypeToVideos?: boolean; // Apply video type to all videos in section
   winners?: UserSearchItem[]; // Section winners (optional, depends on section type)
+  poster?: Image | null;
 }
 
 export interface Bracket {

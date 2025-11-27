@@ -4,6 +4,7 @@ import {
   deleteFromR2,
   uploadEventPosterToR2,
   uploadEventGalleryToR2,
+  uploadSectionPosterToR2,
 } from "../R2";
 import {
   insertEvent,
@@ -54,7 +55,7 @@ interface addEventProps {
       url: string;
       file: File | null;
     } | null;
-    eventType?:
+    eventType:
       | "Battle"
       | "Competition"
       | "Class"
@@ -62,14 +63,15 @@ interface addEventProps {
       | "Session"
       | "Party"
       | "Festival"
-      | "Performance";
+      | "Performance"
+      | "Other";
     styles?: string[];
   };
   sections: {
     id: string;
     title: string;
     description?: string;
-    sectionType?:
+    sectionType:
       | "Battle"
       | "Tournament"
       | "Competition"
@@ -77,7 +79,8 @@ interface addEventProps {
       | "Showcase"
       | "Class"
       | "Session"
-      | "Mixed";
+      | "Mixed"
+      | "Other";
     hasBrackets: boolean;
     styles?: string[];
     applyStylesToVideos?: boolean;
@@ -144,6 +147,13 @@ interface addEventProps {
       displayName: string;
       username: string;
     }[];
+    poster?: {
+      id: string;
+      title: string;
+      url: string;
+      file: File | null;
+      type: "poster" | "gallery" | "profile";
+    } | null;
   }[];
   roles?: {
     id: string;
@@ -220,9 +230,35 @@ export async function addEvent(props: addEventProps): Promise<response> {
       });
     }
 
+    // Upload section posters
+    for (const section of props.sections) {
+      if (section.poster?.file) {
+        const posterResult = await uploadSectionPosterToR2(
+          section.poster.file,
+          eventId,
+          section.id
+        );
+        if (posterResult.success) {
+          section.poster = {
+            ...section.poster,
+            id: posterResult.id!,
+            url: posterResult.url!,
+            file: null,
+            type: "poster" as const,
+          };
+        }
+      }
+    }
+
     // Process sections to handle brackets/videos based on hasBrackets
     const processedSections: Section[] = props.sections.map((section) => {
       const { hasBrackets, ...sectionWithoutBrackets } = section;
+      const poster = section.poster
+        ? {
+            ...section.poster,
+            type: (section.poster.type || "poster") as "poster",
+          }
+        : null;
 
       if (hasBrackets) {
         return {
@@ -231,6 +267,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           hasBrackets: true,
           brackets: section.brackets,
           videos: [],
+          poster,
         };
       } else {
         return {
@@ -239,6 +276,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           hasBrackets: false,
           brackets: [],
           videos: section.videos,
+          poster,
         };
       }
     });
@@ -428,9 +466,60 @@ export async function editEvent(
       }
     }
 
+    // Handle section posters - delete old posters that were removed or replaced
+    const oldSectionMap = new Map(oldEvent.sections.map((s) => [s.id, s]));
+    for (const oldSection of oldEvent.sections) {
+      if (oldSection.poster) {
+        const newSection = editedEvent.sections.find(
+          (s) => s.id === oldSection.id
+        );
+        // Delete poster if section was removed, or poster was removed, or poster was replaced
+        if (
+          !newSection ||
+          !newSection.poster ||
+          (newSection.poster.id !== oldSection.poster.id &&
+            !newSection.poster.file)
+        ) {
+          await deleteFromR2(oldSection.poster.url);
+        }
+      }
+    }
+
+    // Upload new section posters
+    for (const section of editedEvent.sections) {
+      if (section.poster?.file) {
+        // Delete old poster if it exists and is being replaced
+        const oldSection = oldSectionMap.get(section.id);
+        if (oldSection?.poster) {
+          await deleteFromR2(oldSection.poster.url);
+        }
+
+        const posterResult = await uploadSectionPosterToR2(
+          section.poster.file,
+          eventId,
+          section.id
+        );
+        if (posterResult.success) {
+          section.poster = {
+            ...section.poster,
+            id: posterResult.id!,
+            url: posterResult.url!,
+            file: null,
+            type: "poster" as const,
+          };
+        }
+      }
+    }
+
     // Process sections to handle brackets/videos based on hasBrackets
     const processedSections: Section[] = editedEvent.sections.map((section) => {
       const { hasBrackets, ...sectionWithoutBrackets } = section;
+      const poster = section.poster
+        ? {
+            ...section.poster,
+            type: (section.poster.type || "poster") as "poster",
+          }
+        : null;
 
       if (hasBrackets) {
         return {
@@ -439,6 +528,7 @@ export async function editEvent(
           hasBrackets: true,
           brackets: section.brackets,
           videos: [],
+          poster,
         };
       } else {
         return {
@@ -447,6 +537,7 @@ export async function editEvent(
           hasBrackets: false,
           brackets: [],
           videos: section.videos,
+          poster,
         };
       }
     });

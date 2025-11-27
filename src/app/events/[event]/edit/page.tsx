@@ -83,11 +83,24 @@ export default async function EditEventPage({
       : null,
   };
 
+  // Format sections to ensure poster file field is null
+  const formattedSections = (currEvent.sections || []).map((section) => ({
+    ...section,
+    description: section.description ?? "",
+    poster: section.poster
+      ? {
+          ...section.poster,
+          title: section.poster.title || "",
+          file: null,
+        }
+      : null,
+  }));
+
   //Convert event to FormValues
   // Note: Optional string fields are normalized to empty strings to avoid null values
   const eventFormValues = {
     eventDetails: formattedEventDetails,
-    sections: currEvent.sections,
+    sections: formattedSections,
     roles: formattedRoles,
     gallery: formattedPictures,
   } as FormValues;

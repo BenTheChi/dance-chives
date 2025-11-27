@@ -19,6 +19,7 @@ import type {
   Control,
   UseFormSetValue,
   UseFormGetValues,
+  UseFormRegister,
 } from "react-hook-form";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
@@ -29,6 +30,8 @@ import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
+import UploadFile from "../ui/uploadfile";
+import { Image } from "@/types/image";
 import {
   Select,
   SelectContent,
@@ -59,6 +62,7 @@ interface SectionFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
   getValues: UseFormGetValues<FormValues>;
+  register: UseFormRegister<FormValues>;
   activeSectionIndex: number;
   activeSection: Section;
   sections: Section[];
@@ -71,6 +75,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
   return sections.map((section) => ({
     ...section,
     description: section.description ?? "",
+    sectionType: section.sectionType ?? "Other",
   }));
 }
 
@@ -78,6 +83,7 @@ export function SectionForm({
   control,
   setValue,
   getValues,
+  register,
   activeSectionIndex,
   activeSection,
   sections,
@@ -168,7 +174,7 @@ export function SectionForm({
       case "Class":
         return "class";
       default:
-        return "battle"; // Default for Tournament, Mixed, or undefined
+        return "battle"; // Default for Tournament, Mixed, Other, or undefined
     }
   };
 
@@ -459,36 +465,32 @@ export function SectionForm({
         />
 
         <FormField
-          key={`sectionType-${activeSectionId}`}
+          key={`poster-${activeSectionId}`}
           control={control}
-          name={`sections.${activeSectionIndex}.sectionType`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Section Type</FormLabel>
-              <Select
-                value={field.value || ""}
-                onValueChange={(value) => {
-                  field.onChange(value || undefined);
-                  handleSectionTypeChange(value || undefined);
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select section type (optional)" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Battle">Battle</SelectItem>
-                  <SelectItem value="Tournament">Tournament</SelectItem>
-                  <SelectItem value="Competition">Competition</SelectItem>
-                  <SelectItem value="Performance">Performance</SelectItem>
-                  <SelectItem value="Showcase">Showcase</SelectItem>
-                  <SelectItem value="Class">Class</SelectItem>
-                  <SelectItem value="Session">Session</SelectItem>
-                  <SelectItem value="Mixed">Mixed</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
+          name={`sections.${activeSectionIndex}.poster`}
+          render={() => (
+            <FormItem className="w-full">
+              <FormLabel>Poster Upload</FormLabel>
+              <FormControl>
+                <UploadFile
+                  register={register}
+                  name={`sections.${activeSectionIndex}.poster`}
+                  onFileChange={(file) => {
+                    if (file) {
+                      const posterImage = Array.isArray(file) ? file[0] : file;
+                      setValue(`sections.${activeSectionIndex}.poster`, {
+                        ...posterImage,
+                        type: "poster" as const,
+                      } as Image);
+                    } else {
+                      setValue(`sections.${activeSectionIndex}.poster`, null);
+                    }
+                  }}
+                  className="bg-[#E8E7E7]"
+                  maxFiles={1}
+                  files={activeSection.poster || null}
+                />
+              </FormControl>
             </FormItem>
           )}
         />
@@ -503,6 +505,42 @@ export function SectionForm({
               <FormControl>
                 <Textarea {...field} value={field.value ?? ""} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          key={`sectionType-${activeSectionId}`}
+          control={control}
+          name={`sections.${activeSectionIndex}.sectionType`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Section Type</FormLabel>
+              <Select
+                value={field.value || "Other"}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  handleSectionTypeChange(value);
+                }}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select section type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Battle">Battle</SelectItem>
+                  <SelectItem value="Class">Class</SelectItem>
+                  <SelectItem value="Competition">Competition</SelectItem>
+                  <SelectItem value="Mixed">Mixed</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Performance">Performance</SelectItem>
+                  <SelectItem value="Session">Session</SelectItem>
+                  <SelectItem value="Showcase">Showcase</SelectItem>
+                  <SelectItem value="Tournament">Tournament</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

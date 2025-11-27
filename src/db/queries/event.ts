@@ -48,6 +48,7 @@ export function getEventTypeLabel(eventType?: EventType): string | null {
     Party: "PartyEvent",
     Festival: "FestivalEvent",
     Performance: "PerformanceEvent",
+    Other: "OtherEvent",
   };
   return labelMap[eventType] || null;
 }
@@ -68,7 +69,7 @@ export function getEventTypeFromLabel(label: string): EventType | null {
 
 // Section type label translation
 export function getSectionTypeLabel(
-  sectionType?:
+  sectionType:
     | "Battle"
     | "Tournament"
     | "Competition"
@@ -77,6 +78,7 @@ export function getSectionTypeLabel(
     | "Class"
     | "Session"
     | "Mixed"
+    | "Other"
 ): string | null {
   if (!sectionType) return null;
   const labelMap: Record<string, string> = {
@@ -285,8 +287,9 @@ export const getEvent = async (id: string): Promise<Event> => {
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)
     OPTIONAL MATCH (s)<-[:IN]-(v:Video)
     OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+    OPTIONAL MATCH (s)<-[:POSTER_OF]-(poster:Image)
     
-    WITH s, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets,
+    WITH s, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets, poster,
          [label IN labels(s) WHERE label IN ['BattleSection', 'TournamentSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'MixedSection']] as sectionTypeLabels
     
     RETURN collect({
@@ -309,6 +312,12 @@ export const getEvent = async (id: string): Promise<Event> => {
         ELSE null 
       END,
       hasBrackets: size(brackets) > 0,
+      poster: CASE WHEN poster IS NOT NULL THEN {
+        id: poster.id,
+        title: poster.title,
+        url: poster.url,
+        type: "poster"
+      } ELSE null END,
       videos: [v in videos | {
         id: v.id,
         title: v.title,
@@ -609,6 +618,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     section.applyStylesToVideos =
       sectionApplyStylesMap.get(section.id) || false;
     section.winners = sectionWinnersMap.get(section.id) || [];
+    // Poster is already included in the query result
 
     // Add tagged users and styles to direct section videos
     section.videos.forEach((video: Video) => {
@@ -1112,6 +1122,28 @@ const createSections = async (eventId: string, sections: Section[]) => {
           }
         );
       }
+
+      // Handle section poster
+      await session.run(
+        `MATCH (s:Section {id: $sectionId})
+         OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(s)
+         DELETE r
+         WITH s
+         FOREACH (poster IN CASE WHEN $poster IS NOT NULL AND $poster.id IS NOT NULL THEN [$poster] ELSE [] END |
+           MERGE (newPoster:Image:Gallery {id: poster.id})
+           ON CREATE SET
+             newPoster.title = poster.title,
+             newPoster.url = poster.url
+           SET
+             newPoster.title = poster.title,
+             newPoster.url = poster.url
+           MERGE (newPoster)-[:POSTER_OF]->(s)
+         )`,
+        {
+          sectionId: sec.id,
+          poster: sec.poster || null,
+        }
+      );
 
       // Create section style relationships if applyStylesToVideos is true
       if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {

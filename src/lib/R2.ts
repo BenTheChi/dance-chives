@@ -7,7 +7,11 @@ import crypto from "crypto";
 import { getUser } from "@/db/queries/user";
 import { getActualEnvironment } from "@/lib/config";
 
-type ImageType = "user-profile" | "event-poster" | "event-gallery";
+type ImageType =
+  | "user-profile"
+  | "event-poster"
+  | "event-gallery"
+  | "section-poster";
 
 // Initialize R2 client with credentials from environment variables
 function initializeR2Client(): S3Client {
@@ -70,7 +74,8 @@ function getBucketName(): string {
 function generateR2Path(
   type: ImageType,
   entityId: string,
-  filename: string
+  filename: string,
+  sectionId?: string
 ): string {
   const id = crypto.randomUUID();
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
@@ -83,6 +88,11 @@ function generateR2Path(
       return `events/${entityId}/posters/${uniqueFilename}`;
     case "event-gallery":
       return `events/${entityId}/gallery/${uniqueFilename}`;
+    case "section-poster":
+      if (!sectionId) {
+        throw new Error("sectionId is required for section-poster type");
+      }
+      return `events/${entityId}/sections/${sectionId}/posters/${uniqueFilename}`;
     // Legacy types - map to generic events path for unified event system
     default:
       throw new Error(`Unknown image type: ${type}`);
@@ -93,7 +103,8 @@ function generateR2Path(
 async function uploadToR2(
   file: File,
   type: ImageType,
-  entityId: string
+  entityId: string,
+  sectionId?: string
 ): Promise<{ success: boolean; url?: string; id?: string }> {
   const client = initializeR2Client();
   const bucket = getBucketName();
@@ -106,7 +117,7 @@ async function uploadToR2(
   try {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const key = generateR2Path(type, entityId, file.name);
+    const key = generateR2Path(type, entityId, file.name, sectionId);
     const id = key.split("/").pop()?.split("-")[0] || crypto.randomUUID();
 
     await client.send(
@@ -224,4 +235,13 @@ export async function uploadEventGalleryToR2(
   return Promise.all(
     files.map((file) => uploadToR2(file, "event-gallery", eventId))
   );
+}
+
+// Section posters
+export async function uploadSectionPosterToR2(
+  file: File,
+  eventId: string,
+  sectionId: string
+): Promise<{ success: boolean; url?: string; id?: string }> {
+  return uploadToR2(file, "section-poster", eventId, sectionId);
 }
