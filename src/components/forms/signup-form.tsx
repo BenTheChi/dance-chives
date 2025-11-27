@@ -312,7 +312,8 @@ export default function SignUpForm({
             <FormField
               control={form.control}
               name="profilePicture"
-              render={({ field: { onChange, value: _, ...field } }) => (
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              render={({ field: { onChange, value, ...field } }) => (
                 <FormItem>
                   <FormLabel>
                     Profile Picture {isEditMode ? "" : "(Optional)"}
