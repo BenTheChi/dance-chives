@@ -7,6 +7,7 @@ import {
   UseFormRegister,
   UseFormSetValue,
   useFieldArray,
+  useWatch,
 } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { EventDetails } from "@/types/event";
@@ -33,6 +34,7 @@ import {
 import { Button } from "../ui/button";
 import { PlusIcon, MinusIcon } from "lucide-react";
 import { StyleMultiSelect } from "../ui/style-multi-select";
+import { Switch } from "../ui/switch";
 
 interface EventDetailsFormProps {
   control: Control<FormValues>;
@@ -78,6 +80,7 @@ export function EventDetailsForm({
     name: "eventDetails.dates",
   });
   const hasInitialized = useRef(false);
+  const dates = useWatch({ control, name: "eventDetails.dates" });
 
   // Always initialize with one date entry if empty
   useEffect(() => {
@@ -86,8 +89,9 @@ export function EventDetailsForm({
         // Initialize with one entry if empty
         append({
           date: "",
-          startTime: "",
-          endTime: "",
+          isAllDay: true,
+          startTime: undefined,
+          endTime: undefined,
         });
         hasInitialized.current = true;
       } else if (fields.length > 1) {
@@ -126,33 +130,39 @@ export function EventDetailsForm({
       <FormField
         control={control}
         name="eventDetails.eventType"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Event Type</FormLabel>
-            <Select
-              onValueChange={field.onChange}
-              value={field.value || "Other"}
-            >
-              <FormControl>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="Battle">Battle</SelectItem>
-                <SelectItem value="Class">Class</SelectItem>
-                <SelectItem value="Competition">Competition</SelectItem>
-                <SelectItem value="Festival">Festival</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-                <SelectItem value="Party">Party</SelectItem>
-                <SelectItem value="Performance">Performance</SelectItem>
-                <SelectItem value="Session">Session</SelectItem>
-                <SelectItem value="Workshop">Workshop</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
+        render={({ field }) => {
+          // Ensure field.value is always set to a valid enum value
+          const value = field.value || "Other";
+          return (
+            <FormItem>
+              <FormLabel>Event Type</FormLabel>
+              <Select
+                onValueChange={(newValue) => {
+                  field.onChange(newValue);
+                }}
+                value={value}
+              >
+                <FormControl>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Battle">Battle</SelectItem>
+                  <SelectItem value="Class">Class</SelectItem>
+                  <SelectItem value="Competition">Competition</SelectItem>
+                  <SelectItem value="Festival">Festival</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Party">Party</SelectItem>
+                  <SelectItem value="Performance">Performance</SelectItem>
+                  <SelectItem value="Session">Session</SelectItem>
+                  <SelectItem value="Workshop">Workshop</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          );
+        }}
       />
       <div className="flex flex-col sm:flex-row gap-5">
         {/* City Field */}
@@ -214,63 +224,100 @@ export function EventDetailsForm({
             )}
 
             {/* Date and Time Fields */}
-            <div className="flex flex-col sm:flex-row gap-5 w-full">
-              {/* Date Field */}
-              <div className="w-full sm:w-1/3">
-                <DatePicker
-                  control={control as Control<FormValues>}
-                  name={
-                    `eventDetails.dates.${index}.date` as FieldPath<FormValues>
-                  }
-                  label="Date"
-                />
-              </div>
-
-              {/* Start Time Field */}
-              <div className="w-full sm:w-1/3">
+            <div className="flex flex-col gap-5 w-full">
+              {/* Date Field and All Day Toggle */}
+              <div className="flex flex-col sm:flex-row gap-5 items-end">
+                <div className="w-full sm:w-1/3">
+                  <DatePicker
+                    control={control as Control<FormValues>}
+                    name={
+                      `eventDetails.dates.${index}.date` as FieldPath<FormValues>
+                    }
+                    label="Date"
+                  />
+                </div>
                 <FormField
                   control={control}
-                  name={`eventDetails.dates.${index}.startTime`}
+                  name={`eventDetails.dates.${index}.isAllDay`}
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
+                    <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                      <FormLabel className="cursor-pointer">All Day</FormLabel>
                       <FormControl>
-                        <Input
-                          type="time"
-                          {...field}
-                          value={field.value ?? ""}
-                          className="bg-white"
-                          placeholder="2:00 PM"
+                        <Switch
+                          checked={field.value ?? true}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) {
+                              // When toggling to all-day, clear times
+                              setValue(
+                                `eventDetails.dates.${index}.startTime`,
+                                undefined,
+                                { shouldValidate: true }
+                              );
+                              setValue(
+                                `eventDetails.dates.${index}.endTime`,
+                                undefined,
+                                { shouldValidate: true }
+                              );
+                            }
+                          }}
                         />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* End Time Field */}
-              <div className="w-full sm:w-1/3">
-                <FormField
-                  control={control}
-                  name={`eventDetails.dates.${index}.endTime`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="time"
-                          {...field}
-                          value={field.value ?? ""}
-                          className="bg-white"
-                          placeholder="4:00 PM"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Time Fields - Only show when not all-day */}
+              {dates?.[index]?.isAllDay === false && (
+                <div className="flex flex-col sm:flex-row gap-5">
+                  {/* Start Time Field */}
+                  <div className="w-full sm:w-1/2">
+                    <FormField
+                      control={control}
+                      name={`eventDetails.dates.${index}.startTime`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              value={field.value ?? ""}
+                              className="bg-white"
+                              placeholder="2:00 PM"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* End Time Field */}
+                  <div className="w-full sm:w-1/2">
+                    <FormField
+                      control={control}
+                      name={`eventDetails.dates.${index}.endTime`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Time</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="time"
+                              {...field}
+                              value={field.value ?? ""}
+                              className="bg-white"
+                              placeholder="4:00 PM"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -280,8 +327,9 @@ export function EventDetailsForm({
           onClick={() =>
             append({
               date: "",
-              startTime: "",
-              endTime: "",
+              isAllDay: true,
+              startTime: undefined,
+              endTime: undefined,
             })
           }
           type="button"

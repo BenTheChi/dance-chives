@@ -24,6 +24,7 @@ import {
 import { getUserByUsername } from "@/db/queries/user";
 import { UserSearchItem } from "@/types/user";
 import { VIDEO_ROLE_WINNER, VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
+import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
 
 // Unified form props interface - matches FormValues from event-form.tsx
 interface addEventProps {
@@ -40,8 +41,9 @@ interface addEventProps {
     dates: {
       // Required: Array of dates for events (at least one)
       date: string;
-      startTime: string;
-      endTime: string;
+      isAllDay?: boolean; // Form-only field, not stored in DB
+      startTime?: string;
+      endTime?: string;
     }[];
     description?: string;
     schedule?: string;
@@ -55,7 +57,7 @@ interface addEventProps {
       url: string;
       file: File | null;
     } | null;
-    eventType:
+    eventType?:
       | "Battle"
       | "Competition"
       | "Class"
@@ -297,7 +299,28 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     const timezoneData = await response.json();
 
+    // Normalize dates: if isAllDay is true, set times to empty strings
+    // Remove isAllDay field before storing (it's form-only)
+    const normalizedDates = props.eventDetails.dates.map((dateEntry) => {
+      const isAllDay =
+        dateEntry.isAllDay ??
+        isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
+      const normalizedStartTime = isAllDay
+        ? ""
+        : normalizeTime(dateEntry.startTime);
+      const normalizedEndTime = isAllDay
+        ? ""
+        : normalizeTime(dateEntry.endTime);
+
+      return {
+        date: dateEntry.date,
+        startTime: normalizedStartTime,
+        endTime: normalizedEndTime,
+      };
+    });
+
     // Create the EventDetails object
+    // Ensure eventType is always set (default to "Other" if not provided)
     const eventDetails: EventDetails = {
       creatorId: session.user.id,
       title: props.eventDetails.title,
@@ -306,10 +329,10 @@ export async function addEvent(props: addEventProps): Promise<response> {
       cost: props.eventDetails.cost,
       prize: props.eventDetails.prize,
       entryCost: props.eventDetails.entryCost,
-      dates: props.eventDetails.dates,
+      dates: normalizedDates,
       schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Image | null,
-      eventType: props.eventDetails.eventType,
+      eventType: props.eventDetails.eventType || "Other",
       styles: props.eventDetails.styles,
       city: {
         ...props.eventDetails.city,
@@ -563,7 +586,28 @@ export async function editEvent(
       timezone = responseData.data.timezone;
     }
 
+    // Normalize dates: if isAllDay is true, set times to empty strings
+    // Remove isAllDay field before storing (it's form-only)
+    const normalizedDates = editedEvent.eventDetails.dates.map((dateEntry) => {
+      const isAllDay =
+        dateEntry.isAllDay ??
+        isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
+      const normalizedStartTime = isAllDay
+        ? ""
+        : normalizeTime(dateEntry.startTime);
+      const normalizedEndTime = isAllDay
+        ? ""
+        : normalizeTime(dateEntry.endTime);
+
+      return {
+        date: dateEntry.date,
+        startTime: normalizedStartTime,
+        endTime: normalizedEndTime,
+      };
+    });
+
     // Create the EventDetails object
+    // Ensure eventType is always set (default to "Other" if not provided)
     const eventDetails: EventDetails = {
       creatorId: oldEvent.eventDetails.creatorId,
       title: editedEvent.eventDetails.title,
@@ -573,10 +617,10 @@ export async function editEvent(
       prize: editedEvent.eventDetails.prize,
       entryCost: editedEvent.eventDetails.entryCost,
       // Derive startDate from first date in dates array for database compatibility
-      dates: editedEvent.eventDetails.dates,
+      dates: normalizedDates,
       schedule: editedEvent.eventDetails.schedule ?? "",
       poster: editedEvent.eventDetails.poster as Image | null,
-      eventType: editedEvent.eventDetails.eventType,
+      eventType: editedEvent.eventDetails.eventType || "Other",
       styles: editedEvent.eventDetails.styles,
       city: {
         ...editedEvent.eventDetails.city,

@@ -733,7 +733,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     },
     dates: dates || [],
     styles: eventStyles,
-    ...(eventType && { eventType: eventType as EventType }),
+    eventType: (eventType as EventType) || "Other", // Always set eventType, default to "Other"
     ...(eventData.prize && { prize: eventData.prize }),
     ...(eventData.entryCost && { entryCost: eventData.entryCost }),
   };
@@ -1372,7 +1372,8 @@ export const insertEvent = async (event: Event): Promise<Event> => {
 
   const session = driver.session();
   const eventDetails = event.eventDetails;
-  const eventType = eventDetails?.eventType;
+  // Ensure eventType is always set (default to "Other" if not provided)
+  const eventType = eventDetails?.eventType || "Other";
 
   // Build event type label if specified
   const eventTypeLabel = getEventTypeLabel(eventType);
@@ -1626,7 +1627,8 @@ export const editEvent = async (event: Event): Promise<Event> => {
   }
 
   const session = driver.session();
-  const eventType = eventDetails.eventType;
+  // Ensure eventType is always set (default to "Other" if not provided)
+  const eventType = eventDetails.eventType || "Other";
   const eventTypeLabel = getEventTypeLabel(eventType);
 
   // Handle dates array for Session events
@@ -1982,8 +1984,8 @@ export interface CalendarEventData {
   endTime?: string; // Kept for backward compatibility, prefer dates[0].endTime
   dates?: Array<{
     date: string;
-    startTime: string;
-    endTime: string;
+    startTime?: string;
+    endTime?: string;
   }>;
   eventType?: EventType;
   poster?: {
@@ -2667,8 +2669,8 @@ export const getCitySchedule = async (
         endTime: record.get("endTime") || undefined,
         dates: Array.isArray(parsedDates) ? parsedDates : undefined,
         eventType: eventTypeLabel
-          ? getEventTypeFromLabel(eventTypeLabel) || undefined
-          : undefined,
+          ? getEventTypeFromLabel(eventTypeLabel) || "Other"
+          : "Other",
         poster: record.get("poster") || null,
         styles: eventStylesMap.get(eventId) || [],
       };

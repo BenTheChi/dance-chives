@@ -20,8 +20,8 @@ export type EventType =
 
 export interface EventDate {
   date: string;
-  startTime: string;
-  endTime: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 // EventDetails interface - unified properties for all event types

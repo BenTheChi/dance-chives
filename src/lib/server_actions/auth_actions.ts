@@ -342,6 +342,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       RETURN e.id as eventId, e.title as eventTitle, 
              collect(DISTINCT role) as roles,
              e.createdAt as createdAt, e.startDate as startDate,
+             e.dates as dates,
              head(collect(DISTINCT poster.url)) as imageUrl, 
              head(collect(DISTINCT c.name)) as city,
              head(collect(DISTINCT c.id)) as cityId,
@@ -352,7 +353,7 @@ export async function getUserProfile(userIdOrUsername: string) {
     );
 
     const eventsWithRoles = eventsWithRolesResult.records.map((record) => {
-      const dates = record.get("dates");
+      const dates = record.has("dates") ? record.get("dates") : undefined;
       const eventTypeLabel = record.get("eventTypeLabel");
       let parsedDates: EventDate[] = [];
       if (dates) {

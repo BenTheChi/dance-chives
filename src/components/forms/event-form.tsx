@@ -23,6 +23,7 @@ import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
+import { isTimeEmpty } from "@/lib/utils/event-utils";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -122,23 +123,47 @@ const eventDetailsSchema = z.object({
               /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
               "Date must be in MM/DD/YYYY format"
             ),
-          startTime: z.string().min(1, "Start time is required"),
-          endTime: z.string().min(1, "End time is required"),
+          isAllDay: z.boolean().default(true), // Form-only field, not stored in DB
+          startTime: z.string().optional(),
+          endTime: z.string().optional(),
         })
         .refine(
           (data) => {
-            if (!data.startTime || !data.endTime) return true;
-            const [startHours, startMinutes] = data.startTime
+            // If all-day, times should be empty (server will normalize)
+            if (data.isAllDay) {
+              return true;
+            }
+            // If not all-day, both times must be present and non-empty
+            if (isTimeEmpty(data.startTime) || isTimeEmpty(data.endTime)) {
+              return false;
+            }
+            // Validate that end time is after start time
+            const [startHours, startMinutes] = (data.startTime || "")
               .split(":")
               .map(Number);
-            const [endHours, endMinutes] = data.endTime.split(":").map(Number);
+            const [endHours, endMinutes] = (data.endTime || "")
+              .split(":")
+              .map(Number);
             const startTotal = startHours * 60 + startMinutes;
             const endTotal = endHours * 60 + endMinutes;
             return endTotal > startTotal;
           },
-          {
-            message: "End time must be after start time",
-            path: ["endTime"],
+          (data) => {
+            // Custom error messages based on validation failure
+            if (data.isAllDay) {
+              return { message: "", path: [] };
+            }
+            if (isTimeEmpty(data.startTime) || isTimeEmpty(data.endTime)) {
+              return {
+                message:
+                  "Both start time and end time are required when not all-day",
+                path: ["startTime"],
+              };
+            }
+            return {
+              message: "End time must be after start time",
+              path: ["endTime"],
+            };
           }
         )
     )
@@ -253,8 +278,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         dates: [
           {
             date: "",
-            startTime: "",
-            endTime: "",
+            isAllDay: true,
+            startTime: undefined,
+            endTime: undefined,
           },
         ],
         description: "",
@@ -273,6 +299,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   });
 
   const { control, handleSubmit, setValue, getValues, register, watch } = form;
+
+  // Ensure eventType is always set to a valid value
+  useEffect(() => {
+    const currentEventType = getValues("eventDetails.eventType");
+    if (!currentEventType) {
+      setValue("eventDetails.eventType", "Other", { shouldValidate: false });
+    }
+  }, [getValues, setValue]);
 
   const sectionsRaw = watch("sections");
   const sections = sectionsRaw ?? [];
