@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -10,7 +9,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { X } from "lucide-react";
 import type {
   Control,
   UseFormSetValue,
@@ -26,13 +24,6 @@ import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface VideoFormProps {
   video: Video;
@@ -42,7 +33,6 @@ interface VideoFormProps {
   activeSectionId?: string;
   activeBracketId?: string;
   context: "section" | "bracket";
-  onRemove: () => void;
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
   getValues: UseFormGetValues<FormValues>;
@@ -83,7 +73,6 @@ export function VideoForm({
   activeSectionId,
   activeBracketId,
   context,
-  onRemove,
   control,
   setValue,
   getValues,
@@ -277,41 +266,6 @@ export function VideoForm({
     setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
-  const updateVideoType = (
-    type: "battle" | "freestyle" | "choreography" | "class"
-  ) => {
-    // Handle section/bracket videos
-    const currentSections = getValues("sections") || [];
-    const updatedSections = currentSections.map((section) => {
-      if (section.id !== activeSectionId) return section;
-
-      if (context === "section") {
-        return {
-          ...section,
-          videos: section.videos.map((v) =>
-            v.id === video.id ? { ...v, type } : v
-          ),
-        };
-      } else {
-        return {
-          ...section,
-          brackets: section.brackets.map((bracket) =>
-            bracket.id === activeBracketId
-              ? {
-                  ...bracket,
-                  videos: bracket.videos.map((v) =>
-                    v.id === video.id ? { ...v, type } : v
-                  ),
-                }
-              : bracket
-          ),
-        };
-      }
-    });
-
-    setValue("sections", normalizeSectionsForForm(updatedSections));
-  };
-
   const updateTaggedChoreographers = (choreographers: UserSearchItem[]) => {
     // Handle section/bracket videos
     const currentSections = getValues("sections") || [];
@@ -427,15 +381,6 @@ export function VideoForm({
   return (
     <Card className="group">
       <CardHeader className="relative">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          className="absolute top-2 right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
-        >
-          <X className="h-3 w-3" />
-        </Button>
         <FormField
           control={control}
           name={getVideoFieldPath("title")}
@@ -469,43 +414,6 @@ export function VideoForm({
                   {...field}
                   value={typeof field.value === "string" ? field.value : ""}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={control}
-          name={getVideoFieldPath("type")}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Video Type</FormLabel>
-              <FormControl>
-                <Select
-                  value={
-                    typeof field.value === "string" ? field.value : "battle"
-                  }
-                  onValueChange={(value) => {
-                    const type = value as
-                      | "battle"
-                      | "freestyle"
-                      | "choreography"
-                      | "class";
-                    field.onChange(type);
-                    updateVideoType(type);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select video type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="battle">Battle</SelectItem>
-                    <SelectItem value="freestyle">Freestyle</SelectItem>
-                    <SelectItem value="choreography">Choreography</SelectItem>
-                    <SelectItem value="class">Class</SelectItem>
-                  </SelectContent>
-                </Select>
               </FormControl>
               <FormMessage />
             </FormItem>
