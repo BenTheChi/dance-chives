@@ -290,7 +290,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const activeSection = sections.find((s) => s.id === activeSectionId);
 
   // Memoize sections to prevent unnecessary re-renders
-  const sectionsMemo = useMemo(() => sections, [sectionsRaw]);
+  const sectionsMemo = useMemo(() => sectionsRaw ?? [], [sectionsRaw]);
 
   // Auto-select first section when Sections tab is active and no section is selected
   useEffect(() => {

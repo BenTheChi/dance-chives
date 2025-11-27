@@ -113,6 +113,53 @@ export function SectionForm({
     }
   }, [activeSectionId, activeSection?.winners]);
 
+  // Ensure hasBrackets is set correctly based on section type when editing
+  useEffect(() => {
+    if (!activeSection) return;
+
+    const requiresBrackets = sectionTypeRequiresBrackets(
+      activeSection.sectionType
+    );
+    const disallowsBrackets = sectionTypeDisallowsBrackets(
+      activeSection.sectionType
+    );
+
+    // If section type requires brackets but hasBrackets is false, set it to true
+    if (requiresBrackets && !activeSection.hasBrackets) {
+      const currentSections = getValues("sections");
+      const updatedSections = currentSections.map((section) => {
+        if (section.id !== activeSectionId) return section;
+        return {
+          ...section,
+          hasBrackets: true,
+        };
+      });
+      setValue(`sections.${activeSectionIndex}.hasBrackets`, true);
+      setValue("sections", normalizeSectionsForForm(updatedSections));
+    }
+    // If section type disallows brackets but hasBrackets is true, set it to false
+    else if (disallowsBrackets && activeSection.hasBrackets) {
+      const currentSections = getValues("sections");
+      const updatedSections = currentSections.map((section) => {
+        if (section.id !== activeSectionId) return section;
+        return {
+          ...section,
+          hasBrackets: false,
+        };
+      });
+      setValue(`sections.${activeSectionIndex}.hasBrackets`, false);
+      setValue("sections", normalizeSectionsForForm(updatedSections));
+    }
+  }, [
+    activeSectionId,
+    activeSection,
+    activeSection?.sectionType,
+    activeSection?.hasBrackets,
+    activeSectionIndex,
+    setValue,
+    getValues,
+  ]);
+
   const addBracket = () => {
     if (!activeSection) return;
 

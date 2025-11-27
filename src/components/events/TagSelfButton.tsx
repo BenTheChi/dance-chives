@@ -50,6 +50,9 @@ interface TagSelfButtonProps {
   buttonLabel?: string;
   pendingLabel?: string;
   successLabel?: string;
+  // Custom dialog props
+  dialogTitle?: string;
+  dialogDescription?: string;
   // For video-level tagging
   videoType?: "battle" | "choreography" | "class";
   currentVideoRoles?: string[]; // Roles user already has in this video
@@ -69,6 +72,8 @@ export function TagSelfButton({
   buttonLabel = "Tag Myself",
   pendingLabel,
   successLabel,
+  dialogTitle,
+  dialogDescription,
   videoType,
   currentVideoRoles = [],
   onPendingRolesChange,
@@ -220,27 +225,32 @@ export function TagSelfButton({
     target === "section" || target === "video"
       ? currentUserId
       : session?.user?.id;
-  if (!userId) {
-    return null;
-  }
-
-  // For section-level tagging, don't show if user is already tagged
-  if (target === "section" && isUserTagged) {
-    return null;
-  }
-
-  // Don't show the button if all roles are taken
-  if (availableRoles.length === 0) {
-    return null;
-  }
 
   // Filter out roles with pending requests
   const selectableRoles = availableRoles.filter(
     (role) => !pendingRoles.has(role)
   );
 
+  // Auto-select role if only one is available (e.g., section-level Winner)
+  useEffect(() => {
+    if (selectableRoles.length === 1 && !selectedRole && isDialogOpen) {
+      setSelectedRole(selectableRoles[0]);
+    }
+  }, [selectableRoles, isDialogOpen, selectedRole]);
+
+  // Reset selected role when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen) {
+      setSelectedRole("");
+    }
+  }, [isDialogOpen]);
+
   const handleConfirm = () => {
-    if (!selectedRole) {
+    // For single-role scenarios, use the auto-selected role
+    const roleToUse =
+      selectedRole || (selectableRoles.length === 1 ? selectableRoles[0] : "");
+
+    if (!roleToUse) {
       toast.error("Please select a role");
       return;
     }
@@ -250,20 +260,20 @@ export function TagSelfButton({
         let result;
         if (target === "section" && targetId) {
           // Section-level tagging
-          result = await tagSelfInSection(eventId, targetId, selectedRole);
+          result = await tagSelfInSection(eventId, targetId, roleToUse);
         } else if (target === "video" && targetId) {
           // Video-level tagging
-          result = await tagSelfInVideo(eventId, targetId, selectedRole);
+          result = await tagSelfInVideo(eventId, targetId, roleToUse);
         } else {
           // Event-level tagging
-          result = await tagSelfWithRole(eventId, selectedRole);
+          result = await tagSelfWithRole(eventId, roleToUse);
         }
 
         if (result.directTag) {
           toast.success(
             target === "section" && successLabel
               ? successLabel
-              : `Successfully tagged yourself as ${selectedRole}`
+              : `Successfully tagged yourself as ${roleToUse}`
           );
           setSelectedRole(""); // Reset selection
           setIsDialogOpen(false); // Close dialog
@@ -272,7 +282,7 @@ export function TagSelfButton({
           toast.success(
             target === "section" && pendingLabel
               ? pendingLabel
-              : `Request to tag yourself as ${selectedRole} has been created`
+              : `Request to tag yourself as ${roleToUse} has been created`
           );
           setSelectedRole(""); // Reset selection
           setIsDialogOpen(false); // Close dialog
@@ -283,11 +293,11 @@ export function TagSelfButton({
               undefined,
               target === "section" ? currentUserId : session?.user?.id,
               target === "section" ? targetId : undefined,
-              selectedRole
+              roleToUse
             );
             if (request) {
               setPendingRoles((prev) => {
-                const newSet = new Set(prev).add(selectedRole);
+                const newSet = new Set(prev).add(roleToUse);
                 // Notify parent component of pending roles
                 if (onPendingRolesChange) {
                   onPendingRolesChange(Array.from(newSet));
@@ -313,18 +323,18 @@ export function TagSelfButton({
               undefined,
               target === "section" ? currentUserId : session?.user?.id,
               target === "section" ? targetId : undefined,
-              selectedRole
+              roleToUse
             );
             if (request) {
               setPendingRoles((prev) => {
-                const newSet = new Set(prev).add(selectedRole);
+                const newSet = new Set(prev).add(roleToUse);
                 // Notify parent component of pending roles
                 if (onPendingRolesChange) {
                   onPendingRolesChange(Array.from(newSet));
                 }
                 return newSet;
               });
-              toast.info(`${selectedRole} tag request pending`);
+              toast.info(`${roleToUse} tag request pending`);
               setIsDialogOpen(false);
               return;
             }
@@ -348,6 +358,15 @@ export function TagSelfButton({
         ? canTagDirectly
         : (session?.user?.auth ?? 0) >= 2 // Default to moderator level for sections
       : canTagDirectly;
+
+  const shouldHideButton =
+    !userId ||
+    (target === "section" && isUserTagged) ||
+    availableRoles.length === 0;
+
+  if (shouldHideButton) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2 mt-2">
@@ -376,35 +395,42 @@ export function TagSelfButton({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tag Yourself</DialogTitle>
+            <DialogTitle>{dialogTitle || "Tag Yourself"}</DialogTitle>
             <DialogDescription>
-              {target === "section"
-                ? "Select a role to tag yourself with for this section."
-                : target === "video"
-                ? "Select a role to tag yourself with for this video."
-                : "Select a role to tag yourself with for this event."}
+              {dialogDescription ||
+                (target === "section"
+                  ? "Select a role to tag yourself with for this section."
+                  : target === "video"
+                  ? "Select a role to tag yourself with for this video."
+                  : "Select a role to tag yourself with for this event.")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">Role</label>
-              <Select
-                value={selectedRole}
-                onValueChange={setSelectedRole}
-                disabled={isPending}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectableRoles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {selectableRoles.length > 1 ? (
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Role</label>
+                <Select
+                  value={selectedRole}
+                  onValueChange={setSelectedRole}
+                  disabled={isPending}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectableRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : selectableRoles.length === 1 ? (
+              <div className="text-sm text-gray-600">
+                Role: <span className="font-medium">{selectableRoles[0]}</span>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
             <Button
@@ -419,7 +445,9 @@ export function TagSelfButton({
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={isPending || !selectedRole}
+              disabled={
+                isPending || (selectableRoles.length > 1 && !selectedRole)
+              }
             >
               {canTag ? "Confirm" : "Request"}
             </Button>

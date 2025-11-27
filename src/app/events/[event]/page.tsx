@@ -524,33 +524,6 @@ export default async function EventPage({ params }: PageProps) {
                                 ))}
                               </div>
                             )}
-                            {section.brackets.length > 0 ? (
-                              <div className="space-y-2 mt-2">
-                                <div className="text-sm text-gray-600 mb-2">
-                                  Brackets:
-                                </div>
-                                {section.brackets.map((bracket) => (
-                                  <div
-                                    key={bracket.id}
-                                    className="bg-gray-50 rounded p-2 flex justify-between items-center"
-                                  >
-                                    <span className="font-medium text-gray-700">
-                                      {bracket.title}
-                                    </span>
-                                    <span className="text-sm text-gray-500">
-                                      {bracket.videos.length}{" "}
-                                      {bracket.videos.length === 1
-                                        ? "video"
-                                        : "videos"}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-sm text-gray-600 italic mt-2">
-                                No brackets - direct video collection
-                              </div>
-                            )}
                             {section.description && (
                               <p className="text-sm text-gray-600 mt-2 line-clamp-2">
                                 {section.description}
