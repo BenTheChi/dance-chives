@@ -1879,6 +1879,40 @@ export const editEvent = async (event: Event): Promise<Event> => {
   }
 };
 
+// Save event for user
+export async function saveEventForUser(userId: string, eventId: string) {
+  const session = driver.session();
+  try {
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      MATCH (e:Event {id: $eventId})
+      MERGE (u)-[:SAVE]->(e)
+      `,
+      { userId, eventId }
+    );
+  } finally {
+    await session.close();
+  }
+};
+
+// Unsave event for user
+export async function unsaveEventForUser(userId: string, eventId: string) {
+  const session = driver.session();
+  try {
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
+      DELETE r
+      `,
+      { userId, eventId }
+    );
+  } finally {
+    await session.close();
+  }
+};
+
+
 // Helper function to fetch city coordinates from GeoDB API
 async function fetchCityCoordinates(
   cityId: number
