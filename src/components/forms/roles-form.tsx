@@ -11,7 +11,7 @@ import {
   FormField,
   FormMessage,
 } from "../ui/form"; // form components
-import { MinusIcon } from "lucide-react";
+import { X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,6 +22,7 @@ import {
 import { UserSearchItem } from "@/types/user";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
+import { BigAddButton } from "../ui/big-add-button";
 
 interface RolesFormProps {
   control: Control<FormValues>;
@@ -80,81 +81,96 @@ export default function RolesForm({
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
-      <div className="space-y-5 border border-gray-200 rounded-lg p-5 bg-white shadow-sm">
-        {roles.map((role, index) => (
-          <div className="flex items-end gap-5 mb-4" key={role.id}>
-            {/* Remove role button */}
-            <Button
-              onClick={() => removeRole(role.id)}
-              variant="outline"
-              size="icon"
-              className="rounded-full hover:bg-red-200"
-              type="button"
-            >
-              <MinusIcon />
-            </Button>
-
-            {/* Side-by-side form fields */}
-            <div className="flex gap-5 w-full">
-              <FormField
-                control={control}
-                name={`roles.${index}.title`}
-                render={() => (
-                  <FormItem className="w-full">
-                    <FormLabel>Role</FormLabel>
-                    <FormControl>
-                      <Select
-                        onValueChange={(value) => {
-                          setValue(`roles.${index}.title`, value);
-                        }}
-                        value={roles[index].title}
-                      >
-                        <SelectTrigger className="bg-white w-full">
-                          <SelectValue placeholder="Select Role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {AVAILABLE_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    {/* // add form message to display errors / validation */}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DebouncedSearchSelect<UserSearchItem, FormValues>
-                control={control as Control<FormValues>}
-                name={`roles.${index}.user`}
-                onSearch={getUserSearchItems}
-                placeholder="Search..."
-                getDisplayValue={(item: UserSearchItem) => {
-                  if (!item.displayName || !item.username) return "";
-                  return `${item.displayName} (${item.username})`;
-                }}
-                getItemId={(item) => item.username}
-                onChange={(value) => {
-                  setValue(`roles.${index}.user`, value as UserSearchItem);
-                }}
-                value={roles[index].user}
-                label="User"
-              />
-            </div>
+      {roles.length === 0 ? (
+        <div className="border rounded-lg p-6 text-center">
+          <div className="text-sm text-muted-foreground mb-6">
+            No roles yet. Let&apos;s create one!
           </div>
-        ))}
+          <div className="flex justify-center">
+            <BigAddButton onClick={addRole} />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {roles.map((role, index) => (
+            <div
+              key={role.id}
+              className="border rounded-md bg-card border-border"
+            >
+              <div className="p-5">
+                <div className="flex items-end gap-4">
+                  <FormField
+                    control={control}
+                    name={`roles.${index}.title`}
+                    render={() => (
+                      <FormItem className="flex-1">
+                        <FormLabel>Role</FormLabel>
+                        <FormControl>
+                          <Select
+                            onValueChange={(value) => {
+                              setValue(`roles.${index}.title`, value);
+                            }}
+                            value={roles[index].title}
+                          >
+                            <SelectTrigger className="bg-white w-full">
+                              <SelectValue placeholder="Select Role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AVAILABLE_ROLES.map((role) => (
+                                <SelectItem key={role} value={role}>
+                                  {role}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-        <Button
-          className="border-2 px-4 py-2 rounded-lg hover:bg-[#B4D4F7] mt-5"
-          onClick={addRole}
-          type="button"
-        >
-          + Add Another Role
-        </Button>
-      </div>
+                  <div className="flex-1">
+                    <DebouncedSearchSelect<UserSearchItem, FormValues>
+                      control={control as Control<FormValues>}
+                      name={`roles.${index}.user`}
+                      onSearch={getUserSearchItems}
+                      placeholder="Search..."
+                      getDisplayValue={(item: UserSearchItem) => {
+                        if (!item.displayName || !item.username) return "";
+                        return `${item.displayName} (${item.username})`;
+                      }}
+                      getItemId={(item) => item.username}
+                      onChange={(value) => {
+                        setValue(
+                          `roles.${index}.user`,
+                          value as UserSearchItem
+                        );
+                      }}
+                      value={roles[index].user}
+                      label="User"
+                    />
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeRole(role.id)}
+                    className="h-6 w-6 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10 mb-1"
+                    aria-label={`Remove role ${index + 1}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex justify-center mt-6">
+            <BigAddButton onClick={addRole} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

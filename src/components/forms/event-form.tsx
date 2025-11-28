@@ -787,7 +787,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-6 max-w-full overflow-x-hidden">
+    <div className="container mx-auto px-4 sm:px-4 py-6 max-w-full overflow-x-hidden">
       <h1 className="text-3xl font-bold text-center mb-8">
         {isEditing ? "Edit Event" : "New Event"}
       </h1>
@@ -832,7 +832,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {activeMainTab === "Sections" && (
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6">
+              <div className="flex flex-col md:flex-row gap-6 max-w-5xl mx-auto w-full">
                 {/* Left sidebar: sections + nested items - only show if sections exist */}
                 {sections.length > 0 && (
                   <div className="w-full md:w-80 md:flex-shrink-0">
@@ -1123,7 +1123,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   className={sections.length > 0 ? "flex-1 min-w-0" : "w-full"}
                 >
                   {sections.length === 0 || !sectionsSelection ? (
-                    <div className="border rounded-lg p-6 text-center">
+                    <div className="border rounded-lg p-6 text-center max-w-3xl mx-auto w-full">
                       <div className="text-sm text-muted-foreground mb-6">
                         No sections yet. Let&apos;s create one!
                       </div>
@@ -1218,40 +1218,41 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           )}
 
           {activeMainTab === "Photo Gallery" && (
-            <FormField
-              control={control}
-              name="gallery"
-              render={() => (
-                <FormItem className="w-full">
-                  <FormLabel>Photo Gallery</FormLabel>
-                  <FormControl>
-                    <UploadFile
-                      register={register}
-                      name="gallery"
-                      onFileChange={(files) => {
-                        if (files) {
-                          const filesArray = Array.isArray(files)
-                            ? files
-                            : [files];
-                          setValue(
-                            "gallery",
-                            filesArray.map((file) => ({
-                              ...file,
-                              type: "gallery" as const,
-                            }))
-                          );
-                        } else {
-                          setValue("gallery", []);
-                        }
-                      }}
-                      className="bg-[#E8E7E7]"
-                      maxFiles={10}
-                      files={gallery || null}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
+              <FormField
+                control={control}
+                name="gallery"
+                render={() => (
+                  <FormItem className="w-full">
+                    <FormControl>
+                      <UploadFile
+                        register={register}
+                        name="gallery"
+                        onFileChange={(files) => {
+                          if (files) {
+                            const filesArray = Array.isArray(files)
+                              ? files
+                              : [files];
+                            setValue(
+                              "gallery",
+                              filesArray.map((file) => ({
+                                ...file,
+                                type: "gallery" as const,
+                              }))
+                            );
+                          } else {
+                            setValue("gallery", []);
+                          }
+                        }}
+                        className="bg-[#E8E7E7]"
+                        maxFiles={10}
+                        files={gallery || null}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
           )}
 
           {/* Bottom Navigation */}
