@@ -77,7 +77,7 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           <SidebarProvider>
             <div className="flex w-full">
-              <AppSidebar />
+              {/* <AppSidebar /> */}
               <main className="flex flex-col flex-1">{children}</main>
             </div>
           </SidebarProvider>
