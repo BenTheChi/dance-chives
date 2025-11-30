@@ -10,6 +10,8 @@ import {
   insertEvent,
   editEvent as editEventQuery,
   getEvent as getEventQuery,
+  toggleSaveCypher,
+  getSavedEventIds as getSavedEventIdsQuery,
 } from "@/db/queries/event";
 import { Event, EventDetails, Section, Video } from "@/types/event";
 import { Image } from "@/types/image";
@@ -904,6 +906,79 @@ export async function getEvent(eventId: string): Promise<response> {
       error: "Failed to fetch event",
       status: 500,
       event: null,
+    };
+  }
+}
+
+export async function toggleSaveEvent(eventId: string): Promise<
+  | { status: number; saved: boolean }
+  | { status: number; error: string }
+> {
+  const session = await auth();
+
+  if (!session) {
+    console.error("No user session found");
+    return {
+      error: "No user session found",
+      status: 401,
+    };
+  }
+
+  if (!session.user?.id) {
+    console.error("No user ID in session");
+    return {
+      error: "No user ID in session",
+      status: 401,
+    };
+  }
+
+  try {
+    const result = await toggleSaveCypher(session.user.id, eventId);
+    return {
+      status: 200,
+      saved: result.saved,
+    };
+  } catch (error) {
+    console.error("Error toggling save event:", error);
+    return {
+      error: "Failed to toggle save event",
+      status: 500,
+    };
+  }
+}
+
+export async function getSavedEventIds(): Promise<
+  | { status: number; eventIds: string[] }
+  | { status: number; error: string }
+> {
+  const session = await auth();
+
+  if (!session) {
+    // Return empty array for unauthenticated users
+    return {
+      status: 200,
+      eventIds: [],
+    };
+  }
+
+  if (!session.user?.id) {
+    return {
+      status: 200,
+      eventIds: [],
+    };
+  }
+
+  try {
+    const eventIds = await getSavedEventIdsQuery(session.user.id);
+    return {
+      status: 200,
+      eventIds,
+    };
+  } catch (error) {
+    console.error("Error fetching saved event IDs:", error);
+    return {
+      error: "Failed to fetch saved event IDs",
+      status: 500,
     };
   }
 }

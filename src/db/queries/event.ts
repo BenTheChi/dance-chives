@@ -1912,6 +1912,90 @@ export async function unsaveEventForUser(userId: string, eventId: string) {
   }
 };
 
+// Check if event is saved by user
+export async function isEventSavedByUser(userId: string, eventId: string) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
+      RETURN COUNT(r) > 0 AS saved
+      `,
+      { userId, eventId }
+    );
+
+    return result.records[0].get("saved");
+  } finally {
+    await session.close();
+  }
+}
+
+// Toggle save event for user
+// If SAVE relationship exists → delete it and return { saved: false }
+// If not → create it with createdAt and return { saved: true }
+export async function toggleSaveCypher(
+  userId: string,
+  eventId: string
+): Promise<{ saved: boolean }> {
+  const session = driver.session();
+  try {
+    // First, check if the relationship exists
+    const checkResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
+      RETURN r
+      `,
+      { userId, eventId }
+    );
+
+    const relationshipExists = checkResult.records.length > 0;
+
+    if (relationshipExists) {
+      // Delete the relationship
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
+        DELETE r
+        `,
+        { userId, eventId }
+      );
+      return { saved: false };
+    } else {
+      // Create the relationship with createdAt timestamp
+      const createdAt = new Date().toISOString();
+      await session.run(
+        `
+        MATCH (u:User {id: $userId})
+        MATCH (e:Event {id: $eventId})
+        MERGE (u)-[r:SAVE]->(e)
+        ON CREATE SET r.createdAt = $createdAt
+        `,
+        { userId, eventId, createdAt }
+      );
+      return { saved: true };
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+// Get all saved event IDs for a user
+export async function getSavedEventIds(userId: string): Promise<string[]> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
+      RETURN e.id as eventId
+      `,
+      { userId }
+    );
+
+    return result.records.map((record) => record.get("eventId") as string);
+  } finally {
+    await session.close();
+  }
+}
 
 // Helper function to fetch city coordinates from GeoDB API
 async function fetchCityCoordinates(

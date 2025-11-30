@@ -1,15 +1,21 @@
+"use client";
+
 import Image from "next/image";
 import React from "react";
 import Link from "next/link";
+import { Heart } from "lucide-react";
 import { EventCard } from "@/types/event";
 import { CardWithPoster, CardContent } from "@/components/ui/card";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
+import { useToggleSave } from "@/hooks/use-toggle-save";
 
 interface EventcardProps extends EventCard {
   roles?: string[];
   href?: string; // Optional href for the title link, defaults to /events/${id}
+  isSaved?: boolean;
 }
 
 const Eventcard = ({
@@ -23,8 +29,19 @@ const Eventcard = ({
   styles,
   roles,
   href,
+  isSaved,
 }: EventcardProps) => {
   const titleHref = href || `/events/${id}`;
+  const { isSaved: savedState, toggle, isPending } = useToggleSave(
+    isSaved ?? false,
+    id
+  );
+
+  const handleHeartClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle();
+  };
 
   return (
     <CardWithPoster className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
@@ -36,6 +53,22 @@ const Eventcard = ({
             fill
             className="object-cover transition-transform duration-200 group-hover:scale-105"
           />
+          <Button
+            variant={savedState ? "default" : "outline"}
+            size="icon"
+            className={`absolute top-2 right-2 h-8 w-8 rounded-full ${
+              savedState
+                ? "bg-red-500 hover:bg-red-600 text-white"
+                : "bg-white/90 hover:bg-white text-gray-700"
+            } ${isPending ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={handleHeartClick}
+            disabled={isPending}
+            aria-label={savedState ? "Unsave event" : "Save event"}
+          >
+            <Heart
+              className={`h-4 w-4 ${savedState ? "fill-current" : ""}`}
+            />
+          </Button>
         </div>
 
         <div className="sm:p-4 space-y-2 sm:space-y-3">
