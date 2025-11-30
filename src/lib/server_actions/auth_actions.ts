@@ -14,7 +14,7 @@ import { getNeo4jRoleFormats } from "@/lib/utils/roles";
 import driver from "@/db/driver";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { City } from "@/types/city";
 import { signIn, signOut } from "@/auth";
 import { EventDate, EventType } from "@/types/event";

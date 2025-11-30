@@ -1,7 +1,7 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import EventFormWrapper from "@/components/EventFormWrapper";
 import { withPageAuth } from "@/lib/utils/page-auth";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 
 export default async function AddEventPage() {
   return withPageAuth({ minAuthLevel: AUTH_LEVELS.CREATOR }, async () => {

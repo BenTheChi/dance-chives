@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/primsa";
-import { AUTH_LEVELS } from "./auth-utils";
+import { AUTH_LEVELS } from "./auth-constants";
 import {
   getEventTeamMembers,
   getEventCreator,

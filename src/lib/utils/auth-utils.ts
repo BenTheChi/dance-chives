@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { Session } from "next-auth";
+import { AUTH_LEVELS } from "./auth-constants";
 
 /**
  * Require a minimum auth level to proceed
@@ -90,17 +91,6 @@ export async function requireAccountVerification() {
 
   return session;
 }
-
-/**
- * Auth level constants for easier management
- */
-export const AUTH_LEVELS = {
-  BASE_USER: 0,
-  CREATOR: 1,
-  MODERATOR: 2,
-  ADMIN: 3,
-  SUPER_ADMIN: 4,
-} as const;
 
 /**
  * Helper function to get auth level name

@@ -23,11 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
 import NextImage from "next/image";
-import {
-  canUpdateEvent,
-  canDeleteEvent,
-  AUTH_LEVELS,
-} from "@/lib/utils/auth-utils";
+import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
 import { getEventTeamMembers } from "@/db/queries/team-member";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";

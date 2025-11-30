@@ -45,7 +45,7 @@ import {
   SECTION_ROLE_WINNER,
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { Prisma } from "@prisma/client";
 
 // ============================================================================

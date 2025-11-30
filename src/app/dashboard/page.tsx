@@ -15,7 +15,8 @@ import {
   IncomingRequestCard,
   OutgoingRequestCard,
 } from "@/components/requests/RequestCard";
-import { getAuthLevelName, AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { getAuthLevelName } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

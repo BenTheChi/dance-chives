@@ -4,7 +4,7 @@ import { getUserProfile } from "@/lib/server_actions/auth_actions";
 import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 import SignUpForm from "@/components/forms/signup-form";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 
 interface PageProps {
   params: Promise<{ username: string }>;

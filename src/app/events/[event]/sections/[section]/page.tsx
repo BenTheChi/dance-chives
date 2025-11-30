@@ -6,7 +6,7 @@ import Link from "next/link";
 import { PosterImage } from "@/components/PosterImage";
 import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { SectionDetails } from "@/components/sections/SectionDetails";
 
 type PageProps = {
