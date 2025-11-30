@@ -7,6 +7,7 @@ import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 import { UserCard } from "@/components/user-card";
 import { auth } from "@/auth";
 import { getUser } from "@/db/queries/user";
+import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 
 type PageProps = {
   params: Promise<{ style: string }>;
@@ -31,6 +32,14 @@ export default async function StylePage({ params }: PageProps) {
   if (!styleData) {
     notFound();
   }
+
+  const savedResult =
+    session?.user?.id ? await getSavedEventIds() : { status: 200, eventIds: [] };
+  const savedEventIds = new Set(
+    savedResult.status === 200 && "eventIds" in savedResult
+      ? savedResult.eventIds
+      : []
+  );
 
   // Format style name for display (first letter uppercase)
   const displayStyleName = formatStyleNameForDisplay(styleData.styleName);
@@ -64,6 +73,7 @@ export default async function StylePage({ params }: PageProps) {
                     city={event.city}
                     cityId={event.cityId}
                     styles={event.styles}
+                    isSaved={savedEventIds.has(event.id)}
                   />
                 ))}
               </div>

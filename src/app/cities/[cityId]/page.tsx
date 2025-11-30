@@ -12,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { auth } from "@/auth";
+import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 
 type PageProps = {
   params: Promise<{ cityId: string }>;
@@ -30,6 +32,15 @@ export default async function CityPage({ params }: PageProps) {
   if (!cityData) {
     notFound();
   }
+
+  const session = await auth();
+  const savedResult =
+    session?.user?.id ? await getSavedEventIds() : { status: 200, eventIds: [] };
+  const savedEventIds = new Set(
+    savedResult.status === 200 && "eventIds" in savedResult
+      ? savedResult.eventIds
+      : []
+  );
 
   const cityDisplay =
     cityData.city.region && cityData.city.countryCode
@@ -99,6 +110,7 @@ export default async function CityPage({ params }: PageProps) {
                       city={event.city}
                       cityId={cityData.city.id}
                       styles={event.styles}
+                      isSaved={savedEventIds.has(event.id)}
                     />
                   ))}
                 </div>

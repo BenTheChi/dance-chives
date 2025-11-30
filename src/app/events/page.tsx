@@ -2,9 +2,19 @@ import Eventcard from "@/components/cards";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getAllEvents } from "@/db/queries/event";
 import { EventCard } from "@/types/event";
+import { auth } from "@/auth";
+import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 
 export default async function EventsPage() {
   const events = await getAllEvents();
+  const session = await auth();
+  const savedResult =
+    session?.user?.id ? await getSavedEventIds() : { status: 200, eventIds: [] };
+  const savedEventIds = new Set(
+    savedResult.status === 200 && "eventIds" in savedResult
+      ? savedResult.eventIds
+      : []
+  );
 
   return (
     <>
@@ -24,6 +34,7 @@ export default async function EventsPage() {
                 city={event.city}
                 cityId={event.cityId}
                 styles={event.styles}
+                isSaved={savedEventIds.has(event.id)}
               />
             ))}
           </div>
