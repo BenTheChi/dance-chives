@@ -528,7 +528,8 @@ export const getEvent = async (id: string): Promise<Event> => {
     RETURN collect({
       id: galleryPic.id,
       title: galleryPic.title,
-      url: galleryPic.url
+      url: galleryPic.url,
+      caption: galleryPic.caption
     }) as gallery
   `,
     { id }
@@ -1022,21 +1023,27 @@ const createGalleryPhotos = async (eventId: string, gallery: Image[]) => {
   const session = driver.session();
   try {
     for (const pic of gallery) {
+      // Normalize caption: trim whitespace and set to null if empty
+      const caption = pic.caption?.trim() || null;
+
       await session.run(
         `MATCH (e:Event {id: $eventId})
          MERGE (p:Image:Gallery {id: $picId})
          ON CREATE SET
            p.title = $title,
-           p.url = $url
+           p.url = $url,
+           p.caption = $caption
          ON MATCH SET
            p.title = $title,
-           p.url = $url
+           p.url = $url,
+           p.caption = $caption
          MERGE (p)-[:PHOTO]->(e)`,
         {
           eventId,
           picId: pic.id,
           title: pic.title,
           url: pic.url,
+          caption: caption,
         }
       );
     }

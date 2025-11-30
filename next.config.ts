@@ -42,37 +42,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Exclude Node.js modules from client bundle
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        crypto: false,
-        stream: false,
-        url: false,
-        zlib: false,
-        http: false,
-        https: false,
-        assert: false,
-        os: false,
-        path: false,
-        dns: false,
-      };
-    }
-
-    // Silence optional pg-native warnings (pg's native bindings)
-    // pg tries to require('pg-native') in a try/catch; we don't use it,
-    // so alias it to false so webpack doesn't error or warn.
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      "pg-native": false,
-    };
-
-    return config;
-  },
 };
 
 export default nextConfig;

@@ -17,6 +17,7 @@ interface PhotoLightboxProps {
   hasPrev: boolean;
   currentIndex: number;
   totalImages: number;
+  showCaption?: boolean;
 }
 
 export function PhotoLightbox({
@@ -29,6 +30,7 @@ export function PhotoLightbox({
   hasPrev,
   currentIndex,
   totalImages,
+  showCaption = false,
 }: PhotoLightboxProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -93,6 +95,7 @@ export function PhotoLightbox({
   };
 
   const displayTitle = image?.title || `Image ${currentIndex + 1}`;
+  const displayAlt = image?.caption || displayTitle;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -182,7 +185,7 @@ export function PhotoLightbox({
               <div className="relative w-full h-full">
                 <NextImage
                   src={image.url}
-                  alt={displayTitle}
+                  alt={displayAlt}
                   fill
                   className={`object-contain ${
                     isLoading ? "opacity-0" : "opacity-100"
@@ -215,6 +218,15 @@ export function PhotoLightbox({
               </>
             )}
           </div>
+
+          {/* Caption area - only shown when showCaption is true and caption exists */}
+          {showCaption && image?.caption && (
+            <div className="flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 bg-black border-t border-gray-800">
+              <p className="text-sm sm:text-base text-white text-center break-words">
+                {image.caption}
+              </p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -169,6 +169,7 @@ interface addEventProps {
     title: string;
     url: string;
     file: File | null;
+    caption?: string;
   }[];
 }
 
