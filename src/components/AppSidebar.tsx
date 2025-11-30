@@ -15,8 +15,6 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 
-import { usePathname } from "next/navigation";
-
 const menuItems = [
   { title: "Search", url: "/search", icon: SearchIcon },
   { title: "Events", url: "/events", icon: CalendarIcon },
@@ -27,10 +25,6 @@ const menuItems = [
 
 export function AppSidebar() {
   useSidebar();
-
-  if (usePathname() === "/signup") {
-    return <></>;
-  }
 
   return (
     <Sidebar collapsible="icon">

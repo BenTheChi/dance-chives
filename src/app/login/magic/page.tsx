@@ -44,8 +44,18 @@ export default function MagicLoginPage() {
         }
 
         const data = await response.json();
-        const redirectPath =
+        let redirectPath =
           data.redirectPath || (data.needsProfile ? "/signup" : "/dashboard");
+
+        // Add query parameter to indicate magic link flow for signup page
+        if (redirectPath === "/signup") {
+          redirectPath = "/signup?fromMagicLink=true";
+        }
+
+        // Add query parameter to indicate magic link flow for login/dashboard
+        if (redirectPath === "/dashboard") {
+          redirectPath = "/dashboard?fromMagicLinkLogin=true";
+        }
 
         router.replace(redirectPath);
       } catch (error) {
@@ -69,9 +79,7 @@ export default function MagicLoginPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground text-center">
-            {message}
-          </p>
+          <p className="text-sm text-muted-foreground text-center">{message}</p>
           {status === "error" && (
             <div className="flex justify-center">
               <Button asChild>
@@ -84,5 +92,3 @@ export default function MagicLoginPage() {
     </div>
   );
 }
-
-
