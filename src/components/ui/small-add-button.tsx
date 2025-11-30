@@ -3,8 +3,10 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface SmallAddButtonProps
-  extends Omit<React.ComponentProps<typeof Button>, "variant" | "size"> {}
+type SmallAddButtonProps = Omit<
+  React.ComponentProps<typeof Button>,
+  "variant" | "size"
+>;
 
 export function SmallAddButton({ className, ...props }: SmallAddButtonProps) {
   return (
@@ -21,4 +23,3 @@ export function SmallAddButton({ className, ...props }: SmallAddButtonProps) {
     </Button>
   );
 }
-

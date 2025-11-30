@@ -4,14 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { BigAddButton } from "@/components/ui/big-add-button";
 import { SmallAddButton } from "@/components/ui/small-add-button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
-import { Plus, X } from "lucide-react";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { X } from "lucide-react";
 import { FieldErrors, useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -335,8 +329,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       | "profile"
       | "poster",
   }));
-  const activeSection = sections.find((s) => s.id === activeSectionId);
-
   // Memoize sections to prevent unnecessary re-renders
   const sectionsMemo = useMemo(() => sectionsRaw ?? [], [sectionsRaw]);
 
@@ -765,10 +757,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       duration: 7000,
     });
   };
-
-  const activeSectionIndex = sections.findIndex(
-    (s) => s.id === activeSectionId
-  );
 
   // Find the index of the active tab
   const activeTabIndex = mainTabs.findIndex((tab) => tab === activeMainTab);

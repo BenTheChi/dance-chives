@@ -3,8 +3,10 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface BigAddButtonProps
-  extends Omit<React.ComponentProps<typeof Button>, "variant" | "size"> {}
+type BigAddButtonProps = Omit<
+  React.ComponentProps<typeof Button>,
+  "variant" | "size"
+>;
 
 export function BigAddButton({ className, ...props }: BigAddButtonProps) {
   return (

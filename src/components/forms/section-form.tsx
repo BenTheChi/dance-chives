@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   FormControl,
   FormField,
@@ -13,7 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Plus, X, Trophy } from "lucide-react";
+import { X, Trophy } from "lucide-react";
 import { BigAddButton } from "@/components/ui/big-add-button";
 import type {
   Control,
@@ -44,7 +44,6 @@ import {
   sectionTypeDisallowsBrackets,
   sectionTypeRequiresBrackets,
   sectionTypeSupportsWinners,
-  updateSectionType,
   updateVideoTypeForId,
   VideoType,
 } from "@/lib/utils/section-helpers";
@@ -226,42 +225,6 @@ export function SectionForm({
     handleSetActiveBracketId(newBracket.id);
   };
 
-  const removeBracket = (bracketId: string) => {
-    if (!activeSection) return;
-
-    const updatedBrackets = activeSection.brackets.filter(
-      (bracket) => bracket.id !== bracketId
-    );
-    const updatedSections = sections.map((section) =>
-      section.id === activeSectionId
-        ? { ...section, brackets: updatedBrackets }
-        : section
-    );
-
-    setValue("sections", normalizeSectionsForForm(updatedSections));
-
-    // If we removed the active bracket, switch to the first available bracket
-    if (activeBracketId === bracketId && updatedBrackets.length > 0) {
-      handleSetActiveBracketId(updatedBrackets[0].id);
-    }
-  };
-
-  // Handle section type change using shared helper
-  const handleSectionTypeChange = (newType: string | undefined) => {
-    const currentSections = getValues("sections") ?? [];
-    const updatedSections = updateSectionType(
-      currentSections,
-      activeSectionId,
-      newType as Section["sectionType"] | undefined
-    );
-
-    setValue("sections", normalizeSectionsForForm(updatedSections));
-
-    if (!sectionTypeSupportsWinners(newType)) {
-      setSectionWinners([]);
-    }
-  };
-
   const addVideoToSection = () => {
     if (!activeSection) return;
 
@@ -441,7 +404,7 @@ export function SectionForm({
     if (!activeVideoId || !exists) {
       setActiveVideoId(activeSection.videos[0].id);
     }
-  }, [activeSectionId, activeSection?.videos, activeVideoId]);
+  }, [activeSectionId, activeSection, activeVideoId]);
 
   const activeVideo =
     activeVideoId &&
