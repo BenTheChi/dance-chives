@@ -703,7 +703,7 @@ export function SectionForm({
                         <button
                           type="button"
                           onClick={() => setActiveVideoId(video.id)}
-                          className={`flex-1 text-left rounded px-3 py-2 text-sm border ${
+                          className={`flex-1 min-w-0 text-left rounded px-3 py-2 text-sm border ${
                             isActive
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-border hover:bg-muted"

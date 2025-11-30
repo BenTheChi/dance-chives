@@ -174,7 +174,7 @@ export default async function EventPage({ params }: PageProps) {
     <>
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full max-w-6xl">
           <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 xl:col-span-4 auto-rows-min">
             <Link href="/events" className="hover:underline">
               {`Back to Events`}
@@ -189,10 +189,10 @@ export default async function EventPage({ params }: PageProps) {
 
           <PosterImage
             poster={event.eventDetails.poster ?? null}
-            className="md:col-span-1 xl:col-span-1"
+            className="col-span-1 md:col-span-1 xl:col-span-2"
           />
 
-          <div className="flex flex-col gap-4 md:col-span-1 xl:col-span-1">
+          <div className="flex flex-col gap-4 col-span-1 md:col-span-1 xl:col-span-2">
             {/* Event Details */}
             <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
@@ -350,7 +350,7 @@ export default async function EventPage({ params }: PageProps) {
 
           {/* Description */}
           {event.eventDetails.description && (
-            <section className="flex flex-col gap-2 p-4 bg-red-100 rounded-md md:col-span-1 xl:col-span-1">
+            <section className="flex flex-col gap-2 p-4 bg-red-100 rounded-md col-span-1 md:col-span-2 xl:col-span-2">
               <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
                 <FileText />
                 Description:
@@ -362,21 +362,19 @@ export default async function EventPage({ params }: PageProps) {
           )}
 
           {/* Schedule */}
-          {event.eventDetails.schedule && (
-            <section className="flex flex-col gap-2 bg-purple-100 rounded-md p-4 md:col-span-1 xl:col-span-1">
-              <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-                <Calendar />
-                Schedule:
-              </div>
-              <div className="whitespace-pre-wrap">
-                {event.eventDetails.schedule}
-              </div>
-            </section>
-          )}
+          <section className="flex flex-col gap-2 bg-purple-100 rounded-md p-4 col-span-1 md:col-span-2 xl:col-span-2">
+            <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
+              <Calendar />
+              Schedule:
+            </div>
+            <div className="whitespace-pre-wrap">
+              {event.eventDetails.schedule || "No schedule available"}
+            </div>
+          </section>
 
           {/* Sections */}
           {event.sections && event.sections.length > 0 && (
-            <section className="flex flex-col gap-2 bg-green-300 rounded-md p-4 w-full md:col-span-1 xl:col-span-2 shadow-md">
+            <section className="flex flex-wrap gap-2 bg-green-300 rounded-md p-4 w-full shadow-md col-span-1 md:col-span-2 xl:col-span-4">
               <div className="w-full">
                 <Link href={`/events/${event.id}/sections`} className="w-full">
                   <h2 className="text-2xl font-bold mb-4 text-center">
@@ -384,7 +382,7 @@ export default async function EventPage({ params }: PageProps) {
                   </h2>
                 </Link>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-4 justify-center">
                   {event.sections.map((section) => {
                     // Calculate total video count
                     const directVideoCount = section.videos.length;
@@ -398,7 +396,7 @@ export default async function EventPage({ params }: PageProps) {
                     return (
                       <div
                         key={section.id}
-                        className="bg-white rounded-lg p-4 shadow-sm"
+                        className="bg-white rounded-lg p-4 shadow-sm max-w-lg"
                       >
                         <div className="flex gap-4">
                           {/* Poster on left - 1/2 width */}
@@ -538,7 +536,7 @@ export default async function EventPage({ params }: PageProps) {
 
           {/* Photo Gallery */}
           {event.gallery.length > 0 && (
-            <section className="flex flex-col bg-red-100 rounded-md p-4 w-full md:col-span-2 xl:col-span-4">
+            <section className="flex flex-col bg-red-100 rounded-md p-4 w-full col-span-1 md:col-span-2 xl:col-span-4">
               <h2 className="text-2xl font-bold mb-2 text-center">
                 Photo Gallery
               </h2>
