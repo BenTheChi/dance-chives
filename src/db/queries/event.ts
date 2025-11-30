@@ -27,7 +27,7 @@ import {
   normalizeStyleName,
 } from "@/lib/utils/style-utils";
 import { getUserByUsername } from "./user";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { Image } from "../../types/image";
 import { type Record as Neo4jRecord } from "neo4j-driver";
 

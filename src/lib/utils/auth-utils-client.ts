@@ -1,31 +1,9 @@
-import { auth } from "@/auth";
 import { Session } from "next-auth";
 import { AUTH_LEVELS } from "./auth-constants";
 
 /**
- * Require a minimum auth level to proceed
- * Throws an error if user doesn't meet the requirement
- */
-export async function requireAuthLevel(minLevel: number) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  if (!session.user.auth || session.user.auth < minLevel) {
-    throw new Error(
-      `Insufficient authorization level. Required: ${minLevel}, Current: ${
-        session.user.auth || 0
-      }`
-    );
-  }
-
-  return session;
-}
-
-/**
  * Check if a session has a minimum auth level
+ * Client-safe: works with Session objects, doesn't call auth()
  */
 export function hasAuthLevel(
   session: Session | null,
@@ -35,65 +13,16 @@ export function hasAuthLevel(
 }
 
 /**
- * Check if current user has minimum auth level
- */
-export async function checkAuthLevel(minLevel: number): Promise<boolean> {
-  try {
-    const session = await auth();
-    return hasAuthLevel(session, minLevel);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get current user's auth level
- */
-export async function getCurrentAuthLevel(): Promise<number> {
-  const session = await auth();
-  return session?.user?.auth || 0;
-}
-
-/**
  * Check if user has completed account verification (registration)
+ * Client-safe: works with Session objects, doesn't call auth()
  */
 export function isAccountVerified(session: Session | null): boolean {
   return !!session?.user?.accountVerified;
 }
 
 /**
- * Check if current user has completed account verification
- */
-export async function checkAccountVerified(): Promise<boolean> {
-  try {
-    const session = await auth();
-    return isAccountVerified(session);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Require account verification to proceed
- */
-export async function requireAccountVerification() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error("Not authenticated");
-  }
-
-  if (!isAccountVerified(session)) {
-    throw new Error(
-      "Account verification required. Please complete your registration."
-    );
-  }
-
-  return session;
-}
-
-/**
  * Helper function to get auth level name
+ * Client-safe: pure function
  */
 export function getAuthLevelName(level: number): string {
   const levelNames = Object.entries(AUTH_LEVELS).find(
@@ -103,22 +32,8 @@ export function getAuthLevelName(level: number): string {
 }
 
 /**
- * Middleware helper for protecting routes
- */
-export async function protectRoute(minLevel: number = AUTH_LEVELS.BASE_USER) {
-  try {
-    return await requireAuthLevel(minLevel);
-  } catch (error) {
-    throw new Error(
-      `Access denied: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-  }
-}
-
-/**
  * Permission checking functions based on the new auth structure
+ * Client-safe: pure functions that work with auth levels
  */
 
 // Event Permissions
@@ -381,3 +296,4 @@ export function canDeleteSession(
 
   return false;
 }
+

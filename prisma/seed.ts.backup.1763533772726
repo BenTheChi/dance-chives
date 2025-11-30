@@ -354,7 +354,7 @@ async function main() {
       eventDetails: {
         title: "New York Dance Event by Creator",
         description: "A dance event in New York created by Creator",
-        address: "123 Broadway, New York, NY 10001",
+        location: "123 Broadway, New York, NY 10001",
         prize: "$1000",
         entryCost: "$25",
         startDate: "12/15/2024",
@@ -429,7 +429,7 @@ async function main() {
       eventDetails: {
         title: "Seattle Dance Event by Creator",
         description: "A dance event in Seattle created by Creator",
-        address: "456 Pike Street, Seattle, WA 98101",
+        location: "456 Pike Street, Seattle, WA 98101",
         prize: "$1500",
         entryCost: "$30",
         startDate: "12/20/2024",
@@ -504,7 +504,7 @@ async function main() {
       eventDetails: {
         title: "New York Dance Event by Moderator",
         description: "A dance event in New York created by Moderator",
-        address: "789 5th Avenue, New York, NY 10002",
+        location: "789 5th Avenue, New York, NY 10002",
         prize: "$2000",
         entryCost: "$35",
         startDate: "12/25/2024",
@@ -578,7 +578,7 @@ async function main() {
       eventDetails: {
         title: "Seattle Dance Event by Admin",
         description: "A dance event in Seattle created by Admin",
-        address: "321 University Street, Seattle, WA 98102",
+        location: "321 University Street, Seattle, WA 98102",
         prize: "$2500",
         entryCost: "$40",
         startDate: "12/30/2024",
@@ -653,7 +653,7 @@ async function main() {
       eventDetails: {
         title: "New York Dance Event by Super Admin",
         description: "A dance event in New York created by Super Admin",
-        address: "999 Madison Avenue, New York, NY 10003",
+        location: "999 Madison Avenue, New York, NY 10003",
         prize: "$3000",
         entryCost: "$50",
         startDate: "01/05/2025",
@@ -773,7 +773,7 @@ async function main() {
           "An intensive breaking workshop covering advanced footwork, power moves, and freestyle techniques. Perfect for dancers looking to take their skills to the next level. We'll cover everything from foundational concepts to competition-level moves.",
         schedule:
           "10:00 AM - Registration and warm-up\n10:30 AM - Footwork fundamentals\n12:00 PM - Power moves session\n1:30 PM - Lunch break\n2:30 PM - Freestyle and battle techniques\n4:00 PM - Q&A and individual feedback\n5:00 PM - Workshop concludes",
-        address: "789 Dance Studio, 5th Avenue, New York, NY 10002",
+        location: "789 Dance Studio, 5th Avenue, New York, NY 10002",
         startDate: "01/10/2025",
         startTime: "10:00",
         endTime: "17:00",
@@ -850,7 +850,7 @@ async function main() {
           "Master the art of popping and animation in this comprehensive workshop. Learn techniques from basic hits and waves to advanced animation concepts. This workshop is designed for all skill levels, with personalized instruction to help you develop your unique style. We'll explore musicality, isolations, and how to create smooth transitions between moves.",
         schedule:
           "9:00 AM - Check-in and introductions\n9:30 AM - Warm-up and stretching\n10:00 AM - Basic popping techniques\n11:30 AM - Animation fundamentals\n1:00 PM - Lunch break\n2:00 PM - Advanced concepts and combinations\n3:30 PM - Freestyle session\n4:30 PM - Performance tips and stage presence\n5:30 PM - Final showcase and feedback",
-        address: "456 Dance Academy, Pike Street, Seattle, WA 98101",
+        location: "456 Dance Academy, Pike Street, Seattle, WA 98101",
         startDate: "01/15/2025",
         startTime: "09:00",
         endTime: "17:30",
@@ -983,7 +983,7 @@ async function main() {
         ],
         schedule:
           "7:00 PM - Warm-up and stretching\n7:15 PM - Footwork drills\n7:45 PM - Power moves practice\n8:15 PM - Freestyle cypher\n8:45 PM - Cool down and feedback",
-        address: "123 Dance Studio, Broadway, New York, NY 10001",
+        location: "123 Dance Studio, Broadway, New York, NY 10001",
         cost: "$15",
         creatorId: "test-user-1", // Creator
         poster: {
@@ -1069,7 +1069,7 @@ async function main() {
         ],
         schedule:
           "6:00 PM - Check-in and warm-up\n6:15 PM - Basic popping techniques\n7:00 PM - Animation fundamentals\n7:45 PM - Freestyle session\n8:15 PM - Performance tips and feedback",
-        address: "456 Dance Academy, Pike Street, Seattle, WA 98101",
+        location: "456 Dance Academy, Pike Street, Seattle, WA 98101",
         cost: "$20",
         creatorId: "test-user-3", // Admin
         poster: {
@@ -1187,7 +1187,7 @@ async function main() {
         ],
         schedule:
           "8:00 PM - History and introduction\n8:15 PM - Basic waacking techniques\n8:45 PM - Voguing elements\n9:15 PM - Freestyle and expression\n9:45 PM - Group practice and feedback",
-        address: "789 5th Avenue, New York, NY 10002",
+        location: "789 5th Avenue, New York, NY 10002",
         cost: "$18",
         creatorId: "test-user-2", // Moderator
         poster: {
@@ -1287,7 +1287,7 @@ async function main() {
         ],
         schedule:
           "7:30 PM - Warm-up and funk history\n7:45 PM - Classic locking moves\n8:30 PM - Timing and musicality\n9:00 PM - Combinations and routines\n9:15 PM - Freestyle practice",
-        address: "321 University Street, Seattle, WA 98102",
+        location: "321 University Street, Seattle, WA 98102",
         cost: "$16",
         creatorId: "test-user-4", // Super Admin
         poster: {
@@ -1397,7 +1397,7 @@ async function main() {
         ],
         schedule:
           "6:00 PM - Open cypher begins\n6:30 PM - Structured freestyle practice\n7:00 PM - Battle rounds\n7:30 PM - Open freestyle continues\n8:00 PM - Session ends",
-        address: "999 Madison Avenue, New York, NY 10003",
+        location: "999 Madison Avenue, New York, NY 10003",
         cost: "$12",
         creatorId: "test-user-1", // Creator
         poster: {
@@ -1515,7 +1515,7 @@ async function main() {
         ],
         schedule:
           "5:00 PM - Open practice begins\n5:30 PM - Style-specific areas open\n6:00 PM - Group warm-up\n6:30 PM - Open cypher and practice\n7:30 PM - Style showcases\n8:00 PM - Session ends",
-        address: "456 Dance Academy, Pike Street, Seattle, WA 98101",
+        location: "456 Dance Academy, Pike Street, Seattle, WA 98101",
         cost: "$14",
         creatorId: "test-user-3", // Admin
         poster: {

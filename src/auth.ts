@@ -38,6 +38,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     Google,
+    // Magic link credentials provider (used internally after token verification)
+    Credentials({
+      id: "magic-link",
+      name: "Magic Link",
+      credentials: {
+        userId: { label: "User ID", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.userId) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { id: credentials.userId as string },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
+        });
+
+        if (!user) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        };
+      },
+    }),
     // Test login provider - only for development
     ...(process.env.NODE_ENV === "development"
       ? [

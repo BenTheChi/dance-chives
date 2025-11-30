@@ -6,7 +6,7 @@ import { UserMenu } from "./UserMenu";
 import { useSession } from "next-auth/react";
 import { SidebarTrigger } from "./ui/sidebar";
 import { TestLoginDropdown } from "./TestLoginDropdown";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 

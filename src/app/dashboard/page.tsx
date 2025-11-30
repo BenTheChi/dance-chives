@@ -3,6 +3,8 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getDashboardData } from "@/lib/server_actions/request_actions";
 import {
   Card,
@@ -15,7 +17,8 @@ import {
   IncomingRequestCard,
   OutgoingRequestCard,
 } from "@/components/requests/RequestCard";
-import { getAuthLevelName, AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { getAuthLevelName } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -93,11 +96,29 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const { status, update } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromMagicLinkLogin =
+    searchParams.get("fromMagicLinkLogin") === "true";
+
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
   const [loading, setLoading] = useState(true);
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
+  const [hasRefreshedSession, setHasRefreshedSession] = useState(false);
+
+  // Refresh session if we arrived via magic link login
+  useEffect(() => {
+    if (fromMagicLinkLogin && update && !hasRefreshedSession) {
+      setHasRefreshedSession(true);
+      update().finally(() => {
+        // Clean up URL so the flag doesn't persist
+        router.replace("/dashboard");
+      });
+    }
+  }, [fromMagicLinkLogin, update, router, hasRefreshedSession]);
 
   const loadDashboard = async () => {
     try {
@@ -157,8 +178,13 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    // If we came from a magic link, wait for session refresh before loading data
+    if (fromMagicLinkLogin && (!hasRefreshedSession || status === "loading")) {
+      return;
+    }
+
     loadDashboard();
-  }, []);
+  }, [fromMagicLinkLogin, hasRefreshedSession, status]);
 
   if (loading) {
     return (

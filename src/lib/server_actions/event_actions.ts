@@ -49,7 +49,7 @@ interface addEventProps {
     }[];
     description?: string;
     schedule?: string;
-    address?: string;
+    location?: string;
     cost?: string;
     poster?: {
       id: string;
@@ -325,7 +325,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       creatorId: session.user.id,
       title: props.eventDetails.title,
       description: props.eventDetails.description ?? "",
-      location: props.eventDetails.address,
+      location: props.eventDetails.location ?? "",
       cost: props.eventDetails.cost,
       dates: normalizedDates,
       schedule: props.eventDetails.schedule ?? "",
@@ -610,7 +610,7 @@ export async function editEvent(
       creatorId: oldEvent.eventDetails.creatorId,
       title: editedEvent.eventDetails.title,
       description: editedEvent.eventDetails.description ?? "",
-      location: editedEvent.eventDetails.address,
+      location: editedEvent.eventDetails.location,
       cost: editedEvent.eventDetails.cost,
       // Derive startDate from first date in dates array for database compatibility
       dates: normalizedDates,

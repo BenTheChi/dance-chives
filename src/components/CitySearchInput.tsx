@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { CitySearchItem, City } from "@/types/city";
-import { Control, FieldPath, FieldValues } from "react-hook-form";
+import { Control, FieldPath, FieldValues, useWatch } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "./ui/form";
 
 interface CitySearchInputProps<T extends FieldValues> {
@@ -59,6 +59,42 @@ function getDisplayValue(city: City | CitySearchItem): string {
   return `${city.name}, ${city.region}`;
 }
 
+function normalizeCity(
+  city:
+    | City
+    | CitySearchItem
+    | (City & Partial<CitySearchItem>)
+    | string
+    | null
+    | undefined
+): City | null {
+  if (!city) return null;
+
+  const parsed =
+    typeof city === "string"
+      ? (() => {
+          try {
+            return JSON.parse(city);
+          } catch {
+            return null;
+          }
+        })()
+      : city;
+
+  if (!parsed) return null;
+
+  return {
+    id: parsed.id,
+    name: parsed.name,
+    region: parsed.region,
+    countryCode: parsed.countryCode,
+    population: parsed.population,
+    timezone: "timezone" in parsed ? parsed.timezone : undefined,
+    latitude: "latitude" in parsed ? parsed.latitude : undefined,
+    longitude: "longitude" in parsed ? parsed.longitude : undefined,
+  };
+}
+
 export function CitySearchInput<T extends FieldValues>({
   control,
   name,
@@ -71,26 +107,36 @@ export function CitySearchInput<T extends FieldValues>({
   className,
 }: CitySearchInputProps<T>) {
   const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(
-    value ? getDisplayValue(value) : ""
-  );
-  const [selectedCity, setSelectedCity] = useState<City | null>(value || null);
+  const [inputValue, setInputValue] = useState("");
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [items, setItems] = useState<CitySearchItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const fieldValue = useWatch({ control, name });
 
   const debouncedValue = useDebounce(inputValue, 300);
 
-  // Handle controlled component updates
+  // Sync the local state with either the externally supplied value prop or the form state
   useEffect(() => {
-    if (
-      value !== undefined &&
-      value !== null &&
-      (!selectedCity || selectedCity.id !== value.id)
-    ) {
-      setSelectedCity(value);
-      setInputValue(getDisplayValue(value));
+    const sourceCity =
+      value !== undefined
+        ? value
+        : (fieldValue as City | CitySearchItem | string | null | undefined);
+    const normalized = normalizeCity(sourceCity);
+
+    if (!normalized) {
+      if (sourceCity === null) {
+        setSelectedCity((prev) => (prev ? null : prev));
+      }
+      return;
     }
-  }, [value, selectedCity]);
+
+    setSelectedCity((prev) =>
+      prev?.id === normalized.id ? prev : normalized
+    );
+
+    const displayValue = getDisplayValue(normalized);
+    setInputValue((prev) => (prev === displayValue ? prev : displayValue));
+  }, [value, fieldValue]);
 
   // Fetch cities when debounced value changes
   useEffect(() => {
@@ -114,7 +160,7 @@ export function CitySearchInput<T extends FieldValues>({
     fetchCities();
   }, [debouncedValue]);
 
-  const handleSelect = (cityItem: CitySearchItem) => {
+  const handleSelect = (cityItem: CitySearchItem): City => {
     // Convert CitySearchItem to City (fetch timezone if needed)
     const city: City = {
       id: cityItem.id,
@@ -130,6 +176,8 @@ export function CitySearchInput<T extends FieldValues>({
     if (onChange) {
       onChange(city);
     }
+
+    return city;
   };
 
   return (
@@ -184,8 +232,8 @@ export function CitySearchInput<T extends FieldValues>({
                                 <CommandItem
                                   key={item.id}
                                   onSelect={() => {
-                                    handleSelect(item);
-                                    field.onChange(item);
+                                    const city = handleSelect(item);
+                                    field.onChange(city);
                                   }}
                                 >
                                   <Check

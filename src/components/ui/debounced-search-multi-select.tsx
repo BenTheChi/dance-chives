@@ -126,17 +126,14 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
 
   return (
     <div
-      className={cn(
-        "flex flex-col gap-2 debounced-search-multi-select",
-        className
-      )}
+      className={cn("flex flex-col debounced-search-multi-select", className)}
     >
       {name && (
-        <label className="text-sm font-medium mb-1.5 block">
+        <label className="text-sm font-medium block">
           {name.charAt(0).toUpperCase() + name.slice(1)}
         </label>
       )}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1 mb-2">
         {deduplicatedValue.map((item) => {
           const itemId = getItemId(item);
           // itemId is guaranteed to be unique after deduplication

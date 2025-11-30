@@ -2,20 +2,16 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
-import { Plus, X } from "lucide-react";
+import { BigAddButton } from "@/components/ui/big-add-button";
+import { SmallAddButton } from "@/components/ui/small-add-button";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { X } from "lucide-react";
 import { FieldErrors, useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
-import { Section, EventDetails, Role } from "@/types/event";
+import { Section, EventDetails, Role, Bracket } from "@/types/event";
 import { Image } from "@/types/image";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
@@ -24,6 +20,20 @@ import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
 import { isTimeEmpty } from "@/lib/utils/event-utils";
+import {
+  SectionType,
+  updateSectionType,
+  sectionTypeRequiresBrackets,
+  sectionTypeDisallowsBrackets,
+} from "@/lib/utils/section-helpers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -223,6 +233,12 @@ const formSchema = z.object({
 
 export type FormValues = z.infer<typeof formSchema>;
 
+type SectionsSelection =
+  | { type: "sectionOverview"; sectionId: string }
+  | { type: "sectionVideos"; sectionId: string }
+  | { type: "sectionBrackets"; sectionId: string }
+  | { type: "bracket"; sectionId: string; bracketId: string };
+
 // Helper function to normalize sections for form (ensures description is always string)
 function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
   return sections.map((section) => ({
@@ -247,8 +263,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
 
-  const [activeMainTab, setActiveMainTab] = useState("Event Details");
+  const [activeMainTab, setActiveMainTab] = useState("Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
+  const [sectionsSelection, setSectionsSelection] =
+    useState<SectionsSelection | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   //TODO: set up logic for next buttons to use the active tab index
 
@@ -311,23 +329,42 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       | "profile"
       | "poster",
   }));
-  const activeSection = sections.find((s) => s.id === activeSectionId);
-
   // Memoize sections to prevent unnecessary re-renders
   const sectionsMemo = useMemo(() => sectionsRaw ?? [], [sectionsRaw]);
 
-  // Auto-select first section when Sections tab is active and no section is selected
+  // Auto-select first section and default sidebar selection when Sections tab is active
   useEffect(() => {
-    if (activeMainTab === "Sections" && sectionsMemo.length > 0) {
-      // Check if current activeSectionId is invalid (doesn't match any section or is "0")
-      const isValidSection = sectionsMemo.some((s) => s.id === activeSectionId);
-      if (!isValidSection || activeSectionId === "0") {
-        setActiveSectionId(sectionsMemo[0].id);
-      }
-    }
-  }, [activeMainTab, sectionsMemo, activeSectionId]);
+    if (activeMainTab !== "Sections") return;
 
-  const mainTabs = ["Event Details", "Roles", "Sections", "Photo Gallery"];
+    if (sectionsMemo.length === 0) {
+      setActiveSectionId("0");
+      setSectionsSelection(null);
+      return;
+    }
+
+    // Ensure activeSectionId is valid
+    const isValidSection = sectionsMemo.some((s) => s.id === activeSectionId);
+    const targetSectionId = isValidSection
+      ? activeSectionId
+      : sectionsMemo[0].id;
+
+    if (!isValidSection || activeSectionId === "0") {
+      setActiveSectionId(targetSectionId);
+    }
+
+    // Ensure sidebar selection points to a valid section
+    if (
+      !sectionsSelection ||
+      !sectionsMemo.some((s) => s.id === sectionsSelection.sectionId)
+    ) {
+      setSectionsSelection({
+        type: "sectionOverview",
+        sectionId: targetSectionId,
+      });
+    }
+  }, [activeMainTab, sectionsMemo, activeSectionId, sectionsSelection]);
+
+  const mainTabs = ["Details", "Roles", "Sections", "Photo Gallery"];
 
   const addSection = () => {
     const newSection: Section = {
@@ -342,6 +379,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     };
     setValue("sections", normalizeSectionsForForm([...sections, newSection]));
     setActiveSectionId(newSection.id);
+    setSectionsSelection({
+      type: "sectionOverview",
+      sectionId: newSection.id,
+    });
   };
 
   const removeSection = (sectionId: string) => {
@@ -350,9 +391,157 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     );
     setValue("sections", normalizeSectionsForForm(updatedSections));
 
+    if (updatedSections.length === 0) {
+      setActiveSectionId("0");
+      setSectionsSelection(null);
+      return;
+    }
+
     // If we removed the active section, switch to the first available section
-    if (activeSectionId === sectionId && updatedSections.length > 0) {
-      setActiveSectionId(updatedSections[0].id);
+    if (activeSectionId === sectionId) {
+      const nextSectionId = updatedSections[0].id;
+      setActiveSectionId(nextSectionId);
+      setSectionsSelection({
+        type: "sectionOverview",
+        sectionId: nextSectionId,
+      });
+      return;
+    }
+
+    // If current selection was pointing at the removed section, reset it
+    if (sectionsSelection && sectionsSelection.sectionId === sectionId) {
+      const nextSectionId = updatedSections[0].id;
+      setSectionsSelection({
+        type: "sectionOverview",
+        sectionId: nextSectionId,
+      });
+    }
+  };
+
+  const updateSectionHasBrackets = (sectionId: string, checked: boolean) => {
+    const currentSections = getValues("sections") ?? [];
+    const updatedSections = currentSections.map((section) =>
+      section.id === sectionId
+        ? {
+            ...section,
+            hasBrackets: checked,
+          }
+        : section
+    );
+
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+
+    if (
+      !checked &&
+      sectionsSelection &&
+      sectionsSelection.sectionId === sectionId &&
+      (sectionsSelection.type === "sectionBrackets" ||
+        sectionsSelection.type === "bracket")
+    ) {
+      setSectionsSelection({
+        type: "sectionVideos",
+        sectionId,
+      });
+    } else if (
+      checked &&
+      sectionsSelection &&
+      sectionsSelection.sectionId === sectionId &&
+      sectionsSelection.type === "sectionVideos"
+    ) {
+      setSectionsSelection({
+        type: "sectionBrackets",
+        sectionId,
+      });
+    }
+  };
+
+  const addBracketFromSidebar = (sectionId: string) => {
+    const currentSections = getValues("sections") ?? [];
+    const sectionIndex = currentSections.findIndex(
+      (section) => section.id === sectionId
+    );
+    if (sectionIndex === -1) return;
+
+    const targetSection = currentSections[sectionIndex];
+
+    // Only allow adding brackets when hasBrackets is true
+    if (!targetSection.hasBrackets) return;
+
+    const newBracket: Bracket = {
+      id: Date.now().toString(),
+      title: `New Bracket ${targetSection.brackets.length + 1}`,
+      videos: [],
+    };
+
+    const updatedSections = currentSections.map((section) =>
+      section.id === sectionId
+        ? {
+            ...section,
+            brackets: [...section.brackets, newBracket],
+          }
+        : section
+    );
+
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
+      shouldValidate: true,
+    });
+
+    // Select the new bracket in the sidebar/navigation
+    setActiveSectionId(sectionId);
+    setSectionsSelection({
+      type: "bracket",
+      sectionId,
+      bracketId: newBracket.id,
+    });
+  };
+
+  const removeBracketFromSidebar = (sectionId: string, bracketId: string) => {
+    const currentSections = getValues("sections") ?? [];
+    const sectionIndex = currentSections.findIndex(
+      (section) => section.id === sectionId
+    );
+    if (sectionIndex === -1) return;
+
+    const targetSection = currentSections[sectionIndex];
+    const updatedBrackets = targetSection.brackets.filter(
+      (bracket) => bracket.id !== bracketId
+    );
+
+    const updatedSections = currentSections.map((section) =>
+      section.id === sectionId
+        ? {
+            ...section,
+            brackets: updatedBrackets,
+          }
+        : section
+    );
+
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
+      shouldValidate: true,
+    });
+
+    // Adjust selection if it was pointing at the removed bracket
+    if (
+      sectionsSelection &&
+      sectionsSelection.type === "bracket" &&
+      sectionsSelection.sectionId === sectionId &&
+      sectionsSelection.bracketId === bracketId
+    ) {
+      if (updatedBrackets.length > 0) {
+        setSectionsSelection({
+          type: "bracket",
+          sectionId,
+          bracketId: updatedBrackets[0].id,
+        });
+      } else {
+        setSectionsSelection({
+          type: "sectionBrackets",
+          sectionId,
+        });
+      }
     }
   };
 
@@ -465,7 +654,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     console.log("Invalid field paths:", invalidFields);
 
     const tabMap: { [key: string]: string } = {
-      eventDetails: "Event Details",
+      eventDetails: "Details",
       sections: "Sections",
       roles: "Roles",
       gallery: "Photo Gallery",
@@ -569,10 +758,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     });
   };
 
-  const activeSectionIndex = sections.findIndex(
-    (s) => s.id === activeSectionId
-  );
-
   // Find the index of the active tab
   const activeTabIndex = mainTabs.findIndex((tab) => tab === activeMainTab);
 
@@ -590,7 +775,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto px-4 sm:px-4 py-6 max-w-full overflow-x-hidden">
       <h1 className="text-3xl font-bold text-center mb-8">
         {isEditing ? "Edit Event" : "New Event"}
       </h1>
@@ -616,7 +801,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           </div>
 
           {/* Tab Content */}
-          {activeMainTab === "Event Details" && (
+          {activeMainTab === "Details" && (
             <EventDetailsForm
               control={control}
               setValue={setValue}
@@ -635,91 +820,427 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {activeMainTab === "Sections" && (
             <div className="space-y-6">
-              {/* Section Navigation with Remove Icons */}
-              <div className="flex gap-2 items-center flex-wrap">
-                {sections.map((section) => (
-                  <div key={section.id} className="relative group">
-                    <Button
-                      type="button"
-                      variant={
-                        activeSectionId === section.id ? "default" : "outline"
-                      }
-                      onClick={() => setActiveSectionId(section.id)}
-                      className="pr-8"
-                    >
-                      {section.title}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeSection(section.id)}
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-                <Button type="button" onClick={addSection} variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Section
-                </Button>
-              </div>
+              <div className="flex flex-col md:flex-row gap-6 max-w-5xl mx-auto w-full">
+                {/* Left sidebar: sections + nested items - only show if sections exist */}
+                {sections.length > 0 && (
+                  <div className="w-full md:w-80 md:flex-shrink-0">
+                    <div className="space-y-2">
+                      {sections.map((section) => {
+                        const isActiveSection =
+                          sectionsSelection?.sectionId === section.id ||
+                          (!sectionsSelection &&
+                            activeSectionId === section.id);
 
-              {/* Section Form Component */}
-              {activeSection && (
-                <SectionForm
-                  control={control}
-                  setValue={setValue}
-                  getValues={getValues}
-                  register={register}
-                  activeSectionIndex={activeSectionIndex}
-                  activeSection={activeSection}
-                  sections={sections}
-                  activeSectionId={activeSectionId}
-                  eventId={
-                    isEditing ? pathname[pathname.length - 2] : undefined
-                  }
-                />
-              )}
+                        const handleSelectOverview = () => {
+                          setActiveSectionId(section.id);
+                          setSectionsSelection({
+                            type: "sectionOverview",
+                            sectionId: section.id,
+                          });
+                        };
+
+                        const handleSelectVideos = () => {
+                          setActiveSectionId(section.id);
+                          setSectionsSelection({
+                            type: "sectionVideos",
+                            sectionId: section.id,
+                          });
+                        };
+
+                        const handleSelectBracket = (bracketId: string) => {
+                          setActiveSectionId(section.id);
+                          setSectionsSelection({
+                            type: "bracket",
+                            sectionId: section.id,
+                            bracketId,
+                          });
+                        };
+
+                        const requiresBrackets = sectionTypeRequiresBrackets(
+                          section.sectionType
+                        );
+                        const disallowsBrackets = sectionTypeDisallowsBrackets(
+                          section.sectionType
+                        );
+                        const switchDisabled =
+                          requiresBrackets || disallowsBrackets;
+                        const switchChecked = requiresBrackets
+                          ? true
+                          : disallowsBrackets
+                          ? false
+                          : Boolean(section.hasBrackets);
+
+                        return (
+                          <div
+                            key={section.id}
+                            className={`border rounded-md bg-card ${
+                              isActiveSection
+                                ? "border-primary/70 shadow-sm"
+                                : "border-border"
+                            }`}
+                          >
+                            <div className="px-3 py-2 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={handleSelectOverview}
+                                  className={`text-sm font-medium text-left flex-1 ${
+                                    isActiveSection
+                                      ? "text-primary"
+                                      : "text-foreground"
+                                  }`}
+                                >
+                                  {section.title}
+                                </button>
+
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeSection(section.id)}
+                                  className="h-6 w-6 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
+                                  aria-label={`Remove ${section.title}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2">
+                                <Select
+                                  value={
+                                    (section.sectionType ||
+                                      "Other") as SectionType
+                                  }
+                                  onValueChange={(value) => {
+                                    const currentSections =
+                                      getValues("sections") ?? [];
+                                    const updated = updateSectionType(
+                                      currentSections,
+                                      section.id,
+                                      value as SectionType
+                                    );
+                                    setValue(
+                                      "sections",
+                                      normalizeSectionsForForm(updated),
+                                      {
+                                        shouldValidate: true,
+                                        shouldDirty: true,
+                                      }
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Battle">
+                                      Battle
+                                    </SelectItem>
+                                    <SelectItem value="Class">Class</SelectItem>
+                                    <SelectItem value="Competition">
+                                      Competition
+                                    </SelectItem>
+                                    <SelectItem value="Mixed">Mixed</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                    <SelectItem value="Performance">
+                                      Performance
+                                    </SelectItem>
+                                    <SelectItem value="Session">
+                                      Session
+                                    </SelectItem>
+                                    <SelectItem value="Showcase">
+                                      Showcase
+                                    </SelectItem>
+                                    <SelectItem value="Tournament">
+                                      Tournament
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                <div className="flex items-center gap-2 text-xs">
+                                  <Switch
+                                    checked={switchChecked}
+                                    disabled={switchDisabled}
+                                    onCheckedChange={(checked) => {
+                                      if (switchDisabled) return;
+                                      updateSectionHasBrackets(
+                                        section.id,
+                                        checked
+                                      );
+                                    }}
+                                    aria-label={`Toggle brackets for ${section.title}`}
+                                  />
+                                  <span className="text-muted-foreground">
+                                    Use Brackets
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {isActiveSection && (
+                              <div className="border-t px-3 py-2 space-y-1 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={handleSelectOverview}
+                                  className={`block w-full text-left rounded px-2 py-1 ${
+                                    sectionsSelection?.type ===
+                                      "sectionOverview" &&
+                                    sectionsSelection.sectionId === section.id
+                                      ? "bg-primary/10 text-primary"
+                                      : "hover:bg-muted"
+                                  }`}
+                                >
+                                  Overview
+                                </button>
+
+                                {!section.hasBrackets && (
+                                  <button
+                                    type="button"
+                                    onClick={handleSelectVideos}
+                                    className={`block w-full text-left rounded px-2 py-1 ${
+                                      sectionsSelection?.type ===
+                                        "sectionVideos" &&
+                                      sectionsSelection.sectionId === section.id
+                                        ? "bg-primary/10 text-primary"
+                                        : "hover:bg-muted"
+                                    }`}
+                                  >
+                                    Videos
+                                    {section.videos.length > 0 && (
+                                      <span className="ml-1 text-xs text-muted-foreground">
+                                        ({section.videos.length})
+                                      </span>
+                                    )}
+                                  </button>
+                                )}
+
+                                {section.hasBrackets && (
+                                  <>
+                                    <div
+                                      className={`flex items-center justify-between rounded pl-2 py-1 ${
+                                        sectionsSelection?.type ===
+                                          "sectionBrackets" &&
+                                        sectionsSelection.sectionId ===
+                                          section.id
+                                          ? "bg-primary/10 text-primary"
+                                          : ""
+                                      }`}
+                                    >
+                                      <span className="text-xs">
+                                        Brackets
+                                        {section.brackets.length > 0 && (
+                                          <span className="ml-1 text-xs text-muted-foreground">
+                                            ({section.brackets.length})
+                                          </span>
+                                        )}
+                                      </span>
+                                      <SmallAddButton
+                                        onClick={() =>
+                                          addBracketFromSidebar(section.id)
+                                        }
+                                        className="ml-1 h-6 w-6 rounded-full p-0"
+                                        aria-label={`Add bracket to ${section.title}`}
+                                      />
+                                    </div>
+
+                                    {section.brackets.map((bracket) => {
+                                      const isActiveBracketSelection =
+                                        sectionsSelection?.type === "bracket" &&
+                                        sectionsSelection.sectionId ===
+                                          section.id &&
+                                        sectionsSelection.bracketId ===
+                                          bracket.id;
+                                      return (
+                                        <div
+                                          key={bracket.id}
+                                          className="flex items-center justify-between"
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleSelectBracket(bracket.id)
+                                            }
+                                            className={`w-full text-left rounded pl-2 py-1 mx-2 text-xs ${
+                                              isActiveBracketSelection
+                                                ? "bg-primary/10 text-primary"
+                                                : "hover:bg-muted text-muted-foreground"
+                                            }`}
+                                          >
+                                            {bracket.title}
+                                            {bracket.videos.length > 0 && (
+                                              <span className="ml-1 text-[10px]">
+                                                ({bracket.videos.length} videos)
+                                              </span>
+                                            )}
+                                          </button>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() =>
+                                              removeBracketFromSidebar(
+                                                section.id,
+                                                bracket.id
+                                              )
+                                            }
+                                            className="ml-1 h-5 w-5 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
+                                            aria-label={`Remove ${bracket.title}`}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </div>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-center mt-6">
+                      <BigAddButton onClick={addSection} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Right content pane */}
+                <div
+                  className={sections.length > 0 ? "flex-1 min-w-0" : "w-full"}
+                >
+                  {sections.length === 0 || !sectionsSelection ? (
+                    <div className="border rounded-lg p-6 text-center max-w-3xl mx-auto w-full">
+                      <div className="text-sm text-muted-foreground mb-6">
+                        No sections yet. Let&apos;s create one!
+                      </div>
+                      <div className="flex justify-center">
+                        <BigAddButton onClick={addSection} />
+                      </div>
+                    </div>
+                  ) : (
+                    (() => {
+                      const selectedSection = sections.find(
+                        (s) => s.id === sectionsSelection.sectionId
+                      );
+                      if (!selectedSection) {
+                        return (
+                          <div className="border rounded-lg p-6 text-sm text-muted-foreground">
+                            The selected section no longer exists.
+                          </div>
+                        );
+                      }
+
+                      const selectedSectionIndex = sections.findIndex(
+                        (s) => s.id === selectedSection.id
+                      );
+                      if (selectedSectionIndex === -1) {
+                        return null;
+                      }
+
+                      const commonProps = {
+                        control,
+                        setValue,
+                        getValues,
+                        register,
+                        activeSectionIndex: selectedSectionIndex,
+                        activeSection: selectedSection,
+                        sections,
+                        activeSectionId: selectedSection.id,
+                        eventId: isEditing
+                          ? pathname[pathname.length - 2]
+                          : undefined,
+                      };
+
+                      if (sectionsSelection.type === "sectionOverview") {
+                        return <SectionForm {...commonProps} mode="overview" />;
+                      }
+
+                      if (sectionsSelection.type === "sectionVideos") {
+                        return <SectionForm {...commonProps} mode="videos" />;
+                      }
+
+                      if (sectionsSelection.type === "sectionBrackets") {
+                        return (
+                          <SectionForm
+                            {...commonProps}
+                            mode="brackets"
+                            externalActiveBracketId={null}
+                            onActiveBracketChange={(bracketId) =>
+                              setSectionsSelection({
+                                type: "bracket",
+                                sectionId: selectedSection.id,
+                                bracketId,
+                              })
+                            }
+                          />
+                        );
+                      }
+
+                      if (sectionsSelection.type === "bracket") {
+                        return (
+                          <SectionForm
+                            {...commonProps}
+                            mode="brackets"
+                            externalActiveBracketId={
+                              sectionsSelection.bracketId
+                            }
+                            onActiveBracketChange={(bracketId) =>
+                              setSectionsSelection({
+                                type: "bracket",
+                                sectionId: selectedSection.id,
+                                bracketId,
+                              })
+                            }
+                          />
+                        );
+                      }
+
+                      return null;
+                    })()
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
           {activeMainTab === "Photo Gallery" && (
-            <FormField
-              control={control}
-              name="gallery"
-              render={() => (
-                <FormItem className="w-full">
-                  <FormLabel>Photo Gallery</FormLabel>
-                  <FormControl>
-                    <UploadFile
-                      register={register}
-                      name="gallery"
-                      onFileChange={(files) => {
-                        if (files) {
-                          const filesArray = Array.isArray(files)
-                            ? files
-                            : [files];
-                          setValue(
-                            "gallery",
-                            filesArray.map((file) => ({
-                              ...file,
-                              type: "gallery" as const,
-                            }))
-                          );
-                        } else {
-                          setValue("gallery", []);
-                        }
-                      }}
-                      className="bg-[#E8E7E7]"
-                      maxFiles={10}
-                      files={gallery || null}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
+              <FormField
+                control={control}
+                name="gallery"
+                render={() => (
+                  <FormItem className="w-full">
+                    <FormControl>
+                      <UploadFile
+                        register={register}
+                        name="gallery"
+                        onFileChange={(files) => {
+                          if (files) {
+                            const filesArray = Array.isArray(files)
+                              ? files
+                              : [files];
+                            setValue(
+                              "gallery",
+                              filesArray.map((file) => ({
+                                ...file,
+                                type: "gallery" as const,
+                              }))
+                            );
+                          } else {
+                            setValue("gallery", []);
+                          }
+                        }}
+                        className="bg-[#E8E7E7]"
+                        maxFiles={10}
+                        files={gallery || null}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
           )}
 
           {/* Bottom Navigation */}

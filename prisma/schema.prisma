@@ -36,6 +36,9 @@ model User {
 
   // Request approvals
   requestApprovals RequestApproval[]
+
+  // Magic link tokens
+  magicLinkTokens MagicLinkToken[]
 }
 
 model Account {
@@ -201,4 +204,19 @@ model Notification {
   @@index([userId])
   @@index([read])
   @@index([createdAt])
+}
+
+model MagicLinkToken {
+  id        String   @id @default(cuid())
+  email     String
+  userId    String?
+  tokenHash String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([expiresAt])
 }

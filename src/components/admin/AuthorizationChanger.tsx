@@ -19,7 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
-import { AUTH_LEVELS, getAuthLevelName } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
+import { getAuthLevelName } from "@/lib/utils/auth-utils";
 import { UserSearchItem } from "@/types/user";
 import { toast } from "sonner";
 

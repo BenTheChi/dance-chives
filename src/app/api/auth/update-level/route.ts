@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth } from "@/lib/utils/api-auth";
-import { AUTH_LEVELS } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { updateUserAuthLevel } from "@/lib/server_actions/auth_actions";
 
 export async function POST(request: NextRequest) {
