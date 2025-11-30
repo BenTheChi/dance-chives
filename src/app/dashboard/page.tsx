@@ -5,7 +5,14 @@ import { AccountVerificationGuard } from "@/components/AccountVerificationGuard"
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getDashboardData } from "@/lib/server_actions/request_actions";
+import {
+  getDashboardData,
+  getSavedEventsForUser,
+} from "@/lib/server_actions/request_actions";
+import { SavedEventsCalendarSection } from "@/components/SavedEventsCalendarSection";
+import Eventcard from "@/components/cards";
+import { EventCard } from "@/types/event";
+import { CalendarEventData } from "@/db/queries/event";
 import {
   Card,
   CardContent,
@@ -99,12 +106,12 @@ export default function DashboardPage() {
   const { status, update } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const fromMagicLinkLogin =
-    searchParams.get("fromMagicLinkLogin") === "true";
+  const fromMagicLinkLogin = searchParams.get("fromMagicLinkLogin") === "true";
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
+  const [savedEvents, setSavedEvents] = useState<EventCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false);
   const [hasRefreshedSession, setHasRefreshedSession] = useState(false);
@@ -122,8 +129,12 @@ export default function DashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const data = await getDashboardData();
+      const [data, saved] = await Promise.all([
+        getDashboardData(),
+        getSavedEventsForUser(),
+      ]);
       setDashboardData(data);
+      setSavedEvents(saved);
     } catch (error) {
       console.error("Failed to load dashboard:", error);
     } finally {
@@ -233,6 +244,45 @@ export default function DashboardPage() {
     (request: DashboardRequest) => request.status !== "PENDING"
   );
 
+  // Convert saved EventCard[] to CalendarEventData[] format
+  const convertToCalendarEvents = (
+    events: EventCard[]
+  ): CalendarEventData[] => {
+    return events.map((event) => {
+      // Parse date string to dates array format
+      let dates:
+        | Array<{ date: string; startTime?: string; endTime?: string }>
+        | undefined;
+      if (event.date) {
+        try {
+          // Try to parse as date string (MM/DD/YYYY or ISO format)
+          dates = [{ date: event.date }];
+        } catch {
+          dates = undefined;
+        }
+      }
+
+      return {
+        id: event.id,
+        title: event.title,
+        startDate: event.date || undefined,
+        dates: dates,
+        eventType: "Other" as const,
+        poster: event.imageUrl
+          ? {
+              id: "",
+              title: event.title,
+              url: event.imageUrl,
+              type: "image",
+            }
+          : null,
+        styles: event.styles || [],
+      };
+    });
+  };
+
+  const calendarEvents = convertToCalendarEvents(savedEvents);
+
   return (
     <AccountVerificationGuard requireVerification={true}>
       <AppNavbar />
@@ -281,6 +331,52 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
         </Card>
+
+        {/* Saved Events Calendar */}
+        <SavedEventsCalendarSection events={calendarEvents} />
+
+        {/* Saved Events Gallery */}
+        {savedEvents.length > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Saved Events</CardTitle>
+              <CardDescription>
+                Events you have saved ({savedEvents.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {savedEvents.map((event) => (
+                  <Eventcard
+                    key={event.id}
+                    id={event.id}
+                    title={event.title}
+                    series={event.series}
+                    imageUrl={event.imageUrl}
+                    date={event.date}
+                    city={event.city}
+                    cityId={event.cityId}
+                    styles={event.styles}
+                    isSaved={true}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Saved Events</CardTitle>
+              <CardDescription>Events you have saved</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12 text-muted-foreground">
+                No saved events yet. Click the heart icon on any event to save
+                it.
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
         {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (

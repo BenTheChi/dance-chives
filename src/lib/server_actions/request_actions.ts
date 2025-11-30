@@ -47,6 +47,7 @@ import {
 } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { Prisma } from "@prisma/client";
+import { EventCard } from "@/types/event";
 
 // ============================================================================
 // Helper Functions
@@ -1608,6 +1609,24 @@ export async function getDashboardData() {
     userEvents,
     teamMemberships,
   };
+}
+
+export async function getSavedEventsForUser(): Promise<EventCard[]> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return [];
+  }
+
+  try {
+    const { getSavedEventsForUser: getSavedEventsForUserQuery } = await import(
+      "@/db/queries/event"
+    );
+    return await getSavedEventsForUserQuery(session.user.id);
+  } catch (error) {
+    console.error("Error fetching saved events:", error);
+    return [];
+  }
 }
 
 /**

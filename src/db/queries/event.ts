@@ -1997,6 +1997,110 @@ export async function getSavedEventIds(userId: string): Promise<string[]> {
   }
 }
 
+// Get all saved events for a user with full EventCard data
+export async function getSavedEventsForUser(
+  userId: string
+): Promise<EventCard[]> {
+  const session = driver.session();
+
+  try {
+    // Get saved events with basic info
+    const eventsResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
+      WITH DISTINCT e, c, p, r.createdAt as savedAt
+      RETURN e.id as eventId, 
+             e.title as title, 
+             e.startDate as startDate,
+             e.dates as dates,
+             c.name as city, 
+             c.id as cityId, 
+             p.url as imageUrl
+      ORDER BY e.startDate ASC, e.createdAt ASC
+      `,
+      { userId }
+    );
+
+    // Get all styles for each saved event (from event, sections, and videos)
+    const stylesResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
+      OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+      WITH e.id as eventId, 
+           collect(DISTINCT eventStyle.name) as eventStyles,
+           collect(DISTINCT sectionStyle.name) as sectionStyles,
+           collect(DISTINCT videoStyle.name) as videoStyles,
+           collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+      WITH eventId, 
+           [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
+           [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+           [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+           [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+      RETURN eventId, 
+             filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
+      `,
+      { userId }
+    );
+
+    // Create a map of eventId -> styles
+    const stylesMap = new Map<string, string[]>();
+    stylesResult.records.forEach((record) => {
+      const eventId = record.get("eventId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      // Remove duplicates and filter out nulls
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      stylesMap.set(eventId, uniqueStyles);
+    });
+
+    // Combine event data with styles
+    return eventsResult.records.map((record) => {
+      const eventId = record.get("eventId");
+      const startDate = record.get("startDate");
+      const dates = record.get("dates");
+
+      // Determine date to display
+      let displayDate = "";
+      if (startDate) {
+        displayDate = startDate;
+      } else if (dates) {
+        try {
+          const datesArray =
+            typeof dates === "string" ? JSON.parse(dates) : dates;
+          if (Array.isArray(datesArray) && datesArray.length > 0) {
+            displayDate = datesArray[0].date || "";
+          }
+        } catch (error) {
+          console.error("Error parsing dates array:", error);
+        }
+      }
+
+      return {
+        id: eventId,
+        title: record.get("title"),
+        series: undefined,
+        imageUrl: record.get("imageUrl"),
+        date: displayDate,
+        city: record.get("city") || "",
+        cityId: record.get("cityId") as number | undefined,
+        styles: stylesMap.get(eventId) || [],
+      };
+    });
+  } finally {
+    await session.close();
+  }
+}
+
 // Helper function to fetch city coordinates from GeoDB API
 async function fetchCityCoordinates(
   cityId: number
