@@ -9,9 +9,7 @@ interface FileWithId {
   url?: string;
 }
 
-export function useObjectUrls(
-  files: FileWithId[] | null
-): Map<string, string> {
+export function useObjectUrls(files: FileWithId[] | null): Map<string, string> {
   // Create object URLs for files that need them
   const imageSources = useMemo(() => {
     if (!files) return new Map<string, string>();
@@ -54,4 +52,3 @@ export function useObjectUrls(
 
   return imageSources;
 }
-
