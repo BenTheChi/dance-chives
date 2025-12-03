@@ -5,7 +5,7 @@ export interface Image {
   url: string;
   type: "gallery" | "profile" | "poster";
   file: File | null;
-  caption?: string; // Optional caption for gallery photos (max 200 chars)
+  caption?: string; // Optional caption for gallery photos (max 100 chars)
 }
 
 // Gallery Image - for event/workshop/session galleries

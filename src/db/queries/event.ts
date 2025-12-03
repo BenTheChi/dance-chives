@@ -529,7 +529,8 @@ export const getEvent = async (id: string): Promise<Event> => {
       id: galleryPic.id,
       title: galleryPic.title,
       url: galleryPic.url,
-      caption: galleryPic.caption
+      caption: galleryPic.caption,
+      type: "gallery"
     }) as gallery
   `,
     { id }

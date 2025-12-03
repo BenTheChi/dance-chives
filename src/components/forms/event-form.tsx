@@ -322,14 +322,18 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const eventDetails = watch("eventDetails");
   const roles = watch("roles") ?? [];
   const galleryRaw = watch("gallery") ?? [];
-  // Normalize gallery to ensure all images have the type property
-  const gallery: Image[] = galleryRaw.map((img) => ({
-    ...img,
-    type: ((img as Image).type || "gallery") as
-      | "gallery"
-      | "profile"
-      | "poster",
-  }));
+
+  // Normalize and memoize gallery to prevent unnecessary re-renders
+  const gallery: Image[] = useMemo(() => {
+    return galleryRaw.map((img) => ({
+      ...img,
+      type: ((img as Image).type || "gallery") as
+        | "gallery"
+        | "profile"
+        | "poster",
+    }));
+  }, [galleryRaw]);
+
   // Memoize sections to prevent unnecessary re-renders
   const sectionsMemo = useMemo(() => sectionsRaw ?? [], [sectionsRaw]);
 

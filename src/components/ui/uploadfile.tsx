@@ -13,7 +13,8 @@ import type { Image } from "@/types/image";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useMemo, useCallback, memo, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useObjectUrls } from "@/hooks/useObjectUrls";
 
 interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
@@ -58,7 +59,7 @@ export default function UploadFile<T extends FieldValues>({
       id: crypto.randomUUID(),
       title: file.name,
       url: "",
-      type: "poster",
+      type: maxFiles > 1 ? "gallery" : "poster",
       file: file,
     }));
 
@@ -102,7 +103,7 @@ export default function UploadFile<T extends FieldValues>({
     }
   };
 
-  // Local state for caption inputs to prevent rerenders
+  // Track caption values locally for controlled inputs
   const [captionValues, setCaptionValues] = useState<Record<string, string>>(
     () => {
       if (!files || !Array.isArray(files)) return {};
@@ -116,20 +117,22 @@ export default function UploadFile<T extends FieldValues>({
     }
   );
 
-  // Update local state when files prop changes (e.g., on initial load or file removal)
+  // Sync caption values when files prop changes
   useEffect(() => {
     if (!files || !Array.isArray(files)) {
       setCaptionValues({});
       return;
     }
+
     const newValues: Record<string, string> = {};
     files.forEach((file) => {
       if (file.caption) {
         newValues[file.id] = file.caption;
       }
     });
+
+    // Only update if captions actually changed
     setCaptionValues((prev) => {
-      // Only update if there are actual changes to avoid unnecessary rerenders
       const hasChanges = files.some(
         (file) => (file.caption || "") !== (prev[file.id] || "")
       );
@@ -137,15 +140,12 @@ export default function UploadFile<T extends FieldValues>({
     });
   }, [files]);
 
-  const handleCaptionInputChange = useCallback(
-    (fileId: string, value: string) => {
-      setCaptionValues((prev) => ({
-        ...prev,
-        [fileId]: value,
-      }));
-    },
-    []
-  );
+  const handleCaptionChange = useCallback((fileId: string, value: string) => {
+    setCaptionValues((prev) => ({
+      ...prev,
+      [fileId]: value,
+    }));
+  }, []);
 
   const handleCaptionBlur = useCallback(
     (fileId: string) => {
@@ -170,6 +170,10 @@ export default function UploadFile<T extends FieldValues>({
   const isAtLimit = currentFileCount >= maxFiles;
   const isGallery = maxFiles > 1;
 
+  // Get image sources (object URLs or URLs) using the custom hook
+  const filesArray = files ? (Array.isArray(files) ? files : [files]) : null;
+  const imageSources = useObjectUrls(filesArray);
+
   return (
     <Card>
       <CardHeader>
@@ -187,23 +191,69 @@ export default function UploadFile<T extends FieldValues>({
           {files &&
             Array.isArray(files) &&
             files.map((file) => (
-              <ImagePreviewItem
-                key={file.id}
-                file={file}
-                enableCaptions={enableCaptions}
-                captionValue={captionValues[file.id] || ""}
-                onCaptionChange={handleCaptionInputChange}
-                onCaptionBlur={handleCaptionBlur}
-                onRemove={removeFile}
-              />
+              <div key={file.id} className="relative group flex flex-col">
+                <div className="relative">
+                  {(() => {
+                    const imageSrc = imageSources.get(file.id);
+                    if (!imageSrc) return null;
+
+                    return (
+                      <>
+                        <NextImage
+                          src={imageSrc}
+                          alt={file.title}
+                          width={200}
+                          height={200}
+                          className="m-4 w-full max-w-[200px] h-auto object-contain"
+                        />
+                        <button
+                          onClick={() => removeFile(file)}
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove image"
+                        >
+                          ×
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+                {enableCaptions && (
+                  <div className="px-4 pb-4 w-full max-w-[200px]">
+                    <Label
+                      htmlFor={`caption-${file.id}`}
+                      className="text-xs text-gray-600"
+                    >
+                      Optional caption
+                    </Label>
+                    <Input
+                      id={`caption-${file.id}`}
+                      type="text"
+                      value={captionValues[file.id] || ""}
+                      onChange={(e) =>
+                        handleCaptionChange(file.id, e.target.value)
+                      }
+                      onBlur={() => handleCaptionBlur(file.id)}
+                      maxLength={100}
+                      placeholder="Add a caption (max 100 chars)"
+                      className="text-sm mt-1"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      {(captionValues[file.id] || "").length}/100
+                    </p>
+                  </div>
+                )}
+              </div>
             ))}
-          {files && !Array.isArray(files) && (
-            <div key={files.id} className="relative group">
-              {files.file ? (
-                <>
+          {files &&
+            !Array.isArray(files) &&
+            (() => {
+              const imageSrc = imageSources.get(files.id);
+              if (!imageSrc) return null;
+
+              return (
+                <div key={files.id} className="relative group">
                   <NextImage
-                    key={files.id}
-                    src={URL.createObjectURL(files.file as File)}
+                    src={imageSrc}
                     alt={files.title}
                     width={200}
                     height={200}
@@ -216,30 +266,9 @@ export default function UploadFile<T extends FieldValues>({
                   >
                     ×
                   </button>
-                </>
-              ) : (
-                <>
-                  {files.url ? (
-                    <NextImage
-                      key={files.id}
-                      src={files.url || ""}
-                      alt={files.title}
-                      width={200}
-                      height={200}
-                      className="m-4 w-full max-w-[200px] h-auto object-contain"
-                    />
-                  ) : null}
-                  <button
-                    onClick={() => removeFile(files)}
-                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    aria-label="Remove image"
-                  >
-                    ×
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                </div>
+              );
+            })()}
         </div>
         <div className="grid gap-4">
           <div className="flex items-center justify-center w-full">
@@ -304,121 +333,6 @@ export default function UploadFile<T extends FieldValues>({
     </Card>
   );
 }
-
-// Memoized image preview item to prevent unnecessary rerenders
-const ImagePreviewItem = memo(
-  ({
-    file,
-    enableCaptions,
-    captionValue,
-    onCaptionChange,
-    onCaptionBlur,
-    onRemove,
-  }: {
-    file: Image;
-    enableCaptions: boolean;
-    captionValue: string;
-    onCaptionChange: (fileId: string, value: string) => void;
-    onCaptionBlur: (fileId: string) => void;
-    onRemove: (file: Image) => void;
-  }) => {
-    // Memoize the object URL to prevent recreation on every render
-    const objectUrlRef = useRef<string | null>(null);
-
-    const imageSrc = useMemo(() => {
-      // Clean up previous object URL if it exists
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
-
-      if (file.file) {
-        const url = URL.createObjectURL(file.file as File);
-        objectUrlRef.current = url;
-        return url;
-      }
-      return file.url || "";
-    }, [file.file, file.url]);
-
-    // Cleanup object URL on unmount
-    useEffect(() => {
-      return () => {
-        if (objectUrlRef.current) {
-          URL.revokeObjectURL(objectUrlRef.current);
-        }
-      };
-    }, []);
-
-    return (
-      <div className="relative group flex flex-col">
-        <div className="relative">
-          {file.file ? (
-            <>
-              <NextImage
-                src={imageSrc}
-                alt={file.title}
-                width={200}
-                height={200}
-                className="m-4 w-full max-w-[200px] h-auto object-contain"
-              />
-              <button
-                onClick={() => onRemove(file)}
-                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Remove image"
-              >
-                ×
-              </button>
-            </>
-          ) : (
-            <>
-              {file.url ? (
-                <NextImage
-                  src={file.url}
-                  alt={file.title}
-                  width={200}
-                  height={200}
-                  className="m-4 w-full max-w-[200px] h-auto object-contain"
-                />
-              ) : null}
-              <button
-                onClick={() => onRemove(file)}
-                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Remove image"
-              >
-                ×
-              </button>
-            </>
-          )}
-        </div>
-        {enableCaptions && (
-          <div className="px-4 pb-4 w-full max-w-[200px]">
-            <Label
-              htmlFor={`caption-${file.id}`}
-              className="text-xs text-gray-600"
-            >
-              Optional caption
-            </Label>
-            <Input
-              id={`caption-${file.id}`}
-              type="text"
-              value={captionValue}
-              onChange={(e) => onCaptionChange(file.id, e.target.value)}
-              onBlur={() => onCaptionBlur(file.id)}
-              maxLength={200}
-              placeholder="Add a caption (max 200 chars)"
-              className="text-sm mt-1"
-            />
-            <p className="text-xs text-gray-400 mt-1">
-              {captionValue.length}/200
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-ImagePreviewItem.displayName = "ImagePreviewItem";
 
 function UploadIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
