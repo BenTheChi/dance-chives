@@ -66,6 +66,7 @@ export function PhotoGallery({ images }: PhotoGalleryProps) {
           hasPrev={images.length > 1}
           currentIndex={selectedImageIndex}
           totalImages={images.length}
+          showCaption={true}
         />
       )}
     </>

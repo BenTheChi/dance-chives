@@ -63,14 +63,17 @@ export default async function EditEventPage({
     return {
       ...picture,
       file: null,
+      type: "gallery" as const,
     };
   });
 
   // Format dates to include isAllDay field (derived from times)
-  const formattedDates = (currEvent.eventDetails.dates || []).map((dateEntry) => ({
-    ...dateEntry,
-    isAllDay: isAllDayEvent(dateEntry.startTime, dateEntry.endTime),
-  }));
+  const formattedDates = (currEvent.eventDetails.dates || []).map(
+    (dateEntry) => ({
+      ...dateEntry,
+      isAllDay: isAllDayEvent(dateEntry.startTime, dateEntry.endTime),
+    })
+  );
 
   //Add null values to eventDetails objects and normalize optional string fields
   const formattedEventDetails = {
@@ -120,4 +123,3 @@ export default async function EditEventPage({
     </>
   );
 }
-

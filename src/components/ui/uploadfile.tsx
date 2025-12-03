@@ -11,6 +11,10 @@ import { UseFormRegister, FieldValues, Path } from "react-hook-form";
 import NextImage from "next/image";
 import type { Image } from "@/types/image";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState, useEffect, useCallback } from "react";
+import { useObjectUrls } from "@/hooks/useObjectUrls";
 
 interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
@@ -19,6 +23,7 @@ interface UploadFileProps<T extends FieldValues> {
   className?: string;
   maxFiles: number;
   files: Image[] | Image | null;
+  enableCaptions?: boolean;
 }
 
 export default function UploadFile<T extends FieldValues>({
@@ -27,6 +32,7 @@ export default function UploadFile<T extends FieldValues>({
   onFileChange,
   maxFiles = 1,
   files,
+  enableCaptions = false,
 }: UploadFileProps<T>) {
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -53,7 +59,7 @@ export default function UploadFile<T extends FieldValues>({
       id: crypto.randomUUID(),
       title: file.name,
       url: "",
-      type: "poster",
+      type: maxFiles > 1 ? "gallery" : "poster",
       file: file,
     }));
 
@@ -97,10 +103,76 @@ export default function UploadFile<T extends FieldValues>({
     }
   };
 
+  // Track caption values locally for controlled inputs
+  const [captionValues, setCaptionValues] = useState<Record<string, string>>(
+    () => {
+      if (!files || !Array.isArray(files)) return {};
+      const initial: Record<string, string> = {};
+      files.forEach((file) => {
+        if (file.caption) {
+          initial[file.id] = file.caption;
+        }
+      });
+      return initial;
+    }
+  );
+
+  // Sync caption values when files prop changes
+  useEffect(() => {
+    if (!files || !Array.isArray(files)) {
+      setCaptionValues({});
+      return;
+    }
+
+    const newValues: Record<string, string> = {};
+    files.forEach((file) => {
+      if (file.caption) {
+        newValues[file.id] = file.caption;
+      }
+    });
+
+    // Only update if captions actually changed
+    setCaptionValues((prev) => {
+      const hasChanges = files.some(
+        (file) => (file.caption || "") !== (prev[file.id] || "")
+      );
+      return hasChanges ? newValues : prev;
+    });
+  }, [files]);
+
+  const handleCaptionChange = useCallback((fileId: string, value: string) => {
+    setCaptionValues((prev) => ({
+      ...prev,
+      [fileId]: value,
+    }));
+  }, []);
+
+  const handleCaptionBlur = useCallback(
+    (fileId: string) => {
+      if (!files || !Array.isArray(files)) return;
+
+      const caption = captionValues[fileId]?.trim() || undefined;
+      const currentFile = files.find((f) => f.id === fileId);
+
+      // Only update if caption actually changed
+      if (currentFile?.caption !== caption) {
+        const updatedFiles = files.map((file) =>
+          file.id === fileId ? { ...file, caption } : file
+        );
+        onFileChange(updatedFiles);
+      }
+    },
+    [files, captionValues, onFileChange]
+  );
+
   // Calculate current file count and check if at limit
   const currentFileCount = Array.isArray(files) ? files.length : files ? 1 : 0;
   const isAtLimit = currentFileCount >= maxFiles;
   const isGallery = maxFiles > 1;
+
+  // Get image sources (object URLs or URLs) using the custom hook
+  const filesArray = files ? (Array.isArray(files) ? files : [files]) : null;
+  const imageSources = useObjectUrls(filesArray);
 
   return (
     <Card>
@@ -119,55 +191,69 @@ export default function UploadFile<T extends FieldValues>({
           {files &&
             Array.isArray(files) &&
             files.map((file) => (
-              <div key={file.id} className="relative group">
-                {file.file ? (
-                  <>
-                    <NextImage
-                      key={file.id}
-                      src={URL.createObjectURL(file.file as File)}
-                      alt={file.title}
-                      width={200}
-                      height={200}
-                      className="m-4 w-full max-w-[200px] h-auto object-contain"
+              <div key={file.id} className="relative group flex flex-col">
+                <div className="relative">
+                  {(() => {
+                    const imageSrc = imageSources.get(file.id);
+                    if (!imageSrc) return null;
+
+                    return (
+                      <>
+                        <NextImage
+                          src={imageSrc}
+                          alt={file.title}
+                          width={200}
+                          height={200}
+                          className="m-4 w-full max-w-[200px] h-auto object-contain"
+                        />
+                        <button
+                          onClick={() => removeFile(file)}
+                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove image"
+                        >
+                          ×
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+                {enableCaptions && (
+                  <div className="px-4 pb-4 w-full max-w-[200px]">
+                    <Label
+                      htmlFor={`caption-${file.id}`}
+                      className="text-xs text-gray-600"
+                    >
+                      Optional caption
+                    </Label>
+                    <Input
+                      id={`caption-${file.id}`}
+                      type="text"
+                      value={captionValues[file.id] || ""}
+                      onChange={(e) =>
+                        handleCaptionChange(file.id, e.target.value)
+                      }
+                      onBlur={() => handleCaptionBlur(file.id)}
+                      maxLength={100}
+                      placeholder="Add a caption (max 100 chars)"
+                      className="text-sm mt-1"
                     />
-                    <button
-                      onClick={() => removeFile(file)}
-                      className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove image"
-                    >
-                      ×
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {file.url ? (
-                      <NextImage
-                        key={file.id}
-                        src={file.url}
-                        alt={file.title}
-                        width={200}
-                        height={200}
-                        className="m-4 w-full max-w-[200px] h-auto object-contain"
-                      />
-                    ) : null}
-                    <button
-                      onClick={() => removeFile(file)}
-                      className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="Remove image"
-                    >
-                      ×
-                    </button>
-                  </>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {(captionValues[file.id] || "").length}/100
+                    </p>
+                  </div>
                 )}
               </div>
             ))}
-          {files && !Array.isArray(files) && (
-            <div key={files.id} className="relative group">
-              {files.file ? (
-                <>
+          {files &&
+            !Array.isArray(files) &&
+            (() => {
+              const imageSrc = imageSources.get(files.id);
+              if (!imageSrc) return null;
+
+              return (
+                <div key={files.id} className="relative group">
                   <NextImage
-                    key={files.id}
-                    src={URL.createObjectURL(files.file as File)}
+                    src={imageSrc}
                     alt={files.title}
                     width={200}
                     height={200}
@@ -180,30 +266,9 @@ export default function UploadFile<T extends FieldValues>({
                   >
                     ×
                   </button>
-                </>
-              ) : (
-                <>
-                  {files.url ? (
-                    <NextImage
-                      key={files.id}
-                      src={files.url || ""}
-                      alt={files.title}
-                      width={200}
-                      height={200}
-                      className="m-4 w-full max-w-[200px] h-auto object-contain"
-                    />
-                  ) : null}
-                  <button
-                    onClick={() => removeFile(files)}
-                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    aria-label="Remove image"
-                  >
-                    ×
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                </div>
+              );
+            })()}
         </div>
         <div className="grid gap-4">
           <div className="flex items-center justify-center w-full">
