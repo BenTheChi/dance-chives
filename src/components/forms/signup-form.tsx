@@ -24,6 +24,7 @@ import { DatePicker } from "../ui/date-picker";
 import { z } from "zod";
 import { signup, updateUserProfile } from "@/lib/server_actions/auth_actions";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Switch } from "@/components/ui/switch";
@@ -107,7 +108,9 @@ export default function SignUpForm({
   userId,
 }: SignUpFormProps = {}) {
   const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [profilePicturePreview, setProfilePicturePreview] = useState<
     string | null
   >(currentUser?.image || null);
@@ -211,17 +214,14 @@ export default function SignUpForm({
         // Edit mode - use updateUserProfile
         if (!userId) {
           toast.error("User ID is required");
-          setIsSubmitting(false);
           return;
         }
 
         const result = await updateUserProfile(userId, formData);
 
         if (result.success) {
-          // Refresh the session to get updated user data
-          await updateSession();
           toast.success("Profile updated successfully!");
-          window.location.href = "/dashboard";
+          router.replace("/dashboard");
         } else {
           toast.error(result.error || "Failed to update profile");
         }
@@ -229,10 +229,11 @@ export default function SignUpForm({
         // Signup mode - use signup
         const result = await signup(formData);
         if (result.success) {
-          // Refresh the session to get updated user data
+          // Update session to reflect account verification status
           await updateSession();
           toast.success("Account created successfully!");
-          window.location.href = "/dashboard";
+          setIsNavigating(true);
+          router.push("/dashboard");
         } else {
           toast.error(result.error || "Failed to create account");
         }
@@ -497,8 +498,12 @@ export default function SignUpForm({
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting || isNavigating}
+            >
+              {isSubmitting || isNavigating
                 ? isEditMode
                   ? "Updating..."
                   : "Processing..."

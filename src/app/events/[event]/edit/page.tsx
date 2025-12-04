@@ -3,7 +3,7 @@ import EventFormWrapper from "@/components/EventFormWrapper";
 import { getEvent } from "@/db/queries/event";
 import { generateShortId } from "@/lib/utils";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
-import { FormValues } from "@/components/forms/event-form";
+import type { FormValues } from "@/components/forms/event-form";
 import { auth } from "@/auth";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
