@@ -11,11 +11,20 @@ const getEnvVar = (devVar: string, standardVar: string): string | undefined => {
   return process.env[standardVar];
 };
 
-let uri =
-  getEnvVar("DEV_NEO4J_URI", "NEO4J_URI") ||
-  (() => {
-    throw new Error("NEO4J_URI or DEV_NEO4J_URI is not defined");
-  })();
+let driverInstance: ReturnType<typeof neo4j.driver> | null = null;
+
+function getDriver() {
+  // Lazy initialization: only create driver when first accessed
+  if (!driverInstance) {
+    // Check if environment variables are available
+    let uri = getEnvVar("DEV_NEO4J_URI", "NEO4J_URI");
+    
+    // If no URI is available (e.g., during build), throw an error
+    if (!uri) {
+      throw new Error(
+        "NEO4J_URI or DEV_NEO4J_URI is not defined. Database connections are only available at runtime with proper environment variables."
+      );
+    }
 
 // Remove any query parameters from URI to avoid conflicts with driver config
 // Neo4j driver v5+ doesn't allow encryption/trust in both URL and config
@@ -119,10 +128,26 @@ if (finalUriHasEncryption) {
   driverConfig.trust = "TRUST_ALL_CERTIFICATES";
 }
 
-const driver = neo4j.driver(
+    driverInstance = neo4j.driver(
   uri,
   neo4j.auth.basic(username, password),
   driverConfig
 );
+  }
 
-export default driver;
+  return driverInstance;
+}
+
+// Create a proxy that lazily initializes the driver when methods are called
+const driverProxy = new Proxy({} as ReturnType<typeof neo4j.driver>, {
+  get(_target, prop) {
+    const driver = getDriver();
+    const value = (driver as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(driver);
+    }
+    return value;
+  }
+});
+
+export default driverProxy;

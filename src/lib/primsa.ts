@@ -32,15 +32,18 @@ const getDatabaseUrl = (): string | undefined => {
       );
     }
   } else {
-    console.error(
-      `❌ [Prisma] No database URL found for ${nodeEnv} environment!`
-    );
+    // Only log error if not in build context (where env vars may not be available)
+    const isBuildContext = process.env.NEXT_PHASE === "phase-production-build" || 
+                           process.env.NEXT_PHASE === "phase-production-compile";
+    if (!isBuildContext) {
+      console.error(
+        `❌ [Prisma] No database URL found for ${nodeEnv} environment!`
+      );
+    }
   }
 
   return databaseUrl;
 };
-
-const databaseUrl = getDatabaseUrl();
 
 // Store the database URL we used to create the client
 const getCachedDatabaseUrl = (): string | undefined => {
@@ -51,34 +54,55 @@ const setCachedDatabaseUrl = (url: string | undefined): void => {
   globalForPrisma.__prismaDatabaseUrl = url;
 };
 
-// Check if we need to recreate the client (different URL or doesn't exist)
-const cachedUrl = getCachedDatabaseUrl();
-if (!globalForPrisma.prisma || cachedUrl !== databaseUrl) {
-  // Disconnect existing client if URL changed
-  if (globalForPrisma.prisma && cachedUrl !== databaseUrl) {
-    console.log(
-      `🔄 [Prisma] Database URL changed from ${cachedUrl?.substring(
-        0,
-        30
-      )}... to ${databaseUrl?.substring(0, 30)}..., reinitializing client`
+function getPrismaClient(): PrismaClient {
+  const databaseUrl = getDatabaseUrl();
+  
+  // Check if we need to recreate the client (different URL or doesn't exist)
+  const cachedUrl = getCachedDatabaseUrl();
+  if (!globalForPrisma.prisma || cachedUrl !== databaseUrl) {
+    // Disconnect existing client if URL changed
+    if (globalForPrisma.prisma && cachedUrl !== databaseUrl) {
+      console.log(
+        `🔄 [Prisma] Database URL changed from ${cachedUrl?.substring(
+          0,
+          30
+        )}... to ${databaseUrl?.substring(0, 30)}..., reinitializing client`
+      );
+      globalForPrisma.prisma.$disconnect().catch(() => {});
+    }
+
+    // Create new client with the correct database URL
+    // If no database URL is available (e.g., during build), create client without it
+    // It will fail at runtime when actually used, which is expected
+    globalForPrisma.prisma = new PrismaClient(
+      databaseUrl
+        ? {
+            datasources: {
+              db: {
+                url: databaseUrl,
+              },
+            },
+          }
+        : undefined
     );
-    globalForPrisma.prisma.$disconnect().catch(() => {});
+
+    setCachedDatabaseUrl(databaseUrl);
   }
 
-  // Create new client with the correct database URL
-  globalForPrisma.prisma = new PrismaClient(
-    databaseUrl
-      ? {
-          datasources: {
-            db: {
-              url: databaseUrl,
-            },
-          },
-        }
-      : undefined
-  );
-
-  setCachedDatabaseUrl(databaseUrl);
+  return globalForPrisma.prisma;
 }
 
-export const prisma = globalForPrisma.prisma;
+// Create a proxy that lazily initializes the Prisma client when first accessed
+// This prevents build-time errors when DATABASE_URL is not available
+const prismaProxy = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrismaClient();
+    const value = (client as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  }
+});
+
+export const prisma = prismaProxy;
