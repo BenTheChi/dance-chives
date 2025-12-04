@@ -22,7 +22,7 @@ export function HeroSection({
 }: HeroSectionProps) {
   return (
     <section
-      className={`relative w-full ${height} bg-cover bg-center flex items-center justify-center border-b-8 border-black`}
+      className={`relative w-full ${height} bg-cover bg-center flex flex-col items-center justify-center border-b-8 border-black`}
       style={{ backgroundImage: `url('${backgroundImage}')` }}
     >
       <div
@@ -33,11 +33,11 @@ export function HeroSection({
       {backLink && (
         <a
           href={backLink.href}
-          className="absolute top-6 left-6 z-20 bg-[#c4ffd9] text-[#2a2a2a] px-6 py-3 text-xl font-black uppercase border-4 border-black hover:bg-[#3a3a3a] hover:text-[#c4ffd9] transition-all duration-75 flex items-center gap-2"
+          className="absolute top-4 left-4 md:top-6 md:left-6 z-20 bg-[#c4ffd9] text-[#2a2a2a] px-3 py-1.5 md:px-6 md:py-3 text-sm md:text-xl font-black uppercase border-4 border-black hover:bg-[#3a3a3a] hover:text-[#c4ffd9] transition-all duration-75 flex items-center gap-1.5 md:gap-2"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
+            className="h-4 w-4 md:h-6 md:w-6"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -51,15 +51,17 @@ export function HeroSection({
         </a>
       )}
 
-      <div className="relative z-10 text-center px-4 max-w-5xl">
-        <h1 className="text-5xl font-black text-white mb-6 uppercase leading-tight tracking-tight">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-2xl text-white font-bold uppercase tracking-wide mt-6">
-            {subtitle}
-          </p>
-        )}
+      <div className="relative z-10 w-full px-4 max-w-5xl flex flex-col items-center">
+        <div className="text-center w-full">
+          <h1 className="text-2xl md:text-4xl font-black text-white mb-3 md:mb-6 uppercase leading-tight tracking-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-base md:text-2xl text-white font-bold uppercase tracking-wide mt-3 md:mt-6">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );

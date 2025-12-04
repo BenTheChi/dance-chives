@@ -31,9 +31,9 @@ export default function Home() {
           <div className="relative h-[450px] bg-[#f5f5f5] border-8 border-black overflow-hidden">
             <Image
               src="/home/feature.jpg"
-              alt="Dance class"
+              alt="Dance competition"
               fill
-              className="object-cover mr-10"
+              className="object-cover"
             />
           </div>
           <div className="text-[#2a2a2a] space-y-6">

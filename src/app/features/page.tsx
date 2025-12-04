@@ -22,7 +22,7 @@ export default function FeaturesPage() {
         }
         subtitle="The complete platform for organizing, sharing, and preserving dance culture"
         overlayOpacity={50}
-        height="h-[500px] md:h-[600px]"
+        height="h-[450px]"
         backLink={{ href: "/", label: "Back" }}
       />
 
