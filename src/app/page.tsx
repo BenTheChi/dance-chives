@@ -4,7 +4,6 @@ import Image from "next/image";
 import {
   HeroSection,
   SectionContainer,
-  SectionHeader,
   FeatureLinkCard,
   FeaturesGrid,
   CTAButton,

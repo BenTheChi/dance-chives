@@ -3,7 +3,6 @@ import { Nunito, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
