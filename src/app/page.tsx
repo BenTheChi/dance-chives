@@ -59,8 +59,18 @@ export default function Home() {
           </div>
         </div>
         <div className="flex justify-center gap-4 flex-wrap mt-12">
-          <CTAButton variant="primary">Join Early Access</CTAButton>
-          <CTAButton variant="secondary">Contribute</CTAButton>
+          <CTAButton
+            variant="primary"
+            onClick={() => (window.location.href = "#newsletter")}
+          >
+            Join Early Access
+          </CTAButton>
+          <CTAButton
+            variant="secondary"
+            onClick={() => (window.location.href = "#contribute")}
+          >
+            Contribute
+          </CTAButton>
         </div>
       </SectionContainer>
 
@@ -100,14 +110,17 @@ export default function Home() {
       </SectionContainer>
 
       {/* Newsletter Section */}
-      <SectionContainer bgColor="bg-[#c4ffd9]" padding="py-12">
+      <SectionContainer id="newsletter" bgColor="bg-[#c4ffd9]" padding="py-12">
         <div className="ml-embedded" data-form="op8sua"></div>
       </SectionContainer>
 
       {/* Contribution Section */}
       <SectionContainer bgColor="bg-[#3a3a3a]" borderColor="border-transparent">
         <div className="max-w-6xl mx-auto text-center">
-          <h2 className="text-4xl font-black text-[#f5f5f5] mb-12 uppercase tracking-tight">
+          <h2
+            id="contribute"
+            className="text-4xl font-black text-[#f5f5f5] mb-12 uppercase tracking-tight"
+          >
             Want to help shape the future of Dance Chives?
           </h2>
           <div className="flex justify-center">
