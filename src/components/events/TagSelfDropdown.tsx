@@ -36,15 +36,9 @@ export function TagSelfDropdown({
   const router = useRouter();
 
   // Filter out roles already assigned to the current user
-  // Also filter out "Team Member" if user is already a team member
   const availableRoles = useMemo(
-    () =>
-      AVAILABLE_ROLES.filter(
-        (role) =>
-          !currentUserRoles.includes(role) &&
-          !(role === "Team Member" && isTeamMember)
-      ),
-    [currentUserRoles, isTeamMember]
+    () => AVAILABLE_ROLES.filter((role) => !currentUserRoles.includes(role)),
+    [currentUserRoles]
   );
 
   // Memoize the available roles string for dependency tracking

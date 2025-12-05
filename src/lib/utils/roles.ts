@@ -9,7 +9,6 @@ export const AVAILABLE_ROLES = [
   "Videographer",
   "Designer",
   "MC",
-  "Team Member",
 ] as const;
 
 /**

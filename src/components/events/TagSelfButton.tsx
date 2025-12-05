@@ -133,15 +133,12 @@ export function TagSelfButton({
     }
     // Event-level: filter out roles already assigned
     return AVAILABLE_ROLES.filter(
-      (role) =>
-        !safeCurrentUserRoles.includes(role) &&
-        !(role === "Team Member" && isTeamMember)
+      (role) => !safeCurrentUserRoles.includes(role)
     );
   }, [
     target,
     isUserTagged,
     safeCurrentUserRoles,
-    isTeamMember,
     videoType,
     currentVideoRoles,
   ]);

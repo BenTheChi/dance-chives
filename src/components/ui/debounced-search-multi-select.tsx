@@ -26,6 +26,7 @@ interface DebouncedSearchMultiSelectProps<T extends SearchItem> {
   onChange: (values: T[]) => void;
   value: T[];
   name: string;
+  label?: string;
   className?: string;
   disabled?: boolean;
   required?: boolean;
@@ -43,6 +44,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     onChange,
     value,
     name,
+    label,
     className,
     disabled = false,
     required = false,
@@ -128,11 +130,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     <div
       className={cn("flex flex-col debounced-search-multi-select", className)}
     >
-      {name && (
-        <label className="text-sm font-medium block">
-          {name.charAt(0).toUpperCase() + name.slice(1)}
-        </label>
-      )}
+      {label && <label className="text-sm font-medium block">{label}</label>}
       <div className="flex flex-wrap gap-1 mb-2">
         {deduplicatedValue.map((item) => {
           const itemId = getItemId(item);

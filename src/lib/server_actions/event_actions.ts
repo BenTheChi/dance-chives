@@ -173,6 +173,11 @@ interface addEventProps {
     file: File | null;
     caption?: string;
   }[];
+  teamMembers?: {
+    id?: string;
+    displayName: string;
+    username: string;
+  }[];
 }
 
 interface response {
@@ -339,6 +344,27 @@ export async function addEvent(props: addEventProps): Promise<response> {
       },
     };
 
+    // Process team members - get user IDs for each team member
+    const processedTeamMembers: Array<{ id: string; username: string; displayName: string }> = [];
+    if (props.teamMembers && props.teamMembers.length > 0) {
+      for (const member of props.teamMembers) {
+        let userId = member.id;
+        if (!userId && member.username) {
+          const user = await getUserByUsername(member.username);
+          if (user) {
+            userId = user.id;
+          }
+        }
+        if (userId) {
+          processedTeamMembers.push({
+            id: userId,
+            username: member.username,
+            displayName: member.displayName || "",
+          });
+        }
+      }
+    }
+
     // Create the Event object
     const event: Event = {
       id: eventId,
@@ -350,8 +376,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
       gallery: props.gallery as Image[],
     };
 
-    // Call insertEvent with the properly structured Event object
-    const result = await insertEvent(event);
+    // Call insertEvent with the properly structured Event object and team members
+    const result = await insertEvent(event, processedTeamMembers);
 
     // Create corresponding PostgreSQL Event record to link Neo4j event to user
     await prisma.event.upsert({
@@ -625,6 +651,27 @@ export async function editEvent(
       },
     };
 
+    // Process team members - get user IDs for each team member
+    const processedTeamMembers: Array<{ id: string; username: string; displayName: string }> = [];
+    if (editedEvent.teamMembers && editedEvent.teamMembers.length > 0) {
+      for (const member of editedEvent.teamMembers) {
+        let userId = member.id;
+        if (!userId && member.username) {
+          const user = await getUserByUsername(member.username);
+          if (user) {
+            userId = user.id;
+          }
+        }
+        if (userId) {
+          processedTeamMembers.push({
+            id: userId,
+            username: member.username,
+            displayName: member.displayName || "",
+          });
+        }
+      }
+    }
+
     // Create the Event object
     const event: Event = {
       id: eventId,
@@ -636,8 +683,8 @@ export async function editEvent(
       gallery: editedEvent.gallery as Image[],
     };
 
-    // Call editEventQuery with the properly structured Event object
-    const result = await editEventQuery(event);
+    // Call editEventQuery with the properly structured Event object and team members
+    const result = await editEventQuery(event, processedTeamMembers);
 
     console.log("🟢 [editEvent] editEventQuery result:", result);
 

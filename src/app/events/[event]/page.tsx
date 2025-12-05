@@ -13,7 +13,6 @@ import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import { DeleteEventButton } from "@/components/DeleteEventButton";
 import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
@@ -26,7 +25,6 @@ import NextImage from "next/image";
 import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
-import { getEventTeamMembers } from "@/db/queries/team-member";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 
 type PageProps = {
@@ -150,15 +148,10 @@ export default async function EventPage({ params }: PageProps) {
     }
   });
 
-  // Fetch creator and team members for Team Members section
+  // Fetch creator for Event Roles section
   const creator = event.eventDetails.creatorId
     ? await getUser(event.eventDetails.creatorId)
     : null;
-  const teamMemberIds = await getEventTeamMembers(event.id);
-  const teamMembers = await Promise.all(teamMemberIds.map((id) => getUser(id)));
-  const validTeamMembers = teamMembers.filter(
-    (member): member is NonNullable<typeof member> => member !== null
-  );
 
   // Get all dates to display
   const eventDetails = event.eventDetails;
@@ -181,7 +174,6 @@ export default async function EventPage({ params }: PageProps) {
                 <Link href={`/events/${event.id}/edit`}>Edit</Link>
               </Button>
             )}
-            {canDelete && <DeleteEventButton eventId={event.id} />}
           </div>
 
           <PosterImage
@@ -273,6 +265,20 @@ export default async function EventPage({ params }: PageProps) {
             {/* Event Roles */}
             <section className="p-4 rounded-md bg-green-100 flex flex-col gap-2">
               <h2 className="text-xl font-bold mb-2">Event Roles</h2>
+              {creator && (
+                <div className="flex flex-row gap-2 items-center flex-wrap">
+                  <span>Creator: </span>
+                  <Badge variant="secondary" asChild>
+                    {creator.username ? (
+                      <Link href={`/profiles/${creator.username}`}>
+                        {creator.displayName || creator.username}
+                      </Link>
+                    ) : (
+                      <span>{creator.displayName || creator.username}</span>
+                    )}
+                  </Badge>
+                </div>
+              )}
               {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
                 <div
                   key={roleTitle}
@@ -305,44 +311,6 @@ export default async function EventPage({ params }: PageProps) {
                 canTagDirectly={canTagDirectly}
               />
             </section>
-
-            {/* Team Members Section */}
-            {(creator || validTeamMembers.length > 0) && (
-              <section className="bg-green-100 p-4 rounded-md">
-                <h2 className="text-xl font-bold mb-2">Team Members</h2>
-                <div className="flex flex-col gap-2">
-                  {creator && (
-                    <div className="flex flex-row gap-2 items-center flex-wrap">
-                      <span>Creator: </span>
-                      <Badge variant="secondary" asChild>
-                        {creator.username ? (
-                          <Link href={`/profiles/${creator.username}`}>
-                            {creator.displayName || creator.username}
-                          </Link>
-                        ) : (
-                          <span>{creator.displayName || creator.username}</span>
-                        )}
-                      </Badge>
-                    </div>
-                  )}
-                  {validTeamMembers.length > 0 && (
-                    <div className="flex flex-row gap-2 items-center flex-wrap">
-                      {validTeamMembers.map((member) => (
-                        <Badge key={member.id} variant="secondary" asChild>
-                          {member.username ? (
-                            <Link href={`/profiles/${member.username}`}>
-                              {member.displayName || member.username}
-                            </Link>
-                          ) : (
-                            <span>{member.displayName || member.username}</span>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            )}
           </div>
 
           {/* Description */}

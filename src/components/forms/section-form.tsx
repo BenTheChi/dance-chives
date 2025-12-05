@@ -518,7 +518,8 @@ export function SectionForm({
                     setSectionWinners(users);
                   }}
                   value={sectionWinners}
-                  name="Section Winners"
+                  name="sectionWinners"
+                  label="Section Winners"
                 />
                 {sectionWinners.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">

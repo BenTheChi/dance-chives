@@ -7,7 +7,8 @@ import type { FormValues } from "@/components/forms/event-form";
 import { auth } from "@/auth";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
-import { isTeamMember } from "@/db/queries/team-member";
+import { isTeamMember, getEventTeamMembers } from "@/db/queries/team-member";
+import { getUser } from "@/db/queries/user";
 import { isAllDayEvent } from "@/lib/utils/event-utils";
 
 export default async function EditEventPage({
@@ -105,6 +106,23 @@ export default async function EditEventPage({
       : null,
   }));
 
+  // Fetch team members for form
+  const teamMemberIds = await getEventTeamMembers(event);
+  const teamMembersData = await Promise.all(
+    teamMemberIds.map(async (id) => {
+      const user = await getUser(id);
+      if (!user) return null;
+      return {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName || "",
+      };
+    })
+  );
+  const teamMembers = teamMembersData.filter(
+    (member): member is NonNullable<typeof member> => member !== null
+  );
+
   //Convert event to FormValues
   // Note: Optional string fields are normalized to empty strings to avoid null values
   const eventFormValues = {
@@ -112,6 +130,7 @@ export default async function EditEventPage({
     sections: formattedSections,
     roles: formattedRoles,
     gallery: formattedPictures,
+    teamMembers: teamMembers,
   } as FormValues;
 
   return (

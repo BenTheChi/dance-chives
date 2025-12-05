@@ -7,7 +7,10 @@ import {
   isValidVideoRole,
   VIDEO_ROLE_WINNER,
 } from "@/lib/utils/roles";
-import { getAllEventTypeLabels, getEventTypeFromLabel } from "./event";
+import {
+  getAllEventTypeLabels,
+  getEventTypeFromLabel,
+} from "@/db/queries/event";
 
 /**
  * Get team members (users with edit access) for an event from Neo4j
@@ -274,208 +277,22 @@ export async function addTeamMember(
 }
 
 /**
- * Add a user as a team member of a workshop in Neo4j
- * Creates a TEAM_MEMBER relationship between the user and workshop
+ * Remove a user as a team member from an event in Neo4j
+ * Works for all event types (competitions, workshops, sessions)
  */
-export async function addWorkshopTeamMember(
-  workshopId: string,
-  userId: string
-): Promise<void> {
-  const session = driver.session();
-  try {
-    // Validate workshop exists (basic check - you may want to add a workshopExists function)
-    await session.run(
-      `
-      MATCH (w:Workshop {id: $workshopId})
-      RETURN w
-      `,
-      { workshopId }
-    );
-
-    await session.run(
-      `
-      MATCH (w:Workshop {id: $workshopId})
-      MATCH (u:User {id: $userId})
-      MERGE (u)-[:TEAM_MEMBER]->(w)
-      `,
-      { workshopId, userId }
-    );
-  } finally {
-    await session.close();
-  }
-}
-
-/**
- * Check if a user is a team member of a workshop
- * Team members have edit access, separate from roles
- * NOTE: Creators are NOT team members - use isWorkshopCreator() to check for creators
- * Also checks if user is a team member of the associated event (if workshop has one)
- */
-export async function isWorkshopTeamMember(
-  workshopId: string,
-  userId: string
-): Promise<boolean> {
-  const session = driver.session();
-  try {
-    // Check if user has TEAM_MEMBER relationship with workshop (creators are excluded)
-    const workshopResult = await session.run(
-      `
-      MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
-      RETURN count(rel) as count
-      `,
-      { workshopId, userId }
-    );
-
-    const workshopCount =
-      workshopResult.records[0]?.get("count")?.toNumber() || 0;
-    if (workshopCount > 0) {
-      return true;
-    }
-
-    // If not a workshop team member, check if workshop has associated event and user is event team member
-    const eventResult = await session.run(
-      `
-      MATCH (w:Workshop {id: $workshopId})-[:IN]->(e:Event)
-      MATCH (e:Event)<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
-      RETURN count(rel) as count
-      `,
-      { workshopId, userId }
-    );
-
-    const eventCount = eventResult.records[0]?.get("count")?.toNumber() || 0;
-    return eventCount > 0;
-  } finally {
-    await session.close();
-  }
-}
-
-/**
- * Get team members (users with edit access) for a workshop from Neo4j
- * Team members are separate from roles - they grant edit access
- * NOTE: Creators are NOT included as team members - they have separate permissions
- * Returns array of user IDs
- */
-export async function getWorkshopTeamMembers(
-  workshopId: string
-): Promise<string[]> {
-  const session = driver.session();
-  try {
-    const result = await session.run(
-      `
-      MATCH (w:Workshop {id: $workshopId})<-[rel:TEAM_MEMBER]-(user:User)
-      RETURN DISTINCT user.id as userId
-      `,
-      { workshopId }
-    );
-
-    const teamMemberIds = result.records.map((record) => record.get("userId"));
-    return teamMemberIds;
-  } finally {
-    await session.close();
-  }
-}
-
-/**
- * Add a user as a team member of a session in Neo4j
- * Creates a TEAM_MEMBER relationship between the user and session
- */
-export async function addSessionTeamMember(
-  sessionId: string,
-  userId: string
-): Promise<void> {
-  const session = driver.session();
-  try {
-    // Validate session exists
-    await session.run(
-      `
-      MATCH (s:Session {id: $sessionId})
-      RETURN s
-      `,
-      { sessionId }
-    );
-
-    await session.run(
-      `
-      MATCH (s:Session {id: $sessionId})
-      MATCH (u:User {id: $userId})
-      MERGE (u)-[:TEAM_MEMBER]->(s)
-      `,
-      { sessionId, userId }
-    );
-  } finally {
-    await session.close();
-  }
-}
-
-/**
- * Remove a user as a team member of a session in Neo4j
- */
-export async function removeSessionTeamMember(
-  sessionId: string,
+export async function removeTeamMember(
+  eventId: string,
   userId: string
 ): Promise<void> {
   const session = driver.session();
   try {
     await session.run(
       `
-      MATCH (s:Session {id: $sessionId})<-[rel:TEAM_MEMBER]-(u:User {id: $userId})
+      MATCH (e:Event {id: $eventId})<-[rel:TEAM_MEMBER]-(u:User {id: $userId})
       DELETE rel
       `,
-      { sessionId, userId }
+      { eventId, userId }
     );
-  } finally {
-    await session.close();
-  }
-}
-
-/**
- * Check if a user is a team member of a session
- * Team members have edit access, separate from roles
- * NOTE: Creators are NOT team members - use isSessionCreator() to check for creators
- * Sessions don't check event team membership (unlike workshops)
- */
-export async function isSessionTeamMember(
-  sessionId: string,
-  userId: string
-): Promise<boolean> {
-  const session = driver.session();
-  try {
-    const result = await session.run(
-      `
-      MATCH (s:Session {id: $sessionId})<-[rel:TEAM_MEMBER]-(user:User {id: $userId})
-      RETURN count(rel) as count
-      `,
-      { sessionId, userId }
-    );
-
-    const count = result.records[0]?.get("count")?.toNumber() || 0;
-    return count > 0;
-  } finally {
-    await session.close();
-  }
-}
-
-/**
- * Get team members (users with edit access) for a session from Neo4j
- * Team members are separate from roles - they grant edit access
- * NOTE: Creators are NOT included as team members - they have separate permissions
- * Returns array of user IDs
- */
-export async function getSessionTeamMembers(
-  sessionId: string
-): Promise<string[]> {
-  const session = driver.session();
-  try {
-    const result = await session.run(
-      `
-      MATCH (s:Session {id: $sessionId})<-[rel:TEAM_MEMBER]-(user:User)
-      RETURN DISTINCT user.id as userId
-      `,
-      { sessionId }
-    );
-
-    const teamMemberIds = result.records.map((record) => record.get("userId"));
-    return teamMemberIds;
   } finally {
     await session.close();
   }

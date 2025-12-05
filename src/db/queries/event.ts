@@ -1338,8 +1338,13 @@ const createSectionVideos = async (sections: Section[]) => {
 /**
  * Unified function to insert any event
  * Handles event type labels dynamically based on eventDetails.eventType
+ * @param event - The event object to insert
+ * @param teamMembers - Array of team members (separate from roles)
  */
-export const insertEvent = async (event: Event): Promise<Event> => {
+export const insertEvent = async (
+  event: Event,
+  teamMembers?: Array<{ id: string; username: string; displayName: string }>
+): Promise<Event> => {
   // Validate all roles before inserting
   if (event.roles && event.roles.length > 0) {
     for (const role of event.roles) {
@@ -1487,13 +1492,19 @@ export const insertEvent = async (event: Event): Promise<Event> => {
         WITH e, $roles AS roles
         UNWIND roles AS roleData
         MATCH (u:User { id: roleData.user.id })
-        WITH u, e, roleData,
-          CASE 
-            WHEN roleData.title = 'Team Member' THEN 'TEAM_MEMBER'
-            ELSE toUpper(roleData.title)
-          END AS relationshipType
-        CALL apoc.merge.relationship(u, relationshipType, {}, {}, e) YIELD rel
+        WITH u, e, roleData
+        CALL apoc.merge.relationship(u, toUpper(roleData.title), {}, {}, e) YIELD rel
         RETURN count(rel) AS roleCount
+      }
+
+      WITH e
+      CALL {
+        WITH e
+        WITH e, $teamMembers AS teamMembers
+        UNWIND teamMembers AS memberData
+        MATCH (u:User { id: memberData.id })
+        MERGE (u)-[:TEAM_MEMBER]->(e)
+        RETURN count(u) AS teamMemberCount
       }
 
       WITH e
@@ -1502,6 +1513,7 @@ export const insertEvent = async (event: Event): Promise<Event> => {
       {
         eventId: event.id,
         creatorId: eventDetails.creatorId,
+        teamMembers: teamMembers || [],
         title: eventDetails.title,
         description: eventDetails.description,
         location: eventDetails.location,
@@ -1583,8 +1595,13 @@ export const insertEvent = async (event: Event): Promise<Event> => {
 /**
  * Unified function to edit any event
  * Handles event type label updates dynamically
+ * @param event - The event object to edit
+ * @param teamMembers - Array of team members (separate from roles)
  */
-export const editEvent = async (event: Event): Promise<Event> => {
+export const editEvent = async (
+  event: Event,
+  teamMembers?: Array<{ id: string; username: string; displayName: string }>
+): Promise<Event> => {
   const { id } = event;
   const eventDetails = event.eventDetails;
 
@@ -1755,13 +1772,12 @@ export const editEvent = async (event: Event): Promise<Event> => {
       );
     }
 
-    // Update roles (similar to competition edit logic)
-    const validRoleFormats = getNeo4jRoleFormats();
+    // Update roles (exclude TEAM_MEMBER - team members are handled separately)
+    const validRoleFormats = getNeo4jRoleFormats().filter(
+      (r) => r !== "TEAM_MEMBER"
+    );
     const regularRoles = event.roles.filter(
       (r) => r.user && r.title !== "TEAM_MEMBER"
-    );
-    const teamMemberRoles = event.roles.filter(
-      (r) => r.user && r.title === "TEAM_MEMBER"
     );
 
     // Handle regular roles
@@ -1779,30 +1795,14 @@ export const editEvent = async (event: Event): Promise<Event> => {
       );
     }
 
-    // Handle Team Member roles
-    if (teamMemberRoles.length > 0) {
-      await tx.run(
-        `MATCH (e:Event {id: $id})
-         UNWIND $roles AS roleData
-         MERGE (u:User { id: roleData.user.id })
-         MERGE (u)-[:TEAM_MEMBER]->(e)
-         RETURN e, u
-         `,
-        { id, roles: teamMemberRoles }
-      );
-    }
-
-    // Delete roles not in the new list (but preserve CREATED and TEAM_MEMBER relationships)
-    const regularRoleFormats = validRoleFormats.filter(
-      (r) => r !== "TEAM_MEMBER"
-    );
+    // Delete roles not in the new list (but preserve CREATED relationship)
     if (regularRoles.length > 0) {
       await tx.run(
         `MATCH (e:Event {id: $id})
          MATCH (u:User)-[r]->(e)
          WHERE type(r) IN $validRoles AND NOT u.id IN [role IN $roles | role.user.id]
          DELETE r`,
-        { id, roles: regularRoles, validRoles: regularRoleFormats }
+        { id, roles: regularRoles, validRoles: validRoleFormats }
       );
     } else {
       await tx.run(
@@ -1810,20 +1810,33 @@ export const editEvent = async (event: Event): Promise<Event> => {
          MATCH (u:User)-[r]->(e)
          WHERE type(r) IN $validRoles
          DELETE r`,
-        { id, validRoles: regularRoleFormats }
+        { id, validRoles: validRoleFormats }
       );
     }
 
-    // Delete Team Member relationships not in the new list
-    if (teamMemberRoles.length > 0) {
+    // Handle Team Members (separate from roles)
+    if (teamMembers && teamMembers.length > 0) {
+      // Add/update team members
+      await tx.run(
+        `MATCH (e:Event {id: $id})
+         UNWIND $teamMembers AS memberData
+         MERGE (u:User { id: memberData.id })
+         MERGE (u)-[:TEAM_MEMBER]->(e)
+         RETURN e, u
+         `,
+        { id, teamMembers }
+      );
+
+      // Delete team members not in the new list
       await tx.run(
         `MATCH (e:Event {id: $id})
          MATCH (u:User)-[r:TEAM_MEMBER]->(e)
-         WHERE NOT u.id IN [role IN $roles | role.user.id]
+         WHERE NOT u.id IN [member IN $teamMembers | member.id]
          DELETE r`,
-        { id, roles: teamMemberRoles }
+        { id, teamMembers }
       );
     } else {
+      // Remove all team members if none provided
       await tx.run(
         `MATCH (e:Event {id: $id})
          MATCH (u:User)-[r:TEAM_MEMBER]->(e)

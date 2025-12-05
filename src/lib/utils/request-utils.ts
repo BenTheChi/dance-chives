@@ -1,10 +1,6 @@
 import { prisma } from "@/lib/primsa";
 import { AUTH_LEVELS } from "./auth-constants";
-import {
-  getEventTeamMembers,
-  getEventCreator,
-  getSessionTeamMembers,
-} from "@/db/queries/team-member";
+import { getEventTeamMembers, getEventCreator } from "@/db/queries/team-member";
 
 export const REQUEST_TYPES = {
   TAGGING: "TAGGING",
@@ -86,8 +82,8 @@ export async function getTaggingRequestApproversForSession(
     approverIds.add(creatorId);
   }
 
-  // Get team members for this session from Neo4j
-  const teamMembers = await getSessionTeamMembers(sessionId);
+  // Get team members for this session from Neo4j (sessions are events)
+  const teamMembers = await getEventTeamMembers(sessionId);
   teamMembers.forEach((userId) => approverIds.add(userId));
 
   // Get all moderators (auth level 2+)

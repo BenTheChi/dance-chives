@@ -427,7 +427,8 @@ export function VideoForm({
           getItemId={(item) => item.username}
           onChange={updateTaggedDancers}
           value={video.taggedDancers ?? []}
-          name="Tagged Dancers"
+          name="taggedDancers"
+          label="Tagged Dancers"
         />
 
         {/* Tagged Winners - only for battle videos */}
@@ -453,7 +454,8 @@ export function VideoForm({
                     value={
                       isUserSearchItemArray(field.value) ? field.value : []
                     }
-                    name="Tagged Winners"
+                    name="taggedWinners"
+                    label="Tagged Winners"
                   />
                 </FormControl>
                 <FormMessage />
@@ -471,7 +473,8 @@ export function VideoForm({
             getItemId={(item) => item.username}
             onChange={updateTaggedChoreographers}
             value={video.taggedChoreographers ?? []}
-            name="Tagged Choreographers"
+            name="taggedChoreographers"
+            label="Tagged Choreographers"
           />
         )}
 
@@ -484,7 +487,8 @@ export function VideoForm({
             getItemId={(item) => item.username}
             onChange={updateTaggedTeachers}
             value={video.taggedTeachers ?? []}
-            name="Tagged Teachers"
+            name="taggedTeachers"
+            label="Tagged Teachers"
           />
         )}
 
