@@ -17,11 +17,13 @@ import { Event, EventDetails, Section, Video } from "@/types/event";
 import { Image } from "@/types/image";
 import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
+import driver from "@/db/driver";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import {
   setVideoRoles,
   setSectionWinners,
   isTeamMember,
+  addTeamMember,
 } from "@/db/queries/team-member";
 import { getUserByUsername } from "@/db/queries/user";
 import { UserSearchItem } from "@/types/user";
@@ -1127,6 +1129,180 @@ export async function updateEventTeamMembers(
     console.error("Error updating team members:", error);
     return {
       error: "Failed to update team members",
+      status: 500,
+    };
+  }
+}
+
+export async function updateEventCreator(
+  eventId: string,
+  newCreator: UserSearchItem | null,
+  addOldCreatorAsTeamMember: boolean = false
+): Promise<{ status: number; error?: string }> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return {
+      error: "Unauthorized",
+      status: 401,
+    };
+  }
+
+  try {
+    // Check if event exists and user has permission
+    const event = await getEventQuery(eventId);
+    if (!event) {
+      return {
+        error: "Event not found",
+        status: 404,
+      };
+    }
+
+    const authLevel = session.user.auth ?? 0;
+    const isEventTeamMember = await isTeamMember(eventId, session.user.id);
+    const hasPermission = canUpdateEvent(
+      authLevel,
+      {
+        eventId,
+        eventCreatorId: event.eventDetails.creatorId,
+        isTeamMember: isEventTeamMember,
+      },
+      session.user.id
+    );
+
+    if (!hasPermission) {
+      return {
+        error: "You do not have permission to update the creator",
+        status: 403,
+      };
+    }
+
+    if (!newCreator) {
+      return {
+        error: "New creator is required",
+        status: 400,
+      };
+    }
+
+    // Get new creator user ID
+    let newCreatorId = newCreator.id;
+    if (!newCreatorId && newCreator.username) {
+      const user = await getUserByUsername(newCreator.username);
+      if (!user) {
+        return {
+          error: "New creator user not found",
+          status: 404,
+        };
+      }
+      newCreatorId = user.id;
+    }
+
+    if (!newCreatorId) {
+      return {
+        error: "New creator ID is required",
+        status: 400,
+      };
+    }
+
+    const oldCreatorId = event.eventDetails.creatorId;
+
+    // If ownership is changing
+    if (oldCreatorId && oldCreatorId !== newCreatorId) {
+      // Add old creator as team member if requested
+      // Note: This will be handled by updateEventTeamMembers if the old creator
+      // is included in the team members list, but we add it here as a safety measure
+      if (addOldCreatorAsTeamMember) {
+        await addTeamMember(eventId, oldCreatorId);
+      }
+
+      // Update creator relationship in Neo4j
+      const neo4jSession = driver.session();
+      try {
+        // Delete old CREATED relationship
+        await neo4jSession.run(
+          `
+          MATCH (oldCreator:User)-[r:CREATED]->(e:Event {id: $eventId})
+          DELETE r
+          `,
+          { eventId }
+        );
+
+        // Create new CREATED relationship
+        await neo4jSession.run(
+          `
+          MATCH (e:Event {id: $eventId})
+          MATCH (newCreator:User {id: $newCreatorId})
+          MERGE (newCreator)-[:CREATED]->(e)
+          `,
+          { eventId, newCreatorId }
+        );
+      } finally {
+        await neo4jSession.close();
+      }
+
+      // Update event details with new creator ID using editEventQuery
+      // This ensures the creatorId is updated in the event node
+      // We preserve existing team members by getting them from the database
+      const updatedEventDetails: EventDetails = {
+        ...event.eventDetails,
+        creatorId: newCreatorId,
+      };
+
+      const minimalEvent: Event = {
+        id: eventId,
+        createdAt: event.createdAt,
+        updatedAt: new Date(),
+        eventDetails: updatedEventDetails,
+        roles: event.roles || [],
+        sections: event.sections || [],
+        gallery: event.gallery || [],
+      };
+
+      // Get current team members to preserve them (including old creator if we just added them)
+      const { getEventTeamMembers } = await import("@/db/queries/team-member");
+      const teamMemberIds = await getEventTeamMembers(eventId);
+      const { getUser } = await import("@/db/queries/user");
+      const teamMembersData = await Promise.all(
+        teamMemberIds.map(async (id) => {
+          const user = await getUser(id);
+          if (!user) return null;
+          return {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName || "",
+          };
+        })
+      );
+      const processedTeamMembers = teamMembersData.filter(
+        (member): member is NonNullable<typeof member> => member !== null
+      );
+
+      // Update event with new creator ID, preserving current team members
+      // The team members will be updated separately by updateEventTeamMembers
+      await editEventQuery(minimalEvent, processedTeamMembers);
+    }
+
+    // Update corresponding PostgreSQL Event record
+    await prisma.event.upsert({
+      where: { eventId: eventId },
+      update: {
+        userId: newCreatorId,
+        creator: true,
+      },
+      create: {
+        eventId: eventId,
+        userId: newCreatorId,
+        creator: true,
+      },
+    });
+
+    return {
+      status: 200,
+    };
+  } catch (error) {
+    console.error("Error updating creator:", error);
+    return {
+      error: "Failed to update creator",
       status: 500,
     };
   }

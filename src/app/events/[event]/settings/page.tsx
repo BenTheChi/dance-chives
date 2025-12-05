@@ -2,8 +2,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { canUpdateEvent } from "@/lib/utils/auth-utils";
-import { isTeamMember, getEventTeamMembers } from "@/db/queries/team-member";
+import { getEventTeamMembers, isEventCreator } from "@/db/queries/team-member";
 import { getUser } from "@/db/queries/user";
 import EventSettingsForm from "@/components/forms/event-settings-form";
 
@@ -28,22 +27,11 @@ export default async function EventSettingsPage({ params }: PageProps) {
     notFound();
   }
 
-  // Check if user is a team member
-  const isEventTeamMember = await isTeamMember(eventId, session.user.id);
+  // Check if user is the event creator
+  const isCreator = await isEventCreator(eventId, session.user.id);
 
-  // Check authorization - allow team members even without auth level
-  const authLevel = session.user.auth ?? 0;
-  const hasPermission = canUpdateEvent(
-    authLevel,
-    {
-      eventId,
-      eventCreatorId: event.eventDetails.creatorId,
-      isTeamMember: isEventTeamMember,
-    },
-    session.user.id
-  );
-
-  if (!hasPermission) {
+  // Only event creators can access settings page (regardless of auth level)
+  if (!isCreator) {
     redirect(`/events/${eventId}`);
   }
 
@@ -64,6 +52,19 @@ export default async function EventSettingsPage({ params }: PageProps) {
     (member): member is NonNullable<typeof member> => member !== null
   );
 
+  // Fetch creator data for form
+  let creator = null;
+  if (event.eventDetails.creatorId) {
+    const creatorUser = await getUser(event.eventDetails.creatorId);
+    if (creatorUser) {
+      creator = {
+        id: creatorUser.id,
+        username: creatorUser.username,
+        displayName: creatorUser.displayName || "",
+      };
+    }
+  }
+
   return (
     <>
       <AppNavbar />
@@ -75,6 +76,7 @@ export default async function EventSettingsPage({ params }: PageProps) {
           <EventSettingsForm
             eventId={eventId}
             initialTeamMembers={teamMembers}
+            initialCreator={creator}
           />
         </div>
       </div>

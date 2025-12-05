@@ -7,7 +7,7 @@ import type { FormValues } from "@/components/forms/event-form";
 import { auth } from "@/auth";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { notFound, redirect } from "next/navigation";
-import { isTeamMember } from "@/db/queries/team-member";
+import { isTeamMember, isEventCreator } from "@/db/queries/team-member";
 import { isAllDayEvent } from "@/lib/utils/event-utils";
 
 export default async function EditEventPage({
@@ -30,20 +30,25 @@ export default async function EditEventPage({
     notFound();
   }
 
+  // Check if user is the event creator
+  const isCreator = await isEventCreator(event, session.user.id);
+
   // Check if user is a team member
   const isEventTeamMember = await isTeamMember(event, session.user.id);
 
-  // Check authorization - allow team members even without auth level
+  // Check authorization - allow creators regardless of auth level, and team members
   const authLevel = session.user.auth ?? 0;
-  const hasPermission = canUpdateEvent(
-    authLevel,
-    {
-      eventId: event,
-      eventCreatorId: currEvent.eventDetails.creatorId,
-      isTeamMember: isEventTeamMember,
-    },
-    session.user.id
-  );
+  const hasPermission =
+    isCreator ||
+    canUpdateEvent(
+      authLevel,
+      {
+        eventId: event,
+        eventCreatorId: currEvent.eventDetails.creatorId,
+        isTeamMember: isEventTeamMember,
+      },
+      session.user.id
+    );
 
   if (!hasPermission) {
     redirect(`/events/${event}`);

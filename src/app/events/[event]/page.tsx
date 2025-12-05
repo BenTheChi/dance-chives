@@ -157,16 +157,20 @@ export default async function EventPage({ params }: PageProps) {
             <Link href="/events" className="hover:underline">
               {`Back to Events`}
             </Link>
-            {canEdit && (
+            {(canEdit || isCreator) && (
               <div className="flex gap-2">
-                <Button asChild variant="outline" size="icon">
-                  <Link href={`/events/${event.id}/settings`}>
-                    <Settings className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button asChild>
-                  <Link href={`/events/${event.id}/edit`}>Edit</Link>
-                </Button>
+                {isCreator && (
+                  <Button asChild variant="outline" size="icon">
+                    <Link href={`/events/${event.id}/settings`}>
+                      <Settings className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                )}
+                {(canEdit || isCreator) && (
+                  <Button asChild>
+                    <Link href={`/events/${event.id}/edit`}>Edit</Link>
+                  </Button>
+                )}
               </div>
             )}
           </div>
