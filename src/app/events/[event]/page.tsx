@@ -7,6 +7,7 @@ import {
   DollarSign,
   FileText,
   MapPin,
+  Settings,
   Tag,
 } from "lucide-react";
 import Link from "next/link";
@@ -157,9 +158,16 @@ export default async function EventPage({ params }: PageProps) {
               {`Back to Events`}
             </Link>
             {canEdit && (
-              <Button asChild>
-                <Link href={`/events/${event.id}/edit`}>Edit</Link>
-              </Button>
+              <div className="flex gap-2">
+                <Button asChild variant="outline" size="icon">
+                  <Link href={`/events/${event.id}/settings`}>
+                    <Settings className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link href={`/events/${event.id}/edit`}>Edit</Link>
+                </Button>
+              </div>
             )}
           </div>
 

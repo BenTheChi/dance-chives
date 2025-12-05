@@ -15,7 +15,6 @@ import { Section, EventDetails, Role, Bracket } from "@/types/event";
 import { Image } from "@/types/image";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
-import { EventSettingsForm } from "./event-settings-form";
 import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
@@ -231,7 +230,6 @@ const formSchema = z.object({
   ),
   roles: z.array(roleSchema).optional(),
   gallery: z.array(imageSchema),
-  teamMembers: z.array(userSearchItemSchema).optional(),
 });
 
 export type FormValues = z.infer<typeof formSchema>;
@@ -306,7 +304,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       sections: [],
       roles: [],
       gallery: [],
-      teamMembers: [],
     },
   });
 
@@ -325,7 +322,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const eventDetails = watch("eventDetails");
   const roles = watch("roles") ?? [];
   const galleryWatched = watch("gallery");
-  const teamMembers = watch("teamMembers") ?? [];
 
   // Memoize galleryRaw to prevent unnecessary re-renders
   const galleryRaw = useMemo(() => galleryWatched ?? [], [galleryWatched]);
@@ -376,13 +372,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   }, [activeMainTab, sectionsMemo, activeSectionId, sectionsSelection]);
 
-  const mainTabs = [
-    "Details",
-    "Roles",
-    "Sections",
-    "Photo Gallery",
-    "Settings",
-  ];
+  const mainTabs = ["Details", "Roles", "Sections", "Photo Gallery"];
 
   const addSection = () => {
     const newSection: Section = {
@@ -1260,19 +1250,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                 )}
               />
             </div>
-          )}
-
-          {activeMainTab === "Settings" && (
-            <EventSettingsForm
-              control={control}
-              setValue={setValue}
-              teamMembers={teamMembers}
-              eventId={
-                pathname.length >= 3 && pathname[pathname.length - 1] === "edit"
-                  ? pathname[pathname.length - 2]
-                  : ""
-              }
-            />
           )}
 
           {/* Bottom Navigation */}

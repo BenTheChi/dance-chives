@@ -1,6 +1,5 @@
 "use client";
 
-import { Control, UseFormSetValue } from "react-hook-form";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
 import { useRouter } from "next/navigation";
@@ -15,13 +14,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { FormValues } from "./event-form";
+import { updateEventTeamMembers } from "@/lib/server_actions/event_actions";
 
 export interface EventSettingsFormProps {
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
-  teamMembers: UserSearchItem[];
   eventId: string;
+  initialTeamMembers: UserSearchItem[];
 }
 
 async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
@@ -42,18 +39,37 @@ async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
     });
 }
 
-export function EventSettingsForm({
-  setValue,
-  teamMembers,
+export default function EventSettingsForm({
   eventId,
+  initialTeamMembers,
 }: EventSettingsFormProps) {
   const router = useRouter();
+  const [teamMembers, setTeamMembers] =
+    useState<UserSearchItem[]>(initialTeamMembers);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleTeamMembersChange = (newTeamMembers: UserSearchItem[]) => {
-    // Update form state - changes will be saved on form submission
-    setValue("teamMembers", newTeamMembers, { shouldValidate: false });
+    setTeamMembers(newTeamMembers);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const result = await updateEventTeamMembers(eventId, teamMembers);
+      if (result.status === 200) {
+        toast.success("Team members updated successfully");
+        router.push(`/events/${eventId}`);
+      } else {
+        toast.error(result.error || "Failed to update team members");
+      }
+    } catch (error) {
+      console.error("Error updating team members:", error);
+      toast.error("Failed to update team members");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -82,14 +98,16 @@ export function EventSettingsForm({
     }
   };
 
+  const hasChanges =
+    JSON.stringify(teamMembers) !== JSON.stringify(initialTeamMembers);
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold mb-2">Team Members</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Manage team members who have edit access to this event. Changes will
-            be saved when you submit the form.
+            Manage team members who have edit access to this event.
           </p>
           <DebouncedSearchMultiSelect<UserSearchItem>
             onSearch={getUserSearchItems}
@@ -106,9 +124,30 @@ export function EventSettingsForm({
           />
         </div>
 
+        <div className="flex gap-4 pt-4">
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+          {hasChanges && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setTeamMembers(initialTeamMembers)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+          )}
+        </div>
+
         {eventId && (
           <div className="border-t pt-4">
             <Button
+              type="button"
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
             >

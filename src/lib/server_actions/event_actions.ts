@@ -345,7 +345,11 @@ export async function addEvent(props: addEventProps): Promise<response> {
     };
 
     // Process team members - get user IDs for each team member
-    const processedTeamMembers: Array<{ id: string; username: string; displayName: string }> = [];
+    const processedTeamMembers: Array<{
+      id: string;
+      username: string;
+      displayName: string;
+    }> = [];
     if (props.teamMembers && props.teamMembers.length > 0) {
       for (const member of props.teamMembers) {
         let userId = member.id;
@@ -652,7 +656,11 @@ export async function editEvent(
     };
 
     // Process team members - get user IDs for each team member
-    const processedTeamMembers: Array<{ id: string; username: string; displayName: string }> = [];
+    const processedTeamMembers: Array<{
+      id: string;
+      username: string;
+      displayName: string;
+    }> = [];
     if (editedEvent.teamMembers && editedEvent.teamMembers.length > 0) {
       for (const member of editedEvent.teamMembers) {
         let userId = member.id;
@@ -958,9 +966,10 @@ export async function getEvent(eventId: string): Promise<response> {
   }
 }
 
-export async function toggleSaveEvent(eventId: string): Promise<
-  | { status: number; saved: boolean }
-  | { status: number; error: string }
+export async function toggleSaveEvent(
+  eventId: string
+): Promise<
+  { status: number; saved: boolean } | { status: number; error: string }
 > {
   const session = await auth();
 
@@ -996,8 +1005,7 @@ export async function toggleSaveEvent(eventId: string): Promise<
 }
 
 export async function getSavedEventIds(): Promise<
-  | { status: number; eventIds: string[] }
-  | { status: number; error: string }
+  { status: number; eventIds: string[] } | { status: number; error: string }
 > {
   const session = await auth();
 
@@ -1026,6 +1034,99 @@ export async function getSavedEventIds(): Promise<
     console.error("Error fetching saved event IDs:", error);
     return {
       error: "Failed to fetch saved event IDs",
+      status: 500,
+    };
+  }
+}
+
+export async function updateEventTeamMembers(
+  eventId: string,
+  teamMembers: UserSearchItem[]
+): Promise<{ status: number; error?: string }> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return {
+      error: "Unauthorized",
+      status: 401,
+    };
+  }
+
+  try {
+    // Check if event exists and user has permission
+    const event = await getEventQuery(eventId);
+    if (!event) {
+      return {
+        error: "Event not found",
+        status: 404,
+      };
+    }
+
+    const authLevel = session.user.auth ?? 0;
+    const isEventTeamMember = await isTeamMember(eventId, session.user.id);
+    const hasPermission = canUpdateEvent(
+      authLevel,
+      {
+        eventId,
+        eventCreatorId: event.eventDetails.creatorId,
+        isTeamMember: isEventTeamMember,
+      },
+      session.user.id
+    );
+
+    if (!hasPermission) {
+      return {
+        error: "You do not have permission to update team members",
+        status: 403,
+      };
+    }
+
+    // Process team members - get user IDs for each team member
+    const processedTeamMembers: Array<{
+      id: string;
+      username: string;
+      displayName: string;
+    }> = [];
+    if (teamMembers && teamMembers.length > 0) {
+      for (const member of teamMembers) {
+        let userId = member.id;
+        if (!userId && member.username) {
+          const user = await getUserByUsername(member.username);
+          if (user) {
+            userId = user.id;
+          }
+        }
+        if (userId) {
+          processedTeamMembers.push({
+            id: userId,
+            username: member.username,
+            displayName: member.displayName || "",
+          });
+        }
+      }
+    }
+
+    // Update team members using editEventQuery with empty event data
+    // We'll create a minimal event object just to update team members
+    const minimalEvent: Event = {
+      id: eventId,
+      createdAt: event.createdAt,
+      updatedAt: new Date(),
+      eventDetails: event.eventDetails,
+      roles: event.roles || [],
+      sections: event.sections || [],
+      gallery: event.gallery || [],
+    };
+
+    await editEventQuery(minimalEvent, processedTeamMembers);
+
+    return {
+      status: 200,
+    };
+  } catch (error) {
+    console.error("Error updating team members:", error);
+    return {
+      error: "Failed to update team members",
       status: 500,
     };
   }
