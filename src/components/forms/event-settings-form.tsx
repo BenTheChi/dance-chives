@@ -43,7 +43,6 @@ async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
 }
 
 export function EventSettingsForm({
-  control,
   setValue,
   teamMembers,
   eventId,

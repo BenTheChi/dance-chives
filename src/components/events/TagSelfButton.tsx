@@ -63,7 +63,6 @@ interface TagSelfButtonProps {
 export function TagSelfButton({
   eventId,
   currentUserRoles = [],
-  isTeamMember = false,
   canTagDirectly = false,
   target,
   targetId,

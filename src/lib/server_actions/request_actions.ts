@@ -1631,9 +1631,8 @@ export async function getSavedEventsForUser(): Promise<EventCard[]> {
 
 /**
  * Tag self with a role in an event
- * If user has permission (admin, super admin, moderator, event creator, or team member), tags directly
+ * If user has permission (admin, super admin, moderator, event creator), tags directly
  * Otherwise, creates a tagging request
- * Special handling: "Team Member" role creates a TEAM_MEMBER relationship/request instead of a role relationship
  */
 export async function tagSelfWithRole(eventId: string, role: string) {
   const userId = await requireAuth();
@@ -1650,45 +1649,6 @@ export async function tagSelfWithRole(eventId: string, role: string) {
   const eventExistsInNeo4j = await eventExists(eventId);
   if (!eventExistsInNeo4j) {
     throw new Error("Event not found");
-  }
-
-  // Special handling for "Team Member" role
-  if (role === "Team Member") {
-    // Check if user has permission to add team member directly
-    const authLevel = session?.user?.auth || 0;
-    const canAddDirectly =
-      authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-      (await isEventCreator(eventId, userId));
-
-    if (canAddDirectly) {
-      // User has permission - add team member directly
-      try {
-        await addTeamMember(eventId, userId);
-        return { success: true, directTag: true };
-      } catch (error) {
-        console.error("Error adding team member:", error);
-        throw error;
-      }
-    } else {
-      // User doesn't have permission - create a team member request
-      console.log(
-        "🔵 [tagSelfWithRole] User doesn't have permission, creating team member request..."
-      );
-      try {
-        const result = await createTeamMemberRequest(eventId);
-        console.log(
-          "✅ [tagSelfWithRole] Team member request created successfully:",
-          result.request.id
-        );
-        return { success: true, directTag: false, request: result.request };
-      } catch (error) {
-        console.error(
-          "❌ [tagSelfWithRole] Error creating team member request:",
-          error
-        );
-        throw error;
-      }
-    }
   }
 
   // Regular role handling (non-Team Member roles)

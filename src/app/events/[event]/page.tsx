@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
 import NextImage from "next/image";
-import { canUpdateEvent, canDeleteEvent } from "@/lib/utils/auth-utils";
+import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
@@ -71,19 +71,6 @@ export default async function EventPage({ params }: PageProps) {
             eventId: event.id,
             eventCreatorId: event.eventDetails.creatorId,
             isTeamMember: isEventTeamMember,
-          },
-          session.user.id
-        )
-      : false;
-
-  // Check if user can delete the event
-  const canDelete =
-    session?.user?.id && session?.user?.auth !== undefined
-      ? canDeleteEvent(
-          session.user.auth,
-          {
-            eventId: event.id,
-            eventCreatorId: event.eventDetails.creatorId,
           },
           session.user.id
         )

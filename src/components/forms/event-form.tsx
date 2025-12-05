@@ -324,8 +324,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const sections = sectionsRaw ?? [];
   const eventDetails = watch("eventDetails");
   const roles = watch("roles") ?? [];
-  const galleryRaw = watch("gallery") ?? [];
+  const galleryWatched = watch("gallery");
   const teamMembers = watch("teamMembers") ?? [];
+
+  // Memoize galleryRaw to prevent unnecessary re-renders
+  const galleryRaw = useMemo(() => galleryWatched ?? [], [galleryWatched]);
 
   // Normalize and memoize gallery to prevent unnecessary re-renders
   const gallery: Image[] = useMemo(() => {

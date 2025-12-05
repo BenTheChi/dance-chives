@@ -21,13 +21,11 @@ import { toast } from "sonner";
 interface TagSelfDropdownProps {
   eventId: string;
   currentUserRoles: string[]; // Roles already assigned to the current user
-  isTeamMember?: boolean; // Whether the user is already a team member
 }
 
 export function TagSelfDropdown({
   eventId,
   currentUserRoles,
-  isTeamMember = false,
 }: TagSelfDropdownProps) {
   const { data: session } = useSession();
   const [selectedRole, setSelectedRole] = useState<string>("");
