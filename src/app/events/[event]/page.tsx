@@ -13,7 +13,7 @@ import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import { DeleteCompetitionButton } from "@/components/DeleteCompetitionButton";
+import { DeleteEventButton } from "@/components/DeleteEventButton";
 import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
@@ -181,7 +181,7 @@ export default async function EventPage({ params }: PageProps) {
                 <Link href={`/events/${event.id}/edit`}>Edit</Link>
               </Button>
             )}
-            {canDelete && <DeleteCompetitionButton competitionId={event.id} />}
+            {canDelete && <DeleteEventButton eventId={event.id} />}
           </div>
 
           <PosterImage

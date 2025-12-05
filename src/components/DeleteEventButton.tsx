@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export const DeleteCompetitionButton = ({ competitionId }: { competitionId: string }) => {
+export const DeleteEventButton = ({ eventId }: { eventId: string }) => {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -14,7 +14,7 @@ export const DeleteCompetitionButton = ({ competitionId }: { competitionId: stri
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/event?id=${competitionId}`, {
+      const response = await fetch(`/api/event?id=${eventId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
