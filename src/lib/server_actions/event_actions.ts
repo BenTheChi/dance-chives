@@ -27,7 +27,11 @@ import {
 } from "@/db/queries/team-member";
 import { getUserByUsername } from "@/db/queries/user";
 import { UserSearchItem } from "@/types/user";
-import { VIDEO_ROLE_WINNER, VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
+import {
+  VIDEO_ROLE_WINNER,
+  VIDEO_ROLE_DANCER,
+  fromNeo4jRoleFormat,
+} from "@/lib/utils/roles";
 import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
 
 // Unified form props interface - matches FormValues from event-form.tsx
@@ -1110,12 +1114,20 @@ export async function updateEventTeamMembers(
 
     // Update team members using editEventQuery with empty event data
     // We'll create a minimal event object just to update team members
+    // Convert roles from Neo4j format (uppercase) to title case format
+    // This is necessary because editEventQuery validates roles and expects title case
+    const convertedRoles =
+      event.roles?.map((role) => ({
+        ...role,
+        title: fromNeo4jRoleFormat(role.title) || role.title,
+      })) || [];
+
     const minimalEvent: Event = {
       id: eventId,
       createdAt: event.createdAt,
       updatedAt: new Date(),
       eventDetails: event.eventDetails,
-      roles: event.roles || [],
+      roles: convertedRoles,
       sections: event.sections || [],
       gallery: event.gallery || [],
     };
@@ -1248,12 +1260,20 @@ export async function updateEventCreator(
         creatorId: newCreatorId,
       };
 
+      // Convert roles from Neo4j format (uppercase) to title case format
+      // This is necessary because editEventQuery validates roles and expects title case
+      const convertedRoles =
+        event.roles?.map((role) => ({
+          ...role,
+          title: fromNeo4jRoleFormat(role.title) || role.title,
+        })) || [];
+
       const minimalEvent: Event = {
         id: eventId,
         createdAt: event.createdAt,
         updatedAt: new Date(),
         eventDetails: updatedEventDetails,
-        roles: event.roles || [],
+        roles: convertedRoles,
         sections: event.sections || [],
         gallery: event.gallery || [],
       };
