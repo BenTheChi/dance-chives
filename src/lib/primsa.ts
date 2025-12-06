@@ -33,8 +33,9 @@ const getDatabaseUrl = (): string | undefined => {
     }
   } else {
     // Only log error if not in build context (where env vars may not be available)
-    const isBuildContext = process.env.NEXT_PHASE === "phase-production-build" || 
-                           process.env.NEXT_PHASE === "phase-production-compile";
+    const isBuildContext =
+      process.env.NEXT_PHASE === "phase-production-build" ||
+      process.env.NEXT_PHASE === "phase-production-compile";
     if (!isBuildContext) {
       console.error(
         `❌ [Prisma] No database URL found for ${nodeEnv} environment!`
@@ -56,7 +57,7 @@ const setCachedDatabaseUrl = (url: string | undefined): void => {
 
 function getPrismaClient(): PrismaClient {
   const databaseUrl = getDatabaseUrl();
-  
+
   // Check if we need to recreate the client (different URL or doesn't exist)
   const cachedUrl = getCachedDatabaseUrl();
   if (!globalForPrisma.prisma || cachedUrl !== databaseUrl) {
@@ -98,11 +99,11 @@ const prismaProxy = new Proxy({} as PrismaClient, {
   get(_target, prop) {
     const client = getPrismaClient();
     const value = (client as any)[prop];
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       return value.bind(client);
     }
     return value;
-  }
+  },
 });
 
 export const prisma = prismaProxy;
