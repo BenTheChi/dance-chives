@@ -36,7 +36,9 @@ export function FeatureCard({
         <div
           className={`absolute inset-0 flex items-center justify-center bg-[#3a3a3a] text-[#f5f5f5] border-4 border-black m-4`}
         >
-          <p className="text-lg font-bold uppercase">{previewPlaceholder}</p>
+          <p className="text-md md:text-lg text-center font-bold uppercase">
+            {previewPlaceholder}
+          </p>
         </div>
       </div>
       <div className={`p-8 ${cardBgColor}`}>
