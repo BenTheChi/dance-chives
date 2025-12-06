@@ -2031,14 +2031,30 @@ export async function getSavedEventsForUser(
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
-      WITH DISTINCT e, c, p, r.createdAt as savedAt
+      WITH DISTINCT e, c, p, r.createdAt as savedAt,
+           [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
       RETURN e.id as eventId, 
              e.title as title, 
              e.startDate as startDate,
              e.dates as dates,
              c.name as city, 
              c.id as cityId, 
-             p.url as imageUrl
+             p.url as imageUrl,
+             CASE 
+               WHEN size(eventTypeLabels) > 0 THEN 
+                 CASE eventTypeLabels[0]
+                   WHEN 'BattleEvent' THEN 'Battle'
+                   WHEN 'CompetitionEvent' THEN 'Competition'
+                   WHEN 'ClassEvent' THEN 'Class'
+                   WHEN 'WorkshopEvent' THEN 'Workshop'
+                   WHEN 'SessionEvent' THEN 'Session'
+                   WHEN 'PartyEvent' THEN 'Party'
+                   WHEN 'FestivalEvent' THEN 'Festival'
+                   WHEN 'PerformanceEvent' THEN 'Performance'
+                   ELSE null
+                 END
+               ELSE null 
+             END as eventType
       ORDER BY e.startDate ASC, e.createdAt ASC
       `,
       { userId }
@@ -2106,6 +2122,7 @@ export async function getSavedEventsForUser(
         }
       }
 
+      const eventType = record.get("eventType") as EventType | null;
       return {
         id: eventId,
         title: record.get("title"),
@@ -2115,6 +2132,7 @@ export async function getSavedEventsForUser(
         city: record.get("city") || "",
         cityId: record.get("cityId") as number | undefined,
         styles: stylesMap.get(eventId) || [],
+        eventType: eventType || undefined,
       };
     });
   } finally {

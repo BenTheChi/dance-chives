@@ -11,7 +11,7 @@ import {
 } from "@/lib/server_actions/request_actions";
 import { SavedEventsCalendarSection } from "@/components/SavedEventsCalendarSection";
 import Eventcard from "@/components/cards";
-import { EventCard } from "@/types/event";
+import { EventCard, EventType } from "@/types/event";
 import { CalendarEventData } from "@/db/queries/event";
 import {
   Card,
@@ -287,7 +287,7 @@ export function DashboardClient({
         title: event.title,
         startDate: event.date || undefined,
         dates: dates,
-        eventType: "Other" as const,
+        eventType: (event.eventType || "Battle") as EventType,
         poster: event.imageUrl
           ? {
               id: "",

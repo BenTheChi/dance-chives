@@ -99,4 +99,5 @@ export interface EventCard {
   city: string;
   cityId?: number;
   styles: string[];
+  eventType?: EventType;
 }

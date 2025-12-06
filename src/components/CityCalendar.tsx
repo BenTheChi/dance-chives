@@ -380,7 +380,10 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
       <div className="mb-4 flex flex-wrap gap-4 items-center">
         <span className="text-sm font-medium">Event Types:</span>
         {(Object.keys(EVENT_TYPE_LABELS) as Array<EventType | "event">)
-          .filter((type) => type !== "event") // Exclude "event" from legend as it's just a fallback
+          .filter(
+            (type) =>
+              type !== "event" && type !== "Competition" && type !== "Festival"
+          ) // Exclude "event", "Competition", and "Festival" from legend
           .map((type) => (
             <div key={type} className="flex items-center gap-2">
               <div
