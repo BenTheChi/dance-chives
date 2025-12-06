@@ -110,8 +110,8 @@ function getStatusColor(status: string): string {
  */
 function renderRequestDetails(
   request: RequestCardProps["request"]
-): ReactElement[] {
-  const details: ReactElement[] = [];
+): ReactElement<any>[] {
+  const details: ReactElement<any>[] = [];
 
   // Common: sender information
   if (request.sender) {
