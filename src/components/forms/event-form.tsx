@@ -245,7 +245,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
   return sections.map((section) => ({
     ...section,
     description: section.description ?? "",
-    sectionType: section.sectionType ?? "Other",
+    sectionType: section.sectionType ?? "Battle",
     poster: section.poster
       ? {
           ...section.poster,
@@ -299,7 +299,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         location: "",
         cost: "",
         poster: null,
-        eventType: "Other",
+        eventType: "Battle",
       },
       sections: [],
       roles: [],
@@ -313,7 +313,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   useEffect(() => {
     const currentEventType = getValues("eventDetails.eventType");
     if (!currentEventType) {
-      setValue("eventDetails.eventType", "Other", { shouldValidate: false });
+      setValue("eventDetails.eventType", "Battle", { shouldValidate: false });
     }
   }, [getValues, setValue]);
 
@@ -379,7 +379,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       id: crypto.randomUUID(),
       title: `New Section ${sections.length + 1}`,
       description: "",
-      sectionType: "Other",
+      sectionType: "Battle",
       hasBrackets: false,
       videos: [],
       brackets: [],
@@ -917,7 +917,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                 <Select
                                   value={
                                     (section.sectionType ||
-                                      "Other") as SectionType
+                                      "Battle") as SectionType
                                   }
                                   onValueChange={(value) => {
                                     const currentSections =
@@ -945,9 +945,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                       Battle
                                     </SelectItem>
                                     <SelectItem value="Class">Class</SelectItem>
-                                    <SelectItem value="Competition">
-                                      Competition
-                                    </SelectItem>
                                     <SelectItem value="Mixed">Mixed</SelectItem>
                                     <SelectItem value="Other">Other</SelectItem>
                                     <SelectItem value="Performance">
@@ -958,9 +955,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                     </SelectItem>
                                     <SelectItem value="Showcase">
                                       Showcase
-                                    </SelectItem>
-                                    <SelectItem value="Tournament">
-                                      Tournament
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>

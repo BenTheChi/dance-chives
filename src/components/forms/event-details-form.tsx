@@ -146,7 +146,7 @@ export function EventDetailsForm({
             control={control}
             name="eventDetails.eventType"
             render={({ field }) => {
-              const value = field.value || "Other";
+              const value = field.value || "Battle";
               return (
                 <FormItem className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[250px] min-w-0">
                   <FormLabel>
@@ -166,8 +166,6 @@ export function EventDetailsForm({
                     <SelectContent>
                       <SelectItem value="Battle">Battle</SelectItem>
                       <SelectItem value="Class">Class</SelectItem>
-                      <SelectItem value="Competition">Competition</SelectItem>
-                      <SelectItem value="Festival">Festival</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                       <SelectItem value="Party">Party</SelectItem>
                       <SelectItem value="Performance">Performance</SelectItem>

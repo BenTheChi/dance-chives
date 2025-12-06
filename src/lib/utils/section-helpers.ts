@@ -84,7 +84,7 @@ export function updateSectionType(
 
     return {
       ...section,
-      sectionType: (newType || "Other") as Section["sectionType"],
+      sectionType: (newType || "Battle") as Section["sectionType"],
       hasBrackets,
       winners,
       videos: updatedVideos,

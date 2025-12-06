@@ -1381,8 +1381,8 @@ export const insertEvent = async (
 
   const session = driver.session();
   const eventDetails = event.eventDetails;
-  // Ensure eventType is always set (default to "Other" if not provided)
-  const eventType = eventDetails?.eventType || "Other";
+  // Ensure eventType is always set (default to "Battle" if not provided)
+  const eventType = eventDetails?.eventType || "Battle";
 
   // Build event type label if specified
   const eventTypeLabel = getEventTypeLabel(eventType);
@@ -1640,8 +1640,8 @@ export const editEvent = async (
   }
 
   const session = driver.session();
-  // Ensure eventType is always set (default to "Other" if not provided)
-  const eventType = eventDetails.eventType || "Other";
+  // Ensure eventType is always set (default to "Battle" if not provided)
+  const eventType = eventDetails.eventType || "Battle";
   const eventTypeLabel = getEventTypeLabel(eventType);
 
   // Handle dates array for Session events
