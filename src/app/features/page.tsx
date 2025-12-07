@@ -39,14 +39,17 @@ export default function FeaturesPage() {
             <FeatureCard
               title="From workshops to battles—classify every moment"
               description="Structure your events with 8+ event types (Battles, Competitions, Classes, Workshops, Sessions, Parties, Festivals, Performances) and 9 specialized section types (Battle, Tournament, Competition, Performance, Showcase, Class, Session, or Mixed) ensure every part of your event is properly categorized and easy to find."
+              image="/features/organize_1.png"
             />
             <FeatureCard
               title="Videos organized by purpose, not just uploaded in bulk"
               description="Unlike generic media dumps, Dance Chives organizes videos within sections (battles, showcases, classes) and brackets. Each video knows its context—what section it belongs to, who's tagged, what styles are featured—making your archive searchable and meaningful years later."
+              image="/features/organize_2.png"
             />
             <FeatureCard
               title="Posters and photos that complete the picture"
               description="Add event and section posters for visual impact, plus up to 10 gallery photos with captions. Showcase the venue, crowd, and in-between moments that complement your video archive and tell your event's complete story."
+              image="/features/organize_3.png"
             />
             <FeatureCard
               title="One page, two purposes—promote now, archive forever"
@@ -76,12 +79,14 @@ export default function FeaturesPage() {
               description="Dancers can tag themselves in videos as competitors, winners, choreographers, or teachers. Your profile automatically showcases your battles, wins, and contributions—building your digital dance portfolio. Give credit where credit's due."
               cardBgColor="bg-[#c4ffd9]"
               cardBorderColor="border-black"
+              image="/features/connect_1.png"
             />
             <FeatureCard
               title="Tag event organizers, DJs, judges, teachers, and more"
               description="Dance Chives ensures everyone who contributes to an event gets recognized with role-based tagging."
               cardBgColor="bg-[#c4ffd9]"
               cardBorderColor="border-black"
+              image="/features/connect_2.png"
             />
             <FeatureCard
               title="Connect dancers across the world and through time"
@@ -112,6 +117,7 @@ export default function FeaturesPage() {
             <FeatureCard
               title="Your city's dance scene all in one calendar"
               description="City-based calendars display every dance event happening in your area. No more scattered group chats, random IG feeds, or missed announcements. See what's happening at a glance."
+              image="/features/share_1.png"
             />
             <FeatureCard
               title="Filter by style, type, or both—find your vibe"
@@ -156,6 +162,7 @@ export default function FeaturesPage() {
               headerTextColor="text-[#2a2a2a]"
               cardBgColor="bg-[#f5f5f5]"
               cardBorderColor="border-black"
+              image="/features/battle_1.png"
             />
             <FeatureCard
               title="Tag winners, celebrate champions"

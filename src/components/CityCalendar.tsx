@@ -56,7 +56,7 @@ interface CityCalendarProps {
 }
 
 // Predefined colors for each event type
-const EVENT_COLORS: Record<EventType | "event", string> = {
+const EVENT_COLORS: Record<EventType, string> = {
   Battle: "#ef4444", // Red
   Competition: "#3b82f6", // Blue
   Class: "#10b981", // Green
@@ -65,11 +65,11 @@ const EVENT_COLORS: Record<EventType | "event", string> = {
   Party: "#ec4899", // Pink
   Festival: "#f97316", // Orange-red
   Performance: "#6366f1", // Indigo
-  event: "#3b82f6", // Default blue for backward compatibility
+  Other: "#000000", // Black
 };
 
 // Event type labels for legend
-const EVENT_TYPE_LABELS: Record<EventType | "event", string> = {
+const EVENT_TYPE_LABELS: Record<EventType, string> = {
   Battle: "Battle",
   Competition: "Competition",
   Class: "Class",
@@ -78,7 +78,7 @@ const EVENT_TYPE_LABELS: Record<EventType | "event", string> = {
   Party: "Party",
   Festival: "Festival",
   Performance: "Performance",
-  event: "Event", // Default label for backward compatibility
+  Other: "Other",
 };
 
 // Month names for dropdown
@@ -330,7 +330,7 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
     const color =
       eventType && EVENT_COLORS[eventType]
         ? EVENT_COLORS[eventType]
-        : EVENT_COLORS.event;
+        : EVENT_COLORS.Other;
     return {
       style: {
         backgroundColor: color,
