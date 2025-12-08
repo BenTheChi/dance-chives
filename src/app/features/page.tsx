@@ -37,22 +37,22 @@ export default function FeaturesPage() {
 
           <FeaturesGrid columns={2}>
             <FeatureCard
-              title="From workshops to battles—classify every moment"
-              description="Structure your events with 8+ event types (Battles, Competitions, Classes, Workshops, Sessions, Parties, Festivals, Performances) and 9 specialized section types (Battle, Tournament, Competition, Performance, Showcase, Class, Session, or Mixed) ensure every part of your event is properly categorized and easy to find."
+              title="From workshops to battles you can classify every moment with ease"
+              description="Structure your events with 7+ event types (Battles, Classes, Workshops, Sessions, Parties, Performances, Other) and 9 specialized section types (Battle, Performance, Showcase, Class, Session, or Mixed) ensure every part of your event is properly categorized and easy to find."
               image="/features/organize_1.png"
             />
             <FeatureCard
               title="Videos organized by purpose, not just uploaded in bulk"
-              description="Unlike generic media dumps, Dance Chives organizes videos within sections (battles, showcases, classes) and brackets. Each video knows its context—what section it belongs to, who's tagged, what styles are featured—making your archive searchable and meaningful years later."
+              description="Unlike generic media dumps, Dance Chives organizes videos within sections (battles, showcases, classes) and brackets. Each video knows its context, what section it belongs to, who's tagged, and what styles are featured. This makes your archive searchable and meaningful for years to come."
               image="/features/organize_2.png"
             />
             <FeatureCard
               title="Posters and photos that complete the picture"
-              description="Add event and section posters for visual impact, plus up to 10 gallery photos with captions. Showcase the venue, crowd, and in-between moments that complement your video archive and tell your event's complete story."
+              description="Add event and section posters for visual impact and gallery photos with captions. Showcase the venue, crowd, and in-between moments that complement your video archive and tell your event's complete story."
               image="/features/organize_3.png"
             />
             <FeatureCard
-              title="One page, two purposes—promote now, archive forever"
+              title="One page, two purposes: promote now, archive forever"
               description="Create your event page to promote upcoming battles and workshops, then return after the event to add videos, tag winners, and build a permanent archive. The same structured page evolves from promotional flyer to historical record."
             />
           </FeaturesGrid>
@@ -76,7 +76,7 @@ export default function FeaturesPage() {
           <FeaturesGrid columns={3}>
             <FeatureCard
               title="Tag yourself, build your dance resume"
-              description="Dancers can tag themselves in videos as competitors, winners, choreographers, or teachers. Your profile automatically showcases your battles, wins, and contributions—building your digital dance portfolio. Give credit where credit's due."
+              description="Dancers can tag themselves in videos as competitors, winners, choreographers, or teachers. Your profile automatically showcases your battles, wins, and contributions. This builds your digital dance portfolio. Give credit where credit's due."
               cardBgColor="bg-[#c4ffd9]"
               cardBorderColor="border-black"
               image="/features/connect_1.png"
