@@ -34,6 +34,7 @@ import Image from "next/image";
 import { CitySearchInput } from "@/components/CitySearchInput";
 import { City } from "@/types/city";
 import { FieldErrors } from "react-hook-form";
+import { UploadProfilePicture } from "@/components/UploadProfilePicture";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -64,6 +65,7 @@ const signupSchema = z.object({
   website: z.string().url().optional().or(z.literal("")),
   isCreator: z.boolean().optional(),
   profilePicture: z.instanceof(File).nullable().optional(),
+  avatarPicture: z.instanceof(File).nullable().optional(),
 });
 
 const editSchema = z.object({
@@ -81,6 +83,7 @@ const editSchema = z.object({
   instagram: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
   profilePicture: z.instanceof(File).nullable().optional(),
+  avatarPicture: z.instanceof(File).nullable().optional(),
 });
 
 interface SignUpFormProps {
@@ -95,6 +98,7 @@ interface SignUpFormProps {
     date?: string;
     styles?: string[];
     image?: string;
+    avatar?: string;
   };
   userId?: string;
 }
@@ -114,6 +118,10 @@ export default function SignUpForm({
   const [profilePicturePreview, setProfilePicturePreview] = useState<
     string | null
   >(currentUser?.image || null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null
+  );
+  const [avatarPictureFile, setAvatarPictureFile] = useState<File | null>(null);
 
   const schema = isEditMode ? editSchema : signupSchema;
 
@@ -143,6 +151,7 @@ export default function SignUpForm({
           instagram: currentUser?.instagram || "",
           website: currentUser?.website || "",
           profilePicture: null,
+          avatarPicture: null,
         }
       : {
           displayName: "",
@@ -152,6 +161,7 @@ export default function SignUpForm({
           styles: [],
           isCreator: false,
           profilePicture: null,
+          avatarPicture: null,
         },
   });
 
@@ -197,9 +207,15 @@ export default function SignUpForm({
       formData.set("isCreator", (data.isCreator || false).toString());
     }
 
-    // Add profile picture if provided
-    if (data.profilePicture && data.profilePicture instanceof File) {
-      formData.set("profilePicture", data.profilePicture);
+    // Add profile and avatar pictures if provided (use state files if available)
+    const profileFile = profilePictureFile || data.profilePicture;
+    const avatarFile = avatarPictureFile || data.avatarPicture;
+
+    if (profileFile && profileFile instanceof File) {
+      formData.set("profilePicture", profileFile);
+    }
+    if (avatarFile && avatarFile instanceof File) {
+      formData.set("avatarPicture", avatarFile);
     }
 
     return formData;
@@ -220,6 +236,8 @@ export default function SignUpForm({
         const result = await updateUserProfile(userId, formData);
 
         if (result.success) {
+          // Update session to refresh avatar in navbar
+          await updateSession();
           toast.success("Profile updated successfully!");
           router.replace("/dashboard");
         } else {
@@ -313,67 +331,48 @@ export default function SignUpForm({
             <FormField
               control={form.control}
               name="profilePicture"
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              render={({ field: { onChange, value, ...field } }) => (
+              render={({ field: { onChange } }) => (
                 <FormItem>
                   <FormLabel>
                     Profile Picture {isEditMode ? "" : "(Optional)"}
                   </FormLabel>
                   <FormControl>
-                    <div className="space-y-2">
-                      {profilePicturePreview && (
-                        <div className="mb-2">
-                          <Image
-                            src={profilePicturePreview}
-                            alt="Profile preview"
-                            width={80}
-                            height={80}
-                            className="w-20 h-20 rounded-full object-cover"
-                            unoptimized
-                          />
-                        </div>
-                      )}
-                      {!isEditMode &&
-                        session?.user?.image &&
-                        !profilePicturePreview && (
-                          <div className="mb-2">
-                            <Image
-                              src={session.user.image}
-                              alt="Current OAuth profile"
-                              width={80}
-                              height={80}
-                              className="w-20 h-20 rounded-full object-cover"
-                              unoptimized
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Current profile picture from OAuth
-                            </p>
-                          </div>
-                        )}
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        {...field}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          onChange(file);
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setProfilePicturePreview(reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          } else {
-                            setProfilePicturePreview(null);
-                          }
-                        }}
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
-                      />
-                    </div>
+                    <UploadProfilePicture
+                      onImagesReady={(profileBlob, avatarBlob) => {
+                        // Convert blobs to Files
+                        const profileFile = new File(
+                          [profileBlob],
+                          "profile.webp",
+                          { type: "image/webp" }
+                        );
+                        const avatarFile = new File(
+                          [avatarBlob],
+                          "avatar.png",
+                          { type: "image/png" }
+                        );
+                        setProfilePictureFile(profileFile);
+                        setAvatarPictureFile(avatarFile);
+                        onChange(profileFile);
+                        form.setValue("avatarPicture", avatarFile);
+
+                        // Update previews
+                        const profileUrl = URL.createObjectURL(profileBlob);
+                        const avatarUrl = URL.createObjectURL(avatarBlob);
+                        setProfilePicturePreview(profileUrl);
+                      }}
+                      currentProfileImage={currentUser?.image || null}
+                      currentAvatarImage={currentUser?.avatar || null}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
+            />
+            {/* Hidden field for avatar picture */}
+            <FormField
+              control={form.control}
+              name="avatarPicture"
+              render={() => <></>}
             />
             <FormField
               control={form.control}

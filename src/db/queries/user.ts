@@ -12,6 +12,7 @@ export interface UpdateUserInput {
   instagram?: string | null;
   website?: string | null;
   image?: string | null;
+  avatar?: string | null;
   [key: string]: unknown; // Allow additional properties for flexibility
 }
 
@@ -114,6 +115,7 @@ export const signupUser = async (
     instagram?: string | null;
     website?: string | null;
     image?: string | null;
+    avatar?: string | null;
   }
 ) => {
   const session = driver.session();
@@ -157,6 +159,9 @@ export const signupUser = async (
     if (user.image !== undefined) {
       setClauses.push("u.image = $user.image");
     }
+    if (user.avatar !== undefined) {
+      setClauses.push("u.avatar = $user.avatar");
+    }
 
     const setClause = setClauses.join(", ");
 
@@ -188,6 +193,7 @@ export const signupUser = async (
           instagram: user.instagram,
           website: user.website,
           image: user.image,
+          avatar: user.avatar,
         },
         city: cityData,
       }

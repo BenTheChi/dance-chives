@@ -1915,7 +1915,7 @@ export async function saveEventForUser(userId: string, eventId: string) {
   } finally {
     await session.close();
   }
-};
+}
 
 // Unsave event for user
 export async function unsaveEventForUser(userId: string, eventId: string) {
@@ -1931,7 +1931,7 @@ export async function unsaveEventForUser(userId: string, eventId: string) {
   } finally {
     await session.close();
   }
-};
+}
 
 // Check if event is saved by user
 export async function isEventSavedByUser(userId: string, eventId: string) {

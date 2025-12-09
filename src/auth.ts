@@ -11,6 +11,7 @@ declare module "next-auth" {
       email: string;
       name: string;
       image: string;
+      avatar?: string;
       displayName?: string;
       username?: string;
       aboutme?: string;
@@ -26,6 +27,7 @@ declare module "next-auth" {
     email?: string;
     name?: string;
     image?: string;
+    avatar?: string;
     displayName?: string;
     username?: string;
     aboutme?: string;
@@ -131,6 +133,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             (token.name as string | undefined) ?? session.user.name ?? "";
           session.user.image =
             (token.image as string | undefined) ?? session.user.image ?? "";
+          session.user.avatar = token.avatar as string | undefined;
           session.user.displayName = token.displayName as string | undefined;
           session.user.username = token.username as string | undefined;
           session.user.aboutme = token.aboutme as string | undefined;
@@ -208,12 +211,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ) {
           token.image = neo4jUser.image;
         }
+        // Set avatar from Neo4j if available
+        if (
+          neo4jUser.avatar &&
+          typeof neo4jUser.avatar === "string" &&
+          neo4jUser.avatar.trim() !== ""
+        ) {
+          token.avatar = neo4jUser.avatar;
+        } else {
+          token.avatar = undefined;
+        }
       } else {
         // Clear Neo4j-specific fields if user doesn't have a Neo4j profile yet
         // This ensures the token reflects the current state
         token.username = undefined;
         token.displayName = undefined;
         token.aboutme = undefined;
+        token.avatar = undefined;
       }
 
       return token;

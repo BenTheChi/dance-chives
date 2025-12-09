@@ -9,7 +9,11 @@ import {
   updateUser,
   UpdateUserInput,
 } from "@/db/queries/user";
-import { uploadProfilePictureToR2, deleteFromR2 } from "@/lib/R2";
+import {
+  uploadProfilePictureToR2,
+  uploadProfileAndAvatarToR2,
+  deleteFromR2,
+} from "@/lib/R2";
 import { getNeo4jRoleFormats } from "@/lib/utils/roles";
 import driver from "@/db/driver";
 import { auth } from "@/auth";
@@ -94,11 +98,32 @@ export async function signup(
     const instagram = (formData.get("instagram") as string) || "";
     const website = (formData.get("website") as string) || "";
 
-    // Handle profile picture upload if provided
+    // Handle profile and avatar picture uploads if provided
     let imageUrl: string | null = null;
+    let avatarUrl: string | null = null;
     const profilePicture = formData.get("profilePicture") as File | null;
-    if (profilePicture && profilePicture.size > 0) {
+    const avatarPicture = formData.get("avatarPicture") as File | null;
+    
+    if (profilePicture && profilePicture.size > 0 && avatarPicture && avatarPicture.size > 0) {
       // Use username for R2 paths (public-facing identifier)
+      const username = adminUser
+        ? adminUser.defaultData.username
+        : (formData.get("username") as string);
+      if (!username) {
+        console.error("Username is required for profile picture upload");
+      } else {
+        const uploadResult = await uploadProfileAndAvatarToR2(
+          profilePicture,
+          avatarPicture,
+          username
+        );
+        if (uploadResult.success) {
+          imageUrl = uploadResult.profileUrl || null;
+          avatarUrl = uploadResult.avatarUrl || null;
+        }
+      }
+    } else if (profilePicture && profilePicture.size > 0) {
+      // Fallback to single upload if only profile picture is provided
       const username = adminUser
         ? adminUser.defaultData.username
         : (formData.get("username") as string);
@@ -152,6 +177,7 @@ export async function signup(
           instagram: instagram || null,
           website: website || null,
           image: imageUrl,
+          avatar: avatarUrl,
         };
 
     // Update user in Neo4j with profile information
@@ -655,16 +681,42 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       }
     }
 
-    // Handle profile picture upload if provided
+    // Handle profile and avatar picture uploads if provided
     let imageUrl = currentUser.image;
+    let avatarUrl = (currentUser as { avatar?: string | null }).avatar || null;
     const profilePicture = formData.get("profilePicture") as File | null;
-    if (profilePicture && profilePicture.size > 0) {
-      // Delete old profile picture if it exists
+    const avatarPicture = formData.get("avatarPicture") as File | null;
+    
+    if (profilePicture && profilePicture.size > 0 && avatarPicture && avatarPicture.size > 0) {
+      // Delete old profile and avatar pictures if they exist
+      if (currentUser.image) {
+        await deleteFromR2(currentUser.image);
+      }
+      if (avatarUrl) {
+        await deleteFromR2(avatarUrl);
+      }
+
+      // Use username for R2 paths (public-facing identifier)
+      const username = currentUser.username;
+      if (!username) {
+        console.error("Username is required for profile picture upload");
+      } else {
+        const uploadResult = await uploadProfileAndAvatarToR2(
+          profilePicture,
+          avatarPicture,
+          username
+        );
+        if (uploadResult.success) {
+          imageUrl = uploadResult.profileUrl || currentUser.image;
+          avatarUrl = uploadResult.avatarUrl || null;
+        }
+      }
+    } else if (profilePicture && profilePicture.size > 0) {
+      // Fallback to single upload if only profile picture is provided
       if (currentUser.image) {
         await deleteFromR2(currentUser.image);
       }
 
-      // Use username for R2 paths (public-facing identifier)
       const username = currentUser.username;
       if (!username) {
         console.error("Username is required for profile picture upload");
@@ -690,6 +742,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       instagram: instagram || null,
       website: website || null,
       image: imageUrl || null,
+      avatar: avatarUrl || null,
     };
 
     // Update user in Neo4j with styles

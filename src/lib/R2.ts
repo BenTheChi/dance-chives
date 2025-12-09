@@ -219,6 +219,89 @@ export async function uploadProfilePictureToR2(
   return uploadToR2(file, "user-profile", resolvedUsername);
 }
 
+/**
+ * Upload both profile and avatar images to R2 storage with a shared image-id.
+ * Uses username for the R2 path (public-facing identifier).
+ * 
+ * @param profileFile - The profile image file (250×350 WebP)
+ * @param avatarFile - The avatar image file (60×60 PNG)
+ * @param username - The user's username (public identifier). If a user id is passed,
+ *                   it will be automatically converted to username.
+ * @returns Object with success status and URLs for both images, plus the shared image-id
+ */
+export async function uploadProfileAndAvatarToR2(
+  profileFile: File,
+  avatarFile: File,
+  username: string
+): Promise<{
+  success: boolean;
+  profileUrl?: string;
+  avatarUrl?: string;
+  imageId?: string;
+}> {
+  const client = initializeR2Client();
+  const bucket = getBucketName();
+  const publicUrl = process.env.CLOUDFLARE_R2_PUBLIC_URL;
+
+  if (!publicUrl) {
+    throw new Error("CLOUDFLARE_R2_PUBLIC_URL not configured");
+  }
+
+  // Convert id to username if needed
+  const resolvedUsername = await getUsernameFromId(username);
+
+  // Generate shared image-id
+  const imageId = crypto.randomUUID();
+
+  try {
+    // Upload profile image
+    const profileArrayBuffer = await profileFile.arrayBuffer();
+    const profileBuffer = Buffer.from(profileArrayBuffer);
+    const profileKey = `users/${resolvedUsername}/profile-pictures/${imageId}_profile.webp`;
+
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: profileKey,
+        Body: profileBuffer,
+        ContentType: "image/webp",
+      })
+    );
+
+    const profileUrl = publicUrl.endsWith("/")
+      ? `${publicUrl}${profileKey}`
+      : `${publicUrl}/${profileKey}`;
+
+    // Upload avatar image
+    const avatarArrayBuffer = await avatarFile.arrayBuffer();
+    const avatarBuffer = Buffer.from(avatarArrayBuffer);
+    const avatarKey = `users/${resolvedUsername}/profile-pictures/${imageId}_avatar.png`;
+
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: avatarKey,
+        Body: avatarBuffer,
+        ContentType: "image/png",
+      })
+    );
+
+    const avatarUrl = publicUrl.endsWith("/")
+      ? `${publicUrl}${avatarKey}`
+      : `${publicUrl}/${avatarKey}`;
+
+    return {
+      success: true,
+      profileUrl,
+      avatarUrl,
+      imageId,
+    };
+  } catch (error) {
+    console.error(`Error uploading profile and avatar to R2:`, error);
+    return { success: false };
+  }
+}
+
 // Event posters
 export async function uploadEventPosterToR2(
   file: File,

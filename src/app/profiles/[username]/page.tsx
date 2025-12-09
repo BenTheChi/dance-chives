@@ -58,19 +58,19 @@ export default async function ProfilePage({ params }: PageProps) {
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4">
                 {profile.image ? (
-                  <Image
-                    src={profile.image}
-                    alt={profile.displayName || profile.username}
-                    width={120}
-                    height={120}
-                    className="rounded-full object-cover border-2"
-                    unoptimized
-                  />
+                  <div className="relative w-[250px] h-[350px] overflow-hidden rounded-[5px] border-2 border-black">
+                    <Image
+                      src={profile.image}
+                      alt={profile.displayName || profile.username}
+                      width={250}
+                      height={350}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  </div>
                 ) : (
-                  <div className="w-[120px] h-[120px] rounded-full bg-gray-200 flex items-center justify-center text-4xl">
-                    {(profile.displayName ||
-                      profile.username ||
-                      "U")[0].toUpperCase()}
+                  <div className="w-[250px] h-[350px] rounded-[5px] border-2 border-black bg-gray-200 flex items-center justify-center text-4xl">
+                    {profile.displayName || profile.username || "U"}
                   </div>
                 )}
                 <div>

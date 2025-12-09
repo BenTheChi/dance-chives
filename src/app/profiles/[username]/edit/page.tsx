@@ -68,6 +68,7 @@ export default async function EditProfilePage({ params }: PageProps) {
             date: formattedDate,
             styles: profile.styles,
             image: profile.image,
+            avatar: (profile as { avatar?: string }).avatar,
           }}
           userId={session.user.id}
         />
