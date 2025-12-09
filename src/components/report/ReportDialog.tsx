@@ -43,7 +43,7 @@ const REPORT_TYPE_LABELS: Record<(typeof REPORT_TYPES)[number], string> = {
   support: "Support",
 };
 
-// Zod schema for form validation - matches server action schema
+  // Zod schema for form validation - matches server action schema
 const reportFormSchema = z.object({
   username: z.string().min(1, "Username is required"),
   type: z.enum(REPORT_TYPES, {
@@ -54,8 +54,6 @@ const reportFormSchema = z.object({
     .string()
     .min(10, "Feedback must be at least 10 characters")
     .max(1000, "Feedback must be less than 1000 characters"),
-  // File URL stored after upload (maps to screenshotUrl in server action)
-  fileUrl: z.union([z.string().url(), z.literal("")]).optional(),
 });
 
 type ReportFormValues = z.infer<typeof reportFormSchema>;
@@ -67,8 +65,6 @@ interface ReportDialogProps {
   pageReference?: string;
 }
 
-type UploadStatus = "idle" | "uploading" | "success" | "error";
-
 export function ReportDialog({
   open,
   onOpenChange,
@@ -79,8 +75,7 @@ export function ReportDialog({
   const sessionUsername =
     session?.user?.username || session?.user?.displayName || "";
   const username = propUsername || sessionUsername;
-  const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
-  const [uploadError, setUploadError] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,7 +87,6 @@ export function ReportDialog({
       type: undefined,
       page: pageReference || "",
       feedback: "",
-      fileUrl: "",
     },
   });
 
@@ -114,19 +108,21 @@ export function ReportDialog({
         type: undefined,
         page: pageReference || "",
         feedback: "",
-        fileUrl: "",
       });
-      setUploadStatus("idle");
-      setUploadError("");
+      setSelectedFile(null);
       setSelectedFileName("");
       setIsSubmitting(false);
     }
   }, [open, username, pageReference, form]);
 
-  // Handle file upload
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setSelectedFile(null);
+      setSelectedFileName("");
+      return;
+    }
 
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     if (file.size > MAX_FILE_SIZE) {
@@ -135,59 +131,32 @@ export function ReportDialog({
           MAX_FILE_SIZE / 1024 / 1024
         }MB`
       );
-      setUploadStatus("error");
-      setUploadError("File too large");
       e.target.value = ""; // Reset input
+      setSelectedFile(null);
+      setSelectedFileName("");
       return;
     }
 
+    setSelectedFile(file);
     setSelectedFileName(file.name);
-    setUploadStatus("uploading");
-    setUploadError("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/report/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to upload file");
-      }
-
-      // Store URL in form
-      form.setValue("fileUrl", result.url);
-      setUploadStatus("success");
-      toast.success("File uploaded successfully");
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to upload file";
-      setUploadStatus("error");
-      setUploadError(errorMessage);
-      toast.error(errorMessage);
-      form.setValue("fileUrl", "");
-      e.target.value = ""; // Reset input
-    }
   };
 
   const onSubmit = async (data: ReportFormValues) => {
     setIsSubmitting(true);
     try {
+      // Create FormData to send file if present
+      const formData = new FormData();
+      formData.append("username", data.username);
+      formData.append("type", data.type);
+      formData.append("page", data.page);
+      formData.append("feedback", data.feedback);
+      
+      if (selectedFile) {
+        formData.append("file", selectedFile);
+      }
+
       // Map form data to server action parameters
-      const result = await submitReport({
-        username: data.username,
-        type: data.type,
-        page: data.page,
-        feedback: data.feedback,
-        screenshotUrl:
-          data.fileUrl && data.fileUrl !== "" ? data.fileUrl : undefined,
-      });
+      const result = await submitReport(formData);
 
       if (result.success) {
         toast.success("Report submitted successfully!");
@@ -198,10 +167,8 @@ export function ReportDialog({
           type: undefined,
           page: pageReference || "",
           feedback: "",
-          fileUrl: "",
         });
-        setUploadStatus("idle");
-        setUploadError("");
+        setSelectedFile(null);
         setSelectedFileName("");
       }
     } catch (error) {
@@ -332,51 +299,29 @@ export function ReportDialog({
           />
 
           {/* File Upload */}
-          <FormField
-            control={form.control}
-            name="fileUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Attach File (Optional)</FormLabel>
-                <FormControl>
-                  <div className="space-y-2">
-                    <Input
-                      type="file"
-                      onChange={handleFileChange}
-                      disabled={uploadStatus === "uploading"}
-                      accept="*/*"
-                    />
-                    {/* Hidden input to store the URL */}
-                    <Input type="hidden" {...field} />
-                    {/* Upload Status Feedback */}
-                    {uploadStatus === "uploading" && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Uploading {selectedFileName}...</span>
-                      </div>
-                    )}
-                    {uploadStatus === "success" && field.value && (
-                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>File uploaded: {selectedFileName}</span>
-                      </div>
-                    )}
-                    {uploadStatus === "error" && uploadError && (
-                      <div className="flex items-center gap-2 text-sm text-destructive">
-                        <XCircle className="h-4 w-4" />
-                        <span>{uploadError}</span>
-                      </div>
-                    )}
+          <FormItem>
+            <FormLabel>Attach File (Optional)</FormLabel>
+            <FormControl>
+              <div className="space-y-2">
+                <Input
+                  type="file"
+                  onChange={handleFileChange}
+                  disabled={isSubmitting}
+                  accept="image/*"
+                />
+                {/* File Selection Status Feedback */}
+                {selectedFile && selectedFileName && (
+                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>File selected: {selectedFileName}</span>
                   </div>
-                </FormControl>
-                <FormMessage />
-                <p className="text-xs text-muted-foreground">
-                  Maximum file size: 10MB. File will be uploaded immediately
-                  upon selection.
-                </p>
-              </FormItem>
-            )}
-          />
+                )}
+              </div>
+            </FormControl>
+            <p className="text-xs text-muted-foreground">
+              Maximum file size: 10MB. File will be sent as an email attachment.
+            </p>
+          </FormItem>
 
           <DialogFooter>
             <Button

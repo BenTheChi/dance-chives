@@ -15,18 +15,15 @@ const reportSubmissionSchema = z.object({
     .string()
     .min(10, "Feedback must be at least 10 characters")
     .max(1000, "Feedback must be less than 1000 characters"),
-  screenshotUrl: z.string().url().optional(),
 });
-
-type ReportSubmissionParams = z.infer<typeof reportSubmissionSchema>;
 
 /**
  * Submit a report by sending an email to reports@dancechives.com
- * @param params - Report submission parameters
+ * @param formData - FormData containing report parameters and optional file
  * @returns Object with success status
  */
 export async function submitReport(
-  params: ReportSubmissionParams
+  formData: FormData
 ): Promise<{ success: boolean }> {
   // Validate authentication
   const session = await auth();
@@ -34,8 +31,30 @@ export async function submitReport(
     throw new Error("Not authenticated");
   }
 
+  // Extract data from FormData
+  const username = formData.get("username") as string;
+  const type = formData.get("type") as string;
+  const page = formData.get("page") as string;
+  const feedback = formData.get("feedback") as string;
+  const file = formData.get("file") as File | null;
+
   // Validate inputs with Zod
-  const validatedParams = reportSubmissionSchema.parse(params);
+  const validatedParams = reportSubmissionSchema.parse({
+    username,
+    type,
+    page,
+    feedback,
+  });
+
+  // Process file if present
+  let attachment: { filename: string; content: Buffer } | undefined;
+  if (file && file.size > 0) {
+    const arrayBuffer = await file.arrayBuffer();
+    attachment = {
+      filename: file.name,
+      content: Buffer.from(arrayBuffer),
+    };
+  }
 
   // Get Resend API key and from email
   const apiKey = process.env.RESEND_API_KEY;
@@ -89,15 +108,11 @@ export async function submitReport(
             <td style="padding: 8px 0; font-weight: bold; vertical-align: top;">Feedback:</td>
             <td style="padding: 8px 0; white-space: pre-wrap;">${validatedParams.feedback}</td>
           </tr>
-          ${validatedParams.screenshotUrl
+          ${attachment
             ? `
           <tr>
-            <td style="padding: 8px 0; font-weight: bold;">Screenshot:</td>
-            <td style="padding: 8px 0;">
-              <a href="${validatedParams.screenshotUrl}" style="color: #16a34a; text-decoration: none;" target="_blank">
-                View Screenshot
-              </a>
-            </td>
+            <td style="padding: 8px 0; font-weight: bold;">Attachment:</td>
+            <td style="padding: 8px 0;">${attachment.filename} (attached to email)</td>
           </tr>
           `
             : ""
@@ -123,7 +138,7 @@ Report Type: ${reportTypeDisplay}
 Username: ${validatedParams.username}
 Page/URL: ${validatedParams.page}
 Feedback: ${validatedParams.feedback}
-${validatedParams.screenshotUrl ? `Screenshot: ${validatedParams.screenshotUrl}` : ""}
+${attachment ? `Attachment: ${attachment.filename} (attached to email)` : ""}
 Submitted: ${timestamp}
 
 This report was submitted through the Dance Chives reporting system.
@@ -132,13 +147,27 @@ This report was submitted through the Dance Chives reporting system.
   try {
     const resend = new Resend(apiKey);
 
-    const { data, error } = await resend.emails.send({
+    const emailPayload: {
+      from: string;
+      to: string;
+      subject: string;
+      html: string;
+      text: string;
+      attachments?: Array<{ filename: string; content: Buffer }>;
+    } = {
       from,
       to: "reports@dancechives.com",
       subject: `New Report: ${reportTypeDisplay}`,
       html: htmlBody,
       text: textBody,
-    });
+    };
+
+    // Add attachment if file is present
+    if (attachment) {
+      emailPayload.attachments = [attachment];
+    }
+
+    const { data, error } = await resend.emails.send(emailPayload);
 
     if (error) {
       console.error("Failed to send report email via Resend:", error);
