@@ -11,8 +11,7 @@ type ImageType =
   | "user-profile"
   | "event-poster"
   | "event-gallery"
-  | "section-poster"
-  | "report";
+  | "section-poster";
 
 // Initialize R2 client with credentials from environment variables
 function initializeR2Client(): S3Client {
@@ -94,8 +93,6 @@ function generateR2Path(
         throw new Error("sectionId is required for section-poster type");
       }
       return `events/${entityId}/sections/${sectionId}/posters/${uniqueFilename}`;
-    case "report":
-      return `reports/${entityId}/files/${uniqueFilename}`;
     // Legacy types - map to generic events path for unified event system
     default:
       throw new Error(`Unknown image type: ${type}`);
@@ -247,12 +244,4 @@ export async function uploadSectionPosterToR2(
   sectionId: string
 ): Promise<{ success: boolean; url?: string; id?: string }> {
   return uploadToR2(file, "section-poster", eventId, sectionId);
-}
-
-// Report files
-export async function uploadReportFileToR2(
-  file: File,
-  userId: string
-): Promise<{ success: boolean; url?: string; id?: string }> {
-  return uploadToR2(file, "report", userId);
 }
