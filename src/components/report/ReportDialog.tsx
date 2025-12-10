@@ -173,6 +173,9 @@ export function ReportDialog({
         });
         setSelectedFile(null);
         setSelectedFileName("");
+      } else {
+        // Handle error from server action
+        toast.error(result.error || "Failed to submit report. Please try again.");
       }
     } catch (error) {
       console.error("Error submitting report:", error);
