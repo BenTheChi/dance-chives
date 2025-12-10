@@ -3,15 +3,15 @@ import { Resend } from "resend";
 interface SendMagicLinkEmailParams {
   email: string;
   magicLinkUrl: string;
+  from?: string;
 }
 
 export async function sendMagicLinkEmail({
   email,
   magicLinkUrl,
+  from = "notifications@dancechives.com",
 }: SendMagicLinkEmailParams): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from =
-    process.env.MAGIC_LINK_FROM_EMAIL ?? "no-reply@mail.dance-chives.com";
 
   if (!apiKey) {
     console.error(

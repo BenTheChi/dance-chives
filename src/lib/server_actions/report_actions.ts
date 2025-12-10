@@ -58,20 +58,17 @@ export async function submitReport(
 
   // Get Resend API key and from email
   const apiKey = process.env.RESEND_API_KEY;
-  const from =
-    process.env.MAGIC_LINK_FROM_EMAIL ?? "no-reply@mail.dance-chives.com";
+  const from = "reports@dancechives.com";
 
   if (!apiKey) {
-    console.error(
-      "RESEND_API_KEY is not set. Report emails cannot be sent."
-    );
+    console.error("RESEND_API_KEY is not set. Report emails cannot be sent.");
     throw new Error("Email service is not configured");
   }
 
   // Format report type for display
-  const reportTypeDisplay = validatedParams.type
-    .charAt(0)
-    .toUpperCase() + validatedParams.type.slice(1);
+  const reportTypeDisplay =
+    validatedParams.type.charAt(0).toUpperCase() +
+    validatedParams.type.slice(1);
 
   // Format timestamp
   const timestamp = new Date().toLocaleString("en-US", {
@@ -99,23 +96,28 @@ export async function submitReport(
           <tr>
             <td style="padding: 8px 0; font-weight: bold;">Page/URL:</td>
             <td style="padding: 8px 0;">
-              <a href="${validatedParams.page}" style="color: #16a34a; text-decoration: none;">
+              <a href="${
+                validatedParams.page
+              }" style="color: #16a34a; text-decoration: none;">
                 ${validatedParams.page}
               </a>
             </td>
           </tr>
           <tr>
             <td style="padding: 8px 0; font-weight: bold; vertical-align: top;">Feedback:</td>
-            <td style="padding: 8px 0; white-space: pre-wrap;">${validatedParams.feedback}</td>
+            <td style="padding: 8px 0; white-space: pre-wrap;">${
+              validatedParams.feedback
+            }</td>
           </tr>
-          ${attachment
-            ? `
+          ${
+            attachment
+              ? `
           <tr>
             <td style="padding: 8px 0; font-weight: bold;">Attachment:</td>
             <td style="padding: 8px 0;">${attachment.filename} (attached to email)</td>
           </tr>
           `
-            : ""
+              : ""
           }
           <tr>
             <td style="padding: 8px 0; font-weight: bold;">Submitted:</td>
@@ -174,11 +176,9 @@ This report was submitted through the Dance Chives reporting system.
       throw new Error("Failed to send report email");
     }
 
-    console.log("Report email sent successfully:", data);
     return { success: true };
   } catch (error) {
     console.error("Error sending report email via Resend:", error);
     throw error;
   }
 }
-

@@ -60,7 +60,11 @@ export async function POST(req: NextRequest) {
       token
     )}`;
 
-    await sendMagicLinkEmail({ email, magicLinkUrl });
+    await sendMagicLinkEmail({
+      email,
+      magicLinkUrl,
+      from: "notifications@dancechives.com",
+    });
 
     return genericResponse;
   } catch (error) {
