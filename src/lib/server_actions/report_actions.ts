@@ -1,6 +1,5 @@
 "use server";
 
-import { auth } from "@/auth";
 import { Resend } from "resend";
 import * as z from "zod";
 
@@ -38,12 +37,6 @@ export async function submitReport(
   formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Validate authentication
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { success: false, error: "Not authenticated" };
-    }
-
     // Extract data from FormData
     const username = formData.get("username") as string;
     const type = formData.get("type") as string;
