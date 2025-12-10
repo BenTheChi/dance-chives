@@ -75,7 +75,7 @@ export async function submitReport(
 
     // Get Resend API key and from email
     const apiKey = process.env.RESEND_API_KEY;
-    const from = "reports@dancechives.com";
+    const from = "notifications@dancechives.com";
 
     if (!apiKey) {
       console.error("RESEND_API_KEY is not set. Report emails cannot be sent.");
