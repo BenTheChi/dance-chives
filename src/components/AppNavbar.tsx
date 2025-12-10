@@ -9,6 +9,12 @@ import { TestLoginDropdown } from "./TestLoginDropdown";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
+import { ReportButton } from "./report/ReportButton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 export function AppNavbar() {
   const { data: session } = useSession();
@@ -41,11 +47,27 @@ export function AppNavbar() {
         <div className="flex items-center gap-x-2 whitespace-nowrap">
           {session ? (
             <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ReportButton />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Report Issue</p>
+                </TooltipContent>
+              </Tooltip>
               <NotificationPopover />
               <UserMenu session={session} />
             </>
           ) : (
             <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ReportButton />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Report Issue</p>
+                </TooltipContent>
+              </Tooltip>
               {process.env.NODE_ENV === "development" && <TestLoginDropdown />}
               <Link href="/login">
                 <Button size="sm">Login</Button>
