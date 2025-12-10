@@ -45,7 +45,7 @@ const REPORT_TYPE_LABELS: Record<(typeof REPORT_TYPES)[number], string> = {
 
   // Zod schema for form validation - matches server action schema
 const reportFormSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  username: z.string().optional(),
   type: z.enum(REPORT_TYPES, {
     required_error: "Please select a report type",
   }),
@@ -73,8 +73,10 @@ export function ReportDialog({
 }: ReportDialogProps) {
   const { data: session } = useSession();
   const sessionUsername =
-    session?.user?.username || session?.user?.displayName || "";
+    session?.user?.username || session?.user?.displayName || session?.user?.name || "";
   const username = propUsername || sessionUsername;
+  // Check if session.user?.name exists to determine if username should be disabled
+  const hasSessionUsername = !!session?.user?.name;
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -146,7 +148,8 @@ export function ReportDialog({
     try {
       // Create FormData to send file if present
       const formData = new FormData();
-      formData.append("username", data.username);
+      // Map empty username to "Anonymous" before submitting
+      formData.append("username", data.username || "Anonymous");
       formData.append("type", data.type);
       formData.append("page", data.page);
       formData.append("feedback", data.feedback);
@@ -209,7 +212,7 @@ export function ReportDialog({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Username Field (Disabled) */}
+          {/* Username Field */}
           <FormField
             control={form.control}
             name="username"
@@ -217,7 +220,11 @@ export function ReportDialog({
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled placeholder="Your username" />
+                  <Input 
+                    {...field} 
+                    disabled={hasSessionUsername} 
+                    placeholder={hasSessionUsername ? "Your username" : "Enter your username (optional)"} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -255,7 +262,7 @@ export function ReportDialog({
             )}
           />
 
-          {/* Page Field (Disabled) */}
+          {/* Page Field */}
           <FormField
             control={form.control}
             name="page"
@@ -265,8 +272,7 @@ export function ReportDialog({
                 <FormControl>
                   <Input
                     {...field}
-                    disabled
-                    placeholder="What you're reporting"
+                    placeholder="Page URL or description"
                   />
                 </FormControl>
                 <FormMessage />

@@ -7,7 +7,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
-import { ReportButton } from "@/components/report/ReportButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,7 +56,6 @@ export default async function RootLayout({
               <main className="flex flex-col flex-1">{children}</main>
             </div>
           </SidebarProvider>
-          <ReportButton />
         </SessionProvider>
         <Toaster />
       </body>

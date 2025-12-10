@@ -8,7 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ReportDialog } from "./ReportDialog";
 
-export function ReportButton() {
+interface ReportButtonProps {
+  className?: string;
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  size?: "default" | "sm" | "lg" | "icon" | "md";
+}
+
+export function ReportButton({ 
+  className, 
+  variant = "ghost", 
+  size = "icon" 
+}: ReportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentUrl, setCurrentUrl] = useState<string>("");
   const pathname = usePathname();
@@ -24,17 +34,18 @@ export function ReportButton() {
   }, [pathname]);
 
   const username =
-    session?.user?.username || session?.user?.displayName || undefined;
+    session?.user?.username || session?.user?.displayName || session?.user?.name || undefined;
 
   return (
     <>
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        size="icon"
-        aria-label="Report content"
+        className={className}
+        variant={variant}
+        size={size}
+        aria-label="Report Issue"
       >
-        <Flag className="h-6 w-6" />
+        <Flag className="h-5 w-5" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
