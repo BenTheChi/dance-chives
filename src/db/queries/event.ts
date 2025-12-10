@@ -4,7 +4,7 @@ import {
   Section,
   Bracket,
   EventDetails,
-  EventCard,
+  TEventCard,
   EventType,
 } from "../../types/event";
 import {
@@ -777,7 +777,7 @@ export const deleteEvent = async (eventId: string): Promise<boolean> => {
  * Get all events regardless of type
  * Returns a unified EventCard array for display
  */
-export const getAllEvents = async (): Promise<EventCard[]> => {
+export const getAllEvents = async (): Promise<TEventCard[]> => {
   const session = driver.session();
 
   // Get all events with basic info (any Event node)
@@ -786,14 +786,30 @@ export const getAllEvents = async (): Promise<EventCard[]> => {
     MATCH (e:Event)
     OPTIONAL MATCH (e)-[:IN]->(c:City)
     OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
-    WITH DISTINCT e, c, p
+    WITH DISTINCT e, c, p,
+         [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
     RETURN e.id as eventId, 
            e.title as title, 
            e.startDate as startDate,
            e.dates as dates,
            c.name as city, 
            c.id as cityId, 
-           p.url as imageUrl
+           p.url as imageUrl,
+           CASE 
+             WHEN size(eventTypeLabels) > 0 THEN 
+               CASE eventTypeLabels[0]
+                 WHEN 'BattleEvent' THEN 'Battle'
+                 WHEN 'CompetitionEvent' THEN 'Competition'
+                 WHEN 'ClassEvent' THEN 'Class'
+                 WHEN 'WorkshopEvent' THEN 'Workshop'
+                 WHEN 'SessionEvent' THEN 'Session'
+                 WHEN 'PartyEvent' THEN 'Party'
+                 WHEN 'FestivalEvent' THEN 'Festival'
+                 WHEN 'PerformanceEvent' THEN 'Performance'
+                 ELSE null
+               END
+             ELSE null 
+           END as eventType
     ORDER BY e.startDate DESC, e.createdAt DESC
   `
   );
@@ -870,6 +886,7 @@ export const getAllEvents = async (): Promise<EventCard[]> => {
       city: record.get("city") || "",
       cityId: record.get("cityId") as number | undefined,
       styles: stylesMap.get(eventId) || [],
+      eventType: record.get("eventType") as EventType | undefined,
     };
   });
 };
@@ -2021,7 +2038,7 @@ export async function getSavedEventIds(userId: string): Promise<string[]> {
 // Get all saved events for a user with full EventCard data
 export async function getSavedEventsForUser(
   userId: string
-): Promise<EventCard[]> {
+): Promise<TEventCard[]> {
   const session = driver.session();
 
   try {
@@ -2178,8 +2195,8 @@ async function fetchCityCoordinates(
 // Types and interfaces for style, city, and calendar data
 export interface StyleData {
   styleName: string;
-  events: EventCard[];
-  cityFilteredEvents?: EventCard[];
+  events: TEventCard[];
+  cityFilteredEvents?: TEventCard[];
   sections: Array<{
     id: string;
     title: string;
@@ -2309,7 +2326,24 @@ export const getStyleData = async (
        WITH DISTINCT event
       OPTIONAL MATCH (event)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
-      RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl
+      WITH event, c, poster,
+           [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+      RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+             CASE 
+               WHEN size(eventTypeLabels) > 0 THEN 
+                 CASE eventTypeLabels[0]
+                   WHEN 'BattleEvent' THEN 'Battle'
+                   WHEN 'CompetitionEvent' THEN 'Competition'
+                   WHEN 'ClassEvent' THEN 'Class'
+                   WHEN 'WorkshopEvent' THEN 'Workshop'
+                   WHEN 'SessionEvent' THEN 'Session'
+                   WHEN 'PartyEvent' THEN 'Party'
+                   WHEN 'FestivalEvent' THEN 'Festival'
+                   WHEN 'PerformanceEvent' THEN 'Performance'
+                   ELSE null
+                 END
+               ELSE null 
+             END as eventType
       ORDER BY event.startDate DESC`,
       { styleName: normalizedStyleName }
     );
@@ -2449,7 +2483,24 @@ export const getStyleData = async (
          WITH DISTINCT event
          OPTIONAL MATCH (event)-[:IN]->(c:City)
          OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
-         RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl
+         WITH event, c, poster,
+              [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+         RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+                CASE 
+                  WHEN size(eventTypeLabels) > 0 THEN 
+                    CASE eventTypeLabels[0]
+                      WHEN 'BattleEvent' THEN 'Battle'
+                      WHEN 'CompetitionEvent' THEN 'Competition'
+                      WHEN 'ClassEvent' THEN 'Class'
+                      WHEN 'WorkshopEvent' THEN 'Workshop'
+                      WHEN 'SessionEvent' THEN 'Session'
+                      WHEN 'PartyEvent' THEN 'Party'
+                      WHEN 'FestivalEvent' THEN 'Festival'
+                      WHEN 'PerformanceEvent' THEN 'Performance'
+                      ELSE null
+                    END
+                  ELSE null 
+                END as eventType
          ORDER BY event.startDate DESC`,
         { styleName: normalizedStyleName, cityId }
       );
@@ -2499,7 +2550,7 @@ export const getStyleData = async (
     await session.close();
 
     // Build events array
-    const events: EventCard[] = eventsResult.records.map((record) => {
+    const events: TEventCard[] = eventsResult.records.map((record) => {
       const eventId = record.get("eventId");
       return {
         id: eventId,
@@ -2510,6 +2561,7 @@ export const getStyleData = async (
         city: record.get("city"),
         cityId: record.get("cityId") as number | undefined,
         styles: eventStylesMap.get(eventId) || [],
+        eventType: record.get("eventType") as EventType | undefined,
       };
     });
 
@@ -2550,7 +2602,7 @@ export const getStyleData = async (
     }));
 
     // Build city-filtered events array (if cityId was provided)
-    let cityFilteredEvents: EventCard[] = [];
+    let cityFilteredEvents: TEventCard[] = [];
     if (cityFilteredEventsResult && cityFilteredEventStylesResult) {
       // Create styles map for city-filtered events
       const cityFilteredEventStylesMap = new Map<string, string[]>();
@@ -2581,6 +2633,7 @@ export const getStyleData = async (
             city: record.get("city"),
             cityId: record.get("cityId") as number | undefined,
             styles: cityFilteredEventStylesMap.get(eventId) || [],
+            eventType: record.get("eventType") as EventType | undefined,
           };
         }
       );
@@ -2743,8 +2796,25 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+       WITH e, poster,
+            [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
        RETURN e.id as eventId, e.title as title, e.startDate as date, 
-              poster.url as imageUrl
+              poster.url as imageUrl,
+              CASE 
+                WHEN size(eventTypeLabels) > 0 THEN 
+                  CASE eventTypeLabels[0]
+                    WHEN 'BattleEvent' THEN 'Battle'
+                    WHEN 'CompetitionEvent' THEN 'Competition'
+                    WHEN 'ClassEvent' THEN 'Class'
+                    WHEN 'WorkshopEvent' THEN 'Workshop'
+                    WHEN 'SessionEvent' THEN 'Session'
+                    WHEN 'PartyEvent' THEN 'Party'
+                    WHEN 'FestivalEvent' THEN 'Festival'
+                    WHEN 'PerformanceEvent' THEN 'Performance'
+                    ELSE null
+                  END
+                ELSE null 
+              END as eventType
        ORDER BY e.startDate DESC`,
       { cityId }
     );
@@ -2784,7 +2854,7 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
     });
 
     // Build events array
-    const events: EventCard[] = eventsResult.records.map((record) => {
+    const events: TEventCard[] = eventsResult.records.map((record) => {
       const eventId = record.get("eventId");
       return {
         id: eventId,
@@ -2794,6 +2864,7 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
         date: record.get("date"),
         city: city.name,
         styles: eventStylesMap.get(eventId) || [],
+        eventType: record.get("eventType") as EventType | undefined,
       };
     });
 

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
-import Eventcard from "@/components/cards";
+import { EventCard } from "@/components/EventCard";
 import { TaggedVideosGrid } from "@/components/profile/TaggedVideosGrid";
 import {
   WinningSectionCard,
@@ -40,8 +40,9 @@ export default async function ProfilePage({ params }: PageProps) {
   const profile = profileResult.profile;
   const isOwnProfile = session?.user?.username === username;
 
-  const savedResult =
-    session?.user?.id ? await getSavedEventIds() : { status: 200, eventIds: [] };
+  const savedResult = session?.user?.id
+    ? await getSavedEventIds()
+    : { status: 200, eventIds: [] };
   const savedEventIds = new Set(
     savedResult.status === 200 && "eventIds" in savedResult
       ? savedResult.eventIds
@@ -175,7 +176,7 @@ export default async function ProfilePage({ params }: PageProps) {
                   const eventRoute = `/events/${event.id}`;
 
                   return (
-                    <Eventcard
+                    <EventCard
                       key={event.id}
                       id={event.id}
                       title={event.eventDetails.title}
@@ -189,6 +190,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       city={event.eventDetails.city.name || ""}
                       cityId={event.eventDetails.city.id}
                       styles={event.eventDetails.styles || []}
+                      eventType={event.eventDetails.eventType}
                       href={eventRoute}
                       isSaved={savedEventIds.has(event.id)}
                     />
@@ -215,7 +217,7 @@ export default async function ProfilePage({ params }: PageProps) {
                   const eventRoute = `/events/${event.id}`;
 
                   return (
-                    <Eventcard
+                    <EventCard
                       key={event.id}
                       id={event.id}
                       title={event.eventDetails.title}
@@ -229,6 +231,7 @@ export default async function ProfilePage({ params }: PageProps) {
                       city={event.eventDetails.city.name || ""}
                       cityId={event.eventDetails.city.id}
                       styles={event.eventDetails.styles || []}
+                      eventType={event.eventDetails.eventType}
                       roles={event.roles.map((role: Role) => role.title)}
                       href={eventRoute}
                       isSaved={savedEventIds.has(event.id)}

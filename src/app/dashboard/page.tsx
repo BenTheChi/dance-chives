@@ -4,13 +4,13 @@ import {
   getSavedEventsForUser,
 } from "@/lib/server_actions/request_actions";
 import { DashboardClient, type DashboardData } from "./dashboard-client";
-import { EventCard } from "@/types/event";
+import { TEventCard } from "@/types/event";
 
 export default async function DashboardPage() {
   return withPageAuth({ requireVerification: true }, async () => {
     // Fetch initial data on server
     let dashboardData: DashboardData | null = null;
-    let savedEvents: EventCard[] = [];
+    let savedEvents: TEventCard[] = [];
 
     try {
       const [data, saved] = await Promise.all([

@@ -89,8 +89,8 @@ export interface Bracket {
   videos: Video[];
 }
 
-// EventCard for display purposes
-export interface EventCard {
+// TEventCard for display purposes
+export interface TEventCard {
   id: string;
   title: string;
   series?: string;
@@ -100,4 +100,5 @@ export interface EventCard {
   cityId?: number;
   styles: string[];
   eventType?: EventType;
+  additionalDatesCount?: number; // Number of additional dates beyond the first one
 }

@@ -10,8 +10,8 @@ import {
   getSavedEventsForUser,
 } from "@/lib/server_actions/request_actions";
 import { SavedEventsCalendarSection } from "@/components/SavedEventsCalendarSection";
-import Eventcard from "@/components/cards";
-import { EventCard, EventType } from "@/types/event";
+import { EventCard } from "@/components/EventCard";
+import { TEventCard, EventType } from "@/types/event";
 import { CalendarEventData } from "@/db/queries/event";
 import {
   Card,
@@ -104,7 +104,7 @@ export interface DashboardData {
 
 interface DashboardClientProps {
   initialData: DashboardData | null;
-  initialSavedEvents: EventCard[];
+  initialSavedEvents: TEventCard[];
 }
 
 export function DashboardClient({
@@ -119,7 +119,7 @@ export function DashboardClient({
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     initialData || null
   );
-  const [savedEvents, setSavedEvents] = useState<EventCard[]>(
+  const [savedEvents, setSavedEvents] = useState<TEventCard[]>(
     initialSavedEvents || []
   );
   const [loading, setLoading] = useState(false);
@@ -264,9 +264,9 @@ export function DashboardClient({
     (request: DashboardRequest) => request.status !== "PENDING"
   );
 
-  // Convert saved EventCard[] to CalendarEventData[] format
+  // Convert saved TEventCard[] to CalendarEventData[] format
   const convertToCalendarEvents = (
-    events: EventCard[]
+    events: TEventCard[]
   ): CalendarEventData[] => {
     return events.map((event) => {
       // Parse date string to dates array format
@@ -378,7 +378,7 @@ export function DashboardClient({
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {savedEvents.map((event) => (
-                  <Eventcard
+                  <EventCard
                     key={event.id}
                     id={event.id}
                     title={event.title}
@@ -388,6 +388,7 @@ export function DashboardClient({
                     city={event.city}
                     cityId={event.cityId}
                     styles={event.styles}
+                    eventType={event.eventType}
                     isSaved={true}
                   />
                 ))}

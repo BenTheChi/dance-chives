@@ -47,7 +47,7 @@ import {
 } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { Prisma } from "@prisma/client";
-import { EventCard } from "@/types/event";
+import { TEventCard } from "@/types/event";
 
 // ============================================================================
 // Helper Functions
@@ -1611,7 +1611,7 @@ export async function getDashboardData() {
   };
 }
 
-export async function getSavedEventsForUser(): Promise<EventCard[]> {
+export async function getSavedEventsForUser(): Promise<TEventCard[]> {
   const session = await auth();
 
   if (!session?.user?.id) {

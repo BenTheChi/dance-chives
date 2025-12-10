@@ -1,15 +1,16 @@
-import Eventcard from "@/components/cards";
+import { EventCard } from "@/components/EventCard";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getAllEvents } from "@/db/queries/event";
-import { EventCard } from "@/types/event";
+import { TEventCard } from "@/types/event";
 import { auth } from "@/auth";
 import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 
 export default async function EventsPage() {
   const events = await getAllEvents();
   const session = await auth();
-  const savedResult =
-    session?.user?.id ? await getSavedEventIds() : { status: 200, eventIds: [] };
+  const savedResult = session?.user?.id
+    ? await getSavedEventIds()
+    : { status: 200, eventIds: [] };
   const savedEventIds = new Set(
     savedResult.status === 200 && "eventIds" in savedResult
       ? savedResult.eventIds
@@ -23,8 +24,8 @@ export default async function EventsPage() {
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-6">All Events</h1>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {events.map((event: EventCard) => (
-              <Eventcard
+            {events.map((event: TEventCard) => (
+              <EventCard
                 key={event.id}
                 id={event.id}
                 title={event.title}
@@ -34,6 +35,7 @@ export default async function EventsPage() {
                 city={event.city}
                 cityId={event.cityId}
                 styles={event.styles}
+                eventType={event.eventType}
                 isSaved={savedEventIds.has(event.id)}
               />
             ))}
