@@ -52,7 +52,7 @@ export function UserAvatar({
         href={`/profiles/${username}`}
         className="hover:opacity-80 transition-opacity block"
       >
-        <div className="relative w-[45px] h-[45px] rounded-full overflow-hidden border-2 border-border hover:border-primary transition-colors">
+        <div className="relative w-[45px] h-[45px] rounded-full overflow-hidden border-2 border-black transition-colors">
           {avatarUrl ? (
             <Image
               src={avatarUrl}

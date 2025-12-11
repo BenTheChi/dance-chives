@@ -104,8 +104,13 @@ export async function signup(
     let avatarUrl: string | null = null;
     const profilePicture = formData.get("profilePicture") as File | null;
     const avatarPicture = formData.get("avatarPicture") as File | null;
-    
-    if (profilePicture && profilePicture.size > 0 && avatarPicture && avatarPicture.size > 0) {
+
+    if (
+      profilePicture &&
+      profilePicture.size > 0 &&
+      avatarPicture &&
+      avatarPicture.size > 0
+    ) {
       // Use username for R2 paths (public-facing identifier)
       const username = adminUser
         ? adminUser.defaultData.username
@@ -342,14 +347,14 @@ export async function getUserProfile(userIdOrUsername: string) {
           parsedDates = [];
         }
       }
-      
+
       const eventId = record.get("eventId");
       const imageUrl = record.get("imageUrl");
       const posterId = record.get("posterId");
       const posterTitle = record.get("posterTitle");
       const cityId = record.get("cityId");
       const cityName = record.get("cityName");
-      
+
       // Build poster Image object if imageUrl exists
       const poster: Image | null = imageUrl
         ? {
@@ -396,7 +401,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       // Build Event object
       const createdAt = record.get("createdAt");
       const updatedAt = record.get("updatedAt");
-      
+
       return {
         id: eventId,
         createdAt: createdAt ? new Date(createdAt) : new Date(),
@@ -439,90 +444,92 @@ export async function getUserProfile(userIdOrUsername: string) {
       { userId, validRoles: validRoleFormats, allEventTypeLabels }
     );
 
-    const eventsWithRoles: Event[] = eventsWithRolesResult.records.map((record) => {
-      const dates = record.has("dates") ? record.get("dates") : undefined;
-      const eventTypeLabel = record.get("eventTypeLabel");
-      let parsedDates: EventDate[] = [];
-      if (dates) {
-        try {
-          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch {
-          parsedDates = [];
+    const eventsWithRoles: Event[] = eventsWithRolesResult.records.map(
+      (record) => {
+        const dates = record.has("dates") ? record.get("dates") : undefined;
+        const eventTypeLabel = record.get("eventTypeLabel");
+        let parsedDates: EventDate[] = [];
+        if (dates) {
+          try {
+            parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+          } catch {
+            parsedDates = [];
+          }
         }
+
+        const eventId = record.get("eventId");
+        const imageUrl = record.get("imageUrl");
+        const posterId = record.get("posterId");
+        const posterTitle = record.get("posterTitle");
+        const cityId = record.get("cityId");
+        const cityName = record.get("cityName");
+        const roles = record.get("roles") || [];
+
+        // Build poster Image object if imageUrl exists
+        const poster: Image | null = imageUrl
+          ? {
+              id: posterId || "",
+              title: posterTitle || "",
+              url: imageUrl,
+              type: "poster",
+              file: null,
+            }
+          : null;
+
+        // Build City object
+        const city: City = cityId
+          ? {
+              id: cityId as number,
+              name: cityName || "",
+              countryCode: record.get("cityCountryCode") || "",
+              region: record.get("cityRegion") || "",
+              population: (record.get("cityPopulation") as number) || 0,
+              timezone: record.get("cityTimezone") || undefined,
+            }
+          : {
+              id: 0,
+              name: "",
+              countryCode: "",
+              region: "",
+              population: 0,
+            };
+
+        // Build eventDetails
+        const creatorId = record.get("creatorId") || "";
+        const eventDetails: EventDetails = {
+          title: record.get("eventTitle") || "Untitled Event",
+          dates: Array.isArray(parsedDates) ? parsedDates : [],
+          poster: poster,
+          city: city,
+          styles: record.get("styles") || [],
+          eventType: eventTypeLabel
+            ? (getEventTypeFromLabel(eventTypeLabel) as EventType)
+            : "Other",
+          creatorId: creatorId,
+        };
+
+        // Build Event object with roles
+        const createdAt = record.get("createdAt");
+        const updatedAt = record.get("updatedAt");
+
+        // Transform roles to Role[] format
+        const roleObjects = roles.map((roleTitle: string) => ({
+          id: `${eventId}-${roleTitle}`,
+          title: roleTitle,
+          user: null, // We don't have user info for roles in this query
+        }));
+
+        return {
+          id: eventId,
+          createdAt: createdAt ? new Date(createdAt) : new Date(),
+          updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
+          eventDetails: eventDetails,
+          roles: roleObjects,
+          gallery: [],
+          sections: [],
+        };
       }
-      
-      const eventId = record.get("eventId");
-      const imageUrl = record.get("imageUrl");
-      const posterId = record.get("posterId");
-      const posterTitle = record.get("posterTitle");
-      const cityId = record.get("cityId");
-      const cityName = record.get("cityName");
-      const roles = record.get("roles") || [];
-      
-      // Build poster Image object if imageUrl exists
-      const poster: Image | null = imageUrl
-        ? {
-            id: posterId || "",
-            title: posterTitle || "",
-            url: imageUrl,
-            type: "poster",
-            file: null,
-          }
-        : null;
-
-      // Build City object
-      const city: City = cityId
-        ? {
-            id: cityId as number,
-            name: cityName || "",
-            countryCode: record.get("cityCountryCode") || "",
-            region: record.get("cityRegion") || "",
-            population: (record.get("cityPopulation") as number) || 0,
-            timezone: record.get("cityTimezone") || undefined,
-          }
-        : {
-            id: 0,
-            name: "",
-            countryCode: "",
-            region: "",
-            population: 0,
-          };
-
-      // Build eventDetails
-      const creatorId = record.get("creatorId") || "";
-      const eventDetails: EventDetails = {
-        title: record.get("eventTitle") || "Untitled Event",
-        dates: Array.isArray(parsedDates) ? parsedDates : [],
-        poster: poster,
-        city: city,
-        styles: record.get("styles") || [],
-        eventType: eventTypeLabel
-          ? (getEventTypeFromLabel(eventTypeLabel) as EventType)
-          : "Other",
-        creatorId: creatorId,
-      };
-
-      // Build Event object with roles
-      const createdAt = record.get("createdAt");
-      const updatedAt = record.get("updatedAt");
-      
-      // Transform roles to Role[] format
-      const roleObjects = roles.map((roleTitle: string) => ({
-        id: `${eventId}-${roleTitle}`,
-        title: roleTitle,
-        user: null, // We don't have user info for roles in this query
-      }));
-      
-      return {
-        id: eventId,
-        createdAt: createdAt ? new Date(createdAt) : new Date(),
-        updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
-        eventDetails: eventDetails,
-        roles: roleObjects,
-        gallery: [],
-        sections: [],
-      };
-    });
+    );
 
     // Get videos where user is tagged with full video data (collecting all roles)
     // Use relationship types :DANCER and :WINNER
@@ -610,6 +617,8 @@ export async function getUserProfile(userIdOrUsername: string) {
           id: u.id,
           displayName: u.displayName,
           username: u.username,
+          avatar: u.avatar,
+          image: u.image,
           role: role
         }) as taggedUsers
         `,
@@ -661,6 +670,8 @@ export async function getUserProfile(userIdOrUsername: string) {
           id: u.id,
           displayName: u.displayName,
           username: u.username,
+          avatar: u.avatar,
+          image: u.image,
           role: role
         }) as taggedUsers
         `,
@@ -804,8 +815,13 @@ export async function updateUserProfile(userId: string, formData: FormData) {
     let avatarUrl = (currentUser as { avatar?: string | null }).avatar || null;
     const profilePicture = formData.get("profilePicture") as File | null;
     const avatarPicture = formData.get("avatarPicture") as File | null;
-    
-    if (profilePicture && profilePicture.size > 0 && avatarPicture && avatarPicture.size > 0) {
+
+    if (
+      profilePicture &&
+      profilePicture.size > 0 &&
+      avatarPicture &&
+      avatarPicture.size > 0
+    ) {
       // Delete old profile and avatar pictures if they exist
       if (currentUser.image) {
         await deleteFromR2(currentUser.image);

@@ -371,22 +371,30 @@ export const getEvent = async (id: string): Promise<Event> => {
          collect(DISTINCT {
            id: winner.id,
            displayName: winner.displayName,
-           username: winner.username
+           username: winner.username,
+           avatar: winner.avatar,
+           image: winner.image
          }) as allWinners,
          collect(DISTINCT {
            id: dancer.id,
            displayName: dancer.displayName,
-           username: dancer.username
+           username: dancer.username,
+           avatar: dancer.avatar,
+           image: dancer.image
          }) as allDancers,
          collect(DISTINCT {
            id: choreographer.id,
            displayName: choreographer.displayName,
-           username: choreographer.username
+           username: choreographer.username,
+           avatar: choreographer.avatar,
+           image: choreographer.image
          }) as allChoreographers,
          collect(DISTINCT {
            id: teacher.id,
            displayName: teacher.displayName,
-           username: teacher.username
+           username: teacher.username,
+           avatar: teacher.avatar,
+           image: teacher.image
          }) as allTeachers
     WITH s, b, v,
          [w in allWinners WHERE w.id IS NOT NULL] as winners,
@@ -423,22 +431,30 @@ export const getEvent = async (id: string): Promise<Event> => {
          collect(DISTINCT {
            id: winner.id,
            displayName: winner.displayName,
-           username: winner.username
+           username: winner.username,
+           avatar: winner.avatar,
+           image: winner.image
          }) as allWinners,
          collect(DISTINCT {
            id: dancer.id,
            displayName: dancer.displayName,
-           username: dancer.username
+           username: dancer.username,
+           avatar: dancer.avatar,
+           image: dancer.image
          }) as allDancers,
          collect(DISTINCT {
            id: choreographer.id,
            displayName: choreographer.displayName,
-           username: choreographer.username
+           username: choreographer.username,
+           avatar: choreographer.avatar,
+           image: choreographer.image
          }) as allChoreographers,
          collect(DISTINCT {
            id: teacher.id,
            displayName: teacher.displayName,
-           username: teacher.username
+           username: teacher.username,
+           avatar: teacher.avatar,
+           image: teacher.image
          }) as allTeachers
     WITH s, v,
          [w in allWinners WHERE w.id IS NOT NULL] as winners,
@@ -470,7 +486,9 @@ export const getEvent = async (id: string): Promise<Event> => {
     RETURN s.id as sectionId, collect({
       id: u.id,
       displayName: u.displayName,
-      username: u.username
+      username: u.username,
+      avatar: u.avatar,
+      image: u.image
     }) as winners
   `,
     { id }
@@ -2442,7 +2460,9 @@ export const getStyleData = async (
        RETURN v.id as videoId, collect(DISTINCT {
          id: u.id,
          displayName: u.displayName,
-         username: u.username
+         username: u.username,
+         avatar: u.avatar,
+         image: u.image
        }) as taggedUsers`,
       { styleName: normalizedStyleName }
     );
