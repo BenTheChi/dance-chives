@@ -86,7 +86,7 @@ export function EventCard({
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
-        className="block w-full h-[250px] sm:h-[358px] border-b border-black relative flex items-center justify-center bg-gray-200"
+        className="block w-full h-[250px] sm:h-[358px] border-b border-black relative z-10 flex items-center justify-center bg-gray-200"
       >
         {imageUrl ? (
           <Image
@@ -101,8 +101,8 @@ export function EventCard({
       </Link>
 
       {/* Expanded section - always visible on mobile, slides down on desktop hover */}
-      <div className="w-full h-[100px] p-3 bg-gray-100 sm:absolute sm:inset-x-0 sm:group-hover:opacity-100  sm:duration-300 sm:pointer-events-none sm:group-hover:pointer-events-auto sm:h-[142px] overflow-hidden">
-        <div className="flex flex-col justify-between h-full">
+      <div className="w-full h-[100px] bg-gray-100 sm:absolute sm:inset-x-0 sm:top-[358px] sm:opacity-0 sm:group-hover:opacity-100 sm:duration-300 sm:pointer-events-none sm:group-hover:pointer-events-auto sm:h-[135px] overflow-hidden flex flex-col justify-end z-0">
+        <div className="px-3 pb-2 sm:px-6 sm:pb-1 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}
             <div className="flex flex-col">
@@ -130,16 +130,15 @@ export function EventCard({
           </div>
 
           {/* Style tags and action buttons - same line on mobile, separate on desktop */}
-          <div className="flex items-center justify-between gap-2 sm:flex-col sm:items-stretch sm:gap-0">
+          <div className="flex items-center justify-between gap-2">
             {/* Style tags */}
-            <div className="flex flex-wrap gap-1 items-center sm:flex-wrap sm:mb-2">
+            <div className="flex flex-wrap gap-1 items-center sm:flex-wrap sm:mb-2 max-w-[180px]">
               {/* First style - visible on both mobile and desktop */}
               {firstStyle && (
                 <StyleBadge
                   key={firstStyle}
                   style={firstStyle}
                   asLink={false}
-                  className="text-xs px-1.5 py-0.5"
                 />
               )}
               {/* Additional styles for desktop only */}
@@ -148,7 +147,7 @@ export function EventCard({
                   key={style}
                   style={style}
                   asLink={false}
-                  className="hidden sm:inline-block text-xs px-1.5 py-0.5"
+                  className="hidden sm:inline-block"
                 />
               ))}
               {/* Additional count - different for mobile vs desktop */}

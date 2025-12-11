@@ -2,7 +2,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { getCityData } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { EventCard } from "@/components/EventCard";
-import { UserCard } from "@/components/user-card";
+import { UserCard } from "@/components/UserCard";
 import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
 import { CityCalendarSection } from "@/components/CityCalendarSection";
 import {
@@ -136,11 +136,11 @@ export default async function CityPage({ params }: PageProps) {
                   {cityData.users.map((user) => (
                     <UserCard
                       key={user.id}
-                      id={user.id}
                       displayName={user.displayName}
                       username={user.username}
                       image={user.image}
                       styles={user.styles}
+                      city={cityData.city.name}
                     />
                   ))}
                 </div>

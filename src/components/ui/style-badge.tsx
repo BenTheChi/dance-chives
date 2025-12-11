@@ -17,8 +17,8 @@ export function StyleBadge({
   className,
 }: StyleBadgeProps) {
   const badgeClasses = cn(
-    "bg-green-200 text-green-800 text-xs font-medium px-2 py-0.5 rounded inline-block",
-    asLink && "hover:bg-green-300 transition-colors cursor-pointer",
+    "text-black bg-white border border-black font-semibold text-xs px-1 py-0.5 rounded inline-flex items-center justify-center leading-none",
+    asLink && "hover:bg-gray-100 transition-colors cursor-pointer",
     className
   );
 

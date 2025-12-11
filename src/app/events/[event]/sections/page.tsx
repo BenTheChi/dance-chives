@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Bracket, Section, Video } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
@@ -161,20 +162,17 @@ export default async function SectionsPage({ params }: PageProps) {
                           .map((w: UserSearchItem) => [w.id, w])
                       ).values()
                     ).map((winner: UserSearchItem) => (
-                      <Badge
-                        key={winner.id}
-                        variant="secondary"
-                        className="text-xs"
-                        asChild
-                      >
-                        {winner.username ? (
-                          <Link href={`/profiles/${winner.username}`}>
-                            {winner.displayName}
-                          </Link>
-                        ) : (
-                          <span>{winner.displayName}</span>
-                        )}
-                      </Badge>
+                      winner.username ? (
+                        <UserAvatar
+                          key={winner.id}
+                          username={winner.username}
+                          displayName={winner.displayName}
+                          avatar={(winner as any).avatar}
+                          image={(winner as any).image}
+                        />
+                      ) : (
+                        <span key={winner.id}>{winner.displayName}</span>
+                      )
                     ))}
                   </div>
                 )}

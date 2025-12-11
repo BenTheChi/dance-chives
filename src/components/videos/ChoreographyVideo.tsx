@@ -96,7 +96,7 @@ export function ChoreographyVideo({
           {displayStyles.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {displayStyles.map((style) => (
-                <StyleBadge key={style} style={style} />
+                <StyleBadge key={style} style={style} asLink={false} />
               ))}
             </div>
           )}

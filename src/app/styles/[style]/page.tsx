@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { EventCard } from "@/components/EventCard";
 import { StyleVideoGallery } from "@/components/ui/style-video-gallery";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
-import { UserCard } from "@/components/user-card";
+import { UserCard } from "@/components/UserCard";
 import { auth } from "@/auth";
 import { getUser } from "@/db/queries/user";
 import { getSavedEventIds } from "@/lib/server_actions/event_actions";
@@ -20,10 +20,12 @@ export default async function StylePage({ params }: PageProps) {
   // Get current user and their city
   const session = await auth();
   let cityId: number | undefined = undefined;
+  let cityName: string = "";
   if (session?.user?.id) {
     const user = await getUser(session.user.id);
     if (user?.city) {
       cityId = user.city.id;
+      cityName = user.city.name;
     }
   }
 
@@ -101,11 +103,11 @@ export default async function StylePage({ params }: PageProps) {
                 {styleData.cityFilteredUsers.map((user) => (
                   <UserCard
                     key={user.id}
-                    id={user.id}
                     displayName={user.displayName}
                     username={user.username}
                     image={user.image}
                     styles={user.styles}
+                    city={cityName}
                   />
                 ))}
               </div>

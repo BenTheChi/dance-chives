@@ -3,8 +3,8 @@
 import { useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { X, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import {
   BattleVideo,
@@ -13,7 +13,6 @@ import {
   Video,
 } from "@/types/video";
 import { UserSearchItem } from "@/types/user";
-import Link from "next/link";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
 import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 import { Trophy } from "lucide-react";
@@ -22,21 +21,20 @@ import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTransition } from "react";
+import Link from "next/link";
 
-// Helper component for user badge with remove button
-function UserBadgeWithRemove({
+// Helper component for user avatar with remove button
+function UserAvatarWithRemove({
   user,
   eventId,
   videoId,
   currentUserId,
-  badgeClassName,
   icon: Icon,
 }: {
   user: UserSearchItem;
   eventId: string;
   videoId: string;
   currentUserId?: string;
-  badgeClassName?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   const router = useRouter();
@@ -65,34 +63,16 @@ function UserBadgeWithRemove({
   };
 
   return (
-    <div className="relative inline-block group">
-      {canRemove && (
-        <button
-          onClick={handleRemove}
-          disabled={isPending}
-          className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-          title="Remove tag"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      )}
-      <Link
-        href={`/profiles/${user.username}`}
-        className="hover:opacity-80 transition-opacity"
-      >
-        <Badge
-          variant={badgeClassName ? "default" : "secondary"}
-          className={
-            badgeClassName || "text-xs cursor-pointer hover:bg-secondary/80"
-          }
-        >
-          {Icon && badgeClassName && (
-            <Icon className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
-          )}
-          {user.displayName}
-        </Badge>
-      </Link>
-    </div>
+    <UserAvatar
+      username={user.username}
+      displayName={user.displayName}
+      avatar={(user as any).avatar}
+      image={(user as any).image}
+      showRemoveButton={canRemove || false}
+      onRemove={handleRemove}
+      isRemoving={isPending}
+      icon={Icon}
+    />
   );
 }
 
@@ -362,13 +342,12 @@ export function VideoLightbox({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {winners.map((winner: UserSearchItem) => (
-                        <UserBadgeWithRemove
+                        <UserAvatarWithRemove
                           key={winner.username}
                           user={winner}
                           eventId={eventId}
                           videoId={video.id}
                           currentUserId={currentUserId}
-                          badgeClassName="bg-yellow-500 hover:bg-yellow-600 text-xs cursor-pointer"
                           icon={Trophy}
                         />
                       ))}
@@ -390,13 +369,12 @@ export function VideoLightbox({
                     <div className="flex flex-wrap gap-2">
                       {choreographers.map(
                         (choreographer: UserSearchItem, index: number) => (
-                          <UserBadgeWithRemove
+                          <UserAvatarWithRemove
                             key={choreographer.username || index}
                             user={choreographer}
                             eventId={eventId}
                             videoId={video.id}
                             currentUserId={currentUserId}
-                            badgeClassName="bg-white/10 text-white border-white/20 text-xs cursor-pointer hover:bg-white/20"
                           />
                         )
                       )}
@@ -418,13 +396,12 @@ export function VideoLightbox({
                     <div className="flex flex-wrap gap-2">
                       {teachers.map(
                         (teacher: UserSearchItem, index: number) => (
-                          <UserBadgeWithRemove
+                          <UserAvatarWithRemove
                             key={teacher.username || index}
                             user={teacher}
                             eventId={eventId}
                             videoId={video.id}
                             currentUserId={currentUserId}
-                            badgeClassName="bg-white/10 text-white border-white/20 text-xs cursor-pointer hover:bg-white/20"
                           />
                         )
                       )}
@@ -445,13 +422,12 @@ export function VideoLightbox({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {dancers.map((dancer: UserSearchItem, index: number) => (
-                        <UserBadgeWithRemove
+                        <UserAvatarWithRemove
                           key={dancer.username || index}
                           user={dancer}
                           eventId={eventId}
                           videoId={video.id}
                           currentUserId={currentUserId}
-                          badgeClassName="bg-white/10 text-white border-white/20 text-xs cursor-pointer hover:bg-white/20"
                         />
                       ))}
                     </div>

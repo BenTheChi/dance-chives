@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StyleBadge } from "@/components/ui/style-badge";
 import Image from "next/image";
 import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
@@ -144,9 +145,7 @@ export default async function ProfilePage({ params }: PageProps) {
                   <div className="flex flex-wrap gap-2">
                     <span>Dance Styles: </span>
                     {profile.styles.map((style: string) => (
-                      <Badge key={style} variant="secondary">
-                        {style}
-                      </Badge>
+                      <StyleBadge key={style} style={style} />
                     ))}
                   </div>
                 </div>
@@ -185,7 +184,7 @@ export default async function ProfilePage({ params }: PageProps) {
                         event.eventDetails.dates &&
                         event.eventDetails.dates.length > 0
                           ? event.eventDetails.dates[0].date
-                          : event.eventDetails.dates[0].date || ""
+                          : ""
                       }
                       city={event.eventDetails.city.name || ""}
                       cityId={event.eventDetails.city.id}
@@ -226,7 +225,7 @@ export default async function ProfilePage({ params }: PageProps) {
                         event.eventDetails.dates &&
                         event.eventDetails.dates.length > 0
                           ? event.eventDetails.dates[0].date
-                          : event.eventDetails.dates[0].date || ""
+                          : ""
                       }
                       city={event.eventDetails.city.name || ""}
                       cityId={event.eventDetails.city.id}

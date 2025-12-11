@@ -20,6 +20,7 @@ import { TagSelfButton } from "@/components/events/TagSelfButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
 import NextImage from "next/image";
@@ -267,15 +268,12 @@ export default async function EventPage({ params }: PageProps) {
               {creator && (
                 <div className="flex flex-row gap-2 items-center flex-wrap">
                   <span>Creator: </span>
-                  <Badge variant="secondary" asChild>
-                    {creator.username ? (
-                      <Link href={`/profiles/${creator.username}`}>
-                        {creator.displayName || creator.username}
-                      </Link>
-                    ) : (
-                      <span>{creator.displayName || creator.username}</span>
-                    )}
-                  </Badge>
+                  <UserAvatar
+                    username={creator.username || ""}
+                    displayName={creator.displayName || creator.username || ""}
+                    avatar={(creator as any).avatar}
+                    image={(creator as any).image}
+                  />
                 </div>
               )}
               {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
@@ -285,21 +283,19 @@ export default async function EventPage({ params }: PageProps) {
                 >
                   <span>{fromNeo4jRoleFormat(roleTitle) || roleTitle}: </span>
                   {roles.map((role, index) => (
-                    <Badge
-                      key={`${role.id}-${index}`}
-                      variant="secondary"
-                      asChild
-                    >
-                      {role.user?.username ? (
-                        <Link href={`/profiles/${role.user.username}`}>
-                          {role.user.displayName || role.user.username}
-                        </Link>
-                      ) : (
-                        <span>
-                          {role.user?.displayName || role.user?.username}
-                        </span>
-                      )}
-                    </Badge>
+                    role.user?.username ? (
+                      <UserAvatar
+                        key={`${role.id}-${index}`}
+                        username={role.user.username}
+                        displayName={role.user.displayName || role.user.username}
+                        avatar={(role.user as any).avatar}
+                        image={(role.user as any).image}
+                      />
+                    ) : (
+                      <span key={`${role.id}-${index}`}>
+                        {role.user?.displayName || role.user?.username}
+                      </span>
+                    )
                   ))}
                 </div>
               ))}
@@ -464,22 +460,17 @@ export default async function EventPage({ params }: PageProps) {
                                       .map((w) => [w.id, w])
                                   ).values()
                                 ).map((winner) => (
-                                  <Badge
-                                    key={winner.id}
-                                    variant="secondary"
-                                    className="text-xs"
-                                    asChild
-                                  >
-                                    {winner.username ? (
-                                      <Link
-                                        href={`/profiles/${winner.username}`}
-                                      >
-                                        {winner.displayName}
-                                      </Link>
-                                    ) : (
-                                      <span>{winner.displayName}</span>
-                                    )}
-                                  </Badge>
+                                  winner.username ? (
+                                    <UserAvatar
+                                      key={winner.id}
+                                      username={winner.username}
+                                      displayName={winner.displayName}
+                                      avatar={(winner as any).avatar}
+                                      image={(winner as any).image}
+                                    />
+                                  ) : (
+                                    <span key={winner.id}>{winner.displayName}</span>
+                                  )
                                 ))}
                               </div>
                             )}

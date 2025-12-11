@@ -90,7 +90,10 @@ export function BattleVideo({
             )}
           </div>
 
-          <Link href={eventLink} className="text-sm text-muted-foreground hover:text-blue-600">
+          <Link
+            href={eventLink}
+            className="text-sm text-muted-foreground hover:text-blue-600"
+          >
             {eventTitle}
           </Link>
 
@@ -110,7 +113,7 @@ export function BattleVideo({
           {displayStyles.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {displayStyles.map((style) => (
-                <StyleBadge key={style} style={style} />
+                <StyleBadge key={style} style={style} asLink={false} />
               ))}
             </div>
           )}
@@ -119,4 +122,3 @@ export function BattleVideo({
     </CardWithPoster>
   );
 }
-

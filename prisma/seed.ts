@@ -34,7 +34,7 @@ async function main() {
       email: "baseuser@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
-      image: null,
+      image: "",
       auth: 0, // BASE_USER
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -45,7 +45,7 @@ async function main() {
       email: "creator@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
-      image: null,
+      image: "",
       auth: 1, // CREATOR
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -56,7 +56,7 @@ async function main() {
       email: "moderator@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
-      image: null,
+      image: "",
       auth: 2, // MODERATOR
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -67,7 +67,7 @@ async function main() {
       email: "admin@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
-      image: null,
+      image: "",
       auth: 3, // ADMIN
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -78,7 +78,7 @@ async function main() {
       email: "superadmin@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
-      image: null,
+      image: "",
       auth: 3, // ADMIN (Super Admin uses same level)
       createdAt: new Date(),
       updatedAt: new Date(),
