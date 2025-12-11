@@ -1,46 +1,145 @@
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import NextImage from "next/image";
+import { StyleBadge } from "@/components/ui/style-badge";
+import { Section, Video, Bracket } from "@/types/event";
+import { Image } from "@/types/image";
 
 interface SectionCardProps {
-  id: string;
-  title: string;
-  sectionType?: string;
+  section:
+    | Section
+    | {
+        id: string;
+        title: string;
+        sectionType?: Section["sectionType"];
+        poster?: Image | { url?: string } | null;
+        videos?: Video[];
+        brackets?: Bracket[];
+        styles?: string[];
+        applyStylesToVideos?: boolean;
+      };
   eventId: string;
-  eventTitle: string;
+  eventTitle?: string;
 }
 
 export function SectionCard({
-  id,
-  title,
-  sectionType,
+  section,
   eventId,
   eventTitle,
 }: SectionCardProps) {
+  // Handle different section data structures
+  const sectionId = section.id;
+  const sectionTitle = section.title;
+  const sectionType = section.sectionType;
+
+  // Handle poster - can be Image object, object with url, or string url
+  const posterUrl = section.poster
+    ? typeof section.poster === "string"
+      ? section.poster
+      : "url" in section.poster
+      ? section.poster.url
+      : null
+    : null;
+
+  const posterTitle =
+    section.poster &&
+    typeof section.poster === "object" &&
+    "title" in section.poster
+      ? section.poster.title
+      : undefined;
+
+  // Calculate total video count (if videos/brackets are available)
+  const videos = section.videos || [];
+  const brackets = section.brackets || [];
+  const directVideoCount = videos.length;
+  const bracketVideoCount = brackets.reduce(
+    (sum: number, bracket: Bracket) => sum + (bracket.videos?.length || 0),
+    0
+  );
+  const totalVideoCount = directVideoCount + bracketVideoCount;
+
+  // Get styles - either from section.styles or aggregated from videos
+  let displayStyles: string[] = [];
+  if (
+    section.applyStylesToVideos &&
+    section.styles &&
+    section.styles.length > 0
+  ) {
+    displayStyles = section.styles;
+  } else if (!section.applyStylesToVideos && videos.length > 0) {
+    const videoStyles = new Set<string>();
+    videos.forEach((video: Video) => {
+      if (video.styles) {
+        video.styles.forEach((style: string) => videoStyles.add(style));
+      }
+    });
+    brackets.forEach((bracket: Bracket) => {
+      bracket.videos?.forEach((video: Video) => {
+        if (video.styles) {
+          video.styles.forEach((style: string) => videoStyles.add(style));
+        }
+      });
+    });
+    displayStyles = Array.from(videoStyles);
+  }
+
   return (
-    <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
-      <CardContent className="p-4 sm:p-6">
-        <Link href={`/events/${eventId}/sections/${id}`} className="block">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-semibold text-base sm:text-lg line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors">
-              {title}
-            </h3>
-            {sectionType && (
-              <Badge variant="outline" className="text-xs">
-                {sectionType}
-              </Badge>
+    <div className="h-[241px] w-[400px] bg-white rounded-lg border border-black cursor-pointer">
+      <Link
+        href={`/events/${eventId}/sections/${sectionId}`}
+        className="block h-full"
+      >
+        <div className="flex">
+          {/* Poster on left - 1/2 width */}
+          <div className="relative h-[241px] w-[241px] border-r border-black">
+            {posterUrl ? (
+              <NextImage
+                src={posterUrl}
+                alt={posterTitle || sectionTitle}
+                fill
+                className="object-contain"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <span className="text-gray-400 text-sm">No poster</span>
+              </div>
             )}
           </div>
-        </Link>
-        <p className="text-sm text-muted-foreground">
-          <Link
-            href={`/events/${eventId}`}
-            className="hover:text-blue-600 transition-colors"
-          >
-            {eventTitle}
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+
+          {/* Content on right - 1/2 width */}
+          <div className="flex flex-col justify-between p-4 w-1/2">
+            <div className="flex flex-col gap-4">
+              {/* Section type badge in top right */}
+              {sectionType && (
+                <span className="text-sm text-gray-600 self-end">
+                  {sectionType}
+                </span>
+              )}
+
+              <div className="flex flex-col items-center">
+                {/* Title */}
+                <h3 className="font-bold text-lg">{sectionTitle}</h3>
+
+                {/* Video count - only show if we have video data */}
+                {totalVideoCount > 0 && (
+                  <span className="text-sm text-gray-600 b">
+                    {totalVideoCount}{" "}
+                    {totalVideoCount === 1 ? "Video" : "Videos"}
+                  </span>
+                )}
+              </div>
+            </div>
+            {/* Style tags */}
+            {displayStyles.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1 justify-self-end justify-center">
+                {displayStyles.map((style: string) => (
+                  <StyleBadge key={style} style={style} asLink={false} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Link>
+    </div>
   );
 }

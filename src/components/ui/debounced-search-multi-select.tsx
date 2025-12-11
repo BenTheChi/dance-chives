@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { UserBadge } from "@/components/ui/user-badge";
 import { X, Check, ChevronsUpDown, Loader2, Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import {
@@ -134,7 +135,29 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
       <div className="flex flex-wrap gap-1 mb-2">
         {deduplicatedValue.map((item) => {
           const itemId = getItemId(item);
+          // Check if item is a user item (has username and displayName)
+          const isUserItem =
+            "username" in item &&
+            "displayName" in item &&
+            typeof item.username === "string" &&
+            typeof item.displayName === "string";
+
           // itemId is guaranteed to be unique after deduplication
+          if (isUserItem) {
+            return (
+              <UserBadge
+                key={itemId}
+                username={item.username}
+                displayName={item.displayName}
+                avatar={
+                  "avatar" in item ? (item.avatar as string | null) : null
+                }
+                image={"image" in item ? (item.image as string | null) : null}
+                onRemove={() => removeItem(itemId)}
+              />
+            );
+          }
+
           return (
             <Badge
               key={itemId}

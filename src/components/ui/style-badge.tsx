@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   normalizeStyleName,
@@ -9,16 +10,22 @@ interface StyleBadgeProps {
   style: string;
   asLink?: boolean;
   className?: string;
+  showRemoveButton?: boolean;
+  onRemove?: () => void;
 }
 
 export function StyleBadge({
   style,
   asLink = true,
   className,
+  showRemoveButton = false,
+  onRemove,
 }: StyleBadgeProps) {
   const badgeClasses = cn(
-    "text-black bg-white border border-black font-semibold text-xs px-1 py-0.5 rounded inline-flex items-center justify-center leading-none",
-    asLink && "hover:bg-gray-100 transition-colors cursor-pointer",
+    "text-black bg-white border border-black font-semibold text-xs px-1 py-0.5 rounded inline-flex items-center justify-center leading-none gap-1",
+    asLink &&
+      !showRemoveButton &&
+      "hover:bg-gray-100 transition-colors cursor-pointer",
     className
   );
 
@@ -26,16 +33,36 @@ export function StyleBadge({
   const normalizedStyle = normalizeStyleName(style);
   const displayStyle = formatStyleNameForDisplay(style);
 
-  if (asLink) {
+  const badgeContent = (
+    <>
+      {displayStyle}
+      {showRemoveButton && onRemove && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="ml-0.5 hover:bg-gray-200 rounded-full p-0.5 transition-colors"
+          aria-label={`Remove ${displayStyle}`}
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </>
+  );
+
+  if (asLink && !showRemoveButton) {
     return (
       <Link
         href={`/styles/${encodeURIComponent(normalizedStyle)}`}
         className={badgeClasses}
       >
-        {displayStyle}
+        {badgeContent}
       </Link>
     );
   }
 
-  return <span className={badgeClasses}>{displayStyle}</span>;
+  return <span className={badgeClasses}>{badgeContent}</span>;
 }

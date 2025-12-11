@@ -22,7 +22,7 @@ import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-mul
 import { UserSearchItem } from "@/types/user";
 import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
-import { Badge } from "@/components/ui/badge";
+import { StyleBadge } from "@/components/ui/style-badge";
 import { useState, useEffect } from "react";
 
 interface VideoFormProps {
@@ -507,9 +507,7 @@ export function VideoForm({
                   <div className="flex flex-wrap gap-2 mt-2">
                     {sectionStyles.length > 0 ? (
                       sectionStyles.map((style) => (
-                        <Badge key={style} variant="secondary">
-                          {style}
-                        </Badge>
+                        <StyleBadge key={style} style={style} asLink={false} />
                       ))
                     ) : (
                       <span className="text-sm text-muted-foreground">

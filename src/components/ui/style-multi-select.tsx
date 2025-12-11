@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -16,9 +15,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { StyleBadge } from "@/components/ui/style-badge";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DANCE_STYLES } from "@/lib/utils/dance-styles";
+import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 
 interface StyleMultiSelectProps {
   value: string[];
@@ -52,22 +53,13 @@ export function StyleMultiSelect({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1 mb-2">
         {value.map((style) => (
-          <Badge
+          <StyleBadge
             key={style}
-            variant="secondary"
-            className="flex items-center gap-1 hover:bg-secondary/80 transition-colors"
-          >
-            {style}
-            {!disabled && (
-              <button
-                type="button"
-                onClick={() => removeStyle(style)}
-                className="ml-1 hover:bg-secondary/90 rounded-full p-0.5"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </Badge>
+            style={style}
+            asLink={false}
+            showRemoveButton={!disabled}
+            onRemove={() => removeStyle(style)}
+          />
         ))}
       </div>
       <Popover open={open} onOpenChange={setOpen}>
@@ -102,7 +94,7 @@ export function StyleMultiSelect({
                           isSelected ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      {style}
+                      {formatStyleNameForDisplay(style)}
                     </CommandItem>
                   );
                 })}

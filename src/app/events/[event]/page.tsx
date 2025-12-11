@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
-import NextImage from "next/image";
+import { SectionCard } from "@/components/ui/section-card";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
@@ -342,148 +342,15 @@ export default async function EventPage({ params }: PageProps) {
                   </h2>
                 </Link>
 
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {event.sections.map((section) => {
-                    // Calculate total video count
-                    const directVideoCount = section.videos.length;
-                    const bracketVideoCount = section.brackets.reduce(
-                      (sum: number, bracket) => sum + bracket.videos.length,
-                      0
-                    );
-                    const totalVideoCount =
-                      directVideoCount + bracketVideoCount;
-
-                    return (
-                      <div
-                        key={section.id}
-                        className="bg-white rounded-lg p-4 shadow-sm max-w-lg"
-                      >
-                        <div className="flex gap-4">
-                          {/* Poster on left - 1/2 width */}
-                          <div className="w-1/2">
-                            {section.poster?.url ? (
-                              <NextImage
-                                src={section.poster.url}
-                                alt={section.poster.title || section.title}
-                                width={200}
-                                height={200}
-                                className="w-full h-auto object-cover rounded-lg"
-                              />
-                            ) : (
-                              <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-                                <span className="text-gray-400 text-sm">
-                                  No poster
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Content on right - 1/2 width */}
-                          <div className="w-1/2 flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/events/${event.id}/sections/${section.id}`}
-                                className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
-                              >
-                                {section.title}
-                              </Link>
-                            </div>
-                            {section.sectionType && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs w-fit"
-                              >
-                                {section.sectionType}
-                              </Badge>
-                            )}
-                            {/* Display section styles */}
-                            {section.applyStylesToVideos &&
-                              section.styles &&
-                              section.styles.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {section.styles.map((style) => (
-                                    <StyleBadge
-                                      key={style}
-                                      style={style}
-                                      asLink={false}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            {/* Display aggregated video styles if applyStylesToVideos is false */}
-                            {!section.applyStylesToVideos &&
-                              (() => {
-                                const videoStyles = new Set<string>();
-                                section.videos.forEach((video) => {
-                                  if (video.styles) {
-                                    video.styles.forEach((style: string) =>
-                                      videoStyles.add(style)
-                                    );
-                                  }
-                                });
-                                section.brackets.forEach((bracket) => {
-                                  bracket.videos.forEach((video) => {
-                                    if (video.styles) {
-                                      video.styles.forEach((style: string) =>
-                                        videoStyles.add(style)
-                                      );
-                                    }
-                                  });
-                                });
-                                const stylesArray = Array.from(videoStyles);
-                                return stylesArray.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {stylesArray.map((style: string) => (
-                                      <StyleBadge
-                                        key={style}
-                                        style={style}
-                                        asLink={false}
-                                      />
-                                    ))}
-                                  </div>
-                                ) : null;
-                              })()}
-                            <span className="text-sm text-gray-500">
-                              {totalVideoCount}{" "}
-                              {totalVideoCount === 1 ? "video" : "videos"}
-                            </span>
-                            {/* Display section winners */}
-                            {section.winners && section.winners.length > 0 && (
-                              <div className="flex flex-wrap gap-1 items-center mt-2">
-                                <span className="text-lg font-bold">
-                                  Winner:
-                                </span>
-                                {Array.from(
-                                  new Map(
-                                    section.winners
-                                      .filter((w) => w && w.id)
-                                      .map((w) => [w.id, w])
-                                  ).values()
-                                ).map((winner) => (
-                                  winner.username ? (
-                                    <UserAvatar
-                                      key={winner.id}
-                                      username={winner.username}
-                                      displayName={winner.displayName}
-                                      avatar={(winner as any).avatar}
-                                      image={(winner as any).image}
-                                    />
-                                  ) : (
-                                    <span key={winner.id}>{winner.displayName}</span>
-                                  )
-                                ))}
-                              </div>
-                            )}
-                            {section.description && (
-                              <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                                {section.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {event.sections.map((section) => (
+                    <SectionCard
+                      key={section.id}
+                      section={section}
+                      eventId={event.id}
+                      eventTitle={event.eventDetails.title}
+                    />
+                  ))}
                 </div>
               </div>
             </section>

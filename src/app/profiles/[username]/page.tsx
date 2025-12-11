@@ -17,11 +17,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { EventCard } from "@/components/EventCard";
 import { TaggedVideosGrid } from "@/components/profile/TaggedVideosGrid";
-import {
-  WinningSectionCard,
-  type WinningSection,
-} from "@/components/profile/WinningSectionCard";
-import { Event, Role } from "@/types/event";
+import { SectionCard } from "@/components/ui/section-card";
+import { Event, Role, Section } from "@/types/event";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -286,12 +283,34 @@ export default async function ProfilePage({ params }: PageProps) {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.winningSections.map((section: WinningSection) => (
-                  <WinningSectionCard
-                    key={section.sectionId}
-                    section={section}
-                  />
-                ))}
+                {profile.winningSections.map(
+                  (section: {
+                    sectionId: string;
+                    sectionTitle: string;
+                    sectionType?: string;
+                    eventId: string;
+                    eventTitle: string;
+                    imageUrl?: string;
+                  }) => (
+                    <SectionCard
+                      key={section.sectionId}
+                      section={{
+                        id: section.sectionId,
+                        title: section.sectionTitle,
+                        sectionType: section.sectionType as
+                          | Section["sectionType"]
+                          | undefined,
+                        poster: section.imageUrl
+                          ? { url: section.imageUrl }
+                          : null,
+                        videos: [],
+                        brackets: [],
+                      }}
+                      eventId={section.eventId}
+                      eventTitle={section.eventTitle}
+                    />
+                  )
+                )}
               </div>
             </CardContent>
           </Card>
