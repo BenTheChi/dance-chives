@@ -82,8 +82,8 @@ export default async function SectionPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full">
+      <div className="flex flex-col justify-center items-center gap-2 py-5 px-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-6xl">
           <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 auto-rows-min">
             <Link href={`/events/${event.id}`} className="hover:underline">
               Back to {event.eventDetails.title}
@@ -106,7 +106,10 @@ export default async function SectionPage({ params }: PageProps) {
           </div>
 
           {/* Brackets/Video Gallery */}
-          <div className="w-full col-span-1 md:col-span-2">
+          <div
+            className="w-full col-span-1 md:col-span-2"
+            style={{ boxSizing: "content-box" }}
+          >
             <SectionBracketTabSelector
               section={section}
               eventTitle={event.eventDetails.title}

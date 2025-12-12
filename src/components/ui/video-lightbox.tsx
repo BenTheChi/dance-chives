@@ -309,7 +309,7 @@ export function VideoLightbox({
 
           {/* Tagged Users Below Video */}
           <div className="bg-black/90 text-white p-3 sm:p-4 border-t border-white/10">
-            <div className="flex flex-wrap items-start justify-center gap-10">
+            <div className="flex flex-nowrap items-start justify-start gap-10">
               {/* Tag Self Button */}
               {currentUserId && (
                 <div className="flex-shrink-0">
@@ -333,7 +333,7 @@ export function VideoLightbox({
               {/* Winners - Only show for battle videos */}
               {videoType === "battle" && winners.length > 0 && (
                 <div className="flex-shrink-0">
-                  <div className="space-y-2">
+                  <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
                       <Trophy className="w-4 h-4 text-yellow-500" />
                       <h3 className="font-semibold text-sm sm:text-base">
@@ -359,7 +359,7 @@ export function VideoLightbox({
               {/* Choreographers - Only show for choreography videos */}
               {videoType === "choreography" && choreographers.length > 0 && (
                 <div className="flex-shrink-0">
-                  <div className="space-y-2">
+                  <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
                       <h3 className="font-semibold text-sm sm:text-base">
@@ -386,7 +386,7 @@ export function VideoLightbox({
               {/* Teachers - Only show for class videos */}
               {videoType === "class" && teachers.length > 0 && (
                 <div className="flex-shrink-0">
-                  <div className="space-y-2">
+                  <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
                       <h3 className="font-semibold text-sm sm:text-base">
@@ -413,7 +413,7 @@ export function VideoLightbox({
               {/* Dancers - Show for all video types */}
               {dancers.length > 0 && (
                 <div className="flex-shrink-0">
-                  <div className="space-y-2">
+                  <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4" />
                       <h3 className="font-semibold text-sm sm:text-base">

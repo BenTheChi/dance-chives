@@ -82,11 +82,11 @@ export function EventCard({
     : "";
 
   return (
-    <div className="group border border-black overflow-hidden rounded-[5px] bg-gray-100 transition-all duration-300 w-[250px] h-[350px] sm:w-[358px] sm:h-[358px] sm:hover:h-[500px] sm:relative">
+    <div className="group border border-black overflow-hidden rounded-[5px] bg-gray-100 transition-all duration-300 w-[250px] h-[350px] sm:w-[358px] sm:h-[358px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
-        className="block w-full h-[250px] sm:h-[358px] border-b border-black relative z-10 flex items-center justify-center bg-gray-200"
+        className="block w-full h-[250px] sm:h-[358px] border-b border-black relative flex items-center justify-center bg-gray-200"
       >
         {imageUrl ? (
           <Image
@@ -100,8 +100,8 @@ export function EventCard({
         )}
       </Link>
 
-      {/* Expanded section - always visible on mobile, slides down on desktop hover */}
-      <div className="w-full h-[100px] bg-gray-100 sm:absolute sm:inset-x-0 sm:top-[358px] sm:opacity-0 sm:group-hover:opacity-100 sm:duration-300 sm:pointer-events-none sm:group-hover:pointer-events-auto sm:h-[135px] overflow-hidden flex flex-col justify-end z-0">
+      {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
+      <div className="w-full h-[100px] bg-gray-100 sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto sm:h-[135px] sm:bg-gray-100/90 overflow-hidden flex flex-col justify-end z-10">
         <div className="px-3 pb-2 sm:px-6 sm:pb-1 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}

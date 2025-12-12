@@ -19,7 +19,6 @@ import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
@@ -152,9 +151,9 @@ export default async function EventPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full max-w-6xl">
-          <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 xl:col-span-4 auto-rows-min">
+      <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[600px] md:max-w-6xl">
+          <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 auto-rows-min">
             <Link href="/events" className="hover:underline">
               {`Back to Events`}
             </Link>
@@ -178,12 +177,12 @@ export default async function EventPage({ params }: PageProps) {
 
           <PosterImage
             poster={event.eventDetails.poster ?? null}
-            className="col-span-1 md:col-span-1 xl:col-span-2"
+            className="col-span-1 md:col-span-1"
           />
 
-          <div className="flex flex-col gap-4 col-span-1 md:col-span-1 xl:col-span-2">
+          <div className="flex flex-col gap-4 col-span-1 md:col-span-1">
             {/* Event Details */}
-            <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
+            <section className="bg-misty-seafoam p-4 rounded-md flex flex-col gap-2 border border-black">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
               {event.eventDetails.eventType && (
                 <div className="flex flex-row gap-2">
@@ -263,7 +262,7 @@ export default async function EventPage({ params }: PageProps) {
             </section>
 
             {/* Event Roles */}
-            <section className="p-4 rounded-md bg-green-100 flex flex-col gap-2">
+            <section className="p-4 rounded-md bg-misty-seafoam flex flex-col gap-2 border border-black">
               <h2 className="text-xl font-bold mb-2">Event Roles</h2>
               {creator && (
                 <div className="flex flex-row gap-2 items-center flex-wrap">
@@ -282,12 +281,14 @@ export default async function EventPage({ params }: PageProps) {
                   className="flex flex-row gap-2 items-center flex-wrap"
                 >
                   <span>{fromNeo4jRoleFormat(roleTitle) || roleTitle}: </span>
-                  {roles.map((role, index) => (
+                  {roles.map((role, index) =>
                     role.user?.username ? (
                       <UserAvatar
                         key={`${role.id}-${index}`}
                         username={role.user.username}
-                        displayName={role.user.displayName || role.user.username}
+                        displayName={
+                          role.user.displayName || role.user.username
+                        }
                         avatar={(role.user as any).avatar}
                         image={(role.user as any).image}
                       />
@@ -296,7 +297,7 @@ export default async function EventPage({ params }: PageProps) {
                         {role.user?.displayName || role.user?.username}
                       </span>
                     )
-                  ))}
+                  )}
                 </div>
               ))}
               <TagSelfButton
@@ -310,55 +311,43 @@ export default async function EventPage({ params }: PageProps) {
 
           {/* Description */}
           {event.eventDetails.description && (
-            <section className="flex flex-col gap-2 p-4 bg-red-100 rounded-md col-span-1 md:col-span-2 xl:col-span-2">
-              <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-                <FileText />
-                Description:
+            <section className="flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md col-span-1 md:col-span-2 border border-black">
+              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                Description
               </div>
-              <div className="whitespace-pre-wrap max-w-[500px]">
+              <div className="whitespace-pre-wrap">
                 {event.eventDetails.description}
+              </div>
+              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                Schedule
+              </div>
+              <div className="whitespace-pre-wrap">
+                {event.eventDetails.schedule || "No schedule available"}
               </div>
             </section>
           )}
 
-          {/* Schedule */}
-          <section className="flex flex-col gap-2 bg-purple-100 rounded-md p-4 col-span-1 md:col-span-2 xl:col-span-2">
-            <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-              <Calendar />
-              Schedule:
-            </div>
-            <div className="whitespace-pre-wrap">
-              {event.eventDetails.schedule || "No schedule available"}
-            </div>
-          </section>
-
           {/* Sections */}
           {event.sections && event.sections.length > 0 && (
-            <section className="flex flex-wrap gap-2 bg-green-300 rounded-md p-4 w-full shadow-md col-span-1 md:col-span-2 xl:col-span-4">
-              <div className="w-full">
-                <Link href={`/events/${event.id}/sections`} className="w-full">
-                  <h2 className="text-2xl font-bold mb-4 text-center">
-                    Sections
-                  </h2>
-                </Link>
+            <section className="col-span-1 md:col-span-2">
+              <h2 className="text-2xl font-bold mb-4 text-center">Sections</h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {event.sections.map((section) => (
-                    <SectionCard
-                      key={section.id}
-                      section={section}
-                      eventId={event.id}
-                      eventTitle={event.eventDetails.title}
-                    />
-                  ))}
-                </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {event.sections.map((section) => (
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    eventId={event.id}
+                    eventTitle={event.eventDetails.title}
+                  />
+                ))}
               </div>
             </section>
           )}
 
           {/* Photo Gallery */}
           {event.gallery.length > 0 && (
-            <section className="flex flex-col bg-red-100 rounded-md p-4 w-full col-span-1 md:col-span-2 xl:col-span-4">
+            <section className="flex flex-col bg-misty-seafoam rounded-md p-4 w-full col-span-1 md:col-span-2">
               <h2 className="text-2xl font-bold mb-2 text-center">
                 Photo Gallery
               </h2>

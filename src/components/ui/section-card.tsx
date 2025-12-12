@@ -84,7 +84,7 @@ export function SectionCard({
   }
 
   return (
-    <div className="h-[241px] w-[400px] bg-white rounded-lg border border-black cursor-pointer">
+    <div className="h-[241px] w-[400px] bg-white rounded-lg border border-black cursor-pointer hover:shadow-lg/100">
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}
         className="block h-full"
