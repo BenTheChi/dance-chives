@@ -10,6 +10,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const data = res.map((record) => ({
     username: record.username,
     displayName: record.displayName,
+    avatar: record.avatar || null,
+    image: record.image || null,
   }));
 
   return NextResponse.json({ data });

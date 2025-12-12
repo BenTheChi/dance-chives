@@ -28,9 +28,9 @@ export default function SectionBracketTabSelector({
   }, [section]);
 
   return (
-    <div className="w-full">
+    <div className="w-full" style={{ boxSizing: "content-box" }}>
       {section?.hasBrackets ? (
-        <div className="p-5 border-2 rounded-lg bg-white shadow-md">
+        <div className="rounded-lg" style={{ boxSizing: "content-box" }}>
           <Tabs
             value={activeBracket}
             onValueChange={setActiveBracket}
@@ -67,7 +67,7 @@ export default function SectionBracketTabSelector({
           </Tabs>
         </div>
       ) : (
-        <div className="p-5 border-2 rounded-lg bg-white shadow-md">
+        <div className="rounded-lg" style={{ boxSizing: "content-box" }}>
           <VideoGallery
             videos={section?.videos}
             eventLink={`/events/${eventId}`}

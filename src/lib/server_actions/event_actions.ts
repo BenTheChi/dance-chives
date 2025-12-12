@@ -33,6 +33,13 @@ import {
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
 import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import {
+  parseMmddyyyy,
+  zonedDateTimeToUtc,
+  zonedStartOfDayToUtc,
+  localIsoDateInTimeZone,
+} from "@/lib/utils/timezone-utils";
 
 // Unified form props interface - matches FormValues from event-form.tsx
 interface addEventProps {
@@ -311,25 +318,43 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     const timezoneData = await response.json();
 
+    // Normalize timezone format (GeoDB may return underscores instead of slashes)
+    const rawTimezone = timezoneData.data?.timezone || "";
+    const normalizedTimezone = rawTimezone.replace(/__/g, "/");
+
     // Normalize dates: if isAllDay is true, set times to empty strings
     // Remove isAllDay field before storing (it's form-only)
-    const normalizedDates = props.eventDetails.dates.map((dateEntry) => {
-      const isAllDay =
-        dateEntry.isAllDay ??
-        isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
-      const normalizedStartTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.startTime);
-      const normalizedEndTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.endTime);
+    const normalizedDates = props.eventDetails.dates
+      .map((dateEntry) => {
+        const isAllDay =
+          dateEntry.isAllDay ??
+          isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
+        const normalizedStartTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.startTime);
+        const normalizedEndTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.endTime);
 
-      return {
-        date: dateEntry.date,
-        startTime: normalizedStartTime,
-        endTime: normalizedEndTime,
-      };
-    });
+        return {
+          date: dateEntry.date,
+          startTime: normalizedStartTime,
+          endTime: normalizedEndTime,
+        };
+      })
+      // Sort dates chronologically so they're always in order
+      .sort((a, b) => {
+        const parseDate = (dateStr: string): Date => {
+          // Handle ISO format (YYYY-MM-DD)
+          if (dateStr.includes("-")) {
+            return new Date(dateStr);
+          }
+          // Handle MM/DD/YYYY format
+          const [month, day, year] = dateStr.split("/").map(Number);
+          return new Date(year, month - 1, day);
+        };
+        return parseDate(a.date).getTime() - parseDate(b.date).getTime();
+      });
 
     // Create the EventDetails object
     // Ensure eventType is always set (default to "Other" if not provided)
@@ -346,7 +371,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       styles: props.eventDetails.styles,
       city: {
         ...props.eventDetails.city,
-        timezone: timezoneData.data.timezone,
+        timezone: normalizedTimezone,
       },
     };
 
@@ -401,6 +426,13 @@ export async function addEvent(props: addEventProps): Promise<response> {
         userId: session.user.id,
         creator: true,
       },
+    });
+
+    // Upsert Postgres read models for fast cards/dates queries
+    await upsertEventReadModels({
+      eventId: event.id,
+      eventDetails,
+      sections: processedSections,
     });
 
     return {
@@ -600,7 +632,11 @@ export async function editEvent(
       }
     });
 
-    let timezone = oldEvent.eventDetails.city.timezone;
+    // Normalize timezone format (GeoDB may return underscores instead of slashes)
+    let timezone = (oldEvent.eventDetails.city.timezone || "").replace(
+      /__/g,
+      "/"
+    );
 
     if (editedEvent.eventDetails.city.id !== oldEvent.eventDetails.city.id) {
       // Get timezone for city
@@ -618,28 +654,43 @@ export async function editEvent(
       }
 
       const responseData = await response.json();
-      timezone = responseData.data.timezone;
+      const rawTimezone = responseData.data?.timezone || "";
+      timezone = rawTimezone.replace(/__/g, "/");
     }
 
     // Normalize dates: if isAllDay is true, set times to empty strings
     // Remove isAllDay field before storing (it's form-only)
-    const normalizedDates = editedEvent.eventDetails.dates.map((dateEntry) => {
-      const isAllDay =
-        dateEntry.isAllDay ??
-        isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
-      const normalizedStartTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.startTime);
-      const normalizedEndTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.endTime);
+    const normalizedDates = editedEvent.eventDetails.dates
+      .map((dateEntry) => {
+        const isAllDay =
+          dateEntry.isAllDay ??
+          isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
+        const normalizedStartTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.startTime);
+        const normalizedEndTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.endTime);
 
-      return {
-        date: dateEntry.date,
-        startTime: normalizedStartTime,
-        endTime: normalizedEndTime,
-      };
-    });
+        return {
+          date: dateEntry.date,
+          startTime: normalizedStartTime,
+          endTime: normalizedEndTime,
+        };
+      })
+      // Sort dates chronologically so they're always in order
+      .sort((a, b) => {
+        const parseDate = (dateStr: string): Date => {
+          // Handle ISO format (YYYY-MM-DD)
+          if (dateStr.includes("-")) {
+            return new Date(dateStr);
+          }
+          // Handle MM/DD/YYYY format
+          const [month, day, year] = dateStr.split("/").map(Number);
+          return new Date(year, month - 1, day);
+        };
+        return parseDate(a.date).getTime() - parseDate(b.date).getTime();
+      });
 
     // Create the EventDetails object
     // Ensure eventType is always set (default to "Other" if not provided)
@@ -827,6 +878,13 @@ export async function editEvent(
         },
       });
 
+      // Upsert Postgres read models for fast cards/dates queries
+      await upsertEventReadModels({
+        eventId,
+        eventDetails,
+        sections: processedSections,
+      });
+
       return {
         status: 200,
         event: null,
@@ -845,6 +903,209 @@ export async function editEvent(
       status: 500,
       event: null,
     };
+  }
+}
+
+function aggregateEventStylesForCard(
+  eventDetails: EventDetails,
+  sections: Section[]
+): string[] {
+  const styles = new Set<string>();
+
+  if (eventDetails.styles && eventDetails.styles.length > 0) {
+    normalizeStyleNames(eventDetails.styles).forEach((s) => styles.add(s));
+  }
+
+  for (const section of sections) {
+    if (
+      section.applyStylesToVideos &&
+      section.styles &&
+      section.styles.length
+    ) {
+      normalizeStyleNames(section.styles).forEach((s) => styles.add(s));
+      continue;
+    }
+
+    for (const video of section.videos || []) {
+      if (video.styles && video.styles.length) {
+        normalizeStyleNames(video.styles).forEach((s) => styles.add(s));
+      }
+    }
+
+    for (const bracket of section.brackets || []) {
+      for (const video of bracket.videos || []) {
+        if (video.styles && video.styles.length) {
+          normalizeStyleNames(video.styles).forEach((s) => styles.add(s));
+        }
+      }
+    }
+  }
+
+  return Array.from(styles);
+}
+
+function buildSectionCardRow(input: { eventId: string; section: Section }) {
+  const { eventId, section } = input;
+
+  const directVideoCount = section.videos?.length || 0;
+  const bracketVideoCount = (section.brackets || []).reduce(
+    (sum, b) => sum + (b.videos?.length || 0),
+    0
+  );
+
+  // Match existing UI semantics: either section.styles when applyStylesToVideos,
+  // otherwise aggregate from videos.
+  let displayStyles: string[] = [];
+  if (
+    section.applyStylesToVideos &&
+    section.styles &&
+    section.styles.length > 0
+  ) {
+    displayStyles = normalizeStyleNames(section.styles);
+  } else {
+    const s = new Set<string>();
+    for (const v of section.videos || []) {
+      if (v.styles && v.styles.length) {
+        normalizeStyleNames(v.styles).forEach((x) => s.add(x));
+      }
+    }
+    for (const b of section.brackets || []) {
+      for (const v of b.videos || []) {
+        if (v.styles && v.styles.length) {
+          normalizeStyleNames(v.styles).forEach((x) => s.add(x));
+        }
+      }
+    }
+    displayStyles = Array.from(s);
+  }
+
+  return {
+    sectionId: section.id,
+    eventId,
+    title: section.title,
+    sectionType: section.sectionType,
+    posterUrl: section.poster?.url ?? null,
+    styles: displayStyles,
+    totalVideoCount: directVideoCount + bracketVideoCount,
+  };
+}
+
+async function upsertEventReadModels(input: {
+  eventId: string;
+  eventDetails: EventDetails;
+  sections: Section[];
+}): Promise<void> {
+  const { eventId, eventDetails, sections } = input;
+
+  // Normalize timezone format (fix double underscores from GeoDB API)
+  const rawTimezone = eventDetails.city.timezone || "";
+  const eventTimezone = rawTimezone.replace(/__/g, "/") || null;
+  const displayDateLocal = eventDetails.dates?.[0]?.date || null;
+  const additionalDatesCount = Math.max(
+    0,
+    (eventDetails.dates?.length || 0) - 1
+  );
+
+  const styles = aggregateEventStylesForCard(eventDetails, sections);
+
+  await prisma.eventCard.upsert({
+    where: { eventId },
+    update: {
+      title: eventDetails.title,
+      eventType: eventDetails.eventType,
+      cityId: eventDetails.city?.id ?? null,
+      cityName: eventDetails.city?.name ?? null,
+      region: eventDetails.city?.region ?? null,
+      countryCode: eventDetails.city?.countryCode ?? null,
+      eventTimezone,
+      posterUrl: eventDetails.poster?.url ?? null,
+      styles,
+      displayDateLocal,
+      additionalDatesCount,
+    },
+    create: {
+      eventId,
+      title: eventDetails.title,
+      eventType: eventDetails.eventType,
+      cityId: eventDetails.city?.id ?? null,
+      cityName: eventDetails.city?.name ?? null,
+      region: eventDetails.city?.region ?? null,
+      countryCode: eventDetails.city?.countryCode ?? null,
+      eventTimezone,
+      posterUrl: eventDetails.poster?.url ?? null,
+      styles,
+      displayDateLocal,
+      additionalDatesCount,
+    },
+  });
+
+  // Rebuild event_dates
+  await prisma.eventDate.deleteMany({ where: { eventId } });
+
+  if (eventDetails.dates && eventDetails.dates.length > 0 && eventTimezone) {
+    // Filter out entries with missing or invalid date strings
+    const validDates = eventDetails.dates.filter((d) => {
+      if (!d.date || typeof d.date !== "string" || d.date.trim() === "") {
+        return false;
+      }
+      // Validate date format is MM/DD/YYYY
+      try {
+        parseMmddyyyy(d.date);
+        return true;
+      } catch {
+        console.warn(`Skipping invalid date format: "${d.date}"`);
+        return false;
+      }
+    });
+    const dateRows = validDates.map((d) => {
+      const isAllDay =
+        !d.startTime || !d.endTime || d.startTime === "" || d.endTime === "";
+      if (isAllDay) {
+        const startUtc = zonedStartOfDayToUtc({
+          dateMmddyyyy: d.date,
+          timeZone: eventTimezone,
+        });
+        const localIso = localIsoDateInTimeZone({
+          utc: startUtc,
+          timeZone: eventTimezone,
+        });
+        return {
+          eventId,
+          kind: "allDay" as const,
+          startUtc,
+          endUtc: null,
+          // Store the calendar date in the event timezone, not server local time.
+          localDate: new Date(`${localIso}T00:00:00.000Z`),
+        };
+      }
+
+      return {
+        eventId,
+        kind: "timed" as const,
+        startUtc: zonedDateTimeToUtc({
+          dateMmddyyyy: d.date,
+          timeHHmm: d.startTime!,
+          timeZone: eventTimezone,
+        }),
+        endUtc: zonedDateTimeToUtc({
+          dateMmddyyyy: d.date,
+          timeHHmm: d.endTime!,
+          timeZone: eventTimezone,
+        }),
+        localDate: null,
+      };
+    });
+
+    await prisma.eventDate.createMany({ data: dateRows });
+  }
+
+  // Rebuild section_cards
+  await prisma.sectionCard.deleteMany({ where: { eventId } });
+  if (sections && sections.length > 0) {
+    const sectionRows = sections.map((s) =>
+      buildSectionCardRow({ eventId, section: s })
+    );
+    await prisma.sectionCard.createMany({ data: sectionRows });
   }
 }
 

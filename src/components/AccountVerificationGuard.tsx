@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { isAccountVerified } from "@/lib/utils/auth-utils";
+import { isAccountVerified } from "@/lib/utils/auth-utils-shared";
 
 interface AccountVerificationGuardProps {
   children: React.ReactNode;

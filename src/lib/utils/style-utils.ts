@@ -6,18 +6,16 @@ export function normalizeStyleName(style: string): string {
 }
 
 /**
- * Capitalizes the first letter of a style name for display
+ * Converts a style name to upper case for display
  */
 export function formatStyleNameForDisplay(style: string): string {
   if (!style) return style;
-  const normalized = style.toLowerCase().trim();
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  return style.toUpperCase().trim();
 }
 
 /**
- * Normalizes an array of style names to lowercase
+ * Formats an array of style names to uppercase
  */
 export function normalizeStyleNames(styles: string[]): string[] {
-  return styles.map(normalizeStyleName);
+  return styles.map(formatStyleNameForDisplay);
 }
-

@@ -4,7 +4,7 @@ import {
   Section,
   Bracket,
   EventDetails,
-  EventCard,
+  TEventCard,
   EventType,
 } from "../../types/event";
 import {
@@ -371,22 +371,30 @@ export const getEvent = async (id: string): Promise<Event> => {
          collect(DISTINCT {
            id: winner.id,
            displayName: winner.displayName,
-           username: winner.username
+           username: winner.username,
+           avatar: winner.avatar,
+           image: winner.image
          }) as allWinners,
          collect(DISTINCT {
            id: dancer.id,
            displayName: dancer.displayName,
-           username: dancer.username
+           username: dancer.username,
+           avatar: dancer.avatar,
+           image: dancer.image
          }) as allDancers,
          collect(DISTINCT {
            id: choreographer.id,
            displayName: choreographer.displayName,
-           username: choreographer.username
+           username: choreographer.username,
+           avatar: choreographer.avatar,
+           image: choreographer.image
          }) as allChoreographers,
          collect(DISTINCT {
            id: teacher.id,
            displayName: teacher.displayName,
-           username: teacher.username
+           username: teacher.username,
+           avatar: teacher.avatar,
+           image: teacher.image
          }) as allTeachers
     WITH s, b, v,
          [w in allWinners WHERE w.id IS NOT NULL] as winners,
@@ -423,22 +431,30 @@ export const getEvent = async (id: string): Promise<Event> => {
          collect(DISTINCT {
            id: winner.id,
            displayName: winner.displayName,
-           username: winner.username
+           username: winner.username,
+           avatar: winner.avatar,
+           image: winner.image
          }) as allWinners,
          collect(DISTINCT {
            id: dancer.id,
            displayName: dancer.displayName,
-           username: dancer.username
+           username: dancer.username,
+           avatar: dancer.avatar,
+           image: dancer.image
          }) as allDancers,
          collect(DISTINCT {
            id: choreographer.id,
            displayName: choreographer.displayName,
-           username: choreographer.username
+           username: choreographer.username,
+           avatar: choreographer.avatar,
+           image: choreographer.image
          }) as allChoreographers,
          collect(DISTINCT {
            id: teacher.id,
            displayName: teacher.displayName,
-           username: teacher.username
+           username: teacher.username,
+           avatar: teacher.avatar,
+           image: teacher.image
          }) as allTeachers
     WITH s, v,
          [w in allWinners WHERE w.id IS NOT NULL] as winners,
@@ -470,7 +486,9 @@ export const getEvent = async (id: string): Promise<Event> => {
     RETURN s.id as sectionId, collect({
       id: u.id,
       displayName: u.displayName,
-      username: u.username
+      username: u.username,
+      avatar: u.avatar,
+      image: u.image
     }) as winners
   `,
     { id }
@@ -771,107 +789,6 @@ export const deleteEvent = async (eventId: string): Promise<boolean> => {
     await session.close();
     throw error;
   }
-};
-
-/**
- * Get all events regardless of type
- * Returns a unified EventCard array for display
- */
-export const getAllEvents = async (): Promise<EventCard[]> => {
-  const session = driver.session();
-
-  // Get all events with basic info (any Event node)
-  const eventsResult = await session.run(
-    `
-    MATCH (e:Event)
-    OPTIONAL MATCH (e)-[:IN]->(c:City)
-    OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
-    WITH DISTINCT e, c, p
-    RETURN e.id as eventId, 
-           e.title as title, 
-           e.startDate as startDate,
-           e.dates as dates,
-           c.name as city, 
-           c.id as cityId, 
-           p.url as imageUrl
-    ORDER BY e.startDate DESC, e.createdAt DESC
-  `
-  );
-
-  // Get all styles for each event (from event, sections, and videos)
-  const stylesResult = await session.run(
-    `
-    MATCH (e:Event)
-    OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
-    WITH e.id as eventId, 
-         collect(DISTINCT eventStyle.name) as eventStyles,
-         collect(DISTINCT sectionStyle.name) as sectionStyles,
-         collect(DISTINCT videoStyle.name) as videoStyles,
-         collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
-    WITH eventId, 
-         [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
-         [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
-         [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
-         [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
-    RETURN eventId, 
-           filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
-  `
-  );
-
-  // Create a map of eventId -> styles
-  const stylesMap = new Map<string, string[]>();
-  stylesResult.records.forEach((record) => {
-    const eventId = record.get("eventId");
-    const allStyles = (record.get("allStyles") || []) as unknown[];
-    // Remove duplicates and filter out nulls
-    const uniqueStyles = Array.from(
-      new Set(
-        allStyles.filter(
-          (s): s is string => typeof s === "string" && s !== null
-        )
-      )
-    );
-    stylesMap.set(eventId, uniqueStyles);
-  });
-
-  await session.close();
-
-  // Combine event data with styles
-  return eventsResult.records.map((record) => {
-    const eventId = record.get("eventId");
-    const startDate = record.get("startDate");
-    const dates = record.get("dates");
-
-    // Determine date to display
-    let displayDate = "";
-    if (startDate) {
-      displayDate = startDate;
-    } else if (dates) {
-      try {
-        const datesArray =
-          typeof dates === "string" ? JSON.parse(dates) : dates;
-        if (Array.isArray(datesArray) && datesArray.length > 0) {
-          displayDate = datesArray[0].date || "";
-        }
-      } catch (error) {
-        console.error("Error parsing dates array:", error);
-      }
-    }
-
-    return {
-      id: eventId,
-      title: record.get("title"),
-      series: undefined,
-      imageUrl: record.get("imageUrl"),
-      date: displayDate,
-      city: record.get("city") || "",
-      cityId: record.get("cityId") as number | undefined,
-      styles: stylesMap.get(eventId) || [],
-    };
-  });
 };
 
 /**
@@ -2021,7 +1938,7 @@ export async function getSavedEventIds(userId: string): Promise<string[]> {
 // Get all saved events for a user with full EventCard data
 export async function getSavedEventsForUser(
   userId: string
-): Promise<EventCard[]> {
+): Promise<TEventCard[]> {
   const session = driver.session();
 
   try {
@@ -2178,8 +2095,8 @@ async function fetchCityCoordinates(
 // Types and interfaces for style, city, and calendar data
 export interface StyleData {
   styleName: string;
-  events: EventCard[];
-  cityFilteredEvents?: EventCard[];
+  events: TEventCard[];
+  cityFilteredEvents?: TEventCard[];
   sections: Array<{
     id: string;
     title: string;
@@ -2211,7 +2128,7 @@ export interface StyleData {
 
 export interface CityData {
   city: City;
-  events: EventCard[];
+  events: TEventCard[];
   users: Array<{
     id: string;
     displayName: string;
@@ -2309,7 +2226,24 @@ export const getStyleData = async (
        WITH DISTINCT event
       OPTIONAL MATCH (event)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
-      RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl
+      WITH event, c, poster,
+           [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+      RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+             CASE 
+               WHEN size(eventTypeLabels) > 0 THEN 
+                 CASE eventTypeLabels[0]
+                   WHEN 'BattleEvent' THEN 'Battle'
+                   WHEN 'CompetitionEvent' THEN 'Competition'
+                   WHEN 'ClassEvent' THEN 'Class'
+                   WHEN 'WorkshopEvent' THEN 'Workshop'
+                   WHEN 'SessionEvent' THEN 'Session'
+                   WHEN 'PartyEvent' THEN 'Party'
+                   WHEN 'FestivalEvent' THEN 'Festival'
+                   WHEN 'PerformanceEvent' THEN 'Performance'
+                   ELSE null
+                 END
+               ELSE null 
+             END as eventType
       ORDER BY event.startDate DESC`,
       { styleName: normalizedStyleName }
     );
@@ -2408,7 +2342,9 @@ export const getStyleData = async (
        RETURN v.id as videoId, collect(DISTINCT {
          id: u.id,
          displayName: u.displayName,
-         username: u.username
+         username: u.username,
+         avatar: u.avatar,
+         image: u.image
        }) as taggedUsers`,
       { styleName: normalizedStyleName }
     );
@@ -2449,7 +2385,24 @@ export const getStyleData = async (
          WITH DISTINCT event
          OPTIONAL MATCH (event)-[:IN]->(c:City)
          OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
-         RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl
+         WITH event, c, poster,
+              [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+         RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+                CASE 
+                  WHEN size(eventTypeLabels) > 0 THEN 
+                    CASE eventTypeLabels[0]
+                      WHEN 'BattleEvent' THEN 'Battle'
+                      WHEN 'CompetitionEvent' THEN 'Competition'
+                      WHEN 'ClassEvent' THEN 'Class'
+                      WHEN 'WorkshopEvent' THEN 'Workshop'
+                      WHEN 'SessionEvent' THEN 'Session'
+                      WHEN 'PartyEvent' THEN 'Party'
+                      WHEN 'FestivalEvent' THEN 'Festival'
+                      WHEN 'PerformanceEvent' THEN 'Performance'
+                      ELSE null
+                    END
+                  ELSE null 
+                END as eventType
          ORDER BY event.startDate DESC`,
         { styleName: normalizedStyleName, cityId }
       );
@@ -2499,7 +2452,7 @@ export const getStyleData = async (
     await session.close();
 
     // Build events array
-    const events: EventCard[] = eventsResult.records.map((record) => {
+    const events: TEventCard[] = eventsResult.records.map((record) => {
       const eventId = record.get("eventId");
       return {
         id: eventId,
@@ -2510,6 +2463,7 @@ export const getStyleData = async (
         city: record.get("city"),
         cityId: record.get("cityId") as number | undefined,
         styles: eventStylesMap.get(eventId) || [],
+        eventType: record.get("eventType") as EventType | undefined,
       };
     });
 
@@ -2550,7 +2504,7 @@ export const getStyleData = async (
     }));
 
     // Build city-filtered events array (if cityId was provided)
-    let cityFilteredEvents: EventCard[] = [];
+    let cityFilteredEvents: TEventCard[] = [];
     if (cityFilteredEventsResult && cityFilteredEventStylesResult) {
       // Create styles map for city-filtered events
       const cityFilteredEventStylesMap = new Map<string, string[]>();
@@ -2581,6 +2535,7 @@ export const getStyleData = async (
             city: record.get("city"),
             cityId: record.get("cityId") as number | undefined,
             styles: cityFilteredEventStylesMap.get(eventId) || [],
+            eventType: record.get("eventType") as EventType | undefined,
           };
         }
       );
@@ -2743,8 +2698,25 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+       WITH e, poster,
+            [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
        RETURN e.id as eventId, e.title as title, e.startDate as date, 
-              poster.url as imageUrl
+              poster.url as imageUrl,
+              CASE 
+                WHEN size(eventTypeLabels) > 0 THEN 
+                  CASE eventTypeLabels[0]
+                    WHEN 'BattleEvent' THEN 'Battle'
+                    WHEN 'CompetitionEvent' THEN 'Competition'
+                    WHEN 'ClassEvent' THEN 'Class'
+                    WHEN 'WorkshopEvent' THEN 'Workshop'
+                    WHEN 'SessionEvent' THEN 'Session'
+                    WHEN 'PartyEvent' THEN 'Party'
+                    WHEN 'FestivalEvent' THEN 'Festival'
+                    WHEN 'PerformanceEvent' THEN 'Performance'
+                    ELSE null
+                  END
+                ELSE null 
+              END as eventType
        ORDER BY e.startDate DESC`,
       { cityId }
     );
@@ -2784,7 +2756,7 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
     });
 
     // Build events array
-    const events: EventCard[] = eventsResult.records.map((record) => {
+    const events: TEventCard[] = eventsResult.records.map((record) => {
       const eventId = record.get("eventId");
       return {
         id: eventId,
@@ -2794,6 +2766,7 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
         date: record.get("date"),
         city: city.name,
         styles: eventStylesMap.get(eventId) || [],
+        eventType: record.get("eventType") as EventType | undefined,
       };
     });
 

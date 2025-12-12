@@ -521,35 +521,6 @@ export function SectionForm({
                   name="sectionWinners"
                   label="Section Winners"
                 />
-                {sectionWinners.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {sectionWinners
-                      .filter((winner) => winner && winner.username)
-                      .map((winner) => {
-                        return (
-                          <Badge
-                            key={winner.username}
-                            variant="default"
-                            className="bg-yellow-500 hover:bg-yellow-600"
-                          >
-                            <Trophy className="w-3 h-3 mr-1" />
-                            {winner.displayName}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleRemoveSectionWinner(winner.username)
-                              }
-                              className="h-4 w-4 p-0 ml-2 hover:bg-yellow-600"
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </Badge>
-                        );
-                      })}
-                  </div>
-                )}
               </div>
             )}
 

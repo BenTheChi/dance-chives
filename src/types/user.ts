@@ -22,5 +22,7 @@ export interface UserSearchItem {
   id?: string; // Optional - only present when coming from server data, not from API search
   username: string;
   displayName: string;
+  avatar?: string | null; // Optional avatar URL
+  image?: string | null; // Optional image URL (fallback for avatar)
   role?: string; // Optional role property (e.g., "DANCER" for video tags)
 }

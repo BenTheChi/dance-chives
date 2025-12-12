@@ -1,9 +1,14 @@
+/**
+ * Client-safe auth utilities
+ * These functions can be safely imported in both client and server components
+ * They do NOT use the auth() function or any server-only dependencies
+ */
+
 import { Session } from "next-auth";
 import { AUTH_LEVELS } from "./auth-constants";
 
 /**
  * Check if a session has a minimum auth level
- * Client-safe: works with Session objects, doesn't call auth()
  */
 export function hasAuthLevel(
   session: Session | null,
@@ -14,7 +19,6 @@ export function hasAuthLevel(
 
 /**
  * Check if user has completed account verification (registration)
- * Client-safe: works with Session objects, doesn't call auth()
  */
 export function isAccountVerified(session: Session | null): boolean {
   return !!session?.user?.accountVerified;
@@ -22,7 +26,6 @@ export function isAccountVerified(session: Session | null): boolean {
 
 /**
  * Helper function to get auth level name
- * Client-safe: pure function
  */
 export function getAuthLevelName(level: number): string {
   const levelNames = Object.entries(AUTH_LEVELS).find(
@@ -33,7 +36,6 @@ export function getAuthLevelName(level: number): string {
 
 /**
  * Permission checking functions based on the new auth structure
- * Client-safe: pure functions that work with auth levels
  */
 
 // Event Permissions

@@ -1,8 +1,8 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { getCityData } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import Eventcard from "@/components/cards";
-import { UserCard } from "@/components/user-card";
+import { EventCard } from "@/components/EventCard";
+import { UserCard } from "@/components/UserCard";
 import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
 import { CityCalendarSection } from "@/components/CityCalendarSection";
 import {
@@ -34,8 +34,9 @@ export default async function CityPage({ params }: PageProps) {
   }
 
   const session = await auth();
-  const savedResult =
-    session?.user?.id ? await getSavedEventIds() : { status: 200, eventIds: [] };
+  const savedResult = session?.user?.id
+    ? await getSavedEventIds()
+    : { status: 200, eventIds: [] };
   const savedEventIds = new Set(
     savedResult.status === 200 && "eventIds" in savedResult
       ? savedResult.eventIds
@@ -100,7 +101,7 @@ export default async function CityPage({ params }: PageProps) {
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {cityData.events.map((event) => (
-                    <Eventcard
+                    <EventCard
                       key={event.id}
                       id={event.id}
                       title={event.title}
@@ -110,6 +111,7 @@ export default async function CityPage({ params }: PageProps) {
                       city={event.city}
                       cityId={cityData.city.id}
                       styles={event.styles}
+                      eventType={event.eventType}
                       isSaved={savedEventIds.has(event.id)}
                     />
                   ))}
@@ -134,11 +136,11 @@ export default async function CityPage({ params }: PageProps) {
                   {cityData.users.map((user) => (
                     <UserCard
                       key={user.id}
-                      id={user.id}
                       displayName={user.displayName}
                       username={user.username}
                       image={user.image}
                       styles={user.styles}
+                      city={cityData.city.name}
                     />
                   ))}
                 </div>

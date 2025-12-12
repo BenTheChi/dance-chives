@@ -5,7 +5,6 @@ import {
   Building,
   Calendar,
   DollarSign,
-  FileText,
   MapPin,
   Settings,
   Tag,
@@ -19,14 +18,14 @@ import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { TagSelfButton } from "@/components/events/TagSelfButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { Badge } from "@/components/ui/badge";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
-import NextImage from "next/image";
+import { SectionCard } from "@/components/ui/section-card";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
-import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
+import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -141,19 +140,64 @@ export default async function EventPage({ params }: PageProps) {
     ? await getUser(event.eventDetails.creatorId)
     : null;
 
-  // Get all dates to display
-  const eventDetails = event.eventDetails;
-  const eventDates =
-    eventDetails.dates && eventDetails.dates.length > 0
-      ? eventDetails.dates
-      : [];
+  // Get timezone for date display
+  const eventTimezone = event.eventDetails.city.timezone || "UTC";
+
+  // Helper to parse date string (MM/DD/YYYY or YYYY-MM-DD format)
+  const parseEventDate = (dateStr: string): Date => {
+    if (dateStr.includes("-")) {
+      return new Date(dateStr);
+    }
+    const [month, day, year] = dateStr.split("/").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Get today's date at midnight for comparison
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Process dates from Neo4j event data
+  const eventDates = event.eventDetails.dates || [];
+
+  // Sort all dates chronologically and separate into upcoming/past
+  const sortedDates = [...eventDates].sort((a, b) => {
+    return parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime();
+  });
+
+  const allUpcoming = sortedDates.filter(
+    (d) => parseEventDate(d.date) >= today
+  );
+  const allPast = sortedDates
+    .filter((d) => parseEventDate(d.date) < today)
+    .reverse(); // Most recent past first
+
+  // Take up to 3 upcoming and 1 past
+  const upcomingDates = allUpcoming.slice(0, 3);
+  const pastDates = allPast.slice(0, 1);
+
+  // Show "More dates" button if there are more than 3 upcoming OR more than 1 past
+  const showMoreDatesButton = allUpcoming.length > 3 || allPast.length > 1;
+
+  // Format a date entry for display
+  const formatEventDateRow = (dateEntry: {
+    date: string;
+    startTime?: string;
+    endTime?: string;
+  }) => {
+    const isAllDay = !dateEntry.startTime && !dateEntry.endTime;
+    if (isAllDay) return `${dateEntry.date} (All day)`;
+    const timeStr = dateEntry.endTime
+      ? `${dateEntry.startTime} - ${dateEntry.endTime}`
+      : dateEntry.startTime;
+    return `${dateEntry.date} (${timeStr})`;
+  };
 
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col justify-center items-center gap-2 py-5 px-15">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 auto-rows-min w-full max-w-6xl">
-          <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 xl:col-span-4 auto-rows-min">
+      <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[600px] md:max-w-6xl">
+          <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 auto-rows-min">
             <Link href="/events" className="hover:underline">
               {`Back to Events`}
             </Link>
@@ -177,12 +221,12 @@ export default async function EventPage({ params }: PageProps) {
 
           <PosterImage
             poster={event.eventDetails.poster ?? null}
-            className="col-span-1 md:col-span-1 xl:col-span-2"
+            className="col-span-1 md:col-span-1"
           />
 
-          <div className="flex flex-col gap-4 col-span-1 md:col-span-1 xl:col-span-2">
+          <div className="flex flex-col gap-4 col-span-1 md:col-span-1">
             {/* Event Details */}
-            <section className="bg-blue-100 p-4 rounded-md flex flex-col gap-2">
+            <section className="bg-misty-seafoam p-4 rounded-md flex flex-col gap-2 border border-black">
               <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
               {event.eventDetails.eventType && (
                 <div className="flex flex-row gap-2">
@@ -190,25 +234,35 @@ export default async function EventPage({ params }: PageProps) {
                   <b>Type:</b> {event.eventDetails.eventType}
                 </div>
               )}
-              {eventDates.length > 0 && (
+              {(upcomingDates.length > 0 || pastDates.length > 0) && (
                 <div className="flex flex-col gap-2">
-                  {eventDates.map((dateEntry, index) => (
-                    <div key={index} className="flex flex-row gap-2">
+                  {upcomingDates.length > 0 && (
+                    <div className="flex flex-row gap-2">
                       <Calendar />
-                      <b>
-                        Date {eventDates.length > 1 ? `${index + 1}:` : ":"}
-                      </b>
-                      <span>
-                        {dateEntry.date}
-                        {dateEntry.startTime && dateEntry.endTime && (
-                          <span className="ml-2">
-                            ({formatTimeToAMPM(dateEntry.startTime)} -{" "}
-                            {formatTimeToAMPM(dateEntry.endTime)})
+                      <b>Upcoming Dates:</b>
+                      <div className="flex flex-col">
+                        {upcomingDates.map((d, idx) => (
+                          <span key={`upcoming-${d.date}-${idx}`}>
+                            {formatEventDateRow(d)}
                           </span>
-                        )}
-                      </span>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {pastDates.length > 0 && (
+                    <div className="flex flex-row gap-2">
+                      <Calendar />
+                      <b>Past Dates:</b>
+                      <span>{formatEventDateRow(pastDates[0])}</span>
+                    </div>
+                  )}
+
+                  {showMoreDatesButton && (
+                    <div className="pl-7">
+                      <EventDatesDialog eventId={event.id} />
+                    </div>
+                  )}
                 </div>
               )}
               <div className="flex flex-row gap-2">
@@ -262,20 +316,17 @@ export default async function EventPage({ params }: PageProps) {
             </section>
 
             {/* Event Roles */}
-            <section className="p-4 rounded-md bg-green-100 flex flex-col gap-2">
+            <section className="p-4 rounded-md bg-misty-seafoam flex flex-col gap-2 border border-black">
               <h2 className="text-xl font-bold mb-2">Event Roles</h2>
               {creator && (
                 <div className="flex flex-row gap-2 items-center flex-wrap">
                   <span>Creator: </span>
-                  <Badge variant="secondary" asChild>
-                    {creator.username ? (
-                      <Link href={`/profiles/${creator.username}`}>
-                        {creator.displayName || creator.username}
-                      </Link>
-                    ) : (
-                      <span>{creator.displayName || creator.username}</span>
-                    )}
-                  </Badge>
+                  <UserAvatar
+                    username={creator.username || ""}
+                    displayName={creator.displayName || creator.username || ""}
+                    avatar={(creator as { avatar?: string | null }).avatar}
+                    image={(creator as { image?: string | null }).image}
+                  />
                 </div>
               )}
               {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
@@ -284,23 +335,25 @@ export default async function EventPage({ params }: PageProps) {
                   className="flex flex-row gap-2 items-center flex-wrap"
                 >
                   <span>{fromNeo4jRoleFormat(roleTitle) || roleTitle}: </span>
-                  {roles.map((role, index) => (
-                    <Badge
-                      key={`${role.id}-${index}`}
-                      variant="secondary"
-                      asChild
-                    >
-                      {role.user?.username ? (
-                        <Link href={`/profiles/${role.user.username}`}>
-                          {role.user.displayName || role.user.username}
-                        </Link>
-                      ) : (
-                        <span>
-                          {role.user?.displayName || role.user?.username}
-                        </span>
-                      )}
-                    </Badge>
-                  ))}
+                  {roles.map((role, index) =>
+                    role.user?.username ? (
+                      <UserAvatar
+                        key={`${role.id}-${index}`}
+                        username={role.user.username}
+                        displayName={
+                          role.user.displayName || role.user.username
+                        }
+                        avatar={
+                          (role.user as { avatar?: string | null }).avatar
+                        }
+                        image={(role.user as { image?: string | null }).image}
+                      />
+                    ) : (
+                      <span key={`${role.id}-${index}`}>
+                        {role.user?.displayName || role.user?.username}
+                      </span>
+                    )
+                  )}
                 </div>
               ))}
               <TagSelfButton
@@ -314,193 +367,43 @@ export default async function EventPage({ params }: PageProps) {
 
           {/* Description */}
           {event.eventDetails.description && (
-            <section className="flex flex-col gap-2 p-4 bg-red-100 rounded-md col-span-1 md:col-span-2 xl:col-span-2">
-              <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-                <FileText />
-                Description:
+            <section className="flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md col-span-1 md:col-span-2 border border-black">
+              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                Description
               </div>
-              <div className="whitespace-pre-wrap max-w-[500px]">
+              <div className="whitespace-pre-wrap">
                 {event.eventDetails.description}
+              </div>
+              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                Schedule
+              </div>
+              <div className="whitespace-pre-wrap">
+                {event.eventDetails.schedule || "No schedule available"}
               </div>
             </section>
           )}
 
-          {/* Schedule */}
-          <section className="flex flex-col gap-2 bg-purple-100 rounded-md p-4 col-span-1 md:col-span-2 xl:col-span-2">
-            <div className="flex flex-row justify-center items-center gap-2 font-bold text-2xl">
-              <Calendar />
-              Schedule:
-            </div>
-            <div className="whitespace-pre-wrap">
-              {event.eventDetails.schedule || "No schedule available"}
-            </div>
-          </section>
-
           {/* Sections */}
           {event.sections && event.sections.length > 0 && (
-            <section className="flex flex-wrap gap-2 bg-green-300 rounded-md p-4 w-full shadow-md col-span-1 md:col-span-2 xl:col-span-4">
-              <div className="w-full">
-                <Link href={`/events/${event.id}/sections`} className="w-full">
-                  <h2 className="text-2xl font-bold mb-4 text-center">
-                    Sections
-                  </h2>
-                </Link>
+            <section className="col-span-1 md:col-span-2">
+              <h2 className="text-2xl font-bold mb-4 text-center">Sections</h2>
 
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {event.sections.map((section) => {
-                    // Calculate total video count
-                    const directVideoCount = section.videos.length;
-                    const bracketVideoCount = section.brackets.reduce(
-                      (sum: number, bracket) => sum + bracket.videos.length,
-                      0
-                    );
-                    const totalVideoCount =
-                      directVideoCount + bracketVideoCount;
-
-                    return (
-                      <div
-                        key={section.id}
-                        className="bg-white rounded-lg p-4 shadow-sm max-w-lg"
-                      >
-                        <div className="flex gap-4">
-                          {/* Poster on left - 1/2 width */}
-                          <div className="w-1/2">
-                            {section.poster?.url ? (
-                              <NextImage
-                                src={section.poster.url}
-                                alt={section.poster.title || section.title}
-                                width={200}
-                                height={200}
-                                className="w-full h-auto object-cover rounded-lg"
-                              />
-                            ) : (
-                              <div className="w-full aspect-square bg-gray-200 rounded-lg flex items-center justify-center">
-                                <span className="text-gray-400 text-sm">
-                                  No poster
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Content on right - 1/2 width */}
-                          <div className="w-1/2 flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/events/${event.id}/sections/${section.id}`}
-                                className="text-xl font-semibold text-gray-800 hover:text-blue-600 hover:underline transition-colors"
-                              >
-                                {section.title}
-                              </Link>
-                            </div>
-                            {section.sectionType && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs w-fit"
-                              >
-                                {section.sectionType}
-                              </Badge>
-                            )}
-                            {/* Display section styles */}
-                            {section.applyStylesToVideos &&
-                              section.styles &&
-                              section.styles.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {section.styles.map((style) => (
-                                    <StyleBadge
-                                      key={style}
-                                      style={style}
-                                      asLink={false}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            {/* Display aggregated video styles if applyStylesToVideos is false */}
-                            {!section.applyStylesToVideos &&
-                              (() => {
-                                const videoStyles = new Set<string>();
-                                section.videos.forEach((video) => {
-                                  if (video.styles) {
-                                    video.styles.forEach((style: string) =>
-                                      videoStyles.add(style)
-                                    );
-                                  }
-                                });
-                                section.brackets.forEach((bracket) => {
-                                  bracket.videos.forEach((video) => {
-                                    if (video.styles) {
-                                      video.styles.forEach((style: string) =>
-                                        videoStyles.add(style)
-                                      );
-                                    }
-                                  });
-                                });
-                                const stylesArray = Array.from(videoStyles);
-                                return stylesArray.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {stylesArray.map((style: string) => (
-                                      <StyleBadge
-                                        key={style}
-                                        style={style}
-                                        asLink={false}
-                                      />
-                                    ))}
-                                  </div>
-                                ) : null;
-                              })()}
-                            <span className="text-sm text-gray-500">
-                              {totalVideoCount}{" "}
-                              {totalVideoCount === 1 ? "video" : "videos"}
-                            </span>
-                            {/* Display section winners */}
-                            {section.winners && section.winners.length > 0 && (
-                              <div className="flex flex-wrap gap-1 items-center mt-2">
-                                <span className="text-lg font-bold">
-                                  Winner:
-                                </span>
-                                {Array.from(
-                                  new Map(
-                                    section.winners
-                                      .filter((w) => w && w.id)
-                                      .map((w) => [w.id, w])
-                                  ).values()
-                                ).map((winner) => (
-                                  <Badge
-                                    key={winner.id}
-                                    variant="secondary"
-                                    className="text-xs"
-                                    asChild
-                                  >
-                                    {winner.username ? (
-                                      <Link
-                                        href={`/profiles/${winner.username}`}
-                                      >
-                                        {winner.displayName}
-                                      </Link>
-                                    ) : (
-                                      <span>{winner.displayName}</span>
-                                    )}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                            {section.description && (
-                              <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                                {section.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {event.sections.map((section) => (
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    eventId={event.id}
+                    eventTitle={event.eventDetails.title}
+                  />
+                ))}
               </div>
             </section>
           )}
 
           {/* Photo Gallery */}
           {event.gallery.length > 0 && (
-            <section className="flex flex-col bg-red-100 rounded-md p-4 w-full col-span-1 md:col-span-2 xl:col-span-4">
+            <section className="flex flex-col bg-misty-seafoam rounded-md p-4 w-full col-span-1 md:col-span-2">
               <h2 className="text-2xl font-bold mb-2 text-center">
                 Photo Gallery
               </h2>

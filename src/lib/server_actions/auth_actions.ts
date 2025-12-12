@@ -21,12 +21,13 @@ import { prisma } from "@/lib/primsa";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { City } from "@/types/city";
 import { signIn, signOut } from "@/auth";
-import { EventDate, EventType } from "@/types/event";
+import { EventDate, EventType, Event, EventDetails } from "@/types/event";
 import {
   getEventTypeFromLabel,
   getAllEventTypeLabels,
 } from "@/db/queries/event";
 import { UserSearchItem } from "@/types/user";
+import { Image } from "@/types/image";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -103,8 +104,13 @@ export async function signup(
     let avatarUrl: string | null = null;
     const profilePicture = formData.get("profilePicture") as File | null;
     const avatarPicture = formData.get("avatarPicture") as File | null;
-    
-    if (profilePicture && profilePicture.size > 0 && avatarPicture && avatarPicture.size > 0) {
+
+    if (
+      profilePicture &&
+      profilePicture.size > 0 &&
+      avatarPicture &&
+      avatarPicture.size > 0
+    ) {
       // Use username for R2 paths (public-facing identifier)
       const username = adminUser
         ? adminUser.defaultData.username
@@ -154,18 +160,32 @@ export async function signup(
       throw new Error("City is required");
     }
 
-    // Use admin defaults if this is an admin user, otherwise use form data
-    const profileData = adminUser
+    type ProfileData = {
+      displayName: string;
+      username: string;
+      city: City | string;
+      date: string;
+      styles: string[];
+      bio: string | null;
+      instagram: string | null;
+      website: string | null;
+      image: string | null;
+      avatar?: string | null;
+    };
+
+    // Use admin defaults if this is a predefined admin user, otherwise use form data
+    const profileData: ProfileData = adminUser
       ? {
           displayName: adminUser.defaultData.displayName,
           username: adminUser.defaultData.username,
           city: adminUser.defaultData.city as string, // Admin defaults use string for now
           date: adminUser.defaultData.date,
           styles: [],
-          bio: "",
-          instagram: "",
-          website: "",
+          bio: null,
+          instagram: null,
+          website: null,
           image: null,
+          avatar: null,
         }
       : {
           displayName: formData.get("displayName") as string,
@@ -182,6 +202,34 @@ export async function signup(
 
     // Update user in Neo4j with profile information
     const userResult = await signupUser(session.user.id, profileData);
+
+    // Upsert Postgres user_cards projection (for fast user card feeds)
+    const cityObj =
+      typeof profileData.city === "object" ? profileData.city : null;
+    await prisma.userCard.upsert({
+      where: { userId: session.user.id },
+      update: {
+        username: profileData.username,
+        displayName: profileData.displayName,
+        imageUrl: profileData.image ?? null,
+        cityId: cityObj?.id ?? null,
+        cityName:
+          cityObj?.name ??
+          (typeof profileData.city === "string" ? profileData.city : null),
+        styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
+      },
+      create: {
+        userId: session.user.id,
+        username: profileData.username,
+        displayName: profileData.displayName,
+        imageUrl: profileData.image ?? null,
+        cityId: cityObj?.id ?? null,
+        cityName:
+          cityObj?.name ??
+          (typeof profileData.city === "string" ? profileData.city : null),
+        styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
+      },
+    });
 
     // Determine auth level
     let authLevel: number;
@@ -315,19 +363,22 @@ export async function getUserProfile(userIdOrUsername: string) {
       `
       MATCH (u:User {id: $userId})-[:CREATED]->(e:Event)
       OPTIONAL MATCH (e)-[:IN]->(c:City)
-      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
-      WITH e, c, poster, s,
+      WITH e, c, poster, s, u,
            [label IN labels(e) WHERE label IN $allEventTypeLabels][0] as eventTypeLabel
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as startDate, e.dates as dates,
-             e.createdAt as createdAt, poster.url as imageUrl, c.name as city, c.id as cityId,
+             e.createdAt as createdAt, e.updatedAt as updatedAt, u.id as creatorId,
+             poster.id as posterId, poster.title as posterTitle, poster.url as imageUrl, 
+             c.name as cityName, c.id as cityId, c.countryCode as cityCountryCode, 
+             c.region as cityRegion, c.population as cityPopulation, c.timezone as cityTimezone,
              collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
       { userId, allEventTypeLabels }
     );
 
-    const eventsCreated = eventsCreatedResult.records.map((record) => {
+    const eventsCreated: Event[] = eventsCreatedResult.records.map((record) => {
       const dates = record.get("dates");
       const eventTypeLabel = record.get("eventTypeLabel");
       let parsedDates: EventDate[] = [];
@@ -338,19 +389,69 @@ export async function getUserProfile(userIdOrUsername: string) {
           parsedDates = [];
         }
       }
-      return {
-        eventId: record.get("eventId"),
-        eventTitle: record.get("eventTitle") || "Untitled Event",
-        startDate: record.get("startDate"), // Keep for backward compatibility
+
+      const eventId = record.get("eventId");
+      const imageUrl = record.get("imageUrl");
+      const posterId = record.get("posterId");
+      const posterTitle = record.get("posterTitle");
+      const cityId = record.get("cityId");
+      const cityName = record.get("cityName");
+
+      // Build poster Image object if imageUrl exists
+      const poster: Image | null = imageUrl
+        ? {
+            id: posterId || "",
+            title: posterTitle || "",
+            url: imageUrl,
+            type: "poster",
+            file: null,
+          }
+        : null;
+
+      // Build City object
+      const city: City = cityId
+        ? {
+            id: cityId as number,
+            name: cityName || "",
+            countryCode: record.get("cityCountryCode") || "",
+            region: record.get("cityRegion") || "",
+            population: (record.get("cityPopulation") as number) || 0,
+            timezone: record.get("cityTimezone") || undefined,
+          }
+        : {
+            id: 0,
+            name: "",
+            countryCode: "",
+            region: "",
+            population: 0,
+          };
+
+      // Build eventDetails
+      const creatorId = record.get("creatorId") || userId;
+      const eventDetails: EventDetails = {
+        title: record.get("eventTitle") || "Untitled Event",
         dates: Array.isArray(parsedDates) ? parsedDates : [],
-        createdAt: record.get("createdAt"),
-        imageUrl: record.get("imageUrl"),
-        city: record.get("city"),
-        cityId: record.get("cityId") as number | undefined,
+        poster: poster,
+        city: city,
         styles: record.get("styles") || [],
         eventType: eventTypeLabel
-          ? (getEventTypeFromLabel(eventTypeLabel) as EventType | undefined)
-          : undefined,
+          ? (getEventTypeFromLabel(eventTypeLabel) as EventType)
+          : "Other",
+        creatorId: creatorId,
+      };
+
+      // Build Event object
+      const createdAt = record.get("createdAt");
+      const updatedAt = record.get("updatedAt");
+
+      return {
+        id: eventId,
+        createdAt: createdAt ? new Date(createdAt) : new Date(),
+        updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
+        eventDetails: eventDetails,
+        roles: [],
+        gallery: [],
+        sections: [],
       };
     });
 
@@ -361,50 +462,116 @@ export async function getUserProfile(userIdOrUsername: string) {
       MATCH (u:User {id: $userId})-[roleRel]->(e:Event)
       WHERE type(roleRel) IN $validRoles
       OPTIONAL MATCH (e)-[:IN]->(c:City)
-      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
-      WITH e, c, poster, s, type(roleRel) as role,
+      OPTIONAL MATCH (creator:User)-[:CREATED]->(e)
+      WITH e, c, poster, s, creator, type(roleRel) as role,
            [label IN labels(e) WHERE label IN $allEventTypeLabels][0] as eventTypeLabel
       RETURN e.id as eventId, e.title as eventTitle, 
              collect(DISTINCT role) as roles,
-             e.createdAt as createdAt, e.startDate as startDate,
-             e.dates as dates,
+             e.createdAt as createdAt, e.updatedAt as updatedAt, e.startDate as startDate,
+             e.dates as dates, creator.id as creatorId,
+             head(collect(DISTINCT poster.id)) as posterId,
+             head(collect(DISTINCT poster.title)) as posterTitle,
              head(collect(DISTINCT poster.url)) as imageUrl, 
-             head(collect(DISTINCT c.name)) as city,
+             head(collect(DISTINCT c.name)) as cityName,
              head(collect(DISTINCT c.id)) as cityId,
+             head(collect(DISTINCT c.countryCode)) as cityCountryCode,
+             head(collect(DISTINCT c.region)) as cityRegion,
+             head(collect(DISTINCT c.population)) as cityPopulation,
+             head(collect(DISTINCT c.timezone)) as cityTimezone,
              collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
       { userId, validRoles: validRoleFormats, allEventTypeLabels }
     );
 
-    const eventsWithRoles = eventsWithRolesResult.records.map((record) => {
-      const dates = record.has("dates") ? record.get("dates") : undefined;
-      const eventTypeLabel = record.get("eventTypeLabel");
-      let parsedDates: EventDate[] = [];
-      if (dates) {
-        try {
-          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch {
-          parsedDates = [];
+    const eventsWithRoles: Event[] = eventsWithRolesResult.records.map(
+      (record) => {
+        const dates = record.has("dates") ? record.get("dates") : undefined;
+        const eventTypeLabel = record.get("eventTypeLabel");
+        let parsedDates: EventDate[] = [];
+        if (dates) {
+          try {
+            parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+          } catch {
+            parsedDates = [];
+          }
         }
+
+        const eventId = record.get("eventId");
+        const imageUrl = record.get("imageUrl");
+        const posterId = record.get("posterId");
+        const posterTitle = record.get("posterTitle");
+        const cityId = record.get("cityId");
+        const cityName = record.get("cityName");
+        const roles = record.get("roles") || [];
+
+        // Build poster Image object if imageUrl exists
+        const poster: Image | null = imageUrl
+          ? {
+              id: posterId || "",
+              title: posterTitle || "",
+              url: imageUrl,
+              type: "poster",
+              file: null,
+            }
+          : null;
+
+        // Build City object
+        const city: City = cityId
+          ? {
+              id: cityId as number,
+              name: cityName || "",
+              countryCode: record.get("cityCountryCode") || "",
+              region: record.get("cityRegion") || "",
+              population: (record.get("cityPopulation") as number) || 0,
+              timezone: record.get("cityTimezone") || undefined,
+            }
+          : {
+              id: 0,
+              name: "",
+              countryCode: "",
+              region: "",
+              population: 0,
+            };
+
+        // Build eventDetails
+        const creatorId = record.get("creatorId") || "";
+        const eventDetails: EventDetails = {
+          title: record.get("eventTitle") || "Untitled Event",
+          dates: Array.isArray(parsedDates) ? parsedDates : [],
+          poster: poster,
+          city: city,
+          styles: record.get("styles") || [],
+          eventType: eventTypeLabel
+            ? (getEventTypeFromLabel(eventTypeLabel) as EventType)
+            : "Other",
+          creatorId: creatorId,
+        };
+
+        // Build Event object with roles
+        const createdAt = record.get("createdAt");
+        const updatedAt = record.get("updatedAt");
+
+        // Transform roles to Role[] format
+        const roleObjects = roles.map((roleTitle: string) => ({
+          id: `${eventId}-${roleTitle}`,
+          title: roleTitle,
+          user: null, // We don't have user info for roles in this query
+        }));
+
+        return {
+          id: eventId,
+          createdAt: createdAt ? new Date(createdAt) : new Date(),
+          updatedAt: updatedAt ? new Date(updatedAt) : new Date(),
+          eventDetails: eventDetails,
+          roles: roleObjects,
+          gallery: [],
+          sections: [],
+        };
       }
-      return {
-        eventId: record.get("eventId"),
-        eventTitle: record.get("eventTitle") || "Untitled Event",
-        roles: record.get("roles") || [],
-        createdAt: record.get("createdAt"),
-        startDate: record.get("startDate"), // Keep for backward compatibility
-        dates: Array.isArray(parsedDates) ? parsedDates : [],
-        imageUrl: record.get("imageUrl"),
-        city: record.get("city"),
-        cityId: record.get("cityId") as number | undefined,
-        styles: record.get("styles") || [],
-        eventType: eventTypeLabel
-          ? (getEventTypeFromLabel(eventTypeLabel) as EventType | undefined)
-          : undefined,
-      };
-    });
+    );
 
     // Get videos where user is tagged with full video data (collecting all roles)
     // Use relationship types :DANCER and :WINNER
@@ -449,7 +616,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       MATCH (u:User {id: $userId})-[r:WINNER]->(s:Section)
       MATCH (s)-[:IN]->(e:Event)
       OPTIONAL MATCH (e)-[:IN]->(c:City)
-      OPTIONAL MATCH (poster:Picture)-[:POSTER]->(e)
+      OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
       WITH s, e, c, poster,
            [label IN labels(s) WHERE label IN ['BattleSection', 'TournamentSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'MixedSection']] as sectionTypeLabels
       RETURN s.id as sectionId, s.title as sectionTitle,
@@ -492,6 +659,8 @@ export async function getUserProfile(userIdOrUsername: string) {
           id: u.id,
           displayName: u.displayName,
           username: u.username,
+          avatar: u.avatar,
+          image: u.image,
           role: role
         }) as taggedUsers
         `,
@@ -543,6 +712,8 @@ export async function getUserProfile(userIdOrUsername: string) {
           id: u.id,
           displayName: u.displayName,
           username: u.username,
+          avatar: u.avatar,
+          image: u.image,
           role: role
         }) as taggedUsers
         `,
@@ -686,8 +857,13 @@ export async function updateUserProfile(userId: string, formData: FormData) {
     let avatarUrl = (currentUser as { avatar?: string | null }).avatar || null;
     const profilePicture = formData.get("profilePicture") as File | null;
     const avatarPicture = formData.get("avatarPicture") as File | null;
-    
-    if (profilePicture && profilePicture.size > 0 && avatarPicture && avatarPicture.size > 0) {
+
+    if (
+      profilePicture &&
+      profilePicture.size > 0 &&
+      avatarPicture &&
+      avatarPicture.size > 0
+    ) {
       // Delete old profile and avatar pictures if they exist
       if (currentUser.image) {
         await deleteFromR2(currentUser.image);
@@ -747,6 +923,28 @@ export async function updateUserProfile(userId: string, formData: FormData) {
 
     // Update user in Neo4j with styles
     await updateUser(userId, userUpdate, styles);
+
+    // Upsert Postgres user_cards projection (for fast user card feeds)
+    await prisma.userCard.upsert({
+      where: { userId },
+      update: {
+        username: currentUser.username,
+        displayName: userUpdate.displayName || currentUser.displayName || "",
+        imageUrl: (userUpdate.image as string | null) ?? null,
+        cityId: cityData?.id ?? null,
+        cityName: cityData?.name ?? null,
+        styles: (styles || []).map((s) => s.toUpperCase().trim()),
+      },
+      create: {
+        userId,
+        username: currentUser.username,
+        displayName: userUpdate.displayName || currentUser.displayName || "",
+        imageUrl: (userUpdate.image as string | null) ?? null,
+        cityId: cityData?.id ?? null,
+        cityName: cityData?.name ?? null,
+        styles: (styles || []).map((s) => s.toUpperCase().trim()),
+      },
+    });
 
     return { success: true };
   } catch (error) {

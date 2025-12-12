@@ -1,9 +1,9 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getAllUsers } from "@/db/queries/user";
-import { UserCard } from "@/components/user-card";
+import { getUserCards } from "@/db/queries/user-cards";
+import { UserCard } from "@/components/UserCard";
 
 export default async function ProfilesPage() {
-  const users = await getAllUsers();
+  const users = await getUserCards();
 
   return (
     <>
@@ -19,13 +19,11 @@ export default async function ProfilesPage() {
             {users.map((user) => (
               <UserCard
                 key={user.id}
-                id={user.id}
                 displayName={user.displayName}
                 username={user.username}
-                image={user.image}
+                image={user.image ?? undefined}
                 styles={user.styles}
                 city={user.city}
-                cityId={user.cityId}
               />
             ))}
           </div>
