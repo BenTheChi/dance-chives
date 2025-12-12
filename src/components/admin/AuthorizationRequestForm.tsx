@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Loader2, Send, Info } from "lucide-react";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
-import { getAuthLevelName } from "@/lib/utils/auth-utils";
+import { getAuthLevelName } from "@/lib/utils/auth-utils-shared";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { createAuthLevelChangeRequest } from "@/lib/server_actions/request_actions";

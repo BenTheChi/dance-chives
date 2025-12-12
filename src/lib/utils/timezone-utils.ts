@@ -30,7 +30,13 @@ export function zonedDateTimeToUtc(opts: {
   // Create a "wall clock" Date and interpret it in the provided timeZone.
   const wallClock = new Date(d);
   wallClock.setHours(hh, mm, 0, 0);
-  return fromZonedTime(wallClock, timeZone);
+  const result = fromZonedTime(wallClock, timeZone);
+  if (!isValid(result)) {
+    throw new Error(
+      `Failed to convert date/time to UTC: ${dateMmddyyyy} ${timeHHmm} ${timeZone}`
+    );
+  }
+  return result;
 }
 
 /**

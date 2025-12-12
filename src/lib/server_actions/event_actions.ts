@@ -318,25 +318,43 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     const timezoneData = await response.json();
 
+    // Normalize timezone format (GeoDB may return underscores instead of slashes)
+    const rawTimezone = timezoneData.data?.timezone || "";
+    const normalizedTimezone = rawTimezone.replace(/__/g, "/");
+
     // Normalize dates: if isAllDay is true, set times to empty strings
     // Remove isAllDay field before storing (it's form-only)
-    const normalizedDates = props.eventDetails.dates.map((dateEntry) => {
-      const isAllDay =
-        dateEntry.isAllDay ??
-        isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
-      const normalizedStartTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.startTime);
-      const normalizedEndTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.endTime);
+    const normalizedDates = props.eventDetails.dates
+      .map((dateEntry) => {
+        const isAllDay =
+          dateEntry.isAllDay ??
+          isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
+        const normalizedStartTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.startTime);
+        const normalizedEndTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.endTime);
 
-      return {
-        date: dateEntry.date,
-        startTime: normalizedStartTime,
-        endTime: normalizedEndTime,
-      };
-    });
+        return {
+          date: dateEntry.date,
+          startTime: normalizedStartTime,
+          endTime: normalizedEndTime,
+        };
+      })
+      // Sort dates chronologically so they're always in order
+      .sort((a, b) => {
+        const parseDate = (dateStr: string): Date => {
+          // Handle ISO format (YYYY-MM-DD)
+          if (dateStr.includes("-")) {
+            return new Date(dateStr);
+          }
+          // Handle MM/DD/YYYY format
+          const [month, day, year] = dateStr.split("/").map(Number);
+          return new Date(year, month - 1, day);
+        };
+        return parseDate(a.date).getTime() - parseDate(b.date).getTime();
+      });
 
     // Create the EventDetails object
     // Ensure eventType is always set (default to "Other" if not provided)
@@ -353,7 +371,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       styles: props.eventDetails.styles,
       city: {
         ...props.eventDetails.city,
-        timezone: timezoneData.data.timezone,
+        timezone: normalizedTimezone,
       },
     };
 
@@ -614,7 +632,11 @@ export async function editEvent(
       }
     });
 
-    let timezone = oldEvent.eventDetails.city.timezone;
+    // Normalize timezone format (GeoDB may return underscores instead of slashes)
+    let timezone = (oldEvent.eventDetails.city.timezone || "").replace(
+      /__/g,
+      "/"
+    );
 
     if (editedEvent.eventDetails.city.id !== oldEvent.eventDetails.city.id) {
       // Get timezone for city
@@ -632,28 +654,43 @@ export async function editEvent(
       }
 
       const responseData = await response.json();
-      timezone = responseData.data.timezone;
+      const rawTimezone = responseData.data?.timezone || "";
+      timezone = rawTimezone.replace(/__/g, "/");
     }
 
     // Normalize dates: if isAllDay is true, set times to empty strings
     // Remove isAllDay field before storing (it's form-only)
-    const normalizedDates = editedEvent.eventDetails.dates.map((dateEntry) => {
-      const isAllDay =
-        dateEntry.isAllDay ??
-        isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
-      const normalizedStartTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.startTime);
-      const normalizedEndTime = isAllDay
-        ? ""
-        : normalizeTime(dateEntry.endTime);
+    const normalizedDates = editedEvent.eventDetails.dates
+      .map((dateEntry) => {
+        const isAllDay =
+          dateEntry.isAllDay ??
+          isAllDayEvent(dateEntry.startTime, dateEntry.endTime);
+        const normalizedStartTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.startTime);
+        const normalizedEndTime = isAllDay
+          ? ""
+          : normalizeTime(dateEntry.endTime);
 
-      return {
-        date: dateEntry.date,
-        startTime: normalizedStartTime,
-        endTime: normalizedEndTime,
-      };
-    });
+        return {
+          date: dateEntry.date,
+          startTime: normalizedStartTime,
+          endTime: normalizedEndTime,
+        };
+      })
+      // Sort dates chronologically so they're always in order
+      .sort((a, b) => {
+        const parseDate = (dateStr: string): Date => {
+          // Handle ISO format (YYYY-MM-DD)
+          if (dateStr.includes("-")) {
+            return new Date(dateStr);
+          }
+          // Handle MM/DD/YYYY format
+          const [month, day, year] = dateStr.split("/").map(Number);
+          return new Date(year, month - 1, day);
+        };
+        return parseDate(a.date).getTime() - parseDate(b.date).getTime();
+      });
 
     // Create the EventDetails object
     // Ensure eventType is always set (default to "Other" if not provided)
@@ -960,7 +997,9 @@ async function upsertEventReadModels(input: {
 }): Promise<void> {
   const { eventId, eventDetails, sections } = input;
 
-  const eventTimezone = eventDetails.city.timezone || null;
+  // Normalize timezone format (fix double underscores from GeoDB API)
+  const rawTimezone = eventDetails.city.timezone || "";
+  const eventTimezone = rawTimezone.replace(/__/g, "/") || null;
   const displayDateLocal = eventDetails.dates?.[0]?.date || null;
   const additionalDatesCount = Math.max(
     0,
@@ -1004,7 +1043,21 @@ async function upsertEventReadModels(input: {
   await prisma.eventDate.deleteMany({ where: { eventId } });
 
   if (eventDetails.dates && eventDetails.dates.length > 0 && eventTimezone) {
-    const dateRows = eventDetails.dates.map((d) => {
+    // Filter out entries with missing or invalid date strings
+    const validDates = eventDetails.dates.filter((d) => {
+      if (!d.date || typeof d.date !== "string" || d.date.trim() === "") {
+        return false;
+      }
+      // Validate date format is MM/DD/YYYY
+      try {
+        parseMmddyyyy(d.date);
+        return true;
+      } catch {
+        console.warn(`Skipping invalid date format: "${d.date}"`);
+        return false;
+      }
+    });
+    const dateRows = validDates.map((d) => {
       const isAllDay =
         !d.startTime || !d.endTime || d.startTime === "" || d.endTime === "";
       if (isAllDay) {

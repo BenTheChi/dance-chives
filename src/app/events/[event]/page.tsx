@@ -25,8 +25,6 @@ import { SectionCard } from "@/components/ui/section-card";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
-import { prisma } from "@/lib/primsa";
-import { formatInTimeZone } from "date-fns-tz";
 import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 
 type PageProps = {
@@ -142,54 +140,56 @@ export default async function EventPage({ params }: PageProps) {
     ? await getUser(event.eventDetails.creatorId)
     : null;
 
-  // Get all dates to display
-  const eventCard = await prisma.eventCard.findUnique({
-    where: { eventId: event.id },
-    select: { eventTimezone: true },
-  });
-  const eventTimezone =
-    eventCard?.eventTimezone || event.eventDetails.city.timezone || "UTC";
-  const nowUtc = new Date();
-  const todayIso = formatInTimeZone(nowUtc, eventTimezone, "yyyy-MM-dd");
-  const todayLocalDate = new Date(`${todayIso}T00:00:00.000Z`);
+  // Get timezone for date display
+  const eventTimezone = event.eventDetails.city.timezone || "UTC";
 
-  const nextThree = await prisma.eventDate.findMany({
-    where: {
-      eventId: event.id,
-      OR: [
-        { kind: "allDay", localDate: { gte: todayLocalDate } },
-        { kind: "timed", startUtc: { gte: nowUtc } },
-      ],
-    },
-    orderBy: [{ startUtc: "asc" }, { id: "asc" }],
-    take: 3,
-  });
+  // Helper to parse date string (MM/DD/YYYY or YYYY-MM-DD format)
+  const parseEventDate = (dateStr: string): Date => {
+    if (dateStr.includes("-")) {
+      return new Date(dateStr);
+    }
+    const [month, day, year] = dateStr.split("/").map(Number);
+    return new Date(year, month - 1, day);
+  };
 
-  const lastPast = await prisma.eventDate.findFirst({
-    where: {
-      eventId: event.id,
-      OR: [
-        { kind: "allDay", localDate: { lt: todayLocalDate } },
-        { kind: "timed", startUtc: { lt: nowUtc } },
-      ],
-    },
-    orderBy: [{ startUtc: "desc" }, { id: "desc" }],
+  // Get today's date at midnight for comparison
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Process dates from Neo4j event data
+  const eventDates = event.eventDetails.dates || [];
+
+  // Sort all dates chronologically and separate into upcoming/past
+  const sortedDates = [...eventDates].sort((a, b) => {
+    return parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime();
   });
 
-  const formatEventDateRow = (row: {
-    kind: "timed" | "allDay";
-    startUtc: Date;
-    endUtc: Date | null;
+  const allUpcoming = sortedDates.filter(
+    (d) => parseEventDate(d.date) >= today
+  );
+  const allPast = sortedDates
+    .filter((d) => parseEventDate(d.date) < today)
+    .reverse(); // Most recent past first
+
+  // Take up to 3 upcoming and 1 past
+  const upcomingDates = allUpcoming.slice(0, 3);
+  const pastDates = allPast.slice(0, 1);
+
+  // Show "More dates" button if there are more than 3 upcoming OR more than 1 past
+  const showMoreDatesButton = allUpcoming.length > 3 || allPast.length > 1;
+
+  // Format a date entry for display
+  const formatEventDateRow = (dateEntry: {
+    date: string;
+    startTime?: string;
+    endTime?: string;
   }) => {
-    const dateStr = formatInTimeZone(row.startUtc, eventTimezone, "MM/dd/yyyy");
-    if (row.kind === "allDay") return `${dateStr} (All day)`;
-    const startTime = formatInTimeZone(row.startUtc, eventTimezone, "h:mm a");
-    const endTime = row.endUtc
-      ? formatInTimeZone(row.endUtc, eventTimezone, "h:mm a")
-      : "";
-    return endTime
-      ? `${dateStr} (${startTime} - ${endTime})`
-      : `${dateStr} (${startTime})`;
+    const isAllDay = !dateEntry.startTime && !dateEntry.endTime;
+    if (isAllDay) return `${dateEntry.date} (All day)`;
+    const timeStr = dateEntry.endTime
+      ? `${dateEntry.startTime} - ${dateEntry.endTime}`
+      : dateEntry.startTime;
+    return `${dateEntry.date} (${timeStr})`;
   };
 
   return (
@@ -234,33 +234,35 @@ export default async function EventPage({ params }: PageProps) {
                   <b>Type:</b> {event.eventDetails.eventType}
                 </div>
               )}
-              {(nextThree.length > 0 || lastPast) && (
+              {(upcomingDates.length > 0 || pastDates.length > 0) && (
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-row gap-2">
-                    <Calendar />
-                    <b>Next:</b>
-                    <div className="flex flex-col">
-                      {nextThree.length > 0 ? (
-                        nextThree.map((d) => (
-                          <span key={d.id}>{formatEventDateRow(d)}</span>
-                        ))
-                      ) : (
-                        <span>No upcoming dates.</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {lastPast && (
+                  {upcomingDates.length > 0 && (
                     <div className="flex flex-row gap-2">
                       <Calendar />
-                      <b>Last:</b>
-                      <span>{formatEventDateRow(lastPast)}</span>
+                      <b>Upcoming Dates:</b>
+                      <div className="flex flex-col">
+                        {upcomingDates.map((d, idx) => (
+                          <span key={`upcoming-${d.date}-${idx}`}>
+                            {formatEventDateRow(d)}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  <div className="pl-7">
-                    <EventDatesDialog eventId={event.id} />
-                  </div>
+                  {pastDates.length > 0 && (
+                    <div className="flex flex-row gap-2">
+                      <Calendar />
+                      <b>Past Dates:</b>
+                      <span>{formatEventDateRow(pastDates[0])}</span>
+                    </div>
+                  )}
+
+                  {showMoreDatesButton && (
+                    <div className="pl-7">
+                      <EventDatesDialog eventId={event.id} />
+                    </div>
+                  )}
                 </div>
               )}
               <div className="flex flex-row gap-2">
