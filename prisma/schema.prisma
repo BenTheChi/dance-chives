@@ -105,6 +105,118 @@ model Event {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Read models (Postgres projections) for fast card + calendar queries.
+// These are derived from Neo4j entities and keyed by Neo4j IDs.
+
+enum EventDateKind {
+  timed
+  allDay
+}
+
+model EventCard {
+  /// Neo4j Event.id
+  eventId String @id
+
+  title     String
+  eventType String?
+
+  cityId       Int?
+  cityName     String?
+  region       String?
+  countryCode  String?
+  eventTimezone String?
+
+  posterUrl String?
+
+  // Denormalized tags for fast card rendering / filtering
+  styles String[] @default([])
+
+  /// Primary display date in MM/DD/YYYY (keeps UI stable)
+  displayDateLocal String?
+  additionalDatesCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eventDates    EventDate[]
+  sectionCards  SectionCard[]
+
+  @@map("event_cards")
+  @@index([cityId])
+  @@index([eventType])
+  @@index([updatedAt])
+  @@index([styles], type: Gin)
+}
+
+model EventDate {
+  id String @id @default(cuid())
+
+  /// Neo4j Event.id
+  eventId String
+  event   EventCard @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+
+  kind EventDateKind
+
+  // Always stored as UTC instants for ordering/paging.
+  startUtc DateTime @db.Timestamptz(6)
+  endUtc   DateTime? @db.Timestamptz(6)
+
+  // For all-day events: authoritative local calendar day in the event timezone.
+  localDate DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+
+  @@map("event_dates")
+  @@index([eventId, startUtc])
+  @@index([startUtc])
+}
+
+model SectionCard {
+  /// Neo4j Section.id
+  sectionId String @id
+
+  /// Neo4j Event.id
+  eventId String
+  event   EventCard @relation(fields: [eventId], references: [eventId], onDelete: Cascade)
+
+  title       String
+  sectionType String?
+  posterUrl   String?
+
+  styles String[] @default([])
+  totalVideoCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("section_cards")
+  @@index([eventId])
+  @@index([styles], type: Gin)
+}
+
+model UserCard {
+  /// Neo4j User.id
+  userId String @id
+
+  username    String @unique
+  displayName String
+
+  imageUrl String?
+
+  cityId   Int?
+  cityName String?
+
+  styles String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_cards")
+  @@index([cityId])
+  @@index([styles], type: Gin)
+  @@index([updatedAt])
+}
+
 // Request Models
 
 enum RequestStatus {

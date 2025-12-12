@@ -63,6 +63,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.482.0",
     "neo4j-driver": "^5.28.1",

@@ -160,18 +160,32 @@ export async function signup(
       throw new Error("City is required");
     }
 
-    // Use admin defaults if this is an admin user, otherwise use form data
-    const profileData = adminUser
+    type ProfileData = {
+      displayName: string;
+      username: string;
+      city: City | string;
+      date: string;
+      styles: string[];
+      bio: string | null;
+      instagram: string | null;
+      website: string | null;
+      image: string | null;
+      avatar?: string | null;
+    };
+
+    // Use admin defaults if this is a predefined admin user, otherwise use form data
+    const profileData: ProfileData = adminUser
       ? {
           displayName: adminUser.defaultData.displayName,
           username: adminUser.defaultData.username,
           city: adminUser.defaultData.city as string, // Admin defaults use string for now
           date: adminUser.defaultData.date,
           styles: [],
-          bio: "",
-          instagram: "",
-          website: "",
+          bio: null,
+          instagram: null,
+          website: null,
           image: null,
+          avatar: null,
         }
       : {
           displayName: formData.get("displayName") as string,
@@ -188,6 +202,34 @@ export async function signup(
 
     // Update user in Neo4j with profile information
     const userResult = await signupUser(session.user.id, profileData);
+
+    // Upsert Postgres user_cards projection (for fast user card feeds)
+    const cityObj =
+      typeof profileData.city === "object" ? profileData.city : null;
+    await prisma.userCard.upsert({
+      where: { userId: session.user.id },
+      update: {
+        username: profileData.username,
+        displayName: profileData.displayName,
+        imageUrl: profileData.image ?? null,
+        cityId: cityObj?.id ?? null,
+        cityName:
+          cityObj?.name ??
+          (typeof profileData.city === "string" ? profileData.city : null),
+        styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
+      },
+      create: {
+        userId: session.user.id,
+        username: profileData.username,
+        displayName: profileData.displayName,
+        imageUrl: profileData.image ?? null,
+        cityId: cityObj?.id ?? null,
+        cityName:
+          cityObj?.name ??
+          (typeof profileData.city === "string" ? profileData.city : null),
+        styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
+      },
+    });
 
     // Determine auth level
     let authLevel: number;
@@ -881,6 +923,28 @@ export async function updateUserProfile(userId: string, formData: FormData) {
 
     // Update user in Neo4j with styles
     await updateUser(userId, userUpdate, styles);
+
+    // Upsert Postgres user_cards projection (for fast user card feeds)
+    await prisma.userCard.upsert({
+      where: { userId },
+      update: {
+        username: currentUser.username,
+        displayName: userUpdate.displayName || currentUser.displayName || "",
+        imageUrl: (userUpdate.image as string | null) ?? null,
+        cityId: cityData?.id ?? null,
+        cityName: cityData?.name ?? null,
+        styles: (styles || []).map((s) => s.toUpperCase().trim()),
+      },
+      create: {
+        userId,
+        username: currentUser.username,
+        displayName: userUpdate.displayName || currentUser.displayName || "",
+        imageUrl: (userUpdate.image as string | null) ?? null,
+        cityId: cityData?.id ?? null,
+        cityName: cityData?.name ?? null,
+        styles: (styles || []).map((s) => s.toUpperCase().trim()),
+      },
+    });
 
     return { success: true };
   } catch (error) {

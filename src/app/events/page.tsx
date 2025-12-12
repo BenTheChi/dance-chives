@@ -1,12 +1,12 @@
 import { EventCard } from "@/components/EventCard";
 import { AppNavbar } from "@/components/AppNavbar";
-import { getAllEvents } from "@/db/queries/event";
+import { getEventCards } from "@/db/queries/event-cards";
 import { TEventCard } from "@/types/event";
 import { auth } from "@/auth";
 import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 
 export default async function EventsPage() {
-  const events = await getAllEvents();
+  const events = await getEventCards();
   const session = await auth();
   const savedResult = session?.user?.id
     ? await getSavedEventIds()

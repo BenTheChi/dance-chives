@@ -792,124 +792,6 @@ export const deleteEvent = async (eventId: string): Promise<boolean> => {
 };
 
 /**
- * Get all events regardless of type
- * Returns a unified EventCard array for display
- */
-export const getAllEvents = async (): Promise<TEventCard[]> => {
-  const session = driver.session();
-
-  // Get all events with basic info (any Event node)
-  const eventsResult = await session.run(
-    `
-    MATCH (e:Event)
-    OPTIONAL MATCH (e)-[:IN]->(c:City)
-    OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
-    WITH DISTINCT e, c, p,
-         [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
-    RETURN e.id as eventId, 
-           e.title as title, 
-           e.startDate as startDate,
-           e.dates as dates,
-           c.name as city, 
-           c.id as cityId, 
-           p.url as imageUrl,
-           CASE 
-             WHEN size(eventTypeLabels) > 0 THEN 
-               CASE eventTypeLabels[0]
-                 WHEN 'BattleEvent' THEN 'Battle'
-                 WHEN 'CompetitionEvent' THEN 'Competition'
-                 WHEN 'ClassEvent' THEN 'Class'
-                 WHEN 'WorkshopEvent' THEN 'Workshop'
-                 WHEN 'SessionEvent' THEN 'Session'
-                 WHEN 'PartyEvent' THEN 'Party'
-                 WHEN 'FestivalEvent' THEN 'Festival'
-                 WHEN 'PerformanceEvent' THEN 'Performance'
-                 ELSE null
-               END
-             ELSE null 
-           END as eventType
-    ORDER BY e.startDate DESC, e.createdAt DESC
-  `
-  );
-
-  // Get all styles for each event (from event, sections, and videos)
-  const stylesResult = await session.run(
-    `
-    MATCH (e:Event)
-    OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
-    OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
-    WITH e.id as eventId, 
-         collect(DISTINCT eventStyle.name) as eventStyles,
-         collect(DISTINCT sectionStyle.name) as sectionStyles,
-         collect(DISTINCT videoStyle.name) as videoStyles,
-         collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
-    WITH eventId, 
-         [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
-         [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
-         [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
-         [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
-    RETURN eventId, 
-           filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
-  `
-  );
-
-  // Create a map of eventId -> styles
-  const stylesMap = new Map<string, string[]>();
-  stylesResult.records.forEach((record) => {
-    const eventId = record.get("eventId");
-    const allStyles = (record.get("allStyles") || []) as unknown[];
-    // Remove duplicates and filter out nulls
-    const uniqueStyles = Array.from(
-      new Set(
-        allStyles.filter(
-          (s): s is string => typeof s === "string" && s !== null
-        )
-      )
-    );
-    stylesMap.set(eventId, uniqueStyles);
-  });
-
-  await session.close();
-
-  // Combine event data with styles
-  return eventsResult.records.map((record) => {
-    const eventId = record.get("eventId");
-    const startDate = record.get("startDate");
-    const dates = record.get("dates");
-
-    // Determine date to display
-    let displayDate = "";
-    if (startDate) {
-      displayDate = startDate;
-    } else if (dates) {
-      try {
-        const datesArray =
-          typeof dates === "string" ? JSON.parse(dates) : dates;
-        if (Array.isArray(datesArray) && datesArray.length > 0) {
-          displayDate = datesArray[0].date || "";
-        }
-      } catch (error) {
-        console.error("Error parsing dates array:", error);
-      }
-    }
-
-    return {
-      id: eventId,
-      title: record.get("title"),
-      series: undefined,
-      imageUrl: record.get("imageUrl"),
-      date: displayDate,
-      city: record.get("city") || "",
-      cityId: record.get("cityId") as number | undefined,
-      styles: stylesMap.get(eventId) || [],
-      eventType: record.get("eventType") as EventType | undefined,
-    };
-  });
-};
-
-/**
  * Helper function to get userId from UserSearchItem.
  * If id is present, returns it. Otherwise, looks up user by username.
  * Throws error if user not found.
@@ -2246,7 +2128,7 @@ export interface StyleData {
 
 export interface CityData {
   city: City;
-  events: EventCard[];
+  events: TEventCard[];
   users: Array<{
     id: string;
     displayName: string;

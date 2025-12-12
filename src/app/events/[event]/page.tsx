@@ -5,7 +5,6 @@ import {
   Building,
   Calendar,
   DollarSign,
-  FileText,
   MapPin,
   Settings,
   Tag,
@@ -26,7 +25,9 @@ import { SectionCard } from "@/components/ui/section-card";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
-import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
+import { prisma } from "@/lib/primsa";
+import { formatInTimeZone } from "date-fns-tz";
+import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -142,11 +143,54 @@ export default async function EventPage({ params }: PageProps) {
     : null;
 
   // Get all dates to display
-  const eventDetails = event.eventDetails;
-  const eventDates =
-    eventDetails.dates && eventDetails.dates.length > 0
-      ? eventDetails.dates
-      : [];
+  const eventCard = await prisma.eventCard.findUnique({
+    where: { eventId: event.id },
+    select: { eventTimezone: true },
+  });
+  const eventTimezone =
+    eventCard?.eventTimezone || event.eventDetails.city.timezone || "UTC";
+  const nowUtc = new Date();
+  const todayIso = formatInTimeZone(nowUtc, eventTimezone, "yyyy-MM-dd");
+  const todayLocalDate = new Date(`${todayIso}T00:00:00.000Z`);
+
+  const nextThree = await prisma.eventDate.findMany({
+    where: {
+      eventId: event.id,
+      OR: [
+        { kind: "allDay", localDate: { gte: todayLocalDate } },
+        { kind: "timed", startUtc: { gte: nowUtc } },
+      ],
+    },
+    orderBy: [{ startUtc: "asc" }, { id: "asc" }],
+    take: 3,
+  });
+
+  const lastPast = await prisma.eventDate.findFirst({
+    where: {
+      eventId: event.id,
+      OR: [
+        { kind: "allDay", localDate: { lt: todayLocalDate } },
+        { kind: "timed", startUtc: { lt: nowUtc } },
+      ],
+    },
+    orderBy: [{ startUtc: "desc" }, { id: "desc" }],
+  });
+
+  const formatEventDateRow = (row: {
+    kind: "timed" | "allDay";
+    startUtc: Date;
+    endUtc: Date | null;
+  }) => {
+    const dateStr = formatInTimeZone(row.startUtc, eventTimezone, "MM/dd/yyyy");
+    if (row.kind === "allDay") return `${dateStr} (All day)`;
+    const startTime = formatInTimeZone(row.startUtc, eventTimezone, "h:mm a");
+    const endTime = row.endUtc
+      ? formatInTimeZone(row.endUtc, eventTimezone, "h:mm a")
+      : "";
+    return endTime
+      ? `${dateStr} (${startTime} - ${endTime})`
+      : `${dateStr} (${startTime})`;
+  };
 
   return (
     <>
@@ -190,25 +234,33 @@ export default async function EventPage({ params }: PageProps) {
                   <b>Type:</b> {event.eventDetails.eventType}
                 </div>
               )}
-              {eventDates.length > 0 && (
+              {(nextThree.length > 0 || lastPast) && (
                 <div className="flex flex-col gap-2">
-                  {eventDates.map((dateEntry, index) => (
-                    <div key={index} className="flex flex-row gap-2">
-                      <Calendar />
-                      <b>
-                        Date {eventDates.length > 1 ? `${index + 1}:` : ":"}
-                      </b>
-                      <span>
-                        {dateEntry.date}
-                        {dateEntry.startTime && dateEntry.endTime && (
-                          <span className="ml-2">
-                            ({formatTimeToAMPM(dateEntry.startTime)} -{" "}
-                            {formatTimeToAMPM(dateEntry.endTime)})
-                          </span>
-                        )}
-                      </span>
+                  <div className="flex flex-row gap-2">
+                    <Calendar />
+                    <b>Next:</b>
+                    <div className="flex flex-col">
+                      {nextThree.length > 0 ? (
+                        nextThree.map((d) => (
+                          <span key={d.id}>{formatEventDateRow(d)}</span>
+                        ))
+                      ) : (
+                        <span>No upcoming dates.</span>
+                      )}
                     </div>
-                  ))}
+                  </div>
+
+                  {lastPast && (
+                    <div className="flex flex-row gap-2">
+                      <Calendar />
+                      <b>Last:</b>
+                      <span>{formatEventDateRow(lastPast)}</span>
+                    </div>
+                  )}
+
+                  <div className="pl-7">
+                    <EventDatesDialog eventId={event.id} />
+                  </div>
                 </div>
               )}
               <div className="flex flex-row gap-2">
@@ -270,8 +322,8 @@ export default async function EventPage({ params }: PageProps) {
                   <UserAvatar
                     username={creator.username || ""}
                     displayName={creator.displayName || creator.username || ""}
-                    avatar={(creator as any).avatar}
-                    image={(creator as any).image}
+                    avatar={(creator as { avatar?: string | null }).avatar}
+                    image={(creator as { image?: string | null }).image}
                   />
                 </div>
               )}
@@ -289,8 +341,10 @@ export default async function EventPage({ params }: PageProps) {
                         displayName={
                           role.user.displayName || role.user.username
                         }
-                        avatar={(role.user as any).avatar}
-                        image={(role.user as any).image}
+                        avatar={
+                          (role.user as { avatar?: string | null }).avatar
+                        }
+                        image={(role.user as { image?: string | null }).image}
                       />
                     ) : (
                       <span key={`${role.id}-${index}`}>

@@ -19,6 +19,8 @@ interface VideoCardProps {
   bracketTitle?: string;
   onClick: () => void;
   styles?: string[];
+  // Optional context for callers; not currently used by this component.
+  currentUserId?: string;
 }
 
 export function VideoCard({
