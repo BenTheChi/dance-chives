@@ -39,7 +39,7 @@ function formatRow(opts: { item: ApiItem; timeZone: string }): string {
   const date = formatInTimeZone(start, timeZone, "MMM d, yyyy");
 
   if (item.kind === "allDay") {
-    return `${date} (All day)`;
+    return `${date}`;
   }
 
   const startTime = formatInTimeZone(start, timeZone, "h:mm a");

@@ -33,7 +33,7 @@ export function AppNavbar() {
   const canCreateEvents = authLevel >= AUTH_LEVELS.CREATOR;
 
   return (
-    <nav className="border-b bg-sidebar px-4">
+    <nav className="sticky top-0 z-50 border-b bg-sidebar px-4">
       <div className="flex h-14 items-center w-full justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="border-1 border-grey cursor-pointer" />

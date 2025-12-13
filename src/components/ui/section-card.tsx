@@ -84,14 +84,14 @@ export function SectionCard({
   }
 
   return (
-    <div className="h-[241px] w-[400px] bg-white rounded-lg border border-black cursor-pointer hover:shadow-lg/100">
+    <div className="w-full min-w-[300px] max-w-[400px] bg-white rounded-lg border border-black cursor-pointer hover:shadow-lg/100">
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}
         className="block h-full"
       >
-        <div className="flex">
-          {/* Poster on left - 1/2 width */}
-          <div className="relative h-[241px] w-[241px] border-r border-black">
+        <div className="flex h-full">
+          {/* Poster on left - 60% width, square aspect */}
+          <div className="relative w-[60%] aspect-square border-r border-black shrink-0">
             {posterUrl ? (
               <NextImage
                 src={posterUrl}
@@ -106,8 +106,8 @@ export function SectionCard({
             )}
           </div>
 
-          {/* Content on right - 1/2 width */}
-          <div className="flex flex-col justify-between p-4 w-1/2">
+          {/* Content on right - 40% width */}
+          <div className="flex flex-col justify-between p-3 sm:p-4 flex-1">
             <div className="flex flex-col gap-4">
               {/* Section type badge in top right */}
               {sectionType && (

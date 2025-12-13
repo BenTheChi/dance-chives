@@ -53,10 +53,10 @@ export function VideoCard({
     displayStyles && displayStyles.length > 3 ? displayStyles.length - 3 : 0;
 
   return (
-    <div className="group border border-black overflow-hidden rounded-[5px] bg-gray-100 transition-all duration-300 w-[480px] relative">
-      {/* Thumbnail square - clickable */}
+    <div className="group border border-black overflow-hidden rounded-[5px] bg-gray-100 transition-all duration-300 w-full min-w-[300px] relative">
+      {/* Thumbnail - clickable */}
       <div
-        className="w-full h-[360px] border-b border-black relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"
+        className="w-full aspect-[4/3] border-b border-black relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"
         onClick={onClick}
       >
         {thumbnailUrl ? (
@@ -70,17 +70,17 @@ export function VideoCard({
           <h3 className="font-bold text-sm text-center px-4">{video.title}</h3>
         )}
         <div
-          className="absolute inset-0 bottom-30 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          className="absolute inset-0 bottom-30 bg-black/20 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center"
           onClick={onClick}
         >
-          <div className="bg-red-600 rounded-full p-3 scale-90 group-hover:scale-100 transition-transform">
+          <div className="bg-red-600 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform">
             <Play className="w-6 h-6 text-white fill-white ml-0.5" />
           </div>
         </div>
       </div>
 
-      {/* Expanded section - slides up on hover */}
-      <div className="absolute border-t border-black inset-x-0 bottom-0 h-[150px] bg-gray-100/90 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10">
+      {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
+      <div className="absolute border-t border-black inset-x-0 bottom-0 h-[150px] bg-gray-100/90 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10">
         <div className="px-6 pb-3 flex flex-col gap-4">
           <div className="flex justify-between items-start">
             <h3 className="font-bold text-lg">{video.title}</h3>

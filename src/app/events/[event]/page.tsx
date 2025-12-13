@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Event } from "@/types/event";
-import { DollarSign, MapPin, Settings } from "lucide-react";
+import { DollarSign, MapPin, Pencil, Settings } from "lucide-react";
 import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
@@ -177,7 +177,7 @@ export default async function EventPage({ params }: PageProps) {
     endTime?: string;
   }) => {
     const isAllDay = !dateEntry.startTime && !dateEntry.endTime;
-    if (isAllDay) return `${dateEntry.date} (All day)`;
+    if (isAllDay) return `${dateEntry.date}`;
     const timeStr = dateEntry.endTime
       ? `${dateEntry.startTime} - ${dateEntry.endTime}`
       : dateEntry.startTime;
@@ -189,28 +189,6 @@ export default async function EventPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[600px] md:max-w-6xl">
-          <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 auto-rows-min">
-            <Link href="/events" className="hover:underline">
-              {`Back to Events`}
-            </Link>
-            {(canEdit || isCreator) && (
-              <div className="flex gap-2">
-                {isCreator && (
-                  <Button asChild variant="outline" size="icon">
-                    <Link href={`/events/${event.id}/settings`}>
-                      <Settings className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                )}
-                {(canEdit || isCreator) && (
-                  <Button asChild>
-                    <Link href={`/events/${event.id}/edit`}>Edit</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
           <PosterImage
             poster={event.eventDetails.poster ?? null}
             className="col-span-1 md:col-span-1"
@@ -220,7 +198,67 @@ export default async function EventPage({ params }: PageProps) {
             {/* Event Details */}
             <section className="bg-misty-seafoam p-6 rounded-md flex flex-col gap-4 border border-black">
               <div>
-                <h1 className="text-3xl font-bold">
+                {/* Mobile: buttons above title */}
+                {(canEdit || isCreator) && (
+                  <div className="flex gap-2 mb-2 sm:hidden">
+                    {isCreator && (
+                      <Button
+                        asChild
+                        size="icon"
+                        className="bg-periwinkle text-black border-black"
+                      >
+                        <Link href={`/events/${event.id}/settings`}>
+                          <Settings className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                    {(canEdit || isCreator) && (
+                      <Button
+                        asChild
+                        size="icon"
+                        className="bg-periwinkle text-black border-black"
+                      >
+                        <Link href={`/events/${event.id}/edit`}>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {/* Larger screens: title and buttons on same row */}
+                <div className="hidden sm:flex sm:flex-row sm:justify-between sm:items-start sm:gap-4">
+                  <h1 className="text-3xl font-bold">
+                    {event.eventDetails.title}
+                  </h1>
+                  {(canEdit || isCreator) && (
+                    <div className="flex gap-2">
+                      {isCreator && (
+                        <Button
+                          asChild
+                          size="icon"
+                          className="bg-periwinkle text-black border-black"
+                        >
+                          <Link href={`/events/${event.id}/settings`}>
+                            <Settings className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      )}
+                      {(canEdit || isCreator) && (
+                        <Button
+                          asChild
+                          size="icon"
+                          className="bg-periwinkle text-black border-black"
+                        >
+                          <Link href={`/events/${event.id}/edit`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Mobile: title shown separately */}
+                <h1 className="text-3xl font-bold sm:hidden">
                   {event.eventDetails.title}
                 </h1>
 
@@ -249,7 +287,7 @@ export default async function EventPage({ params }: PageProps) {
                 <div className="flex flex-col gap-3">
                   {pastDates.length > 0 && (
                     <div className="flex flex-col">
-                      <span className="text-md font-semibold">Past Dates</span>
+                      <span className="text-md font-semibold">Past Date</span>
                       <div className="flex flex-col text-sm">
                         {pastDates.map((d, idx) => (
                           <span key={`past-${d.date}-${idx}`}>
@@ -263,7 +301,7 @@ export default async function EventPage({ params }: PageProps) {
                   {upcomingDates.length > 0 && (
                     <div className="flex flex-col">
                       <span className="text-md font-semibold">
-                        Future Dates
+                        Future Date(s)
                       </span>
                       <div className="flex flex-col text-sm">
                         {upcomingDates.map((d, idx) => (

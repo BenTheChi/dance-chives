@@ -2,7 +2,6 @@ import { AppNavbar } from "@/components/AppNavbar";
 import SectionBracketTabSelector from "@/components/SectionBracketTabSelector";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { PosterImage } from "@/components/PosterImage";
 import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
@@ -84,12 +83,6 @@ export default async function SectionPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-3">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-6xl">
-          <div className="flex flex-row justify-between items-center mb-2 w-full col-span-1 md:col-span-2 auto-rows-min">
-            <Link href={`/events/${event.id}`} className="hover:underline">
-              Back to {event.eventDetails.title}
-            </Link>
-          </div>
-
           <PosterImage
             poster={section.poster ?? null}
             className="md:col-span-1"
@@ -100,6 +93,7 @@ export default async function SectionPage({ params }: PageProps) {
               section={section}
               displayStyles={displayStyles}
               eventId={event.id}
+              eventTitle={event.eventDetails.title}
               canTagDirectly={canTagDirectly}
               currentUserId={session?.user?.id}
             />
