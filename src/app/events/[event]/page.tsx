@@ -18,6 +18,7 @@ import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
 import { EventDatesDialog } from "@/components/events/EventDatesDialog";
+import { enrichUserWithCardData } from "@/db/queries/user-cards";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -127,9 +128,18 @@ export default async function EventPage({ params }: PageProps) {
     }
   });
 
-  // Fetch creator for Event Roles section
-  const creator = event.eventDetails.creatorId
+  // Fetch creator for Event Roles section and enrich with Postgres data
+  const creatorRaw = event.eventDetails.creatorId
     ? await getUser(event.eventDetails.creatorId)
+    : null;
+  const creator = creatorRaw
+    ? await enrichUserWithCardData({
+        id: creatorRaw.id,
+        username: creatorRaw.username,
+        displayName: creatorRaw.displayName,
+        avatar: creatorRaw.avatar,
+        image: creatorRaw.image,
+      })
     : null;
 
   // Get timezone for date display
@@ -282,42 +292,40 @@ export default async function EventPage({ params }: PageProps) {
                   )}
                 </div>
               </div>
-
-              {(pastDates.length > 0 || upcomingDates.length > 0) && (
-                <div className="flex flex-col gap-3">
-                  {pastDates.length > 0 && (
-                    <div className="flex flex-col">
-                      <span className="text-md font-semibold">Past Date</span>
-                      <div className="flex flex-col text-sm">
-                        {pastDates.map((d, idx) => (
-                          <span key={`past-${d.date}-${idx}`}>
-                            {formatEventDateRow(d)}
-                          </span>
-                        ))}
+              <div>
+                {showMoreDatesButton && <EventDatesDialog eventId={event.id} />}
+                {(pastDates.length > 0 || upcomingDates.length > 0) && (
+                  <div className="flex flex-col gap-3">
+                    {pastDates.length > 0 && (
+                      <div className="flex flex-col">
+                        <span className="text-md font-semibold">Past Date</span>
+                        <div className="flex flex-col text-sm">
+                          {pastDates.map((d, idx) => (
+                            <span key={`past-${d.date}-${idx}`}>
+                              {formatEventDateRow(d)}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {upcomingDates.length > 0 && (
-                    <div className="flex flex-col">
-                      <span className="text-md font-semibold">
-                        Future Date(s)
-                      </span>
-                      <div className="flex flex-col text-sm">
-                        {upcomingDates.map((d, idx) => (
-                          <span key={`upcoming-${d.date}-${idx}`}>
-                            {formatEventDateRow(d)}
-                          </span>
-                        ))}
+                    {upcomingDates.length > 0 && (
+                      <div className="flex flex-col">
+                        <span className="text-md font-semibold">
+                          Future Date(s)
+                        </span>
+                        <div className="flex flex-col text-sm">
+                          {upcomingDates.map((d, idx) => (
+                            <span key={`upcoming-${d.date}-${idx}`}>
+                              {formatEventDateRow(d)}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {showMoreDatesButton && (
-                    <EventDatesDialog eventId={event.id} />
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
 
               {eventStyles.length > 0 && (
                 <div className="flex flex-wrap gap-2">
@@ -366,6 +374,9 @@ export default async function EventPage({ params }: PageProps) {
                     avatar={(creator as { avatar?: string | null }).avatar}
                     image={(creator as { image?: string | null }).image}
                     isSmall={true}
+                    showHoverCard
+                    city={creator.city || ""}
+                    styles={creator.styles}
                   />
                 </div>
               )}
@@ -387,6 +398,9 @@ export default async function EventPage({ params }: PageProps) {
                           (role.user as { avatar?: string | null }).avatar
                         }
                         image={(role.user as { image?: string | null }).image}
+                        showHoverCard
+                        city={(role.user as { city?: string }).city || ""}
+                        styles={(role.user as { styles?: string[] }).styles}
                       />
                     ) : (
                       <span key={`${role.id}-${index}`}>

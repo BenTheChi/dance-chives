@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -15,7 +15,6 @@ import {
 import { UserSearchItem } from "@/types/user";
 import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
-import { Trophy } from "lucide-react";
 import { extractYouTubeVideoId } from "@/lib/utils";
 import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
 import { useRouter } from "next/navigation";
@@ -29,13 +28,15 @@ function UserAvatarWithRemove({
   eventId,
   videoId,
   currentUserId,
-  icon: Icon,
+  borderColor,
+  isSmall,
 }: {
   user: UserSearchItem;
   eventId: string;
   videoId: string;
   currentUserId?: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  borderColor?: "black" | "white";
+  isSmall?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -71,7 +72,11 @@ function UserAvatarWithRemove({
       showRemoveButton={canRemove || false}
       onRemove={handleRemove}
       isRemoving={isPending}
-      icon={Icon}
+      showHoverCard
+      city={(user as any).city || ""}
+      styles={(user as any).styles}
+      borderColor={borderColor}
+      isSmall={isSmall}
     />
   );
 }
@@ -90,6 +95,7 @@ interface VideoLightboxProps {
   eventTitle: string;
   eventId: string;
   sectionTitle: string;
+  sectionSlug?: string;
   bracketTitle?: string;
   sectionStyles?: string[];
   applyStylesToVideos?: boolean;
@@ -110,6 +116,7 @@ export function VideoLightbox({
   eventTitle,
   eventId,
   sectionTitle,
+  sectionSlug,
   bracketTitle,
   sectionStyles,
   applyStylesToVideos,
@@ -136,11 +143,8 @@ export function VideoLightbox({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
 
-  // Check if this is a workshop or session video (legacy check, all events now use /events/)
-  const isWorkshopOrSession =
-    eventLink.startsWith("/workshops/") ||
-    eventLink.startsWith("/sessions/") ||
-    eventLink.startsWith("/events/");
+  // State for spoiler functionality - winners hidden by default
+  const [showWinners, setShowWinners] = useState(false);
 
   // Get video type, defaulting to "battle" for backwards compatibility
   const videoType = video?.type || "battle";
@@ -200,11 +204,11 @@ export function VideoLightbox({
       <DialogTitle className="sr-only">{video.title}</DialogTitle>
       <DialogContent
         closeButton={false}
-        className="h-[95vh] sm:h-[90vh] p-0 gap-0 m-2 !max-w-[95vw] !w-[95vw]"
+        className="sm:h-[90vh] p-0 gap-0 !max-w-[100vw] sm:!max-w-[95vw] !w-[100vw] sm:!w-[95vw]"
       >
         <div className="flex flex-col h-full w-full bg-black">
           {/* Video Header */}
-          <div className="p-2 sm:p-4 bg-black text-white border-b border-white/10">
+          <div className="pt-2 px-4 bg-black text-white border-b border-white/10">
             {/* First line: Title, metadata, and controls */}
             <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2">
               <div className="flex items-center flex-wrap gap-2 sm:gap-4 min-w-0 flex-1">
@@ -215,18 +219,19 @@ export function VideoLightbox({
                   {currentIndex + 1} of {totalVideos}
                 </span>
                 <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-300">
-                  <Link
-                    href={eventLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 whitespace-nowrap"
-                  >
+                  <Link href={eventLink} className="whitespace-nowrap">
                     {eventTitle}
                   </Link>
-                  {!isWorkshopOrSession && (
+
+                  {sectionSlug && (
                     <>
                       <span>•</span>
-                      <span className="whitespace-nowrap">{sectionTitle}</span>
+                      <Link
+                        href={`/events/${eventId}/sections/${sectionSlug}`}
+                        className="whitespace-nowrap"
+                      >
+                        {sectionTitle}
+                      </Link>
                       {bracketTitle && (
                         <>
                           <span>•</span>
@@ -276,7 +281,7 @@ export function VideoLightbox({
 
             {/* Second line: Style tags */}
             {displayStyles.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2 pb-2">
                 {displayStyles.map((style) => (
                   <StyleBadge key={style} style={style} />
                 ))}
@@ -285,7 +290,7 @@ export function VideoLightbox({
           </div>
 
           {/* Video Player */}
-          <div className="flex-1 relative min-h-[200px] sm:min-h-[300px]">
+          <div className="flex-1 relative min-h-[200px] sm:min-h-[300px] border-t border-b border-white/50">
             {(() => {
               const youtubeId = extractYouTubeVideoId(video.src);
               if (!youtubeId) {
@@ -329,28 +334,61 @@ export function VideoLightbox({
                 </div>
               )}
 
+              {/* Dancers - Show for all video types */}
+              {dancers.length > 0 && (
+                <div className="flex-shrink-0">
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm">Dancers</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2 ml-2">
+                      {dancers.map((dancer: UserSearchItem, index: number) => (
+                        <UserAvatarWithRemove
+                          key={dancer.username || index}
+                          user={dancer}
+                          eventId={eventId}
+                          videoId={video.id}
+                          currentUserId={currentUserId}
+                          borderColor="white"
+                          isSmall={true}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Winners - Only show for battle videos */}
               {videoType === "battle" && winners.length > 0 && (
                 <div className="flex-shrink-0">
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-yellow-500" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Winners
+                      <h3 className="font-semibold text-sm">
+                        Winners{" "}
+                        <Button
+                          variant="link"
+                          className="text-xs text-gray-400 hover:text-white p-0 h-auto"
+                          onClick={() => setShowWinners(!showWinners)}
+                        >
+                          ({showWinners ? "hide" : "show"})
+                        </Button>
                       </h3>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {winners.map((winner: UserSearchItem) => (
-                        <UserAvatarWithRemove
-                          key={winner.username}
-                          user={winner}
-                          eventId={eventId}
-                          videoId={video.id}
-                          currentUserId={currentUserId}
-                          icon={Trophy}
-                        />
-                      ))}
-                    </div>
+                    {showWinners && (
+                      <div className="flex flex-wrap gap-2 ml-2">
+                        {winners.map((winner: UserSearchItem) => (
+                          <UserAvatarWithRemove
+                            key={winner.username}
+                            user={winner}
+                            eventId={eventId}
+                            videoId={video.id}
+                            currentUserId={currentUserId}
+                            borderColor="white"
+                            isSmall={true}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -360,12 +398,9 @@ export function VideoLightbox({
                 <div className="flex-shrink-0">
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Choreographers
-                      </h3>
+                      <h3 className="font-semibold text-sm">Choreographers</h3>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 ml-2">
                       {choreographers.map(
                         (choreographer: UserSearchItem, index: number) => (
                           <UserAvatarWithRemove
@@ -374,6 +409,8 @@ export function VideoLightbox({
                             eventId={eventId}
                             videoId={video.id}
                             currentUserId={currentUserId}
+                            borderColor="white"
+                            isSmall={true}
                           />
                         )
                       )}
@@ -387,12 +424,9 @@ export function VideoLightbox({
                 <div className="flex-shrink-0">
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Teachers
-                      </h3>
+                      <h3 className="font-semibold text-sm">Teachers</h3>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 ml-2">
                       {teachers.map(
                         (teacher: UserSearchItem, index: number) => (
                           <UserAvatarWithRemove
@@ -401,34 +435,11 @@ export function VideoLightbox({
                             eventId={eventId}
                             videoId={video.id}
                             currentUserId={currentUserId}
+                            borderColor="white"
+                            isSmall={true}
                           />
                         )
                       )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Dancers - Show for all video types */}
-              {dancers.length > 0 && (
-                <div className="flex-shrink-0">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <h3 className="font-semibold text-sm sm:text-base">
-                        Dancers
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {dancers.map((dancer: UserSearchItem, index: number) => (
-                        <UserAvatarWithRemove
-                          key={dancer.username || index}
-                          user={dancer}
-                          eventId={eventId}
-                          videoId={video.id}
-                          currentUserId={currentUserId}
-                        />
-                      ))}
                     </div>
                   </div>
                 </div>

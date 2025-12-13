@@ -10,7 +10,6 @@ import { useToggleSave } from "@/hooks/use-toggle-save";
 import { cn } from "@/lib/utils";
 
 interface EventCardProps extends TEventCard {
-  roles?: string[];
   href?: string; // Optional href for the title link, defaults to /events/${id}
   isSaved?: boolean;
 }
@@ -18,13 +17,11 @@ interface EventCardProps extends TEventCard {
 export function EventCard({
   id,
   title,
-  series,
   imageUrl,
   date,
   city,
   cityId,
   styles,
-  roles,
   href,
   isSaved,
   additionalDatesCount,
@@ -101,7 +98,7 @@ export function EventCard({
       </Link>
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
-      <div className="w-full h-[100px] bg-gray-100 sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto sm:h-[135px] sm:bg-gray-100/90 overflow-hidden flex flex-col justify-end z-10">
+      <div className="w-full bg-gray-100 sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto sm:bg-gray-100 overflow-hidden flex flex-col justify-end z-10 border-t border-black py-2">
         <div className="px-3 pb-2 sm:px-6 sm:pb-1 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}

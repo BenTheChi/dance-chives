@@ -99,6 +99,9 @@ export function SectionDetails({
                   displayName={winner.displayName}
                   avatar={(winner as any).avatar}
                   image={(winner as any).image}
+                  showHoverCard
+                  city={(winner as any).city || ""}
+                  styles={(winner as any).styles}
                 />
               ) : (
                 <span key={winner.id}>{winner.displayName}</span>

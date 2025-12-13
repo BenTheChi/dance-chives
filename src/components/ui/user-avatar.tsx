@@ -1,7 +1,15 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { UserCard } from "@/components/UserCard";
 
 interface UserAvatarProps {
   username: string;
@@ -12,8 +20,11 @@ interface UserAvatarProps {
   showRemoveButton?: boolean;
   onRemove?: () => void;
   isRemoving?: boolean;
-  icon?: React.ComponentType<{ className?: string }>;
   isSmall?: boolean;
+  showHoverCard?: boolean;
+  styles?: string[];
+  city: string;
+  borderColor?: "black" | "white";
 }
 
 export function UserAvatar({
@@ -25,11 +36,14 @@ export function UserAvatar({
   showRemoveButton = false,
   onRemove,
   isRemoving = false,
-  icon: Icon,
   isSmall = false,
+  showHoverCard = false,
+  styles,
+  city,
+  borderColor = "black",
 }: UserAvatarProps) {
   const size = isSmall ? 30 : 45;
-  const avatarUrl = avatar || image;
+  const avatarUrl = avatar;
   const initials = displayName
     ? displayName
         .split(" ")
@@ -38,6 +52,59 @@ export function UserAvatar({
         .toUpperCase()
         .slice(0, 2)
     : username[0]?.toUpperCase() || "U";
+
+  const avatarElement = (
+    <div
+      className={cn(
+        "relative rounded-full overflow-hidden border-2 transition-colors cursor-pointer",
+        borderColor === "white" ? "border-white" : "border-black"
+      )}
+      style={{ width: size, height: size }}
+    >
+      {avatarUrl ? (
+        <Image
+          src={avatarUrl}
+          alt={displayName || username}
+          width={size}
+          height={size}
+          className="object-cover w-full h-full"
+          unoptimized
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-600 text-sm font-semibold">
+          {initials}
+        </div>
+      )}
+    </div>
+  );
+
+  const content = showHoverCard ? (
+    <HoverCard openDelay={200} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <Link href={`/profiles/${username}`} className="inline-block">
+          {avatarElement}
+        </Link>
+      </HoverCardTrigger>
+      <HoverCardContent
+        className="w-auto p-0 bg-white"
+        sideOffset={8}
+        collisionPadding={16}
+      >
+        <UserCard
+          displayName={displayName}
+          username={username}
+          image={image || undefined}
+          styles={styles}
+          city={city}
+          isSmall
+        />
+      </HoverCardContent>
+    </HoverCard>
+  ) : (
+    <Link href={`/profiles/${username}`} className="block">
+      {avatarElement}
+    </Link>
+  );
 
   return (
     <div className={cn("relative inline-block group", className)}>
@@ -51,35 +118,7 @@ export function UserAvatar({
           <X className="w-3 h-3" />
         </button>
       )}
-      <Link
-        href={`/profiles/${username}`}
-        className="hover:opacity-80 transition-opacity block"
-      >
-        <div
-          className="relative rounded-full overflow-hidden border-2 border-black transition-colors"
-          style={{ width: size, height: size }}
-        >
-          {avatarUrl ? (
-            <Image
-              src={avatarUrl}
-              alt={displayName || username}
-              width={size}
-              height={size}
-              className="object-cover w-full h-full"
-              unoptimized
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-600 text-sm font-semibold">
-              {initials}
-            </div>
-          )}
-          {Icon && (
-            <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-sm">
-              <Icon className="w-3 h-3" />
-            </div>
-          )}
-        </div>
-      </Link>
+      {content}
     </div>
   );
 }

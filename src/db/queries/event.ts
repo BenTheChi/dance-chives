@@ -6,6 +6,7 @@ import {
   EventDetails,
   TEventCard,
   EventType,
+  Role,
 } from "../../types/event";
 import {
   Video,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/utils/style-utils";
 import { getUserByUsername } from "./user";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
+import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
 import { type Record as Neo4jRecord } from "neo4j-driver";
 
@@ -753,6 +755,93 @@ export const getEvent = async (id: string): Promise<Event> => {
     styles: eventStyles,
     eventType: (eventType as EventType) || "Other", // Always set eventType, default to "Other"
   };
+
+  // Enrich all users with city and styles from Postgres UserCard table
+  // Collect all users that need enrichment
+  const allUsers: UserSearchItem[] = [];
+
+  // Collect role users
+  roles.forEach((role: Role) => {
+    if (role.user) {
+      allUsers.push(role.user);
+    }
+  });
+
+  // Collect section winners and video tagged users
+  sections.forEach((section: Section) => {
+    if (section.winners) {
+      allUsers.push(...section.winners);
+    }
+    section.videos.forEach((video: Video) => {
+      if (video.taggedDancers) allUsers.push(...video.taggedDancers);
+      if (video.taggedWinners) allUsers.push(...video.taggedWinners);
+      if ((video as ChoreographyVideo).taggedChoreographers) {
+        allUsers.push(...(video as ChoreographyVideo).taggedChoreographers!);
+      }
+      if ((video as ClassVideo).taggedTeachers) {
+        allUsers.push(...(video as ClassVideo).taggedTeachers!);
+      }
+    });
+    section.brackets?.forEach((bracket: Bracket) => {
+      bracket.videos.forEach((video: Video) => {
+        if (video.taggedDancers) allUsers.push(...video.taggedDancers);
+        if (video.taggedWinners) allUsers.push(...video.taggedWinners);
+        if ((video as ChoreographyVideo).taggedChoreographers) {
+          allUsers.push(...(video as ChoreographyVideo).taggedChoreographers!);
+        }
+        if ((video as ClassVideo).taggedTeachers) {
+          allUsers.push(...(video as ClassVideo).taggedTeachers!);
+        }
+      });
+    });
+  });
+
+  // Enrich all users at once
+  const enrichedUsers = await enrichUsersWithCardData(allUsers);
+
+  // Create a map for quick lookup by user ID
+  const enrichedUserMap = new Map(enrichedUsers.map((u) => [u.id, u]));
+
+  // Apply enriched data back to all user references
+  const applyEnrichment = (user: UserSearchItem): UserSearchItem => {
+    const enriched = user.id ? enrichedUserMap.get(user.id) : undefined;
+    if (enriched) {
+      user.city = enriched.city;
+      user.styles = enriched.styles;
+      user.image = user.image || enriched.image;
+    }
+    return user;
+  };
+
+  // Apply to roles
+  roles.forEach((role: Role) => {
+    if (role.user) {
+      applyEnrichment(role.user);
+    }
+  });
+
+  // Apply to sections and videos
+  sections.forEach((section: Section) => {
+    section.winners?.forEach(applyEnrichment);
+    section.videos.forEach((video: Video) => {
+      video.taggedDancers?.forEach(applyEnrichment);
+      video.taggedWinners?.forEach(applyEnrichment);
+      (video as ChoreographyVideo).taggedChoreographers?.forEach(
+        applyEnrichment
+      );
+      (video as ClassVideo).taggedTeachers?.forEach(applyEnrichment);
+    });
+    section.brackets?.forEach((bracket: Bracket) => {
+      bracket.videos.forEach((video: Video) => {
+        video.taggedDancers?.forEach(applyEnrichment);
+        video.taggedWinners?.forEach(applyEnrichment);
+        (video as ChoreographyVideo).taggedChoreographers?.forEach(
+          applyEnrichment
+        );
+        (video as ClassVideo).taggedTeachers?.forEach(applyEnrichment);
+      });
+    });
+  });
 
   // Build the result object
   const result: Event = {

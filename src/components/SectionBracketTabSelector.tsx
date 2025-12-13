@@ -117,6 +117,7 @@ export default function SectionBracketTabSelector({
           eventTitle={eventTitle}
           eventId={eventId}
           sectionTitle={section?.title}
+          sectionSlug={section?.id}
           sectionStyles={section?.styles}
           applyStylesToVideos={section?.applyStylesToVideos}
           currentUserId={currentUserId}
@@ -128,12 +129,13 @@ export default function SectionBracketTabSelector({
   // Render section with brackets - scroll-spy navigation
   return (
     <div className="w-full" ref={containerRef}>
-      {/* Sticky Tab Bar */}
+      {/* Sticky Tab Bar - Mobile only */}
       <div
         ref={tabBarRef}
         className={cn(
           "bg-background/95 backdrop-blur-sm z-40 transition-shadow duration-200",
           "sticky top-14", // Stick under navbar (h-14 = 56px = top-14)
+          "sm:hidden", // Only show on mobile
           isSticky && "shadow-md border-b"
         )}
       >
@@ -175,6 +177,7 @@ export default function SectionBracketTabSelector({
                 eventTitle={eventTitle}
                 eventId={eventId}
                 sectionTitle={section?.title}
+                sectionSlug={section?.id}
                 bracketTitle={bracket.title}
                 sectionStyles={section?.styles}
                 applyStylesToVideos={section?.applyStylesToVideos}

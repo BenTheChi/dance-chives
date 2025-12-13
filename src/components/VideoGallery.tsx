@@ -11,6 +11,7 @@ interface VideoGalleryProps {
   eventTitle: string;
   eventId: string;
   sectionTitle: string;
+  sectionSlug?: string;
   bracketTitle?: string;
   sectionStyles?: string[];
   applyStylesToVideos?: boolean;
@@ -23,6 +24,7 @@ export default function VideoGallery({
   eventTitle,
   eventId,
   sectionTitle,
+  sectionSlug,
   bracketTitle,
   sectionStyles,
   applyStylesToVideos,
@@ -83,6 +85,7 @@ export default function VideoGallery({
           eventTitle={eventTitle}
           eventId={eventId}
           sectionTitle={sectionTitle}
+          sectionSlug={sectionSlug}
           bracketTitle={bracketTitle}
           sectionStyles={sectionStyles}
           applyStylesToVideos={applyStylesToVideos}

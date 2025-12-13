@@ -64,84 +64,85 @@ export function VideoCard({
             src={thumbnailUrl}
             alt={video.title}
             fill
-            className="object-cover"
+            className="object-cover mt-5 sm:mt-0"
           />
         ) : (
           <h3 className="font-bold text-sm text-center px-4">{video.title}</h3>
         )}
-        <div
-          className="absolute inset-0 bottom-30 bg-black/20 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center"
-          onClick={onClick}
-        >
-          <div className="bg-red-600 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform">
-            <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-          </div>
-        </div>
       </div>
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
-      <div className="absolute border-t border-black inset-x-0 bottom-0 h-[150px] bg-gray-100/90 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10">
-        <div className="px-6 pb-3 flex flex-col gap-4">
-          <div className="flex justify-between items-start">
-            <h3 className="font-bold text-lg">{video.title}</h3>
+      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden z-10 flex flex-col">
+        <div className="flex justify-between items-start bg-gray-100 px-3 py-2 border-b border-black">
+          <h3 className="font-bold text-lg">{video.title}</h3>
 
-            {/* Title */}
-            <div className="flex flex-col gap-1 items-end">
-              <Link
-                href={eventLink}
-                className="text-sm text-gray-500 hover:text-blue-600"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {eventTitle}
-              </Link>
-              <span className="text-xs text-gray-500 capitalize">
-                {video.type}
-              </span>
-            </div>
-          </div>
-
-          {/* Style tags and dancer tags */}
-          <div className="flex flex-col gap-2">
-            {/* Dancer tags */}
-            {taggedDancers.length > 0 && (
-              <div className="flex flex-wrap gap-1 items-center">
-                {taggedDancers.map((dancer) => (
-                  <UserAvatar
-                    key={dancer.id || dancer.username}
-                    username={dancer.username}
-                    displayName={dancer.displayName}
-                    avatar={dancer.avatar}
-                    image={dancer.image}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Style tags */}
-            {displayStyles.length > 0 && (
-              <div className="flex flex-wrap gap-1 items-center">
-                {/* First style */}
-                {firstStyle && (
-                  <StyleBadge
-                    key={firstStyle}
-                    style={firstStyle}
-                    asLink={false}
-                  />
-                )}
-                {/* Additional styles */}
-                {desktopStyles.map((style) => (
-                  <StyleBadge key={style} style={style} asLink={false} />
-                ))}
-                {/* Additional count */}
-                {desktopAdditionalCount > 0 && (
-                  <span className="text-xs text-gray-500">
-                    +{desktopAdditionalCount} more
-                  </span>
-                )}
-              </div>
-            )}
+          {/* Title */}
+          <div className="flex flex-col gap-1 items-end">
+            <Link
+              href={eventLink}
+              className="text-sm text-gray-500 hover:text-blue-600"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {eventTitle}
+            </Link>
+            <span className="text-xs text-gray-500 capitalize">
+              {video.type}
+            </span>
           </div>
         </div>
+        {/* Style tags and dancer tags */}
+        <div className="flex flex-col gap-2 pt-2 px-2">
+          {/* Style tags */}
+          {displayStyles.length > 0 && (
+            <div className="flex flex-wrap gap-1 items-center">
+              {/* First style */}
+              {firstStyle && (
+                <StyleBadge
+                  key={firstStyle}
+                  style={firstStyle}
+                  asLink={false}
+                />
+              )}
+              {/* Additional styles */}
+              {desktopStyles.map((style) => (
+                <StyleBadge key={style} style={style} asLink={false} />
+              ))}
+              {/* Additional count */}
+              {desktopAdditionalCount > 0 && (
+                <span className="text-xs text-gray-500">
+                  +{desktopAdditionalCount} more
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Play button - absolutely centered */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div
+            className="bg-mint/85 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform cursor-pointer pointer-events-auto border-2 border-pulse-green"
+            onClick={onClick}
+          >
+            <Play className="w-6 h-6 text-pulse-green fill-pulse-green ml-0.5 size-6" />
+          </div>
+        </div>
+        {/* Dancer tags */}
+        {taggedDancers.length > 0 && (
+          <div className="flex flex-wrap gap-1 items-center px-2 pb-2 mt-auto">
+            {taggedDancers.map((dancer) => (
+              <UserAvatar
+                key={dancer.id || dancer.username}
+                username={dancer.username}
+                displayName={dancer.displayName}
+                avatar={dancer.avatar}
+                image={dancer.image}
+                showHoverCard
+                city={dancer.city || ""}
+                styles={dancer.styles}
+                borderColor="white"
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

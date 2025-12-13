@@ -25,4 +25,6 @@ export interface UserSearchItem {
   avatar?: string | null; // Optional avatar URL
   image?: string | null; // Optional image URL (fallback for avatar)
   role?: string; // Optional role property (e.g., "DANCER" for video tags)
+  city?: string; // User's city
+  styles?: string[]; // User's dance styles
 }

@@ -8,6 +8,7 @@ interface UserCardProps {
   image?: string;
   styles?: string[];
   city: string;
+  isSmall?: boolean;
 }
 
 export function UserCard({

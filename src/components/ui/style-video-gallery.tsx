@@ -66,6 +66,7 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
           eventTitle={videos[selectedVideoIndex].eventTitle}
           eventId={videos[selectedVideoIndex].eventId}
           sectionTitle={videos[selectedVideoIndex].sectionTitle}
+          sectionSlug={videos[selectedVideoIndex].sectionId}
           bracketTitle={undefined}
           sectionStyles={undefined}
           applyStylesToVideos={undefined}

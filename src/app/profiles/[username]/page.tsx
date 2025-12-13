@@ -228,7 +228,6 @@ export default async function ProfilePage({ params }: PageProps) {
                       cityId={event.eventDetails.city.id}
                       styles={event.eventDetails.styles || []}
                       eventType={event.eventDetails.eventType}
-                      roles={event.roles.map((role: Role) => role.title)}
                       href={eventRoute}
                       isSaved={savedEventIds.has(event.id)}
                     />

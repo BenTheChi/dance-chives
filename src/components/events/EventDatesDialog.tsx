@@ -11,12 +11,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { formatInTimeZone } from "date-fns-tz";
 
-type Cursor = {
-  cursorType: "future" | "past";
-  cursorStartUtc: string | null;
-  cursorId: string | null;
-} | null;
-
 type ApiItem = {
   id: string;
   kind: "timed" | "allDay";
@@ -29,8 +23,6 @@ type ApiResponse = {
   eventId: string;
   eventTimezone: string;
   items: ApiItem[];
-  nextCursor: Cursor;
-  hasMore: boolean;
 };
 
 function formatRow(opts: { item: ApiItem; timeZone: string }): string {
@@ -58,34 +50,16 @@ export function EventDatesDialog(props: { eventId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [timeZone, setTimeZone] = useState<string>("UTC");
   const [items, setItems] = useState<ApiItem[]>([]);
-  const [cursor, setCursor] = useState<Cursor>(null);
-  const [hasMore, setHasMore] = useState(false);
 
-  const fetchPage = useCallback(
-    async (opts: { reset: boolean }) => {
-      const query = new URLSearchParams();
-      query.set("limit", "20");
-      if (!opts.reset && cursor?.cursorType) {
-        query.set("cursorType", cursor.cursorType);
-        if (cursor.cursorStartUtc)
-          query.set("cursorStartUtc", cursor.cursorStartUtc);
-        if (cursor.cursorId) query.set("cursorId", cursor.cursorId);
-      }
-
-      const res = await fetch(
-        `/api/events/${eventId}/dates?${query.toString()}`
-      );
-      if (!res.ok) {
-        throw new Error(`Failed to fetch dates: ${res.status}`);
-      }
-      const data = (await res.json()) as ApiResponse;
-      setTimeZone(data.eventTimezone || "UTC");
-      setCursor(data.nextCursor);
-      setHasMore(Boolean(data.hasMore));
-      setItems((prev) => (opts.reset ? data.items : [...prev, ...data.items]));
-    },
-    [cursor, eventId]
-  );
+  const fetchDates = useCallback(async () => {
+    const res = await fetch(`/api/events/${eventId}/dates`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch dates: ${res.status}`);
+    }
+    const data = (await res.json()) as ApiResponse;
+    setTimeZone(data.eventTimezone || "UTC");
+    setItems(data.items);
+  }, [eventId]);
 
   const onOpenChange = useCallback(
     async (nextOpen: boolean) => {
@@ -93,24 +67,14 @@ export function EventDatesDialog(props: { eventId: string }) {
       if (nextOpen && items.length === 0 && !isLoading) {
         setIsLoading(true);
         try {
-          await fetchPage({ reset: true });
+          await fetchDates();
         } finally {
           setIsLoading(false);
         }
       }
     },
-    [fetchPage, isLoading, items.length]
+    [fetchDates, isLoading, items.length]
   );
-
-  const onShowMore = useCallback(async () => {
-    if (!hasMore || isLoading) return;
-    setIsLoading(true);
-    try {
-      await fetchPage({ reset: false });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchPage, hasMore, isLoading]);
 
   // For display: split by comparing to "now" for timed; for all-day trust localDate vs today in TZ
   const nowUtc = useMemo(() => new Date(), []);
@@ -139,7 +103,7 @@ export function EventDatesDialog(props: { eventId: string }) {
 
   return (
     <>
-      <Button variant="outline" onClick={() => onOpenChange(true)}>
+      <Button variant="link" onClick={() => onOpenChange(true)}>
         More dates
       </Button>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,61 +114,59 @@ export function EventDatesDialog(props: { eventId: string }) {
           </DialogHeader>
 
           <div className="max-h-[60vh] overflow-y-auto space-y-3">
-            <div className="space-y-2">
-              <div className="text-sm font-semibold">Upcoming</div>
-              {future.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No upcoming dates.
+            {isLoading ? (
+              <div className="text-sm text-muted-foreground">Loading...</div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">Upcoming</div>
+                  {future.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No upcoming dates.
+                    </div>
+                  ) : (
+                    <ul className="space-y-1">
+                      {future
+                        .slice()
+                        .sort(
+                          (a, b) =>
+                            +new Date(a.startUtc) - +new Date(b.startUtc)
+                        )
+                        .map((item) => (
+                          <li key={item.id} className="text-sm">
+                            {formatRow({ item, timeZone })}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </div>
-              ) : (
-                <ul className="space-y-1">
-                  {future
-                    .slice()
-                    .sort(
-                      (a, b) => +new Date(a.startUtc) - +new Date(b.startUtc)
-                    )
-                    .map((item) => (
-                      <li key={item.id} className="text-sm">
-                        {formatRow({ item, timeZone })}
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
 
-            <Separator />
+                <Separator />
 
-            <div className="space-y-2">
-              <div className="text-sm font-semibold">Past</div>
-              {past.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No past dates.
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">Past</div>
+                  {past.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      No past dates.
+                    </div>
+                  ) : (
+                    <ul className="space-y-1">
+                      {past
+                        .slice()
+                        .sort(
+                          (a, b) =>
+                            +new Date(b.startUtc) - +new Date(a.startUtc)
+                        )
+                        .map((item) => (
+                          <li key={item.id} className="text-sm">
+                            {formatRow({ item, timeZone })}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
                 </div>
-              ) : (
-                <ul className="space-y-1">
-                  {past
-                    .slice()
-                    .sort(
-                      (a, b) => +new Date(b.startUtc) - +new Date(a.startUtc)
-                    )
-                    .map((item) => (
-                      <li key={item.id} className="text-sm">
-                        {formatRow({ item, timeZone })}
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={onShowMore} disabled={!hasMore || isLoading}>
-              {isLoading
-                ? "Loading..."
-                : hasMore
-                ? "Show more"
-                : "No more dates"}
-            </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
