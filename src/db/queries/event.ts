@@ -223,6 +223,7 @@ export const getEvent = async (id: string): Promise<Event> => {
       description: e.description,
       location: e.location,
       cost: e.cost,
+      prize: e.prize,
       startDate: e.startDate,
       dates: e.dates,
       schedule: e.schedule,
@@ -741,6 +742,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     description: eventData.description,
     location: eventData.location,
     cost: eventData.cost,
+    prize: eventData.prize,
     schedule: eventData.schedule,
     creatorId: eventData.creatorId,
     poster: poster || null,
@@ -1407,6 +1409,7 @@ export const insertEvent = async (
         e.description = $description,
         e.location = $location,
         e.cost = $cost,
+        e.prize = $prize,
         e.startDate = $startDate,
         e.dates = $dates,
         e.schedule = $schedule,
@@ -1417,6 +1420,7 @@ export const insertEvent = async (
         e.description = $description,
         e.location = $location,
         e.cost = $cost,
+        e.prize = $prize,
         e.startDate = $startDate,
         e.dates = $dates,
         e.schedule = $schedule,
@@ -1435,6 +1439,7 @@ export const insertEvent = async (
         description: eventDetails.description,
         location: eventDetails.location,
         cost: eventDetails.cost || null,
+        prize: eventDetails.prize || null,
         // Derive startDate from first date in dates array for database storage
         startDate:
           eventDetails.dates && eventDetails.dates.length > 0
@@ -1524,6 +1529,7 @@ export const insertEvent = async (
         description: eventDetails.description,
         location: eventDetails.location,
         cost: eventDetails.cost || null,
+        prize: eventDetails.prize || null,
         // Derive startDate from first date in dates array for database storage
         startDate:
           eventDetails.dates && eventDetails.dates.length > 0
@@ -1679,6 +1685,7 @@ export const editEvent = async (
            e.description = $description,
            e.location = $location,
            e.cost = $cost,
+           e.prize = $prize,
            e.startDate = $startDate,
            e.dates = $dates,
            e.schedule = $schedule,
@@ -1689,6 +1696,7 @@ export const editEvent = async (
         description: eventDetails.description,
         location: eventDetails.location,
         cost: eventDetails.cost || null,
+        prize: eventDetails.prize || null,
         // Derive startDate from first date in dates array for database storage
         startDate:
           eventDetails.dates && eventDetails.dates.length > 0

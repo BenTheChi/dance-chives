@@ -1,12 +1,5 @@
 "use client";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
 import { UseFormRegister, FieldValues, Path } from "react-hook-form";
 import NextImage from "next/image";
 import type { Image } from "@/types/image";
@@ -175,19 +168,16 @@ export default function UploadFile<T extends FieldValues>({
   const imageSources = useObjectUrls(filesArray);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Upload a File</CardTitle>
-        <CardDescription>
+    <section>
+      {/* <header>
+        <p>
           {isGallery
             ? `Select files to upload. ${currentFileCount}/${maxFiles} photos.`
-            : "Select a file to upload and click the submit button."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <hr />
-
-        <div className="flex flex-row gap-2 flex-wrap">
+            : "Select a file to upload"}
+        </p>
+      </header> */}
+      <div>
+        <div className="flex flex-row gap-2 flex-wrap justify-center">
           {files &&
             Array.isArray(files) &&
             files.map((file) => (
@@ -329,8 +319,8 @@ export default function UploadFile<T extends FieldValues>({
             </label>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

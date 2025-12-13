@@ -32,6 +32,7 @@ export interface EventDetails {
   location?: string;
   creatorId: string;
   cost?: string;
+  prize?: string;
   dates: EventDate[]; // Required: Array of dates for events (at least one)
   poster?: Image | null;
   city: City;

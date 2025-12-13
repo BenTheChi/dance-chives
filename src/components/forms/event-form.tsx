@@ -188,6 +188,10 @@ const eventDetailsSchema = z.object({
     (val) => (val === null ? undefined : val),
     z.string().optional()
   ),
+  prize: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.string().optional()
+  ),
   poster: imageSchema.nullable().optional(),
   eventType: z.enum([
     "Battle",
@@ -297,6 +301,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         schedule: "",
         location: "",
         cost: "",
+        prize: "",
         poster: null,
         eventType: "Battle",
       },

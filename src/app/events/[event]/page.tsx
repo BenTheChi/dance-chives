@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Event } from "@/types/event";
-import { DollarSign, MapPin, Pencil, Settings } from "lucide-react";
+import { DollarSign, MapPin, Pencil, Settings, Trophy } from "lucide-react";
 import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
@@ -369,6 +369,13 @@ export default async function EventPage({ params }: PageProps) {
                 <div className="flex flex-row gap-2 items-center">
                   <DollarSign size={18} />
                   <span>{event.eventDetails.cost}</span>
+                </div>
+              )}
+
+              {event.eventDetails.prize && (
+                <div className="flex flex-row gap-2 items-center">
+                  <Trophy size={18} />
+                  <span>{event.eventDetails.prize}</span>
                 </div>
               )}
             </section>

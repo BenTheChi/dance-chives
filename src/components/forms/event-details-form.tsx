@@ -112,7 +112,7 @@ export function EventDetailsForm({
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       {/* Basic Information Section */}
-      <div className="space-y-5 border border-gray-200 rounded-lg p-5 bg-white shadow-sm">
+      <div className="space-y-5 border border-charcoal rounded-lg p-5 bg-white shadow-sm">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Basic Information
@@ -206,7 +206,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Location & Date Section */}
-      <div className="space-y-5 border border-gray-200 rounded-lg p-5 bg-white shadow-sm">
+      <div className="space-y-5 border border-charcoal rounded-lg p-5 bg-white shadow-sm">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             When & Where
@@ -259,7 +259,7 @@ export function EventDetailsForm({
           {fields.map((field, index) => (
             <div
               key={field.id}
-              className="border border-gray-200 rounded-lg p-4 sm:p-5 bg-white shadow-sm w-full overflow-hidden"
+              className="border border-charcoal rounded-lg p-4 sm:p-5 bg-white shadow-sm w-full overflow-hidden"
             >
               <div className="space-y-4">
                 {/* Date and All Day Row */}
@@ -393,11 +393,9 @@ export function EventDetailsForm({
       </div>
 
       {/* Event Poster Section */}
-      <div className="space-y-5 border border-gray-200 rounded-lg p-5 bg-white shadow-sm">
+      <div className="space-y-5 border border-charcoal rounded-lg p-5 bg-white shadow-sm">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Event Poster
-          </h3>
+          <h3 className="text-lg font-semibold">Event Poster</h3>
         </div>
 
         <FormField
@@ -424,7 +422,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Additional Details Section */}
-      <div className="space-y-5 border border-gray-200 rounded-lg p-5 bg-white shadow-sm">
+      <div className="space-y-5 border border-charcoal rounded-lg p-5 bg-white shadow-sm">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Additional Details
@@ -441,7 +439,7 @@ export function EventDetailsForm({
                 <textarea
                   {...field}
                   value={field.value ?? ""}
-                  className="bg-white min-h-[120px] p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
+                  className="bg-white min-h-[120px] p-3 rounded-md border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
                   placeholder="Tell people about your event. What makes it special? Who should attend?"
                 />
               </FormControl>
@@ -455,12 +453,12 @@ export function EventDetailsForm({
           name="eventDetails.schedule"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Schedule / Timeline</FormLabel>
+              <FormLabel>Schedule</FormLabel>
               <FormControl>
                 <textarea
                   {...field}
                   value={field.value ?? ""}
-                  className="bg-white min-h-[120px] p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
+                  className="bg-white min-h-[120px] p-3 rounded-md border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
                   placeholder="Add a detailed schedule or timeline for your event..."
                 />
               </FormControl>
@@ -469,19 +467,37 @@ export function EventDetailsForm({
           )}
         />
 
-        <div className="flex flex-col sm:flex-row gap-5 w-full">
+        <div className="flex flex-col sm:flex-row w-full gap-5">
           <FormField
             control={control}
             name="eventDetails.cost"
             render={({ field }) => (
-              <FormItem className="flex-1 w-full sm:max-w-[300px] min-w-0">
-                <FormLabel>Cost / Price</FormLabel>
+              <FormItem className="flex-1">
+                <FormLabel>Cost</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     value={field.value ?? ""}
                     className="bg-white w-full"
                     placeholder="e.g., $20, Free, $10-15"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="eventDetails.prize"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>Prize</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    className="bg-white w-full"
+                    placeholder="e.g., $500, Trophy, Gift card"
                   />
                 </FormControl>
                 <FormMessage />

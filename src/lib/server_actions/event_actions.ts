@@ -64,6 +64,7 @@ interface addEventProps {
     schedule?: string;
     location?: string;
     cost?: string;
+    prize?: string;
     poster?: {
       id: string;
       title: string;
@@ -364,6 +365,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       description: props.eventDetails.description ?? "",
       location: props.eventDetails.location ?? "",
       cost: props.eventDetails.cost,
+      prize: props.eventDetails.prize,
       dates: normalizedDates,
       schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Image | null,
@@ -700,6 +702,7 @@ export async function editEvent(
       description: editedEvent.eventDetails.description ?? "",
       location: editedEvent.eventDetails.location,
       cost: editedEvent.eventDetails.cost,
+      prize: editedEvent.eventDetails.prize,
       // Derive startDate from first date in dates array for database compatibility
       dates: normalizedDates,
       schedule: editedEvent.eventDetails.schedule ?? "",

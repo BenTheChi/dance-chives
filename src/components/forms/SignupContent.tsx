@@ -114,7 +114,7 @@ export function SignupContent() {
 
     return (
       <div className="flex flex-col items-center justify-center w-full">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md bg-misty-seafoam">
           <CardHeader>
             <CardTitle className="text-2xl text-center">
               Create your account
@@ -141,15 +141,10 @@ export function SignupContent() {
               </Button>
             </div>
 
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">
-                  Or sign up with magic link
-                </span>
-              </div>
+            <hr className="my-4 border-black" />
+
+            <div className="text-muted-foreground text-center mb-0">
+              Or sign up with magic link
             </div>
 
             <form onSubmit={handleSendMagicLink} className="space-y-3">

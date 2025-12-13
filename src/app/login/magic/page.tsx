@@ -72,7 +72,7 @@ export default function MagicLoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md bg-misty-seafoam">
         <CardHeader>
           <CardTitle className="text-center">
             {status === "loading" ? "Signing you in..." : "Magic link error"}

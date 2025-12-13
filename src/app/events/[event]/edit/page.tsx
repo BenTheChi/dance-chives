@@ -88,6 +88,7 @@ export default async function EditEventPage({
     schedule: currEvent.eventDetails.schedule ?? "",
     location: currEvent.eventDetails.location ?? "",
     cost: currEvent.eventDetails.cost ?? "",
+    prize: currEvent.eventDetails.prize ?? "",
     poster: currEvent.eventDetails.poster
       ? {
           ...currEvent.eventDetails.poster,
