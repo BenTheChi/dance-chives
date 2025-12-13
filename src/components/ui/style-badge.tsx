@@ -22,7 +22,7 @@ export function StyleBadge({
   onRemove,
 }: StyleBadgeProps) {
   const badgeClasses = cn(
-    "text-black bg-white border border-black font-semibold text-xs px-1 py-0.5 rounded inline-flex items-center justify-center leading-none gap-1",
+    "text-black bg-white border border-charcoal font-semibold text-xs px-1 py-0.5 rounded inline-flex items-center justify-center leading-none gap-1",
     asLink &&
       !showRemoveButton &&
       "hover:bg-gray-100 transition-colors cursor-pointer",

@@ -5,7 +5,7 @@ export default function SignupPage() {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-fog-white">
         <SignupContent />
       </div>
     </>

@@ -508,9 +508,8 @@ export function UploadProfilePicture({
 
       {profilePreview && profileConfirmed && !imageSrc && (
         <div className="space-y-4">
-          <div className="flex gap-4">
+          <div className="flex gap-10">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Profile Preview</label>
               <div className="relative h-[350px] w-[250px] overflow-hidden rounded-lg border-2 border-black">
                 <Image
                   src={profilePreview}
@@ -523,8 +522,7 @@ export function UploadProfilePicture({
               </div>
             </div>
             {avatarPreview && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Avatar Preview</label>
+              <div className="space-y-2 flex flex-col items-center">
                 <div className="relative h-[60px] w-[60px] overflow-hidden rounded-full">
                   <Image
                     src={avatarPreview}

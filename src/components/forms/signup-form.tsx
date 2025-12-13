@@ -3,13 +3,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -30,7 +23,6 @@ import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
 import { toast } from "sonner";
-import Image from "next/image";
 import { CitySearchInput } from "@/components/CitySearchInput";
 import { City } from "@/types/city";
 import { FieldErrors } from "react-hook-form";
@@ -269,29 +261,29 @@ export default function SignUpForm({
   };
 
   return (
-    <Card className={isEditMode ? "w-full max-w-2xl" : "w-full max-w-2xl"}>
-      <CardHeader>
-        <CardTitle className="text-xl">
-          {isEditMode ? "Edit Profile" : "Complete Your Registration"}
-        </CardTitle>
-        <CardDescription>
+    <section className="w-full max-w-lg border-2 border-black rounded-md p-4 bg-misty-seafoam">
+      <header className="mb-6">
+        <h1 className="text-xl font-semibold">
+          {isEditMode ? "Edit Profile" : "Complete Your Profile"}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
           {isEditMode
             ? "Update your profile information"
             : "You've signed in with OAuth. Complete your profile to verify your account and access all features."}
           {!isEditMode && isAdminUser && (
-            <div className="mt-2">
+            <span className="block mt-2">
               <Badge variant="default" className="text-xs">
                 🔑 Admin Account Detected - Super Admin privileges will be
                 automatically assigned
               </Badge>
-            </div>
+            </span>
           )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </p>
+      </header>
+      <div>
         <Form {...form}>
           <form
-            className="space-y-3"
+            className="space-y-7"
             onSubmit={handleSubmit(onSubmit, onError)}
           >
             {/* Username field - only show in signup mode */}
@@ -301,7 +293,7 @@ export default function SignUpForm({
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel required>Username</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Unique identifier. Cannot change."
@@ -327,15 +319,119 @@ export default function SignUpForm({
               </div>
             )}
 
+            <FormField
+              control={form.control}
+              name="displayName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel required>Display Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Will be displayed publicly. Can be changed."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <CitySearchInput
+              control={form.control}
+              name="city"
+              label="City"
+              placeholder="Search for a city..."
+              required
+            />
+            <DatePicker
+              control={form.control}
+              name="date"
+              label="Date of Birth"
+              required={!isEditMode}
+            />
+            {/* Event Creator Switch - only show on first-time signup (not in edit mode) */}
+            {!isEditMode && (
+              <FormField
+                control={form.control}
+                name="isCreator"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Do you want to create events?</FormLabel>
+                    <FormControl>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-charcoal">No</span>
+                        <Switch
+                          checked={field.value || false}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span className="text-sm text-charcoal">Yes</span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            <hr className="my-10 border-black" />
+            <FormField
+              control={form.control}
+              name="styles"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dance Styles</FormLabel>
+                  <FormControl>
+                    <StyleMultiSelect
+                      value={field.value || []}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Bio field */}
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bio</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Tell us about yourself..."
+                      className="resize-none min-h-[80px]"
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Instagram field */}
+            <FormField
+              control={form.control}
+              name="instagram"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instagram Username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="@username" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <hr className="my-10 border-black" />
             {/* Profile Picture */}
             <FormField
               control={form.control}
               name="profilePicture"
               render={({ field: { onChange } }) => (
                 <FormItem>
-                  <FormLabel>
-                    Profile Picture {isEditMode ? "" : "(Optional)"}
-                  </FormLabel>
+                  <FormLabel>Profile Picture</FormLabel>
                   <FormControl>
                     <UploadProfilePicture
                       onImagesReady={(profileBlob, avatarBlob) => {
@@ -374,128 +470,22 @@ export default function SignUpForm({
               name="avatarPicture"
               render={() => <></>}
             />
-            <FormField
-              control={form.control}
-              name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Display Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Will be displayed publicly. Can be changed."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <CitySearchInput
-              control={form.control}
-              name="city"
-              label="City"
-              placeholder="Search for a city..."
-              required
-            />
-            <DatePicker
-              control={form.control}
-              name="date"
-              label="Date of Birth"
-            />
-            <FormField
-              control={form.control}
-              name="styles"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Dance Styles (Optional)</FormLabel>
-                  <FormControl>
-                    <StyleMultiSelect
-                      value={field.value || []}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Event Creator Switch - only show on first-time signup (not in edit mode) */}
-            {!isEditMode && (
-              <FormField
-                control={form.control}
-                name="isCreator"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Do you want to create events?</FormLabel>
-                    <FormControl>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-muted-foreground">
-                          No
-                        </span>
-                        <Switch
-                          checked={field.value || false}
-                          onCheckedChange={field.onChange}
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          Yes
-                        </span>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Bio field */}
-            <FormField
-              control={form.control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Tell us about yourself..."
-                      className="resize-none min-h-[80px]"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Instagram field */}
-            <FormField
-              control={form.control}
-              name="instagram"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Instagram Username (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@username" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Website field */}
-            <FormField
+            {/* <FormField
               control={form.control}
               name="website"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Website (Optional)</FormLabel>
+                  <FormLabel>Website</FormLabel>
                   <FormControl>
                     <Input placeholder="https://yourwebsite.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
+            <hr className="my-10 border-black" />
 
             <Button
               type="submit"
@@ -508,11 +498,11 @@ export default function SignUpForm({
                   : "Processing..."
                 : isEditMode
                 ? "Update Profile"
-                : "Complete Registration & Verify Account"}
+                : "Complete Profile"}
             </Button>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

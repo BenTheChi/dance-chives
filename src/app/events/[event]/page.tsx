@@ -199,12 +199,33 @@ export default async function EventPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[600px] md:max-w-6xl">
-          <PosterImage
-            poster={event.eventDetails.poster ?? null}
-            className="col-span-1 md:col-span-1"
-          />
+          {/* Left column: Poster + Sections (sections only when description exists) */}
+          <div className="flex flex-col gap-4 col-span-1">
+            <PosterImage
+              poster={event.eventDetails.poster ?? null}
+              className="w-full"
+            />
 
-          <div className="flex flex-col gap-4 col-span-1 md:col-span-1">
+            {/* Sections in left column ONLY when description/schedule exists (to fill space next to long content) */}
+            {event.sections &&
+              event.sections.length > 0 &&
+              (event.eventDetails.description ||
+                event.eventDetails.schedule) && (
+                <div className="hidden md:flex flex-col gap-4">
+                  {event.sections.map((section) => (
+                    <SectionCard
+                      key={section.id}
+                      section={section}
+                      eventId={event.id}
+                      eventTitle={event.eventDetails.title}
+                    />
+                  ))}
+                </div>
+              )}
+          </div>
+
+          {/* Right column: Details + Roles + Description */}
+          <div className="flex flex-col gap-4 col-span-1">
             {/* Event Details */}
             <section className="bg-misty-seafoam p-6 rounded-md flex flex-col gap-4 border border-black">
               <div>
@@ -411,32 +432,38 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               ))}
             </section>
+
+            {/* Description - directly under Event Roles */}
+            {(event.eventDetails.description ||
+              event.eventDetails.schedule) && (
+              <section className="flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md border border-black">
+                {event.eventDetails.description && (
+                  <>
+                    <div className="font-semibold text-2xl">Description</div>
+                    <div className="whitespace-pre-wrap">
+                      {event.eventDetails.description}
+                    </div>
+                  </>
+                )}
+                {event.eventDetails.schedule && (
+                  <>
+                    <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                      Schedule
+                    </div>
+                    <div className="whitespace-pre-wrap">
+                      {event.eventDetails.schedule}
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
           </div>
 
-          {/* Description */}
-          {event.eventDetails.description && (
-            <section className="flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md col-span-1 md:col-span-2 border border-black">
-              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
-                Description
-              </div>
-              <div className="whitespace-pre-wrap">
-                {event.eventDetails.description}
-              </div>
-              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
-                Schedule
-              </div>
-              <div className="whitespace-pre-wrap">
-                {event.eventDetails.schedule || "No schedule available"}
-              </div>
-            </section>
-          )}
-
-          {/* Sections */}
+          {/* Sections - full width 2 columns when NO description, mobile stacked */}
           {event.sections && event.sections.length > 0 && (
-            <section className="col-span-1 md:col-span-2">
-              <h2 className="text-2xl font-bold mb-4 text-center">Sections</h2>
-
-              <div className="flex flex-wrap justify-center gap-2">
+            <>
+              {/* Mobile: always stacked */}
+              <div className="col-span-1 flex flex-col gap-4 md:hidden">
                 {event.sections.map((section) => (
                   <SectionCard
                     key={section.id}
@@ -446,7 +473,21 @@ export default async function EventPage({ params }: PageProps) {
                   />
                 ))}
               </div>
-            </section>
+              {/* Desktop: 2 columns only when no description (otherwise sections are in left column) */}
+              {!event.eventDetails.description &&
+                !event.eventDetails.schedule && (
+                  <div className="hidden md:grid col-span-2 grid-cols-2 gap-4">
+                    {event.sections.map((section) => (
+                      <SectionCard
+                        key={section.id}
+                        section={section}
+                        eventId={event.id}
+                        eventTitle={event.eventDetails.title}
+                      />
+                    ))}
+                  </div>
+                )}
+            </>
           )}
 
           {/* Photo Gallery */}

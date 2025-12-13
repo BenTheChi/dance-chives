@@ -187,7 +187,7 @@ export function SignupContent() {
 
   // If the user is logged in, but not registered show the signup form
   return (
-    <div className="flex items-start justify-center w-full max-w-4xl px-4">
+    <div className="flex items-start justify-center w-full max-w-4xl px-4 py-5">
       <SignUpForm />
     </div>
   );
