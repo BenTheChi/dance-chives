@@ -11,7 +11,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { X } from "lucide-react";
-import { BigAddButton } from "@/components/ui/big-add-button";
+import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import type {
   Control,
   UseFormSetValue,
@@ -177,7 +177,7 @@ export function BracketForm({
             No videos yet. Let&apos;s create one!
           </div>
           <div className="flex justify-center">
-            <BigAddButton onClick={addVideoToBracket} />
+            <CirclePlusButton size="lg" onClick={addVideoToBracket} />
           </div>
         </div>
       ) : (
@@ -250,7 +250,7 @@ export function BracketForm({
               );
             })}
             <div className="flex justify-center mt-2">
-              <BigAddButton onClick={addVideoToBracket} />
+              <CirclePlusButton size="lg" onClick={addVideoToBracket} />
             </div>
           </div>
 

@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { BigAddButton } from "@/components/ui/big-add-button";
-import { SmallAddButton } from "@/components/ui/small-add-button";
+import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { X } from "lucide-react";
 import { FieldErrors, useForm, Resolver } from "react-hook-form";
@@ -1036,11 +1035,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                           </span>
                                         )}
                                       </span>
-                                      <SmallAddButton
+                                      <CirclePlusButton
+                                        size="sm"
                                         onClick={() =>
                                           addBracketFromSidebar(section.id)
                                         }
-                                        className="ml-1 h-6 w-6 rounded-full p-0"
+                                        className="ml-1"
                                         aria-label={`Add bracket to ${section.title}`}
                                       />
                                     </div>
@@ -1103,7 +1103,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     </div>
 
                     <div className="flex justify-center mt-6">
-                      <BigAddButton onClick={addSection} />
+                      <CirclePlusButton size="lg" onClick={addSection} />
                     </div>
                   </div>
                 )}
@@ -1118,7 +1118,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                         No sections yet. Let&apos;s create one!
                       </div>
                       <div className="flex justify-center">
-                        <BigAddButton onClick={addSection} />
+                        <CirclePlusButton size="lg" onClick={addSection} />
                       </div>
                     </div>
                   ) : (

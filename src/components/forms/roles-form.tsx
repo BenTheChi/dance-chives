@@ -22,7 +22,7 @@ import {
 import { UserSearchItem } from "@/types/user";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
-import { BigAddButton } from "../ui/big-add-button";
+import { CirclePlusButton } from "../ui/circle-plus-button";
 
 interface RolesFormProps {
   control: Control<FormValues>;
@@ -87,7 +87,7 @@ export default function RolesForm({
             No roles yet. Let&apos;s create one!
           </div>
           <div className="flex justify-center">
-            <BigAddButton onClick={addRole} />
+            <CirclePlusButton size="lg" onClick={addRole} />
           </div>
         </div>
       ) : (
@@ -167,7 +167,7 @@ export default function RolesForm({
           ))}
 
           <div className="flex justify-center mt-6">
-            <BigAddButton onClick={addRole} />
+            <CirclePlusButton size="lg" onClick={addRole} />
           </div>
         </div>
       )}
