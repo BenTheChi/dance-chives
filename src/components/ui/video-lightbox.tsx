@@ -13,7 +13,7 @@ import {
   Video,
 } from "@/types/video";
 import { UserSearchItem } from "@/types/user";
-import { TagSelfButton } from "@/components/events/TagSelfButton";
+import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 import { Trophy } from "lucide-react";
 import { extractYouTubeVideoId } from "@/lib/utils";
@@ -313,7 +313,7 @@ export function VideoLightbox({
               {/* Tag Self Button */}
               {currentUserId && (
                 <div className="flex-shrink-0">
-                  <TagSelfButton
+                  <TagSelfCircleButton
                     eventId={eventId}
                     target="video"
                     targetId={video.id}
@@ -325,7 +325,6 @@ export function VideoLightbox({
                       ...(isUserChoreographer ? ["Choreographer"] : []),
                       ...(isUserTeacher ? ["Teacher"] : []),
                     ]}
-                    buttonLabel="Tag Self"
                   />
                 </div>
               )}

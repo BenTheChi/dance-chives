@@ -4,7 +4,7 @@ import { Section } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { TagSelfButton } from "@/components/events/TagSelfButton";
+import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 import { useEffect, useState } from "react";
 import { checkUserWinnerOfSection } from "@/lib/server_actions/request_actions";
 
@@ -84,7 +84,7 @@ export function SectionDetails({
               new Map(
                 section.winners.filter((w) => w && w.id).map((w) => [w.id, w])
               ).values()
-            ).map((winner) => (
+            ).map((winner) =>
               winner.username ? (
                 <UserAvatar
                   key={winner.id}
@@ -96,21 +96,20 @@ export function SectionDetails({
               ) : (
                 <span key={winner.id}>{winner.displayName}</span>
               )
-            ))}
+            )}
           </div>
         ) : (
           <p className="text-sm text-gray-600">No winners yet.</p>
         )}
         {currentUserId && section?.id && (
           <div className="mt-2">
-            <TagSelfButton
+            <TagSelfCircleButton
               eventId={eventId}
               target="section"
               targetId={section.id}
               currentUserId={currentUserId}
               isUserTagged={isUserWinner}
               canTagDirectly={canTagDirectly}
-              buttonLabel="Tag Myself"
               pendingLabel="Winner tag request pending"
               successLabel="Tagged as Winner"
               dialogTitle={`Tag yourself as a winner of ${section.title}?`}

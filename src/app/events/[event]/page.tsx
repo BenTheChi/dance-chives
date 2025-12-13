@@ -1,21 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Event } from "@/types/event";
-import {
-  Award,
-  Building,
-  Calendar,
-  DollarSign,
-  MapPin,
-  Settings,
-  Tag,
-} from "lucide-react";
+import { DollarSign, MapPin, Settings } from "lucide-react";
 import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
-import { TagSelfButton } from "@/components/events/TagSelfButton";
+import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -226,21 +218,54 @@ export default async function EventPage({ params }: PageProps) {
 
           <div className="flex flex-col gap-4 col-span-1 md:col-span-1">
             {/* Event Details */}
-            <section className="bg-misty-seafoam p-4 rounded-md flex flex-col gap-2 border border-black">
-              <h1 className="text-2xl font-bold">{event.eventDetails.title}</h1>
-              {event.eventDetails.eventType && (
-                <div className="flex flex-row gap-2">
-                  <Award />
-                  <b>Type:</b> {event.eventDetails.eventType}
+            <section className="bg-misty-seafoam p-6 rounded-md flex flex-col gap-4 border border-black">
+              <div>
+                <h1 className="text-3xl font-bold">
+                  {event.eventDetails.title}
+                </h1>
+
+                <div className="text-xl text-muted-foreground font-semibold">
+                  {event.eventDetails.city.id ? (
+                    <Link
+                      href={`/cities/${event.eventDetails.city.id}`}
+                      className="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
+                    >
+                      {event.eventDetails.city.name}
+                    </Link>
+                  ) : (
+                    event.eventDetails.city.name
+                  )}
+
+                  {event.eventDetails.eventType && (
+                    <span className="text-muted-foreground">
+                      {` | `}
+                      {event.eventDetails.eventType}
+                    </span>
+                  )}
                 </div>
-              )}
-              {(upcomingDates.length > 0 || pastDates.length > 0) && (
-                <div className="flex flex-col gap-2">
+              </div>
+
+              {(pastDates.length > 0 || upcomingDates.length > 0) && (
+                <div className="flex flex-col gap-3">
+                  {pastDates.length > 0 && (
+                    <div className="flex flex-col">
+                      <span className="text-md font-semibold">Past Dates</span>
+                      <div className="flex flex-col text-sm">
+                        {pastDates.map((d, idx) => (
+                          <span key={`past-${d.date}-${idx}`}>
+                            {formatEventDateRow(d)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {upcomingDates.length > 0 && (
-                    <div className="flex flex-row gap-2">
-                      <Calendar />
-                      <b>Upcoming Dates:</b>
-                      <div className="flex flex-col">
+                    <div className="flex flex-col">
+                      <span className="text-md font-semibold">
+                        Future Dates
+                      </span>
+                      <div className="flex flex-col text-sm">
                         {upcomingDates.map((d, idx) => (
                           <span key={`upcoming-${d.date}-${idx}`}>
                             {formatEventDateRow(d)}
@@ -250,82 +275,59 @@ export default async function EventPage({ params }: PageProps) {
                     </div>
                   )}
 
-                  {pastDates.length > 0 && (
-                    <div className="flex flex-row gap-2">
-                      <Calendar />
-                      <b>Past Dates:</b>
-                      <span>{formatEventDateRow(pastDates[0])}</span>
-                    </div>
-                  )}
-
                   {showMoreDatesButton && (
-                    <div className="pl-7">
-                      <EventDatesDialog eventId={event.id} />
-                    </div>
+                    <EventDatesDialog eventId={event.id} />
                   )}
                 </div>
               )}
-              <div className="flex flex-row gap-2">
-                <Building />
-                <b>City:</b>{" "}
-                {event.eventDetails.city.id ? (
-                  <Link
-                    href={`/cities/${event.eventDetails.city.id}`}
-                    className="hover:text-blue-600 hover:underline transition-colors"
-                  >
-                    {event.eventDetails.city.name}
-                    {event.eventDetails.city.countryCode &&
-                      `, ${event.eventDetails.city.countryCode}`}
-                  </Link>
-                ) : (
-                  <>
-                    {event.eventDetails.city.name}
-                    {event.eventDetails.city.countryCode &&
-                      `, ${event.eventDetails.city.countryCode}`}
-                  </>
-                )}
-              </div>
+
+              {eventStyles.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {eventStyles.map((style) => (
+                    <StyleBadge key={style} style={style} />
+                  ))}
+                </div>
+              )}
+
               {event.eventDetails.location && (
-                <div className="flex flex-row gap-2">
-                  <div className="flex flex-row gap-2">
-                    <MapPin />
-                    <b>Location:</b>
-                  </div>
+                <div className="flex flex-row gap-2 items-start">
+                  <MapPin className="mt-1 shrink-0" size={18} />
                   <div className="whitespace-pre-wrap">
                     {event.eventDetails.location}
                   </div>
                 </div>
               )}
+
               {event.eventDetails.cost && (
-                <div className="flex flex-row gap-2">
-                  <DollarSign />
-                  <b>Cost:</b> {event.eventDetails.cost}
-                </div>
-              )}
-              {eventStyles.length > 0 && (
                 <div className="flex flex-row gap-2 items-center">
-                  <Tag />
-                  <b>Styles:</b>
-                  <div className="flex flex-wrap gap-1">
-                    {eventStyles.map((style) => (
-                      <StyleBadge key={style} style={style} />
-                    ))}
-                  </div>
+                  <DollarSign size={18} />
+                  <span>{event.eventDetails.cost}</span>
                 </div>
               )}
             </section>
 
             {/* Event Roles */}
-            <section className="p-4 rounded-md bg-misty-seafoam flex flex-col gap-2 border border-black">
-              <h2 className="text-xl font-bold mb-2">Event Roles</h2>
+            <section className="p-4 rounded-md bg-misty-seafoam flex flex-col border border-black">
+              <div className="flex flex-row justify-between items-baseline">
+                <h2 className="text-xl font-bold mb-2">Event Roles</h2>
+                <TagSelfCircleButton
+                  eventId={event.id}
+                  currentUserRoles={currentUserRoles}
+                  isTeamMember={isEventTeamMember}
+                  canTagDirectly={canTagDirectly}
+                />
+              </div>
               {creator && (
                 <div className="flex flex-row gap-2 items-center flex-wrap">
-                  <span>Creator: </span>
+                  <span className="text-sm text-muted-foreground">
+                    Page Owner:{" "}
+                  </span>
                   <UserAvatar
                     username={creator.username || ""}
                     displayName={creator.displayName || creator.username || ""}
                     avatar={(creator as { avatar?: string | null }).avatar}
                     image={(creator as { image?: string | null }).image}
+                    isSmall={true}
                   />
                 </div>
               )}
@@ -356,12 +358,6 @@ export default async function EventPage({ params }: PageProps) {
                   )}
                 </div>
               ))}
-              <TagSelfButton
-                eventId={event.id}
-                currentUserRoles={currentUserRoles}
-                isTeamMember={isEventTeamMember}
-                canTagDirectly={canTagDirectly}
-              />
             </section>
           </div>
 

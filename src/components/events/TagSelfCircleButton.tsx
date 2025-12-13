@@ -33,8 +33,9 @@ import {
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 
-interface TagSelfButtonProps {
+interface TagSelfCircleButtonProps {
   eventId: string;
   // For event-level tagging
   currentUserRoles?: string[]; // Roles already assigned to the current user
@@ -47,7 +48,6 @@ interface TagSelfButtonProps {
   role?: string;
   isUserTagged?: boolean;
   showRemoveButton?: boolean;
-  buttonLabel?: string;
   pendingLabel?: string;
   successLabel?: string;
   // Custom dialog props
@@ -58,9 +58,11 @@ interface TagSelfButtonProps {
   currentVideoRoles?: string[]; // Roles user already has in this video
   // Callback to notify parent of pending roles (for display outside component)
   onPendingRolesChange?: (roles: string[]) => void;
+  // Button size
+  size?: "sm" | "md" | "lg";
 }
 
-export function TagSelfButton({
+export function TagSelfCircleButton({
   eventId,
   currentUserRoles = [],
   canTagDirectly = false,
@@ -68,7 +70,6 @@ export function TagSelfButton({
   targetId,
   currentUserId,
   isUserTagged = false,
-  buttonLabel = "Tag Myself",
   pendingLabel,
   successLabel,
   dialogTitle,
@@ -76,7 +77,8 @@ export function TagSelfButton({
   videoType,
   currentVideoRoles = [],
   onPendingRolesChange,
-}: TagSelfButtonProps) {
+  size = "md",
+}: TagSelfCircleButtonProps) {
   const { data: session } = useSession();
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isPending, startTransition] = useTransition();
@@ -365,15 +367,8 @@ export function TagSelfButton({
   }
 
   return (
-    <div className="flex flex-col gap-2 mt-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsDialogOpen(true)}
-        className="w-fit bg-gray-200 text-black hover:bg-gray-300"
-      >
-        {buttonLabel || "Tag Myself"}
-      </Button>
+    <div className="flex flex-col gap-2">
+      <CirclePlusButton size={size} onClick={() => setIsDialogOpen(true)} />
       {pendingRoles.size > 0 && (
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (

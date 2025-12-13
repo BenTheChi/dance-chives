@@ -13,6 +13,7 @@ interface UserAvatarProps {
   onRemove?: () => void;
   isRemoving?: boolean;
   icon?: React.ComponentType<{ className?: string }>;
+  isSmall?: boolean;
 }
 
 export function UserAvatar({
@@ -25,7 +26,9 @@ export function UserAvatar({
   onRemove,
   isRemoving = false,
   icon: Icon,
+  isSmall = false,
 }: UserAvatarProps) {
+  const size = isSmall ? 30 : 45;
   const avatarUrl = avatar || image;
   const initials = displayName
     ? displayName
@@ -52,13 +55,16 @@ export function UserAvatar({
         href={`/profiles/${username}`}
         className="hover:opacity-80 transition-opacity block"
       >
-        <div className="relative w-[45px] h-[45px] rounded-full overflow-hidden border-2 border-black transition-colors">
+        <div
+          className="relative rounded-full overflow-hidden border-2 border-black transition-colors"
+          style={{ width: size, height: size }}
+        >
           {avatarUrl ? (
             <Image
               src={avatarUrl}
               alt={displayName || username}
-              width={45}
-              height={45}
+              width={size}
+              height={size}
               className="object-cover w-full h-full"
               unoptimized
             />
