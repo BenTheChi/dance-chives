@@ -437,33 +437,71 @@ export function VideoForm({
 
   return (
     <div className="space-y-4">
-      <FormField
-        control={control}
-        name={getVideoFieldPath("type")}
-        render={({ field }) => (
-          <FormItem>
-            <Select
-              value={(field.value as Video["type"]) || video.type || "battle"}
-              onValueChange={(value) => {
-                field.onChange(value);
-                handleTypeChange(value as Video["type"]);
-              }}
-            >
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="battle">Battle</SelectItem>
-                <SelectItem value="freestyle">Freestyle</SelectItem>
-                <SelectItem value="choreography">Choreo</SelectItem>
-                <SelectItem value="class">Class</SelectItem>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div className="flex gap-2 items-end">
+        <FormField
+          control={control}
+          name={getVideoFieldPath("styles")}
+          render={({ field }) => {
+            const sectionStyles = activeSection?.styles || [];
 
+            return (
+              <FormItem>
+                {isStylesDisabled ? (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {sectionStyles.length > 0 ? (
+                      sectionStyles.map((style) => (
+                        <StyleBadge key={style} style={style} asLink={false} />
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No styles set for this section
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <FormControl>
+                    <StyleMultiSelect
+                      value={isStringArray(field.value) ? field.value : []}
+                      onChange={(styles) => {
+                        field.onChange(styles);
+                        updateVideoStyles(styles);
+                      }}
+                      disabled={isStylesDisabled}
+                    />
+                  </FormControl>
+                )}
+                <FormMessage />
+              </FormItem>
+            );
+          }}
+        />
+        <FormField
+          control={control}
+          name={getVideoFieldPath("type")}
+          render={({ field }) => (
+            <FormItem>
+              <Select
+                value={(field.value as Video["type"]) || video.type || "battle"}
+                onValueChange={(value) => {
+                  field.onChange(value);
+                  handleTypeChange(value as Video["type"]);
+                }}
+              >
+                <SelectTrigger className="w-[140px] h-9 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="battle">Battle</SelectItem>
+                  <SelectItem value="freestyle">Freestyle</SelectItem>
+                  <SelectItem value="choreography">Choreo</SelectItem>
+                  <SelectItem value="class">Class</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
       <div className="w-full overflow-hidden rounded-md border border-border bg-muted/30">
         {thumbnailUrl ? (
           <div className="relative aspect-video">
@@ -551,44 +589,6 @@ export function VideoForm({
           label="Tagged Teachers"
         />
       )}
-
-      <FormField
-        control={control}
-        name={getVideoFieldPath("styles")}
-        render={({ field }) => {
-          const sectionStyles = activeSection?.styles || [];
-
-          return (
-            <FormItem>
-              {isStylesDisabled ? (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {sectionStyles.length > 0 ? (
-                    sectionStyles.map((style) => (
-                      <StyleBadge key={style} style={style} asLink={false} />
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      No styles set for this section
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <FormControl>
-                  <StyleMultiSelect
-                    value={isStringArray(field.value) ? field.value : []}
-                    onChange={(styles) => {
-                      field.onChange(styles);
-                      updateVideoStyles(styles);
-                    }}
-                    disabled={isStylesDisabled}
-                  />
-                </FormControl>
-              )}
-              <FormMessage />
-            </FormItem>
-          );
-        }}
-      />
     </div>
   );
 }

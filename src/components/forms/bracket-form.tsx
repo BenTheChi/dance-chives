@@ -1,17 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { X } from "lucide-react";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
+import { CircleXButton } from "@/components/ui/circle-x-button";
 import type {
   Control,
   UseFormSetValue,
@@ -20,7 +12,6 @@ import type {
 import { VideoForm } from "./video-form";
 import { FormValues } from "./event-form";
 import { Section, Bracket, Video } from "@/types/event";
-import { updateVideoTypeForId, VideoType } from "@/lib/utils/section-helpers";
 import {
   Accordion,
   AccordionContent,
@@ -57,7 +48,6 @@ export function BracketForm({
   setValue,
   getValues,
   activeSectionIndex,
-  activeBracketIndex,
   bracket,
   sections,
   activeSectionId,
@@ -105,8 +95,6 @@ export function BracketForm({
   );
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [isAddingVideo, setIsAddingVideo] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const titleHoldTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Keep activeVideoId in sync with the current bracket's videos
   useEffect(() => {
@@ -150,7 +138,7 @@ export function BracketForm({
               ...section,
               brackets: section.brackets.map((b) =>
                 b.id === activeBracketId
-                  ? { ...b, videos: [...b.videos, newVideo] }
+                  ? { ...b, videos: [newVideo, ...b.videos] }
                   : b
               ),
             }
@@ -175,60 +163,27 @@ export function BracketForm({
     <div className="space-y-4">
       <div className="space-y-2">
         <span className="text-sm font-medium">Bracket Title</span>
-        {isEditingTitle ? (
-          <Input
-            value={bracket.title}
-            autoFocus
-            onChange={(e) => {
-              const title = e.target.value;
-              const updatedSections = sections.map((section) =>
-                section.id === activeSectionId
-                  ? {
-                      ...section,
-                      brackets: section.brackets.map((b) =>
-                        b.id === activeBracketId ? { ...b, title } : b
-                      ),
-                    }
-                  : section
-              );
-              setValue("sections", normalizeSectionsForForm(updatedSections), {
-                shouldValidate: true,
-                shouldDirty: true,
-              });
-            }}
-            onBlur={() => setIsEditingTitle(false)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === "Escape") {
-                setIsEditingTitle(false);
-              }
-            }}
-          />
-        ) : (
-          <div
-            className="border rounded-md px-3 py-2 cursor-text"
-            onDoubleClick={() => setIsEditingTitle(true)}
-            onMouseDown={() => {
-              titleHoldTimer.current = setTimeout(
-                () => setIsEditingTitle(true),
-                500
-              );
-            }}
-            onMouseUp={() => {
-              if (titleHoldTimer.current) {
-                clearTimeout(titleHoldTimer.current);
-                titleHoldTimer.current = null;
-              }
-            }}
-            onMouseLeave={() => {
-              if (titleHoldTimer.current) {
-                clearTimeout(titleHoldTimer.current);
-                titleHoldTimer.current = null;
-              }
-            }}
-          >
-            {bracket.title || "Untitled Bracket"}
-          </div>
-        )}
+        <Input
+          value={bracket.title}
+          placeholder="Untitled Bracket"
+          onChange={(e) => {
+            const title = e.target.value;
+            const updatedSections = sections.map((section) =>
+              section.id === activeSectionId
+                ? {
+                    ...section,
+                    brackets: section.brackets.map((b) =>
+                      b.id === activeBracketId ? { ...b, title } : b
+                    ),
+                  }
+                : section
+            );
+            setValue("sections", normalizeSectionsForForm(updatedSections), {
+              shouldValidate: true,
+              shouldDirty: true,
+            });
+          }}
+        />
       </div>
 
       <div className="flex items-center gap-3">
@@ -260,9 +215,9 @@ export function BracketForm({
             <AccordionItem
               key={video.id}
               value={video.id}
-              className="border border-border rounded-md overflow-hidden bg-misty-seafoam"
+              className="border border-border rounded-md overflow-hidden bg-periwinkle-light/50 last:border-b"
             >
-              <div className="bg-misty-seafoam flex items-center gap-3 px-4 py-3">
+              <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
                 <Input
                   value={video.title}
                   onChange={(e) => {
@@ -296,27 +251,17 @@ export function BracketForm({
                   className="h-9"
                 />
 
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive outline-none"
-                  aria-label={`Remove ${video.title || "video"}`}
-                  onClick={() => removeVideoFromBracket(video.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      removeVideoFromBracket(video.id);
-                    }
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </span>
-
-                <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-border p-0 justify-center">
+                <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
                   <span className="sr-only">Toggle video</span>
                 </AccordionTrigger>
+
+                <CircleXButton
+                  size="md"
+                  aria-label={`Remove ${video.title || "video"}`}
+                  onClick={() => removeVideoFromBracket(video.id)}
+                />
               </div>
-              <AccordionContent className="px-4 pb-4 bg-misty-seafoam">
+              <AccordionContent className="px-4 pb-4 bg-periwinkle-light/50">
                 <VideoForm
                   key={video.id}
                   control={control}
