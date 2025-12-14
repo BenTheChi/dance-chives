@@ -198,11 +198,12 @@ export default async function EventPage({ params }: PageProps) {
     <>
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[600px] md:max-w-6xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[357px] md:max-w-[727px]">
           {/* Left column: Poster + Sections (sections only when description exists) */}
           <div className="flex flex-col gap-4 col-span-1">
             <PosterImage
               poster={event.eventDetails.poster ?? null}
+              originalPoster={event.eventDetails.originalPoster ?? null}
               className="w-full"
             />
 

@@ -100,7 +100,7 @@ function generateR2Path(
 }
 
 // Core upload function
-async function uploadToR2(
+export async function uploadToR2(
   file: File,
   type: ImageType,
   entityId: string,

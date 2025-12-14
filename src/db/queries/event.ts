@@ -210,9 +210,10 @@ export const getEvent = async (id: string): Promise<Event> => {
     MATCH (e:Event {id: $id})
     OPTIONAL MATCH (e)-[:IN]->(c:City)
     OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+    OPTIONAL MATCH (originalPoster:Image)-[:ORIGINAL_POSTER_OF]->(e)
     OPTIONAL MATCH (creator:User)-[:CREATED]->(e)
     
-    WITH e, c, poster, creator,
+    WITH e, c, poster, originalPoster, creator,
          [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
     
     RETURN e {
@@ -249,6 +250,11 @@ export const getEvent = async (id: string): Promise<Event> => {
       title: poster.title,
       url: poster.url
     } as poster,
+    originalPoster {
+      id: originalPoster.id,
+      title: originalPoster.title,
+      url: originalPoster.url
+    } as originalPoster,
     c {
       id: c.id,
       name: c.name,
@@ -567,6 +573,7 @@ export const getEvent = async (id: string): Promise<Event> => {
   const eventData = eventRecord.get("event");
   const eventType = eventRecord.get("eventType");
   const poster = eventRecord.get("poster");
+  const originalPoster = eventRecord.get("originalPoster");
   const city = eventRecord.get("city");
   const roles = rolesResult.records[0]?.get("roles") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
@@ -746,6 +753,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     schedule: eventData.schedule,
     creatorId: eventData.creatorId,
     poster: poster || null,
+    originalPoster: originalPoster || null,
     city: city || {
       id: 0,
       name: "",
@@ -1494,6 +1502,21 @@ export const insertEvent = async (
       )
 
       WITH e
+      OPTIONAL MATCH (oldOriginalPoster:Image)-[r2:ORIGINAL_POSTER_OF]->(e)
+      DELETE r2
+      WITH e
+      FOREACH (originalPoster IN CASE WHEN $originalPoster IS NOT NULL AND $originalPoster.id IS NOT NULL THEN [$originalPoster] ELSE [] END |
+        MERGE (newOriginalPoster:Image:Gallery {id: originalPoster.id})
+        ON CREATE SET
+          newOriginalPoster.title = originalPoster.title,
+          newOriginalPoster.url = originalPoster.url
+        SET
+          newOriginalPoster.title = originalPoster.title,
+          newOriginalPoster.url = originalPoster.url
+        MERGE (newOriginalPoster)-[:ORIGINAL_POSTER_OF]->(e)
+      )
+
+      WITH e
       MATCH (creator:User {id: $creatorId})
       MERGE (creator)-[:CREATED]->(e)
 
@@ -1540,6 +1563,7 @@ export const insertEvent = async (
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
         poster: eventDetails.poster,
+        originalPoster: eventDetails.originalPoster,
         city: eventDetails.city,
         roles: event.roles,
       }
@@ -1763,6 +1787,25 @@ export const editEvent = async (
          MERGE (newPoster)-[:POSTER_OF]->(e)
        )`,
       { id, poster: eventDetails.poster }
+    );
+
+    // Update originalPoster
+    await tx.run(
+      `MATCH (e:Event {id: $id})
+       OPTIONAL MATCH (oldOriginalPoster:Image)-[r:ORIGINAL_POSTER_OF]->(e)
+       DELETE r
+       WITH e
+       FOREACH (originalPoster IN CASE WHEN $originalPoster IS NOT NULL AND $originalPoster.id IS NOT NULL THEN [$originalPoster] ELSE [] END |
+         MERGE (newOriginalPoster:Image:Gallery { id: originalPoster.id })
+         ON CREATE SET
+           newOriginalPoster.title = originalPoster.title,
+           newOriginalPoster.url = originalPoster.url
+         SET
+           newOriginalPoster.title = originalPoster.title,
+           newOriginalPoster.url = originalPoster.url
+         MERGE (newOriginalPoster)-[:ORIGINAL_POSTER_OF]->(e)
+       )`,
+      { id, originalPoster: eventDetails.originalPoster }
     );
 
     // Update event styles
