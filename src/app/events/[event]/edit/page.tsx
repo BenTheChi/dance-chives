@@ -96,6 +96,14 @@ export default async function EditEventPage({
           file: null,
         }
       : null,
+    originalPoster: currEvent.eventDetails.originalPoster
+      ? {
+          ...currEvent.eventDetails.originalPoster,
+          title: currEvent.eventDetails.originalPoster.title || "",
+          file: null,
+        }
+      : null,
+    bgColor: currEvent.eventDetails.bgColor || "#ffffff",
   };
 
   // Format sections to ensure poster file field is null

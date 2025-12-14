@@ -71,6 +71,12 @@ interface addEventProps {
       url: string;
       file: File | null;
     } | null;
+    originalPoster?: {
+      id: string;
+      title: string;
+      url: string;
+      file: File | null;
+    } | null;
     eventType?:
       | "Battle"
       | "Competition"
@@ -369,6 +375,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       dates: normalizedDates,
       schedule: props.eventDetails.schedule ?? "",
       poster: props.eventDetails.poster as Image | null,
+      originalPoster: props.eventDetails.originalPoster as Image | null,
       eventType: props.eventDetails.eventType || "Other",
       styles: props.eventDetails.styles,
       city: {
@@ -505,31 +512,14 @@ export async function editEvent(
     if (oldEvent.eventDetails.poster && !editedEvent.eventDetails.poster) {
       await deleteFromR2(oldEvent.eventDetails.poster.url);
     }
+    if (oldEvent.eventDetails.originalPoster && !editedEvent.eventDetails.originalPoster) {
+      await deleteFromR2(oldEvent.eventDetails.originalPoster.url);
+    }
 
     // Upload new poster if exists. Delete old poster if it exists.
-    if (editedEvent.eventDetails.poster?.file) {
-      if (oldEvent.eventDetails.poster) {
-        await deleteFromR2(oldEvent.eventDetails.poster.url);
-      }
-
-      const posterResult = await uploadEventPosterToR2(
-        editedEvent.eventDetails.poster.file,
-        eventId
-      );
-      if (posterResult.success) {
-        editedEvent.eventDetails.poster = {
-          ...editedEvent.eventDetails.poster,
-          id: posterResult.id!,
-          url: posterResult.url!,
-          file: null,
-        };
-      }
-    } else if (
-      !editedEvent.eventDetails.poster &&
-      oldEvent.eventDetails.poster
-    ) {
-      await deleteFromR2(oldEvent.eventDetails.poster.url);
-    }
+    // Note: With PosterUpload, poster and originalPoster are already uploaded via API
+    // So we just need to handle the case where they're already URLs (not files)
+    // The poster upload happens client-side via the API endpoint
 
     // Upload gallery files
     const galleryFiles = editedEvent.gallery.filter((item) => item.file);
@@ -707,6 +697,7 @@ export async function editEvent(
       dates: normalizedDates,
       schedule: editedEvent.eventDetails.schedule ?? "",
       poster: editedEvent.eventDetails.poster as Image | null,
+      originalPoster: editedEvent.eventDetails.originalPoster as Image | null,
       eventType: editedEvent.eventDetails.eventType || "Other",
       styles: editedEvent.eventDetails.styles,
       city: {

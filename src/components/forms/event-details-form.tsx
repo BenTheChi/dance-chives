@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import {
   Control,
   FieldPath,
@@ -23,7 +24,7 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
-import UploadFile from "../ui/uploadfile";
+import { PosterUpload } from "../ui/poster-upload";
 import { DatePicker } from "../ui/date-picker";
 import {
   Select,
@@ -76,6 +77,8 @@ export function EventDetailsForm({
   eventDetails,
   register,
 }: EventDetailsFormProps) {
+  const pathname = usePathname();
+  const isEditing = pathname.split("/").pop() === "edit";
   const { fields, append, remove } = useFieldArray({
     control,
     name: "eventDetails.dates",
@@ -404,15 +407,39 @@ export function EventDetailsForm({
           render={() => (
             <FormItem>
               <FormControl>
-                <UploadFile
-                  register={register}
-                  name="eventDetails.poster"
-                  onFileChange={(file) => {
-                    setValue("eventDetails.poster", file as Image);
+                <PosterUpload
+                  initialPoster={eventDetails.poster?.url || null}
+                  onUpload={(urls) => {
+                    // Create Image objects for thumbnail and original
+                    const thumbnailImage: Image = {
+                      id: eventDetails.poster?.id || crypto.randomUUID(),
+                      title: eventDetails.poster?.title || "Poster thumbnail",
+                      url: urls.thumbnail,
+                      type: "poster",
+                      file: null,
+                    };
+                    const originalImage: Image = {
+                      id: crypto.randomUUID(),
+                      title: eventDetails.poster?.title || "Poster original",
+                      url: urls.original,
+                      type: "poster",
+                      file: null,
+                    };
+
+                    setValue("eventDetails.poster", thumbnailImage, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                    setValue("eventDetails.originalPoster", originalImage, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
                   }}
-                  className="bg-[#E8E7E7]"
+                  editable={isEditing}
                   maxFiles={1}
-                  files={eventDetails.poster || null}
+                  className="bg-[#E8E7E7]"
                 />
               </FormControl>
               <FormMessage />

@@ -35,6 +35,7 @@ export interface EventDetails {
   prize?: string;
   dates: EventDate[]; // Required: Array of dates for events (at least one)
   poster?: Image | null;
+  originalPoster?: Image | null;
   city: City;
   styles?: string[]; // danceStyleTags
   eventType: EventType;

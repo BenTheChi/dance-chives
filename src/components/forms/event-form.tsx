@@ -193,6 +193,7 @@ const eventDetailsSchema = z.object({
     z.string().optional()
   ),
   poster: imageSchema.nullable().optional(),
+  originalPoster: imageSchema.nullable().optional(),
   eventType: z.enum([
     "Battle",
     "Competition",
@@ -303,6 +304,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         cost: "",
         prize: "",
         poster: null,
+        originalPoster: null,
+        bgColor: "#ffffff",
         eventType: "Battle",
       },
       sections: [],
