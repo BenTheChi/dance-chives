@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { FieldErrors, useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -807,7 +808,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                 className={`text-lg font-medium pb-2 border-b-2 transition-colors ${
                   activeMainTab === tab
                     ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent hover:text-foreground"
+                    : "border-transparent hover:text-foreground"
                 }`}
               >
                 {tab}
@@ -838,9 +839,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               <div className="flex flex-col md:flex-row gap-6 max-w-5xl mx-auto w-full">
                 {/* Left sidebar: sections + nested items - only show if sections exist */}
                 {sections.length > 0 && (
-                  <div className="w-full md:w-80 md:flex-shrink-0">
-                    <div className="space-y-2">
-                      {sections.map((section) => {
+                  <div className="w-full md:w-80 md:flex-shrink-0 ">
+                    <div className="space-y-2 ">
+                      {sections.map((section, sectionIndex) => {
                         const isActiveSection =
                           sectionsSelection?.sectionId === section.id ||
                           (!sectionsSelection &&
@@ -888,31 +889,58 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                         return (
                           <div
                             key={section.id}
-                            className={`border rounded-md bg-card ${
+                            onClick={handleSelectOverview}
+                            className={`rounded-md cursor-pointer transition-colors relative ${
                               isActiveSection
-                                ? "border-primary/70 shadow-sm"
-                                : "border-border"
+                                ? "border-2 border-primary/70 shadow-sm bg-misty-seafoam before:absolute before:inset-0 before:bg-black/5 before:rounded-md before:pointer-events-none"
+                                : "border border-border bg-misty-seafoam"
                             }`}
                           >
-                            <div className="px-3 py-2 space-y-2">
+                            <div
+                              className="px-3 py-2 space-y-2 rounded-md"
+                              onClick={(e) => {
+                                // Only stop propagation for interactive elements
+                                const target = e.target as HTMLElement;
+                                const isInteractiveElement =
+                                  target.tagName === "INPUT" ||
+                                  target.tagName === "BUTTON" ||
+                                  target.tagName === "SELECT" ||
+                                  target.closest("button") !== null ||
+                                  target.closest("[role='combobox']") !==
+                                    null ||
+                                  target.closest("[role='switch']") !== null ||
+                                  target.closest("label") !== null;
+
+                                if (isInteractiveElement) {
+                                  e.stopPropagation();
+                                }
+                              }}
+                            >
                               <div className="flex items-center justify-between gap-2">
-                                <button
-                                  type="button"
-                                  onClick={handleSelectOverview}
-                                  className={`text-sm font-medium text-left flex-1 ${
-                                    isActiveSection
-                                      ? "text-primary"
-                                      : "text-foreground"
-                                  }`}
-                                >
-                                  {section.title}
-                                </button>
+                                <FormField
+                                  control={control}
+                                  name={`sections.${sectionIndex}.title`}
+                                  render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                      <FormControl>
+                                        <Input
+                                          {...field}
+                                          className="h-8 text-xs bg-white"
+                                          placeholder="Section title"
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
 
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => removeSection(section.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeSection(section.id);
+                                  }}
                                   className="h-6 w-6 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
                                   aria-label={`Remove ${section.title}`}
                                 >
@@ -944,7 +972,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                     );
                                   }}
                                 >
-                                  <SelectTrigger className="w-[130px] h-8 text-xs">
+                                  <SelectTrigger className="w-[130px] h-8 text-xs bg-white">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -979,15 +1007,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                     }}
                                     aria-label={`Toggle brackets for ${section.title}`}
                                   />
-                                  <span className="text-muted-foreground">
-                                    Use Brackets
-                                  </span>
+                                  <span>Use Brackets</span>
                                 </div>
                               </div>
                             </div>
 
                             {isActiveSection && (
-                              <div className="border-t px-3 py-2 space-y-1 text-sm">
+                              <div
+                                className="border-t px-3 py-2 space-y-1 text-sm bg-misty-seafoam rounded-b relative before:absolute before:inset-0 before:bg-black/5 before:rounded-b before:pointer-events-none"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
                                   type="button"
                                   onClick={handleSelectOverview}
@@ -1016,7 +1045,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                   >
                                     Videos
                                     {section.videos.length > 0 && (
-                                      <span className="ml-1 text-xs text-muted-foreground">
+                                      <span className="ml-1 text-xs">
                                         ({section.videos.length})
                                       </span>
                                     )}
@@ -1038,7 +1067,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                       <span className="text-xs">
                                         Brackets
                                         {section.brackets.length > 0 && (
-                                          <span className="ml-1 text-xs text-muted-foreground">
+                                          <span className="ml-1 text-xs">
                                             ({section.brackets.length})
                                           </span>
                                         )}
@@ -1073,7 +1102,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                             className={`w-full text-left rounded pl-2 py-1 mx-2 text-xs ${
                                               isActiveBracketSelection
                                                 ? "bg-primary/10 text-primary"
-                                                : "hover:bg-muted text-muted-foreground"
+                                                : "hover:bg-muted"
                                             }`}
                                           >
                                             {bracket.title}
@@ -1122,7 +1151,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                 >
                   {sections.length === 0 || !sectionsSelection ? (
                     <div className="border rounded-lg p-6 text-center max-w-3xl mx-auto w-full">
-                      <div className="text-sm text-muted-foreground mb-6">
+                      <div className="text-sm mb-6">
                         No sections yet. Let&apos;s create one!
                       </div>
                       <div className="flex justify-center">
@@ -1136,7 +1165,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                       );
                       if (!selectedSection) {
                         return (
-                          <div className="border rounded-lg p-6 text-sm text-muted-foreground">
+                          <div className="border rounded-lg p-6 text-sm">
                             The selected section no longer exists.
                           </div>
                         );

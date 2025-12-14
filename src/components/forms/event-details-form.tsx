@@ -122,29 +122,28 @@ export function EventDetailsForm({
           </h3>
         </div>
 
-        {/* Event Title - Full Width */}
-        <FormField
-          control={control}
-          name="eventDetails.title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Event Title <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  className="bg-white"
-                  placeholder="e.g., Summer Dance Battle 2024"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Event Type and Styles */}
         <div className="flex flex-col sm:flex-row gap-5 w-full">
+          {/* Event Title - Full Width */}
+          <FormField
+            control={control}
+            name="eventDetails.title"
+            render={({ field }) => (
+              <FormItem className="flex-1 min-w-0 w-full">
+                <FormLabel>
+                  Event Title <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    className="bg-white w-full"
+                    placeholder="e.g., Summer Dance Battle 2024"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={control}
             name="eventDetails.eventType"
@@ -181,31 +180,32 @@ export function EventDetailsForm({
               );
             }}
           />
-          <FormField
-            control={control}
-            name="eventDetails.styles"
-            render={({ field }) => (
-              <FormItem className="flex-1 min-w-0 w-full">
-                <FormLabel>Dance Styles</FormLabel>
-                <FormControl>
-                  <StyleMultiSelect
-                    value={field.value ?? []}
-                    onChange={(styles) => {
-                      field.onChange(styles);
-                      setValue("eventDetails.styles", styles, {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                        shouldTouch: true,
-                      });
-                    }}
-                    placeholder="Select dance styles..."
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
+        {/* Event and Styles */}
+        <FormField
+          control={control}
+          name="eventDetails.styles"
+          render={({ field }) => (
+            <FormItem className="flex-1 min-w-0 w-full">
+              <FormLabel>Dance Styles</FormLabel>
+              <FormControl>
+                <StyleMultiSelect
+                  value={field.value ?? []}
+                  onChange={(styles) => {
+                    field.onChange(styles);
+                    setValue("eventDetails.styles", styles, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                  }}
+                  placeholder="Select dance styles..."
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
 
       {/* Location & Date Section */}

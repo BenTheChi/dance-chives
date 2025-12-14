@@ -13,7 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { X, Trophy } from "lucide-react";
+import { X } from "lucide-react";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import type {
   Control,
@@ -29,7 +29,6 @@ import { FormValues } from "./event-form";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
-import { Badge } from "@/components/ui/badge";
 import UploadFile from "../ui/uploadfile";
 import { Image } from "@/types/image";
 import {
@@ -433,25 +432,10 @@ export function SectionForm({
   };
 
   return (
-    <Card>
+    <Card className="bg-misty-seafoam">
       <CardContent className="space-y-4">
         {resolvedMode === "overview" && (
           <>
-            <FormField
-              key={`title-${activeSectionId}`}
-              control={control}
-              name={`sections.${activeSectionIndex}.title`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Section Title</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               key={`poster-${activeSectionId}`}
               control={control}

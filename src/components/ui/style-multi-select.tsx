@@ -50,8 +50,8 @@ export function StyleMultiSelect({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1 mb-2">
+    <div className="">
+      <div className="flex flex-wrap gap-1">
         {value.map((style) => (
           <StyleBadge
             key={style}
@@ -59,6 +59,7 @@ export function StyleMultiSelect({
             asLink={false}
             showRemoveButton={!disabled}
             onRemove={() => removeStyle(style)}
+            className="mb-1"
           />
         ))}
       </div>
