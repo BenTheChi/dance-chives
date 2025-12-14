@@ -6,6 +6,7 @@ export interface Video {
   title: string;
   src: string;
   styles?: string[];
+  thumbnailUrl?: string;
   type: "battle" | "freestyle" | "choreography" | "class";
   taggedDancers?: UserSearchItem[];
   taggedWinners?: UserSearchItem[];

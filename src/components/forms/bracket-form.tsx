@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,12 +22,14 @@ import { FormValues } from "./event-form";
 import { Section, Bracket, Video } from "@/types/event";
 import { updateVideoTypeForId, VideoType } from "@/lib/utils/section-helpers";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Helper function to normalize sections for form (ensures description is always string)
 function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
@@ -80,33 +82,6 @@ export function BracketForm({
     }
   };
 
-  const addVideoToBracket = () => {
-    const activeSection = sections.find((s) => s.id === activeSectionId);
-    const defaultVideoType = getDefaultVideoType(activeSection?.sectionType);
-
-    const newVideo: Video = {
-      id: Date.now().toString(),
-      title: `Video ${bracket.videos.length + 1}`,
-      src: "https://example.com/video",
-      type: defaultVideoType,
-    };
-
-    const updatedSections = sections.map((section) =>
-      section.id === activeSectionId
-        ? {
-            ...section,
-            brackets: section.brackets.map((b) =>
-              b.id === activeBracketId
-                ? { ...b, videos: [...b.videos, newVideo] }
-                : b
-            ),
-          }
-        : section
-    );
-
-    setValue("sections", normalizeSectionsForForm(updatedSections));
-  };
-
   const removeVideoFromBracket = (videoId: string) => {
     const updatedVideos = bracket.videos.filter(
       (video) => video.id !== videoId
@@ -128,6 +103,10 @@ export function BracketForm({
   const [activeVideoId, setActiveVideoId] = useState<string | null>(
     bracket.videos[0]?.id ?? null
   );
+  const [newVideoUrl, setNewVideoUrl] = useState("");
+  const [isAddingVideo, setIsAddingVideo] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const titleHoldTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Keep activeVideoId in sync with the current bracket's videos
   useEffect(() => {
@@ -144,135 +123,218 @@ export function BracketForm({
     }
   }, [bracket.videos, activeVideoId]);
 
-  const activeVideo =
-    activeVideoId && bracket.videos.find((video) => video.id === activeVideoId)
-      ? bracket.videos.find((video) => video.id === activeVideoId)
-      : null;
+  const handleAddVideoFromUrl = async () => {
+    if (!newVideoUrl.trim()) {
+      toast.error("Please enter a YouTube URL.");
+      return;
+    }
+    setIsAddingVideo(true);
+    try {
+      const activeSection = sections.find((s) => s.id === activeSectionId);
+      const defaultVideoType = getDefaultVideoType(activeSection?.sectionType);
+      const metadata = await fetchYouTubeOEmbed(newVideoUrl.trim());
+      const truncatedTitle =
+        metadata.title?.slice(0, 60) || `Video ${bracket.videos.length + 1}`;
 
-  const activeVideoIndex = activeVideo
-    ? bracket.videos.findIndex((video) => video.id === activeVideo.id)
-    : -1;
+      const newVideo: Video = {
+        id: Date.now().toString(),
+        title: truncatedTitle,
+        src: newVideoUrl.trim(),
+        thumbnailUrl: metadata.thumbnail_url,
+        type: defaultVideoType,
+      };
+
+      const updatedSections = sections.map((section) =>
+        section.id === activeSectionId
+          ? {
+              ...section,
+              brackets: section.brackets.map((b) =>
+                b.id === activeBracketId
+                  ? { ...b, videos: [...b.videos, newVideo] }
+                  : b
+              ),
+            }
+          : section
+      );
+
+      setValue("sections", normalizeSectionsForForm(updatedSections), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      setActiveVideoId(newVideo.id);
+      setNewVideoUrl("");
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not fetch video info. Please check the URL.");
+    } finally {
+      setIsAddingVideo(false);
+    }
+  };
 
   return (
-    <div className="space-y-2">
-      <FormField
-        control={control}
-        name={`sections.${activeSectionIndex}.brackets.${activeBracketIndex}.title`}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Bracket Title</FormLabel>
-            <FormControl>
-              <Input {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <h4 className="text-md font-semibold">Videos</h4>
-
-      {bracket.videos.length === 0 ? (
-        <div className="border rounded-lg p-6 text-center">
-          <div className="text-sm text-muted-foreground mb-6">
-            No videos yet. Let&apos;s create one!
-          </div>
-          <div className="flex justify-center">
-            <CirclePlusButton size="lg" onClick={addVideoToBracket} />
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="w-full lg:w-64 space-y-2">
-            {bracket.videos.map((video) => {
-              const isActive = video.id === activeVideoId;
-              return (
-                <div key={video.id} className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveVideoId(video.id)}
-                    className={`flex-1 min-w-0 text-left rounded px-3 py-2 text-sm border ${
-                      isActive
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:bg-muted"
-                    }`}
-                  >
-                    <div className="truncate">
-                      {video.title || "Untitled video"}
-                    </div>
-                  </button>
-                  <div className="flex items-center gap-1">
-                    <Select
-                      value={(video.type || "battle") as VideoType}
-                      onValueChange={(value) => {
-                        const currentSections = getValues("sections") ?? [];
-                        const updated = updateVideoTypeForId(
-                          currentSections,
-                          {
-                            sectionId: activeSectionId,
-                            bracketId: activeBracketId,
-                            videoId: video.id,
-                            context: "bracket",
-                          },
-                          value as VideoType
-                        );
-                        setValue(
-                          "sections",
-                          normalizeSectionsForForm(updated),
-                          {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          }
-                        );
-                      }}
-                    >
-                      <SelectTrigger className="w-[90px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="battle">Battle</SelectItem>
-                        <SelectItem value="freestyle">Freestyle</SelectItem>
-                        <SelectItem value="choreography">Choreo</SelectItem>
-                        <SelectItem value="class">Class</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
-                      onClick={() => removeVideoFromBracket(video.id)}
-                      aria-label={`Remove ${video.title || "video"}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <span className="text-sm font-medium">Bracket Title</span>
+        {isEditingTitle ? (
+          <Input
+            value={bracket.title}
+            autoFocus
+            onChange={(e) => {
+              const title = e.target.value;
+              const updatedSections = sections.map((section) =>
+                section.id === activeSectionId
+                  ? {
+                      ...section,
+                      brackets: section.brackets.map((b) =>
+                        b.id === activeBracketId ? { ...b, title } : b
+                      ),
+                    }
+                  : section
               );
-            })}
-            <div className="flex justify-center mt-2">
-              <CirclePlusButton size="lg" onClick={addVideoToBracket} />
-            </div>
+              setValue("sections", normalizeSectionsForForm(updatedSections), {
+                shouldValidate: true,
+                shouldDirty: true,
+              });
+            }}
+            onBlur={() => setIsEditingTitle(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === "Escape") {
+                setIsEditingTitle(false);
+              }
+            }}
+          />
+        ) : (
+          <div
+            className="border rounded-md px-3 py-2 cursor-text"
+            onDoubleClick={() => setIsEditingTitle(true)}
+            onMouseDown={() => {
+              titleHoldTimer.current = setTimeout(
+                () => setIsEditingTitle(true),
+                500
+              );
+            }}
+            onMouseUp={() => {
+              if (titleHoldTimer.current) {
+                clearTimeout(titleHoldTimer.current);
+                titleHoldTimer.current = null;
+              }
+            }}
+            onMouseLeave={() => {
+              if (titleHoldTimer.current) {
+                clearTimeout(titleHoldTimer.current);
+                titleHoldTimer.current = null;
+              }
+            }}
+          >
+            {bracket.title || "Untitled Bracket"}
           </div>
+        )}
+      </div>
 
-          <div className="flex-1 min-w-0">
-            {activeVideo && activeVideoIndex !== -1 && (
-              <VideoForm
-                key={activeVideo.id}
-                control={control}
-                setValue={setValue}
-                getValues={getValues}
-                video={activeVideo}
-                videoIndex={activeVideoIndex}
-                sectionIndex={activeSectionIndex}
-                sections={sections}
-                activeSectionId={activeSectionId}
-                activeBracketId={activeBracketId}
-                context="bracket"
-                eventId={eventId}
-              />
-            )}
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <Input
+            placeholder="Enter YouTube URL"
+            value={newVideoUrl}
+            onChange={(e) => setNewVideoUrl(e.target.value)}
+          />
         </div>
+        {isAddingVideo ? (
+          <div className="rounded-full bg-pulse-green border border-charcoal w-[50px] h-[50px] flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin text-black" />
+          </div>
+        ) : (
+          <CirclePlusButton size="lg" onClick={handleAddVideoFromUrl} />
+        )}
+      </div>
+
+      {bracket.videos.length > 0 && (
+        <Accordion
+          type="single"
+          collapsible
+          value={activeVideoId ?? undefined}
+          onValueChange={(val) => setActiveVideoId(val || null)}
+          className="space-y-3"
+        >
+          {bracket.videos.map((video, index) => (
+            <AccordionItem
+              key={video.id}
+              value={video.id}
+              className="border border-border rounded-md overflow-hidden bg-misty-seafoam"
+            >
+              <div className="bg-misty-seafoam flex items-center gap-3 px-4 py-3">
+                <Input
+                  value={video.title}
+                  onChange={(e) => {
+                    const title = e.target.value;
+                    const updatedSections = sections.map((section) =>
+                      section.id === activeSectionId
+                        ? {
+                            ...section,
+                            brackets: section.brackets.map((b) =>
+                              b.id === activeBracketId
+                                ? {
+                                    ...b,
+                                    videos: b.videos.map((v) =>
+                                      v.id === video.id ? { ...v, title } : v
+                                    ),
+                                  }
+                                : b
+                            ),
+                          }
+                        : section
+                    );
+                    setValue(
+                      "sections",
+                      normalizeSectionsForForm(updatedSections),
+                      {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      }
+                    );
+                  }}
+                  className="h-9"
+                />
+
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive outline-none"
+                  aria-label={`Remove ${video.title || "video"}`}
+                  onClick={() => removeVideoFromBracket(video.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      removeVideoFromBracket(video.id);
+                    }
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </span>
+
+                <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-border p-0 justify-center">
+                  <span className="sr-only">Toggle video</span>
+                </AccordionTrigger>
+              </div>
+              <AccordionContent className="px-4 pb-4 bg-misty-seafoam">
+                <VideoForm
+                  key={video.id}
+                  control={control}
+                  setValue={setValue}
+                  getValues={getValues}
+                  video={video}
+                  videoIndex={index}
+                  sectionIndex={activeSectionIndex}
+                  sections={sections}
+                  activeSectionId={activeSectionId}
+                  activeBracketId={activeBracketId}
+                  context="bracket"
+                  eventId={eventId}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       )}
     </div>
   );

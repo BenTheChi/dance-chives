@@ -33,13 +33,6 @@ import { Badge } from "@/components/ui/badge";
 import UploadFile from "../ui/uploadfile";
 import { Image } from "@/types/image";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   getDefaultVideoType,
   sectionTypeDisallowsBrackets,
   sectionTypeRequiresBrackets,
@@ -47,6 +40,15 @@ import {
   updateVideoTypeForId,
   VideoType,
 } from "@/lib/utils/section-helpers";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
   return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
@@ -132,6 +134,8 @@ export function SectionForm({
     }
   };
   const [sectionWinners, setSectionWinners] = useState<UserSearchItem[]>([]);
+  const [newVideoUrl, setNewVideoUrl] = useState("");
+  const [isAddingVideo, setIsAddingVideo] = useState(false);
 
   // Load existing section winners from activeSection.winners
   // Use a Map to deduplicate winners by username
@@ -223,31 +227,6 @@ export function SectionForm({
       shouldValidate: true,
     });
     handleSetActiveBracketId(newBracket.id);
-  };
-
-  const addVideoToSection = () => {
-    if (!activeSection) return;
-
-    const defaultVideoType = getDefaultVideoType(activeSection.sectionType);
-
-    const newVideo: Video = {
-      id: Date.now().toString(),
-      title: `Video ${activeSection.videos.length + 1}`,
-      src: "https://example.com/video",
-      type: defaultVideoType,
-    } as Video; // Type assertion needed since Video is a union type
-
-    const updatedSections = sections.map((section) =>
-      section.id === activeSectionId
-        ? {
-            ...section,
-            videos: [...section.videos, newVideo],
-            description: section.description ?? "",
-          }
-        : { ...section, description: section.description ?? "" }
-    );
-
-    setValue("sections", normalizeSectionsForForm(updatedSections));
   };
 
   const removeVideoFromSection = (videoId: string) => {
@@ -406,17 +385,52 @@ export function SectionForm({
     }
   }, [activeSectionId, activeSection, activeVideoId]);
 
-  const activeVideo =
-    activeVideoId &&
-    activeSection.videos.find((video) => video.id === activeVideoId)
-      ? activeSection.videos.find((video) => video.id === activeVideoId)
-      : null;
-
-  const activeVideoIndex = activeVideo
-    ? activeSection.videos.findIndex((video) => video.id === activeVideo.id)
-    : -1;
-
   const resolvedMode: SectionFormMode = mode ?? "overview";
+
+  const handleAddVideoFromUrl = async () => {
+    if (!newVideoUrl.trim()) {
+      toast.error("Please enter a YouTube URL.");
+      return;
+    }
+    setIsAddingVideo(true);
+    try {
+      const metadata = await fetchYouTubeOEmbed(newVideoUrl.trim());
+      const defaultVideoType = getDefaultVideoType(activeSection.sectionType);
+      const truncatedTitle =
+        metadata.title?.slice(0, 60) ||
+        `Video ${activeSection.videos.length + 1}`;
+
+      const newVideo: Video = {
+        id: Date.now().toString(),
+        title: truncatedTitle,
+        src: newVideoUrl.trim(),
+        thumbnailUrl: metadata.thumbnail_url,
+        type: defaultVideoType,
+      };
+
+      const updatedSections = sections.map((section) =>
+        section.id === activeSectionId
+          ? {
+              ...section,
+              videos: [...section.videos, newVideo],
+              description: section.description ?? "",
+            }
+          : { ...section, description: section.description ?? "" }
+      );
+
+      setValue("sections", normalizeSectionsForForm(updatedSections), {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      setActiveVideoId(newVideo.id);
+      setNewVideoUrl("");
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not fetch video info. Please check the URL.");
+    } finally {
+      setIsAddingVideo(false);
+    }
+  };
 
   return (
     <Card>
@@ -619,111 +633,102 @@ export function SectionForm({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Videos</h3>
 
-            {activeSection.videos.length === 0 ? (
-              <div className="border rounded-lg p-6 text-center">
-                <div className="text-sm text-muted-foreground mb-6">
-                  No videos yet. Let&apos;s create one!
-                </div>
-                <div className="flex justify-center">
-                  <CirclePlusButton size="lg" onClick={addVideoToSection} />
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <Input
+                  placeholder="Enter YouTube URL"
+                  value={newVideoUrl}
+                  onChange={(e) => setNewVideoUrl(e.target.value)}
+                />
               </div>
-            ) : (
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className="w-full lg:w-64 space-y-2">
-                  {activeSection.videos.map((video) => {
-                    const isActive = video.id === activeVideoId;
-                    return (
-                      <div key={video.id} className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setActiveVideoId(video.id)}
-                          className={`flex-1 min-w-0 text-left rounded px-3 py-2 text-sm border ${
-                            isActive
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border hover:bg-muted"
-                          }`}
-                        >
-                          <div className="truncate">
-                            {video.title || "Untitled video"}
-                          </div>
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <Select
-                            value={(video.type || "battle") as VideoType}
-                            onValueChange={(value) => {
-                              const currentSections =
-                                getValues("sections") ?? [];
-                              const updated = updateVideoTypeForId(
-                                currentSections,
-                                {
-                                  sectionId: activeSectionId,
-                                  videoId: video.id,
-                                  context: "section",
-                                },
-                                value as VideoType
-                              );
-                              setValue(
-                                "sections",
-                                normalizeSectionsForForm(updated),
-                                {
-                                  shouldValidate: true,
-                                  shouldDirty: true,
-                                }
-                              );
-                            }}
-                          >
-                            <SelectTrigger className="w-[90px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="battle">Battle</SelectItem>
-                              <SelectItem value="freestyle">
-                                Freestyle
-                              </SelectItem>
-                              <SelectItem value="choreography">
-                                Choreo
-                              </SelectItem>
-                              <SelectItem value="class">Class</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
-                            onClick={() => removeVideoFromSection(video.id)}
-                            aria-label={`Remove ${video.title || "video"}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="flex justify-center mt-2">
-                    <CirclePlusButton size="lg" onClick={addVideoToSection} />
-                  </div>
+              {isAddingVideo ? (
+                <div className="rounded-full bg-pulse-green border border-charcoal w-[50px] h-[50px] flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-black" />
                 </div>
+              ) : (
+                <CirclePlusButton size="lg" onClick={handleAddVideoFromUrl} />
+              )}
+            </div>
 
-                <div className="flex-1 min-w-0">
-                  {activeVideo && activeVideoIndex !== -1 && (
-                    <VideoForm
-                      key={activeVideo.id}
-                      control={control}
-                      setValue={setValue}
-                      getValues={getValues}
-                      video={activeVideo}
-                      videoIndex={activeVideoIndex}
-                      sectionIndex={activeSectionIndex}
-                      sections={sections}
-                      activeSectionId={activeSectionId}
-                      context="section"
-                      eventId={eventId}
-                    />
-                  )}
-                </div>
-              </div>
+            {activeSection.videos.length > 0 && (
+              <Accordion
+                type="single"
+                collapsible
+                value={activeVideoId ?? undefined}
+                onValueChange={(val) => setActiveVideoId(val || null)}
+                className="space-y-3"
+              >
+                {activeSection.videos.map((video, index) => (
+                  <AccordionItem
+                    key={video.id}
+                    value={video.id}
+                    className="border border-border rounded-md overflow-hidden bg-white data-[state=open]:border-primary/50 data-[state=open]:bg-muted/40"
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <Input
+                        value={video.title}
+                        onChange={(e) => {
+                          const title = e.target.value;
+                          const currentSections = getValues("sections") ?? [];
+                          const updated = currentSections.map((section) => {
+                            if (section.id !== activeSectionId) return section;
+                            return {
+                              ...section,
+                              videos: section.videos.map((v) =>
+                                v.id === video.id ? { ...v, title } : v
+                              ),
+                            };
+                          });
+                          setValue(
+                            "sections",
+                            normalizeSectionsForForm(updated),
+                            {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            }
+                          );
+                        }}
+                        className="h-9"
+                      />
+
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-transparent text-destructive hover:bg-destructive/10 hover:text-destructive outline-none"
+                        aria-label={`Remove ${video.title || "video"}`}
+                        onClick={() => removeVideoFromSection(video.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            removeVideoFromSection(video.id);
+                          }
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </span>
+
+                      <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-border p-0 justify-center">
+                        <span className="sr-only">Toggle video</span>
+                      </AccordionTrigger>
+                    </div>
+                    <AccordionContent className="px-4 pb-4">
+                      <VideoForm
+                        key={video.id}
+                        control={control}
+                        setValue={setValue}
+                        getValues={getValues}
+                        video={video}
+                        videoIndex={index}
+                        sectionIndex={activeSectionIndex}
+                        sections={sections}
+                        activeSectionId={activeSectionId}
+                        context="section"
+                        eventId={eventId}
+                      />
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             )}
           </div>
         )}

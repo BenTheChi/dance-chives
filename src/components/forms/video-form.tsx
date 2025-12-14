@@ -1,14 +1,12 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import type {
   Control,
   UseFormSetValue,
@@ -20,10 +18,21 @@ import { Section } from "@/types/event";
 import { Video } from "@/types/video";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
-import { VideoEmbed } from "../VideoEmbed";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { useState, useEffect } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Image from "next/image";
+import {
+  extractYouTubeVideoId,
+  normalizeYouTubeThumbnailUrl,
+} from "@/lib/utils";
 
 interface VideoFormProps {
   video: Video;
@@ -378,161 +387,208 @@ export function VideoForm({
     );
   };
 
+  const handleTypeChange = (value: Video["type"]) => {
+    const currentSections = getValues("sections") || [];
+    const updatedSections = currentSections.map((section) => {
+      if (section.id !== activeSectionId) return section;
+
+      if (context === "section") {
+        return {
+          ...section,
+          videos: section.videos.map((v) =>
+            v.id === video.id ? { ...v, type: value } : v
+          ),
+        };
+      }
+
+      return {
+        ...section,
+        brackets: section.brackets.map((bracket) =>
+          bracket.id === activeBracketId
+            ? {
+                ...bracket,
+                videos: bracket.videos.map((v) =>
+                  v.id === video.id ? { ...v, type: value } : v
+                ),
+              }
+            : bracket
+        ),
+      };
+    });
+
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  };
+
+  const thumbnailFromSrc = () => {
+    if (video.thumbnailUrl) return video.thumbnailUrl;
+    const youtubeId = extractYouTubeVideoId(video.src);
+    if (youtubeId) {
+      return normalizeYouTubeThumbnailUrl(
+        `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+      );
+    }
+    return null;
+  };
+
+  const thumbnailUrl = thumbnailFromSrc();
+
   return (
-    <Card className="group">
-      <CardHeader className="relative">
+    <div className="space-y-4">
+      <FormField
+        control={control}
+        name={getVideoFieldPath("type")}
+        render={({ field }) => (
+          <FormItem>
+            <Select
+              value={(field.value as Video["type"]) || video.type || "battle"}
+              onValueChange={(value) => {
+                field.onChange(value);
+                handleTypeChange(value as Video["type"]);
+              }}
+            >
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="battle">Battle</SelectItem>
+                <SelectItem value="freestyle">Freestyle</SelectItem>
+                <SelectItem value="choreography">Choreo</SelectItem>
+                <SelectItem value="class">Class</SelectItem>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="w-full overflow-hidden rounded-md border border-border bg-muted/30">
+        {thumbnailUrl ? (
+          <div className="relative aspect-video">
+            <Image
+              src={thumbnailUrl}
+              alt={video.title || "Video thumbnail"}
+              fill
+              className="object-cover"
+              sizes="100vw"
+            />
+          </div>
+        ) : (
+          <div className="flex aspect-video items-center justify-center text-sm text-muted-foreground">
+            No thumbnail
+          </div>
+        )}
+      </div>
+
+      <DebouncedSearchMultiSelect<UserSearchItem>
+        onSearch={searchUsers}
+        placeholder="Search dancers..."
+        getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+        getItemId={(item) => item.username}
+        onChange={updateTaggedDancers}
+        value={video.taggedDancers ?? []}
+        name="taggedDancers"
+        label="Tagged Dancers"
+      />
+
+      {/* Tagged Winners - only for battle videos */}
+      {videoType === "battle" && (
         <FormField
           control={control}
-          name={getVideoFieldPath("title")}
+          name={getVideoFieldPath("taggedWinners")}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input
-                  {...field}
-                  value={typeof field.value === "string" ? field.value : ""}
+                <DebouncedSearchMultiSelect<UserSearchItem>
+                  onSearch={searchUsers}
+                  placeholder="Search winners..."
+                  getDisplayValue={(item) =>
+                    `${item.displayName} (${item.username})`
+                  }
+                  getItemId={(item) => item.username}
+                  onChange={(users) => {
+                    field.onChange(users);
+                    // updateTaggedWinners will automatically add new winners to dancers list
+                    updateTaggedWinners(users);
+                  }}
+                  value={isUserSearchItemArray(field.value) ? field.value : []}
+                  name="taggedWinners"
+                  label="Tagged Winners"
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div>
-          <VideoEmbed title={video.title} src={video.src} />
-        </div>
+      )}
 
-        <FormField
-          control={control}
-          name={getVideoFieldPath("src")}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Source</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  value={typeof field.value === "string" ? field.value : ""}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+      {/* Tagged Choreographers - only for choreography videos */}
+      {videoType === "choreography" && (
         <DebouncedSearchMultiSelect<UserSearchItem>
           onSearch={searchUsers}
-          placeholder="Search dancers..."
+          placeholder="Search choreographers..."
           getDisplayValue={(item) => `${item.displayName} (${item.username})`}
           getItemId={(item) => item.username}
-          onChange={updateTaggedDancers}
-          value={video.taggedDancers ?? []}
-          name="taggedDancers"
-          label="Tagged Dancers"
+          onChange={updateTaggedChoreographers}
+          value={video.taggedChoreographers ?? []}
+          name="taggedChoreographers"
+          label="Tagged Choreographers"
         />
+      )}
 
-        {/* Tagged Winners - only for battle videos */}
-        {videoType === "battle" && (
-          <FormField
-            control={control}
-            name={getVideoFieldPath("taggedWinners")}
-            render={({ field }) => (
-              <FormItem>
+      {/* Tagged Teachers - only for class videos */}
+      {videoType === "class" && (
+        <DebouncedSearchMultiSelect<UserSearchItem>
+          onSearch={searchUsers}
+          placeholder="Search teachers..."
+          getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+          getItemId={(item) => item.username}
+          onChange={updateTaggedTeachers}
+          value={video.taggedTeachers ?? []}
+          name="taggedTeachers"
+          label="Tagged Teachers"
+        />
+      )}
+
+      <FormField
+        control={control}
+        name={getVideoFieldPath("styles")}
+        render={({ field }) => {
+          const sectionStyles = activeSection?.styles || [];
+
+          return (
+            <FormItem>
+              {isStylesDisabled ? (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {sectionStyles.length > 0 ? (
+                    sectionStyles.map((style) => (
+                      <StyleBadge key={style} style={style} asLink={false} />
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      No styles set for this section
+                    </span>
+                  )}
+                </div>
+              ) : (
                 <FormControl>
-                  <DebouncedSearchMultiSelect<UserSearchItem>
-                    onSearch={searchUsers}
-                    placeholder="Search winners..."
-                    getDisplayValue={(item) =>
-                      `${item.displayName} (${item.username})`
-                    }
-                    getItemId={(item) => item.username}
-                    onChange={(users) => {
-                      field.onChange(users);
-                      // updateTaggedWinners will automatically add new winners to dancers list
-                      updateTaggedWinners(users);
+                  <StyleMultiSelect
+                    value={isStringArray(field.value) ? field.value : []}
+                    onChange={(styles) => {
+                      field.onChange(styles);
+                      updateVideoStyles(styles);
                     }}
-                    value={
-                      isUserSearchItemArray(field.value) ? field.value : []
-                    }
-                    name="taggedWinners"
-                    label="Tagged Winners"
+                    disabled={isStylesDisabled}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-
-        {/* Tagged Choreographers - only for choreography videos */}
-        {videoType === "choreography" && (
-          <DebouncedSearchMultiSelect<UserSearchItem>
-            onSearch={searchUsers}
-            placeholder="Search choreographers..."
-            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
-            getItemId={(item) => item.username}
-            onChange={updateTaggedChoreographers}
-            value={video.taggedChoreographers ?? []}
-            name="taggedChoreographers"
-            label="Tagged Choreographers"
-          />
-        )}
-
-        {/* Tagged Teachers - only for class videos */}
-        {videoType === "class" && (
-          <DebouncedSearchMultiSelect<UserSearchItem>
-            onSearch={searchUsers}
-            placeholder="Search teachers..."
-            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
-            getItemId={(item) => item.username}
-            onChange={updateTaggedTeachers}
-            value={video.taggedTeachers ?? []}
-            name="taggedTeachers"
-            label="Tagged Teachers"
-          />
-        )}
-
-        <FormField
-          control={control}
-          name={getVideoFieldPath("styles")}
-          render={({ field }) => {
-            const sectionStyles = activeSection?.styles || [];
-
-            return (
-              <FormItem>
-                <FormLabel>
-                  Dance Styles{isStylesDisabled && " (from section)"}
-                </FormLabel>
-                {isStylesDisabled ? (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {sectionStyles.length > 0 ? (
-                      sectionStyles.map((style) => (
-                        <StyleBadge key={style} style={style} asLink={false} />
-                      ))
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        No styles set for this section
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <FormControl>
-                    <StyleMultiSelect
-                      value={isStringArray(field.value) ? field.value : []}
-                      onChange={(styles) => {
-                        field.onChange(styles);
-                        updateVideoStyles(styles);
-                      }}
-                      disabled={isStylesDisabled}
-                    />
-                  </FormControl>
-                )}
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
-      </CardContent>
-    </Card>
+              )}
+              <FormMessage />
+            </FormItem>
+          );
+        }}
+      />
+    </div>
   );
 }
