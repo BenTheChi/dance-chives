@@ -210,9 +210,10 @@ export const getEvent = async (id: string): Promise<Event> => {
     MATCH (e:Event {id: $id})
     OPTIONAL MATCH (e)-[:IN]->(c:City)
     OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+    OPTIONAL MATCH (originalPoster:Image)-[:ORIGINAL_POSTER_OF]->(e)
     OPTIONAL MATCH (creator:User)-[:CREATED]->(e)
     
-    WITH e, c, poster, creator,
+    WITH e, c, poster, originalPoster, creator,
          [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
     
     RETURN e {

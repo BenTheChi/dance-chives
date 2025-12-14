@@ -1,10 +1,12 @@
 "use server";
 import { auth } from "@/auth";
+import sharp from "sharp";
 import {
   deleteFromR2,
   uploadEventPosterToR2,
   uploadEventGalleryToR2,
   uploadSectionPosterToR2,
+  uploadToR2,
 } from "../R2";
 import {
   insertEvent,
@@ -77,6 +79,7 @@ interface addEventProps {
       url: string;
       file: File | null;
     } | null;
+    bgColor?: string;
     eventType?:
       | "Battle"
       | "Competition"
@@ -224,15 +227,76 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     // Upload eventDetails poster if exists
     if (props.eventDetails.poster?.file) {
-      const posterResult = await uploadEventPosterToR2(
-        props.eventDetails.poster.file,
+      const bgColor = props.eventDetails.bgColor || "#ffffff";
+      const file = props.eventDetails.poster.file;
+
+      // Parse background color to RGB for sharp
+      const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+          ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+            }
+          : { r: 255, g: 255, b: 255 }; // Default to white
+      };
+
+      const bgRgb = hexToRgb(bgColor);
+
+      // Convert File to Buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Generate thumbnail (357x357px)
+      const THUMBNAIL_SIZE = 357;
+      const thumbnailBuffer = await sharp(buffer)
+        .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
+          fit: "contain",
+          background: bgRgb,
+        })
+        .toBuffer();
+
+      // Create File objects from buffers for upload
+      const originalFile = new File([buffer], file.name, { type: file.type });
+      const thumbnailFile = new File(
+        [thumbnailBuffer],
+        `thumbnail-${file.name}`,
+        { type: file.type }
+      );
+
+      // Upload original poster
+      const originalResult = await uploadToR2(
+        originalFile,
+        "event-poster",
         eventId
       );
-      if (posterResult.success) {
+
+      // Upload thumbnail
+      const thumbnailResult = await uploadToR2(
+        thumbnailFile,
+        "event-poster",
+        eventId
+      );
+
+      if (
+        originalResult.success &&
+        originalResult.url &&
+        thumbnailResult.success &&
+        thumbnailResult.url
+      ) {
+        // Store thumbnail URL in poster (for display)
         props.eventDetails.poster = {
           ...props.eventDetails.poster,
-          id: posterResult.id!,
-          url: posterResult.url!,
+          id: thumbnailResult.id || props.eventDetails.poster.id,
+          url: thumbnailResult.url,
+          file: null,
+        };
+        // Store original URL in originalPoster
+        props.eventDetails.originalPoster = {
+          id: originalResult.id || crypto.randomUUID(),
+          title: props.eventDetails.poster.title || "Poster original",
+          url: originalResult.url,
           file: null,
         };
       }
@@ -512,14 +576,97 @@ export async function editEvent(
     if (oldEvent.eventDetails.poster && !editedEvent.eventDetails.poster) {
       await deleteFromR2(oldEvent.eventDetails.poster.url);
     }
-    if (oldEvent.eventDetails.originalPoster && !editedEvent.eventDetails.originalPoster) {
+    if (
+      oldEvent.eventDetails.originalPoster &&
+      !editedEvent.eventDetails.originalPoster
+    ) {
       await deleteFromR2(oldEvent.eventDetails.originalPoster.url);
     }
 
     // Upload new poster if exists. Delete old poster if it exists.
-    // Note: With PosterUpload, poster and originalPoster are already uploaded via API
-    // So we just need to handle the case where they're already URLs (not files)
-    // The poster upload happens client-side via the API endpoint
+    if (editedEvent.eventDetails.poster?.file) {
+      // Delete old poster if it exists and is being replaced
+      if (oldEvent.eventDetails.poster) {
+        await deleteFromR2(oldEvent.eventDetails.poster.url);
+      }
+      if (oldEvent.eventDetails.originalPoster) {
+        await deleteFromR2(oldEvent.eventDetails.originalPoster.url);
+      }
+
+      const bgColor = editedEvent.eventDetails.bgColor || "#ffffff";
+      const file = editedEvent.eventDetails.poster.file;
+
+      // Parse background color to RGB for sharp
+      const hexToRgb = (hex: string) => {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+          ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+            }
+          : { r: 255, g: 255, b: 255 }; // Default to white
+      };
+
+      const bgRgb = hexToRgb(bgColor);
+
+      // Convert File to Buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Generate thumbnail (357x357px)
+      const THUMBNAIL_SIZE = 357;
+      const thumbnailBuffer = await sharp(buffer)
+        .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
+          fit: "contain",
+          background: bgRgb,
+        })
+        .toBuffer();
+
+      // Create File objects from buffers for upload
+      const originalFile = new File([buffer], file.name, { type: file.type });
+      const thumbnailFile = new File(
+        [thumbnailBuffer],
+        `thumbnail-${file.name}`,
+        { type: file.type }
+      );
+
+      // Upload original poster
+      const originalResult = await uploadToR2(
+        originalFile,
+        "event-poster",
+        eventId
+      );
+
+      // Upload thumbnail
+      const thumbnailResult = await uploadToR2(
+        thumbnailFile,
+        "event-poster",
+        eventId
+      );
+
+      if (
+        originalResult.success &&
+        originalResult.url &&
+        thumbnailResult.success &&
+        thumbnailResult.url
+      ) {
+        // Store thumbnail URL in poster (for display)
+        editedEvent.eventDetails.poster = {
+          ...editedEvent.eventDetails.poster,
+          id: thumbnailResult.id || editedEvent.eventDetails.poster.id,
+          url: thumbnailResult.url,
+          file: null,
+        };
+        // Store original URL in originalPoster
+        editedEvent.eventDetails.originalPoster = {
+          id: originalResult.id || crypto.randomUUID(),
+          title: editedEvent.eventDetails.poster.title || "Poster original",
+          url: originalResult.url,
+          file: null,
+        };
+      }
+    }
 
     // Upload gallery files
     const galleryFiles = editedEvent.gallery.filter((item) => item.file);

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,22 +15,23 @@ import { UploadIcon, X } from "lucide-react";
 
 interface PosterUploadProps {
   initialPoster?: string | null;
-  onUpload: (urls: { thumbnail: string; original: string }) => void;
+  onFileChange: (data: { file: File | null; bgColor: string }) => void;
   editable: boolean;
   maxFiles?: number; // Kept for compatibility, always 1 for posters
   className?: string;
+  initialBgColor?: string;
 }
 
 export function PosterUpload({
   initialPoster,
-  onUpload,
+  onFileChange,
   editable,
   maxFiles = 1,
   className = "",
+  initialBgColor = "#ffffff",
 }: PosterUploadProps) {
   const [posterFile, setPosterFile] = useState<File | null>(null);
-  const [bgColor, setBgColor] = useState<string>("#ffffff");
-  const [isUploading, setIsUploading] = useState(false);
+  const [bgColor, setBgColor] = useState<string>(initialBgColor);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -179,6 +179,7 @@ export function PosterUpload({
     }
 
     setPosterFile(selectedFile);
+    onFileChange({ file: selectedFile, bgColor });
 
     // Reset input to allow selecting the same file again
     e.target.value = "";
@@ -186,61 +187,19 @@ export function PosterUpload({
 
   const handleRemove = () => {
     setPosterFile(null);
+    onFileChange({ file: null, bgColor });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  const handleUpload = async () => {
-    if (!posterFile) {
-      toast.error("Please select a file to upload.");
-      return;
+  // Notify parent when bgColor changes (only if we have a file)
+  useEffect(() => {
+    if (posterFile) {
+      onFileChange({ file: posterFile, bgColor });
     }
-
-    setIsUploading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", posterFile);
-      formData.append("bgColor", bgColor);
-
-      const response = await fetch("/api/poster/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Upload failed: ${response.statusText}`
-        );
-      }
-
-      const data = await response.json();
-
-      if (data.thumbnail && data.original) {
-        // Call onUpload callback
-        onUpload({
-          thumbnail: data.thumbnail,
-          original: data.original,
-        });
-
-        toast.success("Poster uploaded successfully!");
-        setPosterFile(null);
-      } else {
-        throw new Error("Invalid response from server");
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to upload poster. Please try again."
-      );
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bgColor]);
 
   const hasPreview = posterFile || initialPoster;
 
@@ -267,12 +226,78 @@ export function PosterUpload({
               </button>
             )}
           </div>
+
+          {/* Color Picker - Only show when a new file is selected (creating or replacing) */}
+          {posterFile && (
+            <div className="flex flex-col items-center gap-2">
+              <Label htmlFor="bg-color">Background Color</Label>
+              <div className="flex items-center justify-center gap-3">
+                <Popover
+                  open={isColorPickerOpen}
+                  onOpenChange={setIsColorPickerOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-16 h-10 rounded border border-charcoal cursor-pointer"
+                      style={{ backgroundColor: bgColor }}
+                      aria-label="Pick background color"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="start">
+                    <HexColorPicker color={bgColor} onChange={setBgColor} />
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  id="bg-color"
+                  type="text"
+                  value={bgColor}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow any input while typing, but validate on blur
+                    setBgColor(value);
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value.trim();
+                    // Validate and normalize hex color format on blur
+                    if (!value) {
+                      setBgColor("#ffffff");
+                      return;
+                    }
+                    // Add # if missing
+                    const normalized = value.startsWith("#")
+                      ? value
+                      : "#" + value;
+                    // Validate hex format (3 or 6 hex digits)
+                    if (/^#[A-Fa-f0-9]{3}$/.test(normalized)) {
+                      // Expand shorthand #RGB to #RRGGBB
+                      setBgColor(
+                        "#" +
+                          normalized[1] +
+                          normalized[1] +
+                          normalized[2] +
+                          normalized[2] +
+                          normalized[3] +
+                          normalized[3]
+                      );
+                    } else if (/^#[A-Fa-f0-9]{6}$/.test(normalized)) {
+                      setBgColor(normalized.toLowerCase());
+                    } else {
+                      // Invalid format, reset to default
+                      setBgColor("#ffffff");
+                    }
+                  }}
+                  className="w-24 bg-white"
+                  placeholder="#ffffff"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* File Input */}
       <div className="space-y-2">
-        <Label htmlFor="poster-file">Poster Image</Label>
         <div className="flex items-center justify-center w-full">
           <label
             htmlFor="poster-file"
@@ -295,93 +320,10 @@ export function PosterUpload({
               className="hidden"
               accept="image/*"
               onChange={handleFileSelect}
-              disabled={isUploading}
             />
           </label>
         </div>
       </div>
-
-      {/* Color Picker - Only show when a new file is selected (creating or replacing) */}
-      {posterFile && (
-        <div className="space-y-2">
-          <Label htmlFor="bg-color">Background Color</Label>
-          <div className="flex items-center gap-3">
-            <Popover
-              open={isColorPickerOpen}
-              onOpenChange={setIsColorPickerOpen}
-            >
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  disabled={isUploading}
-                  className="w-16 h-10 rounded border border-charcoal cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: bgColor }}
-                  aria-label="Pick background color"
-                />
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-3" align="start">
-                <HexColorPicker color={bgColor} onChange={setBgColor} />
-              </PopoverContent>
-            </Popover>
-            <Input
-              id="bg-color"
-              type="text"
-              value={bgColor}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Allow any input while typing, but validate on blur
-                setBgColor(value);
-              }}
-              onBlur={(e) => {
-                const value = e.target.value.trim();
-                // Validate and normalize hex color format on blur
-                if (!value) {
-                  setBgColor("#ffffff");
-                  return;
-                }
-                // Add # if missing
-                const normalized = value.startsWith("#") ? value : "#" + value;
-                // Validate hex format (3 or 6 hex digits)
-                if (/^#[A-Fa-f0-9]{3}$/.test(normalized)) {
-                  // Expand shorthand #RGB to #RRGGBB
-                  setBgColor(
-                    "#" +
-                      normalized[1] +
-                      normalized[1] +
-                      normalized[2] +
-                      normalized[2] +
-                      normalized[3] +
-                      normalized[3]
-                  );
-                } else if (/^#[A-Fa-f0-9]{6}$/.test(normalized)) {
-                  setBgColor(normalized.toLowerCase());
-                } else {
-                  // Invalid format, reset to default
-                  setBgColor("#ffffff");
-                }
-              }}
-              className="w-24 bg-white"
-              placeholder="#ffffff"
-              disabled={isUploading}
-            />
-            <span className="text-sm text-gray-500">
-              Color shown behind poster
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Upload Button - Only show when file is selected */}
-      {posterFile && (
-        <Button
-          onClick={handleUpload}
-          disabled={isUploading}
-          className="w-full"
-          type="button"
-        >
-          {isUploading ? "Uploading..." : "Upload Poster"}
-        </Button>
-      )}
     </div>
   );
 }

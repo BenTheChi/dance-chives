@@ -36,6 +36,7 @@ export interface EventDetails {
   dates: EventDate[]; // Required: Array of dates for events (at least one)
   poster?: Image | null;
   originalPoster?: Image | null;
+  bgColor?: string; // Form-only field for poster background color
   city: City;
   styles?: string[]; // danceStyleTags
   eventType: EventType;

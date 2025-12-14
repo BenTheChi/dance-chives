@@ -7,6 +7,7 @@ import { Image } from "@/types/image";
 
 interface PosterImageProps {
   poster: Image | null;
+  originalPoster?: Image | null;
   className?: string;
   width?: number;
   height?: number;
@@ -14,9 +15,10 @@ interface PosterImageProps {
 
 export function PosterImage({
   poster,
+  originalPoster,
   className = "",
-  width = 500,
-  height = 500,
+  width = 357,
+  height = 357,
 }: PosterImageProps) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
@@ -30,6 +32,9 @@ export function PosterImage({
     );
   }
 
+  // Use originalPoster for lightbox if available, otherwise fall back to poster
+  const lightboxImage = originalPoster || poster;
+
   return (
     <>
       <div
@@ -42,14 +47,14 @@ export function PosterImage({
             alt={poster.title}
             width={width}
             height={height}
-            className="object-contain rounded-md w-full max-w-[600px]"
+            className="object-contain rounded-md w-full max-w-[357px]"
           />
         ) : null}
       </div>
 
       {isLightboxOpen && (
         <PhotoLightbox
-          image={poster}
+          image={lightboxImage}
           isOpen={isLightboxOpen}
           onClose={() => setIsLightboxOpen(false)}
           onNext={() => {}}

@@ -11,10 +11,21 @@ async function main() {
   console.log("🧹 Clearing existing Neo4j data...");
   const clearSession = driver.session();
   try {
-    await clearSession.run("MATCH (n) DETACH DELETE n");
-    console.log("✅ Neo4j database cleared");
+    // Wait a bit for Neo4j to be ready if it just started
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const result = await clearSession.run(
+      "MATCH (n) DETACH DELETE n RETURN count(n) as deleted"
+    );
+    const deletedCount = result.records[0]?.get("deleted") || 0;
+    console.log(`✅ Neo4j database cleared (deleted ${deletedCount} nodes)`);
   } catch (error) {
     console.error("⚠️  Error clearing Neo4j database:", error);
+    console.error(
+      "   This might happen if Neo4j is not running or not accessible."
+    );
+    console.error("   Try running: npm run neo4j:clear");
+    // Don't throw - allow seed to continue even if Neo4j clear fails
   } finally {
     await clearSession.close();
   }

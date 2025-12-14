@@ -195,6 +195,7 @@ const eventDetailsSchema = z.object({
   ),
   poster: imageSchema.nullable().optional(),
   originalPoster: imageSchema.nullable().optional(),
+  bgColor: z.string().optional(),
   eventType: z.enum([
     "Battle",
     "Competition",
