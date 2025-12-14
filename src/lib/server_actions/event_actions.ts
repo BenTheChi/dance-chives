@@ -258,9 +258,11 @@ export async function addEvent(props: addEventProps): Promise<response> {
         .toBuffer();
 
       // Create File objects from buffers for upload
-      const originalFile = new File([buffer], file.name, { type: file.type });
+      const originalFile = new File([new Uint8Array(buffer)], file.name, {
+        type: file.type,
+      });
       const thumbnailFile = new File(
-        [thumbnailBuffer],
+        [new Uint8Array(thumbnailBuffer)],
         `thumbnail-${file.name}`,
         { type: file.type }
       );
@@ -624,9 +626,11 @@ export async function editEvent(
         .toBuffer();
 
       // Create File objects from buffers for upload
-      const originalFile = new File([buffer], file.name, { type: file.type });
+      const originalFile = new File([new Uint8Array(buffer)], file.name, {
+        type: file.type,
+      });
       const thumbnailFile = new File(
-        [thumbnailBuffer],
+        [new Uint8Array(thumbnailBuffer)],
         `thumbnail-${file.name}`,
         { type: file.type }
       );
