@@ -47,7 +47,7 @@ export function PosterImage({
             alt={poster.title}
             width={width}
             height={height}
-            className="object-contain rounded-md w-full max-w-[357px]"
+            className="object-contain rounded-md w-full"
           />
         ) : null}
       </div>

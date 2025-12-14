@@ -51,9 +51,9 @@ export async function POST(request: NextRequest) {
 
     const bgRgb = hexToRgb(bgColor);
 
-    // Generate thumbnail (357x357px)
+    // Generate thumbnail (500x500px)
     const thumbnailBuffer = await sharp(buffer)
-      .resize(357, 357, {
+      .resize(500, 500, {
         fit: "contain",
         background: bgRgb,
       })

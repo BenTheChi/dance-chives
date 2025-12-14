@@ -90,8 +90,8 @@ export function SectionCard({
         className="block h-full"
       >
         <div className="flex h-full">
-          {/* Poster on left - 60% width, square aspect */}
-          <div className="relative w-[60%] aspect-square border-r border-black shrink-0">
+          {/* Poster on left - max 500px width, square aspect */}
+          <div className="relative w-[500px] max-w-[500px] min-w-[200px] aspect-square border-r border-black shrink-0">
             {posterUrl ? (
               <NextImage
                 src={posterUrl}
@@ -106,8 +106,8 @@ export function SectionCard({
             )}
           </div>
 
-          {/* Content on right - 40% width */}
-          <div className="flex flex-col justify-between p-3 sm:p-4 flex-1">
+          {/* Content on right - expands as needed */}
+          <div className="flex flex-col justify-between p-3 sm:p-4 flex-1 min-w-0">
             <div className="flex flex-col gap-4">
               {/* Section type badge in top right */}
               {sectionType && (

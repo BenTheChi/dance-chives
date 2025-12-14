@@ -198,37 +198,20 @@ export default async function EventPage({ params }: PageProps) {
     <>
       <AppNavbar />
       <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-[357px] md:max-w-[727px]">
-          {/* Left column: Poster + Sections (sections only when description exists) */}
-          <div className="flex flex-col gap-4 col-span-1">
+        {/* Right column: Details + Roles + Poster */}
+        <div className="flex flex-col min-[1180px]:flex-row justify-center gap-5 w-full sm:w-auto">
+          <div className="w-full sm:w-[500px] sm:flex-shrink">
             <PosterImage
               poster={event.eventDetails.poster ?? null}
               originalPoster={event.eventDetails.originalPoster ?? null}
+              width={500}
+              height={500}
               className="w-full"
             />
-
-            {/* Sections in left column ONLY when description/schedule exists (to fill space next to long content) */}
-            {event.sections &&
-              event.sections.length > 0 &&
-              (event.eventDetails.description ||
-                event.eventDetails.schedule) && (
-                <div className="hidden md:flex flex-col gap-4">
-                  {event.sections.map((section) => (
-                    <SectionCard
-                      key={section.id}
-                      section={section}
-                      eventId={event.id}
-                      eventTitle={event.eventDetails.title}
-                    />
-                  ))}
-                </div>
-              )}
           </div>
-
-          {/* Right column: Details + Roles + Description */}
-          <div className="flex flex-col gap-4 col-span-1">
+          <div className="flex flex-col gap-4 w-full sm:w-auto">
             {/* Event Details */}
-            <section className="bg-misty-seafoam p-6 rounded-md flex flex-col gap-4 border border-black">
+            <section className="bg-misty-seafoam p-4 rounded-md flex flex-col gap-4 border border-black w-full sm:max-w-[500px]">
               <div>
                 {/* Mobile: buttons above title */}
                 {(canEdit || isCreator) && (
@@ -382,7 +365,7 @@ export default async function EventPage({ params }: PageProps) {
             </section>
 
             {/* Event Roles */}
-            <section className="p-4 rounded-md bg-misty-seafoam flex flex-col border border-black">
+            <section className="p-4 rounded-md bg-misty-seafoam flex flex-col border border-black sm:max-w-[500px]">
               <div className="flex flex-row justify-between items-baseline">
                 <h2 className="text-xl font-bold mb-2">Event Roles</h2>
                 <TagSelfCircleButton
@@ -440,74 +423,56 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               ))}
             </section>
-
-            {/* Description - directly under Event Roles */}
-            {(event.eventDetails.description ||
-              event.eventDetails.schedule) && (
-              <section className="flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md border border-black">
-                {event.eventDetails.description && (
-                  <>
-                    <div className="font-semibold text-2xl">Description</div>
-                    <div className="whitespace-pre-wrap">
-                      {event.eventDetails.description}
-                    </div>
-                  </>
-                )}
-                {event.eventDetails.schedule && (
-                  <>
-                    <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
-                      Schedule
-                    </div>
-                    <div className="whitespace-pre-wrap">
-                      {event.eventDetails.schedule}
-                    </div>
-                  </>
-                )}
-              </section>
-            )}
           </div>
-
-          {/* Sections - full width 2 columns when NO description, mobile stacked */}
-          {event.sections && event.sections.length > 0 && (
-            <>
-              {/* Mobile: always stacked */}
-              <div className="col-span-1 flex flex-col gap-4 md:hidden">
-                {event.sections.map((section) => (
-                  <SectionCard
-                    key={section.id}
-                    section={section}
-                    eventId={event.id}
-                    eventTitle={event.eventDetails.title}
-                  />
-                ))}
-              </div>
-              {/* Desktop: 2 columns only when no description (otherwise sections are in left column) */}
-              {!event.eventDetails.description &&
-                !event.eventDetails.schedule && (
-                  <div className="hidden md:grid col-span-2 grid-cols-2 gap-4">
-                    {event.sections.map((section) => (
-                      <SectionCard
-                        key={section.id}
-                        section={section}
-                        eventId={event.id}
-                        eventTitle={event.eventDetails.title}
-                      />
-                    ))}
-                  </div>
-                )}
-            </>
-          )}
-
-          {/* Photo Gallery */}
-          {event.gallery.length > 0 && (
-            <section className="flex flex-col bg-misty-seafoam rounded-md p-4 w-full col-span-1 md:col-span-2">
-              <h2 className="text-2xl font-bold mb-2 text-center">
-                Photo Gallery
-              </h2>
-              <PhotoGallery images={event.gallery} />
-            </section>
-          )}
         </div>
+
+        {/* Description/Schedule - full width row */}
+        {(event.eventDetails.description || event.eventDetails.schedule) && (
+          <section className="flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md border border-black">
+            {event.eventDetails.description && (
+              <>
+                <div className="font-semibold text-2xl">Description</div>
+                <div className="whitespace-pre-wrap">
+                  {event.eventDetails.description}
+                </div>
+              </>
+            )}
+            {event.eventDetails.schedule && (
+              <>
+                <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                  Schedule
+                </div>
+                <div className="whitespace-pre-wrap">
+                  {event.eventDetails.schedule}
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
+        {/* Sections - full width flex row */}
+        {event.sections && event.sections.length > 0 && (
+          <div className="flex flex-col gap-4">
+            {event.sections.map((section) => (
+              <SectionCard
+                key={section.id}
+                section={section}
+                eventId={event.id}
+                eventTitle={event.eventDetails.title}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Photo Gallery */}
+        {event.gallery.length > 0 && (
+          <section className="flex flex-col bg-misty-seafoam rounded-md p-4 w-full">
+            <h2 className="text-2xl font-bold mb-2 text-center">
+              Photo Gallery
+            </h2>
+            <PhotoGallery images={event.gallery} />
+          </section>
+        )}
       </div>
     </>
   );

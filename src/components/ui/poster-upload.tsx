@@ -15,6 +15,7 @@ import { UploadIcon, X } from "lucide-react";
 
 interface PosterUploadProps {
   initialPoster?: string | null;
+  initialPosterFile?: File | null; // File from form state to restore preview
   onFileChange: (data: { file: File | null; bgColor: string }) => void;
   editable: boolean;
   maxFiles?: number; // Kept for compatibility, always 1 for posters
@@ -24,21 +25,28 @@ interface PosterUploadProps {
 
 export function PosterUpload({
   initialPoster,
+  initialPosterFile,
   onFileChange,
   editable,
   maxFiles = 1,
   className = "",
   initialBgColor = "#ffffff",
 }: PosterUploadProps) {
-  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterFile, setPosterFile] = useState<File | null>(
+    initialPosterFile || null
+  );
   const [bgColor, setBgColor] = useState<string>(initialBgColor);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
+  const prevInitialPosterFileRef = useRef<File | null | undefined>(
+    initialPosterFile
+  );
+  const prevInitialBgColorRef = useRef<string | undefined>(initialBgColor);
 
   const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
-  const THUMBNAIL_SIZE = 357;
+  const THUMBNAIL_SIZE = 500;
 
   // Helper function to parse hex color to RGB
   const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
@@ -60,7 +68,7 @@ export function PosterUpload({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size to exactly 357×357
+    // Set canvas size to exactly 500×500
     canvas.width = THUMBNAIL_SIZE;
     canvas.height = THUMBNAIL_SIZE;
 
@@ -127,11 +135,11 @@ export function PosterUpload({
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // Set canvas size to exactly 357×357
+        // Set canvas size to exactly 500×500
         canvas.width = THUMBNAIL_SIZE;
         canvas.height = THUMBNAIL_SIZE;
 
-        // Draw the existing thumbnail directly (it's already 357×357 with background)
+        // Draw the existing thumbnail directly (it's already 500×500 with background)
         ctx.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
         previewImageRef.current = image;
       };
@@ -157,6 +165,30 @@ export function PosterUpload({
       updateCanvasPreview(previewImageRef.current, previewCanvasRef.current);
     }
   }, [bgColor, posterFile]);
+
+  // Restore posterFile from props when component remounts or props change
+  useEffect(() => {
+    // Only update if the prop actually changed (to avoid unnecessary re-renders)
+    if (prevInitialPosterFileRef.current !== initialPosterFile) {
+      if (initialPosterFile) {
+        setPosterFile(initialPosterFile);
+      } else if (!initialPoster && !initialPosterFile) {
+        // If both initialPosterFile and initialPoster are null/undefined, clear the file
+        // This handles the case where the poster was removed
+        setPosterFile(null);
+      }
+      prevInitialPosterFileRef.current = initialPosterFile;
+    }
+  }, [initialPosterFile, initialPoster]);
+
+  // Sync bgColor with initialBgColor prop when it changes
+  useEffect(() => {
+    // Only update if the prop actually changed
+    if (prevInitialBgColorRef.current !== initialBgColor && initialBgColor) {
+      setBgColor(initialBgColor);
+      prevInitialBgColorRef.current = initialBgColor;
+    }
+  }, [initialBgColor]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -205,10 +237,10 @@ export function PosterUpload({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Preview Box - 357x357 Canvas */}
+      {/* Preview Box - 500x500 Canvas */}
       {hasPreview && (
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-[357px] h-[357px] rounded-lg border border-charcoal overflow-hidden">
+          <div className="relative w-[500px] h-[500px] rounded-lg border border-charcoal overflow-hidden">
             <canvas
               ref={previewCanvasRef}
               className="w-full h-full"

@@ -248,8 +248,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Generate thumbnail (357x357px)
-      const THUMBNAIL_SIZE = 357;
+      // Generate thumbnail (500x500px)
+      const THUMBNAIL_SIZE = 500;
       const thumbnailBuffer = await sharp(buffer)
         .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
           fit: "contain",
@@ -616,8 +616,8 @@ export async function editEvent(
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Generate thumbnail (357x357px)
-      const THUMBNAIL_SIZE = 357;
+      // Generate thumbnail (500x500px)
+      const THUMBNAIL_SIZE = 500;
       const thumbnailBuffer = await sharp(buffer)
         .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
           fit: "contain",

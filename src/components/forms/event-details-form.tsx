@@ -409,6 +409,7 @@ export function EventDetailsForm({
               <FormControl>
                 <PosterUpload
                   initialPoster={eventDetails.poster?.url || null}
+                  initialPosterFile={eventDetails.poster?.file || null}
                   initialBgColor={eventDetails.bgColor || "#ffffff"}
                   onFileChange={({ file, bgColor }) => {
                     // Store bgColor in form state

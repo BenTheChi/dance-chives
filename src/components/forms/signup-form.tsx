@@ -42,8 +42,18 @@ const citySchema = z.object({
 });
 
 const signupSchema = z.object({
-  displayName: z.string().min(1, "Display name is required"),
-  username: z.string().min(1, "Username is required"),
+  displayName: z
+    .string()
+    .min(1, "Display name is required")
+    .max(50, "Display name must be 50 characters or less"),
+  username: z
+    .string()
+    .min(1, "Username is required")
+    .max(50, "Username must be 50 characters or less")
+    .regex(
+      /^[a-z0-9]+$/,
+      "Username can only contain lowercase letters and numbers"
+    ),
   date: z
     .string()
     .min(1, "Date of birth is required")
@@ -61,7 +71,10 @@ const signupSchema = z.object({
 });
 
 const editSchema = z.object({
-  displayName: z.string().min(1, "Display name is required"),
+  displayName: z
+    .string()
+    .min(1, "Display name is required")
+    .max(50, "Display name must be 50 characters or less"),
   date: z
     .string()
     .regex(/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/, {
@@ -298,6 +311,14 @@ export default function SignUpForm({
                       <Input
                         placeholder="Unique identifier. Cannot change."
                         {...field}
+                        onChange={(e) => {
+                          // Normalize to lowercase and filter out invalid characters
+                          const value = e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]/g, "");
+                          field.onChange(value);
+                        }}
+                        maxLength={50}
                       />
                     </FormControl>
                     <FormMessage />
@@ -329,6 +350,7 @@ export default function SignUpForm({
                     <Input
                       placeholder="Will be displayed publicly. Can be changed."
                       {...field}
+                      maxLength={50}
                     />
                   </FormControl>
                   <FormMessage />
