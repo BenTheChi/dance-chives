@@ -20,7 +20,12 @@ export default async function EventSettingsPage({ params }: PageProps) {
     redirect("/login");
   }
 
-  const event = await getEvent(eventId);
+  const sessionForAuth = await auth();
+  const event = await getEvent(
+    eventId,
+    sessionForAuth?.user?.id,
+    sessionForAuth?.user?.auth ?? 0
+  );
 
   // Check if event exists
   if (!event) {
@@ -77,6 +82,7 @@ export default async function EventSettingsPage({ params }: PageProps) {
             eventId={eventId}
             initialTeamMembers={teamMembers}
             initialCreator={creator}
+            initialStatus={event.eventDetails.status || "visible"}
           />
         </div>
       </div>

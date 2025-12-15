@@ -38,16 +38,24 @@ export default async function SectionPage({ params }: PageProps) {
     notFound();
   }
 
-  // Get event and find the section
-  const event = await getEvent(paramResult.event);
+  // Check authentication and permissions
+  const session = await auth();
+  const userId = session?.user?.id;
+  const authLevel = session?.user?.auth ?? 0;
+
+  // Get event and find the section (with authorization check)
+  const event = await getEvent(paramResult.event, userId, authLevel);
+
+  // If event is null, it means it's hidden and user is not authorized
+  if (!event) {
+    notFound();
+  }
+
   const section = event.sections.find((s) => s.id === paramResult.section);
 
   if (!section) {
     notFound();
   }
-
-  // Check authentication and permissions
-  const session = await auth();
   const isCreator = session?.user?.id
     ? await isEventCreator(event.id, session.user.id)
     : false;

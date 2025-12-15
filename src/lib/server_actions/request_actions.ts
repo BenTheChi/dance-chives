@@ -1550,7 +1550,7 @@ export async function getDashboardData() {
     incomingRequests,
     outgoingRequests,
     notifications,
-    userEventsRaw,
+    userEvents,
     teamMemberships,
     user,
     userProfile,
@@ -1558,10 +1558,10 @@ export async function getDashboardData() {
     getIncomingRequests(),
     getOutgoingRequests(),
     getNotifications(10),
-    prisma.event.findMany({
-      where: { userId, creator: true },
-      take: 10,
-    }),
+    (async () => {
+      const { getUserCreatedEventCards } = await import("@/db/queries/event");
+      return await getUserCreatedEventCards(userId);
+    })(),
     getUserTeamMemberships(userId).then((memberships) =>
       memberships.slice(0, 10).map((m) => ({
         eventId: m.eventId,
@@ -1581,17 +1581,13 @@ export async function getDashboardData() {
     getUser(userId).catch(() => null), // Get displayName from Neo4j
   ]);
 
-  // Fetch event titles and creation dates from Neo4j for user events
-  const userEvents = await Promise.all(
-    userEventsRaw.map(async (event) => {
-      const eventData = await getEventTitle(event.eventId, true);
-      return {
-        ...event,
-        eventTitle: eventData.title || "Untitled Event",
-        createdAt: eventData.createdAt,
-      };
-    })
-  );
+  // Get hidden events for moderators/admins
+  let hiddenEvents: TEventCard[] = [];
+  const authLevel = user?.auth ?? 0;
+  if (authLevel >= AUTH_LEVELS.MODERATOR) {
+    const { getHiddenEvents } = await import("@/db/queries/event");
+    hiddenEvents = await getHiddenEvents();
+  }
 
   // Destructure to exclude id from being sent to client
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1608,6 +1604,7 @@ export async function getDashboardData() {
     notifications,
     userEvents,
     teamMemberships,
+    hiddenEvents,
   };
 }
 
@@ -1622,7 +1619,13 @@ export async function getSavedEventsForUser(): Promise<TEventCard[]> {
     const { getSavedEventsForUser: getSavedEventsForUserQuery } = await import(
       "@/db/queries/event"
     );
-    return await getSavedEventsForUserQuery(session.user.id);
+    // Get user's auth level
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { auth: true },
+    });
+    const authLevel = user?.auth ?? 0;
+    return await getSavedEventsForUserQuery(session.user.id, authLevel);
   } catch (error) {
     console.error("Error fetching saved events:", error);
     return [];

@@ -42,13 +42,20 @@ export default async function EventPage({ params }: PageProps) {
     notFound();
   }
 
-  const event = (await getEvent(paramResult.event)) as Event;
+  const session = await auth();
+  const userId = session?.user?.id;
+  const authLevel = session?.user?.auth ?? 0;
+
+  // Get event with authorization check
+  const event = await getEvent(paramResult.event, userId, authLevel);
+
+  // If event is null, it means it's hidden and user is not authorized
+  if (!event) {
+    notFound();
+  }
 
   // Check if current user is the creator
-  const session = await auth();
-  const isCreator = session?.user?.id
-    ? await isEventCreator(event.id, session.user.id)
-    : false;
+  const isCreator = userId ? await isEventCreator(event.id, userId) : false;
 
   // Check if user is a team member
   const isEventTeamMember = session?.user?.id
@@ -243,9 +250,16 @@ export default async function EventPage({ params }: PageProps) {
                   )}
                   {/* Larger screens: title and buttons on same row */}
                   <div className="hidden sm:flex sm:flex-row sm:justify-between sm:items-start sm:gap-4">
-                    <h1 className="text-3xl font-bold">
-                      {event.eventDetails.title}
-                    </h1>
+                    <div>
+                      <h1 className="text-3xl font-bold">
+                        {event.eventDetails.title}
+                      </h1>
+                      {event.eventDetails.status === "hidden" && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          (hidden)
+                        </p>
+                      )}
+                    </div>
                     {(canEdit || isCreator) && (
                       <div className="flex gap-2">
                         {isCreator && (
@@ -274,9 +288,16 @@ export default async function EventPage({ params }: PageProps) {
                     )}
                   </div>
                   {/* Mobile: title shown separately */}
-                  <h1 className="text-3xl font-bold sm:hidden">
-                    {event.eventDetails.title}
-                  </h1>
+                  <div className="sm:hidden">
+                    <h1 className="text-3xl font-bold">
+                      {event.eventDetails.title}
+                    </h1>
+                    {event.eventDetails.status === "hidden" && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        (hidden)
+                      </p>
+                    )}
+                  </div>
 
                   <div className="text-xl text-muted-foreground font-semibold">
                     {event.eventDetails.city.id ? (

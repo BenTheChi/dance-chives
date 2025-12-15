@@ -3,6 +3,9 @@ import { EventType, TEventCard } from "@/types/event";
 
 export async function getEventCards(): Promise<TEventCard[]> {
   const rows = await prisma.eventCard.findMany({
+    where: {
+      status: "visible",
+    } as any, // Type assertion until Prisma client is regenerated
     orderBy: [{ updatedAt: "desc" }],
   });
 
@@ -17,5 +20,6 @@ export async function getEventCards(): Promise<TEventCard[]> {
     styles: r.styles ?? [],
     eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
     additionalDatesCount: r.additionalDatesCount ?? 0,
+    status: ((r as any).status as "hidden" | "visible") || "visible",
   }));
 }

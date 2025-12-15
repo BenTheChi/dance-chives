@@ -23,9 +23,13 @@ export default async function EditEventPage({
     redirect("/login");
   }
 
-  const currEvent = await getEvent(event);
+  const currEvent = await getEvent(
+    event,
+    session.user.id,
+    session.user.auth ?? 0
+  );
 
-  // Check if event exists
+  // Check if event exists or is hidden and user is not authorized
   if (!currEvent) {
     notFound();
   }

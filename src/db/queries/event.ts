@@ -200,9 +200,59 @@ interface SearchParams {
 /**
  * Unified function to get any event by ID
  * Works for all event types (Competition, Workshop, Session, etc.)
+ * @param id - Event ID
+ * @param userId - Optional user ID for authorization check
+ * @param authLevel - Optional auth level for authorization check
  */
-export const getEvent = async (id: string): Promise<Event> => {
+export const getEvent = async (
+  id: string,
+  userId?: string,
+  authLevel?: number
+): Promise<Event | null> => {
   const session = driver.session();
+
+  // Check if event is hidden and user is not authorized
+  if (userId !== undefined) {
+    const isModOrAdmin =
+      authLevel !== undefined && authLevel >= AUTH_LEVELS.MODERATOR;
+    const accessCheck = await session.run(
+      `
+      MATCH (e:Event {id: $id})
+      OPTIONAL MATCH (creator:User {id: $userId})-[:CREATED]->(e)
+      OPTIONAL MATCH (teamMember:User {id: $userId})-[:TEAM_MEMBER]->(e)
+      WITH e,
+           (e.status = 'visible' OR e.status IS NULL) as isVisible,
+           (creator IS NOT NULL) as isCreator,
+           (teamMember IS NOT NULL) as isTeamMember
+      RETURN e IS NOT NULL as exists,
+             isVisible,
+             isCreator,
+             isTeamMember,
+             $isModOrAdmin as isModOrAdmin
+      `,
+      { id, userId, isModOrAdmin }
+    );
+
+    if (accessCheck.records.length > 0) {
+      const record = accessCheck.records[0];
+      const exists = record.get("exists");
+      const isVisible = record.get("isVisible");
+      const isCreator = record.get("isCreator");
+      const isTeamMember = record.get("isTeamMember");
+      const isModOrAdmin = record.get("isModOrAdmin");
+
+      if (!exists) {
+        await session.close();
+        return null;
+      }
+
+      // If event is hidden and user is not authorized, return null
+      if (!isVisible && !isCreator && !isTeamMember && !isModOrAdmin) {
+        await session.close();
+        return null;
+      }
+    }
+  }
 
   // Get main event data - matches any Event node regardless of type labels
   const eventResult = await session.run(
@@ -228,6 +278,7 @@ export const getEvent = async (id: string): Promise<Event> => {
       startDate: e.startDate,
       dates: e.dates,
       schedule: e.schedule,
+      status: COALESCE(e.status, 'visible'),
       creatorId: creator.id
     } as event,
     CASE 
@@ -764,6 +815,7 @@ export const getEvent = async (id: string): Promise<Event> => {
     dates: dates || [],
     styles: eventStyles,
     eventType: (eventType as EventType) || "Other", // Always set eventType, default to "Other"
+    status: (eventData.status as "hidden" | "visible") || "visible",
   };
 
   // Enrich all users with city and styles from Postgres UserCard table
@@ -1421,6 +1473,7 @@ export const insertEvent = async (
         e.startDate = $startDate,
         e.dates = $dates,
         e.schedule = $schedule,
+        e.status = $status,
         e.createdAt = $createdAt,
         e.updatedAt = $updatedAt
       ON MATCH SET
@@ -1432,6 +1485,7 @@ export const insertEvent = async (
         e.startDate = $startDate,
         e.dates = $dates,
         e.schedule = $schedule,
+        e.status = $status,
         e.updatedAt = $updatedAt
 
       WITH e
@@ -1455,6 +1509,7 @@ export const insertEvent = async (
             : null,
         dates: datesJson,
         schedule: eventDetails.schedule || null,
+        status: eventDetails.status || "visible",
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
       }
@@ -1713,6 +1768,7 @@ export const editEvent = async (
            e.startDate = $startDate,
            e.dates = $dates,
            e.schedule = $schedule,
+           e.status = COALESCE($status, e.status, 'visible'),
            e.updatedAt = $updatedAt`,
       {
         id,
@@ -1728,6 +1784,7 @@ export const editEvent = async (
             : null,
         dates: datesJson,
         schedule: eventDetails.schedule || null,
+        status: eventDetails.status || null,
         updatedAt: event.updatedAt.toISOString(),
       }
     );
@@ -2057,16 +2114,192 @@ export async function toggleSaveCypher(
   }
 }
 
-// Get all saved event IDs for a user
-export async function getSavedEventIds(userId: string): Promise<string[]> {
+/**
+ * Get all hidden events (for admin dashboard)
+ * Returns event cards for all events with status = "hidden"
+ */
+export async function getHiddenEvents(): Promise<TEventCard[]> {
+  const session = driver.session();
+
+  try {
+    // Get all hidden events
+    const eventsResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE e.status = 'hidden'
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
+      WITH DISTINCT e, c, p,
+           [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+      RETURN e.id as eventId, 
+             e.title as title, 
+             e.startDate as startDate,
+             e.dates as dates,
+             c.name as city, 
+             c.id as cityId, 
+             p.url as imageUrl,
+             CASE 
+               WHEN size(eventTypeLabels) > 0 THEN 
+                 CASE eventTypeLabels[0]
+                   WHEN 'BattleEvent' THEN 'Battle'
+                   WHEN 'CompetitionEvent' THEN 'Competition'
+                   WHEN 'ClassEvent' THEN 'Class'
+                   WHEN 'WorkshopEvent' THEN 'Workshop'
+                   WHEN 'SessionEvent' THEN 'Session'
+                   WHEN 'PartyEvent' THEN 'Party'
+                   WHEN 'FestivalEvent' THEN 'Festival'
+                   WHEN 'PerformanceEvent' THEN 'Performance'
+                   ELSE null
+                 END
+               ELSE null 
+             END as eventType
+      ORDER BY e.startDate ASC, e.createdAt ASC
+      `,
+      {}
+    );
+
+    // Get all styles for each hidden event
+    const stylesResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE e.status = 'hidden'
+      OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+      WITH e.id as eventId, 
+           collect(DISTINCT eventStyle.name) as eventStyles,
+           collect(DISTINCT sectionStyle.name) as sectionStyles,
+           collect(DISTINCT videoStyle.name) as videoStyles,
+           collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+      WITH eventId, 
+           [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
+           [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+           [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+           [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+      RETURN eventId, 
+             filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
+      `,
+      {}
+    );
+
+    // Create a map of eventId -> styles
+    const stylesMap = new Map<string, string[]>();
+    stylesResult.records.forEach((record) => {
+      const eventId = record.get("eventId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      stylesMap.set(eventId, uniqueStyles);
+    });
+
+    // Combine event data with styles
+    return eventsResult.records.map((record) => {
+      const eventId = record.get("eventId");
+      const startDate = record.get("startDate");
+      const dates = record.get("dates");
+
+      // Determine date to display
+      let displayDate = "";
+      if (startDate) {
+        displayDate = startDate;
+      } else if (dates) {
+        try {
+          const datesArray =
+            typeof dates === "string" ? JSON.parse(dates) : dates;
+          if (Array.isArray(datesArray) && datesArray.length > 0) {
+            displayDate = datesArray[0].date || "";
+          }
+        } catch (error) {
+          console.error("Error parsing dates array:", error);
+        }
+      }
+
+      const eventType = record.get("eventType") as EventType | null;
+      return {
+        id: eventId,
+        title: record.get("title"),
+        series: undefined,
+        imageUrl: record.get("imageUrl"),
+        date: displayDate,
+        city: record.get("city") || "",
+        cityId: record.get("cityId") as number | undefined,
+        styles: stylesMap.get(eventId) || [],
+        eventType: eventType || undefined,
+        status: "hidden" as const,
+      };
+    });
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Check if a user can access a hidden event
+ * Returns true if user is creator, team member, moderator, or admin
+ */
+export async function canAccessHiddenEvent(
+  eventId: string,
+  userId: string,
+  authLevel?: number
+): Promise<boolean> {
   const session = driver.session();
   try {
+    // Check if user is moderator or admin (authLevel >= 2)
+    if (authLevel !== undefined && authLevel >= AUTH_LEVELS.MODERATOR) {
+      return true;
+    }
+
+    // Check if user is creator or team member
+    const result = await session.run(
+      `
+      MATCH (e:Event {id: $eventId})
+      OPTIONAL MATCH (u:User {id: $userId})-[:CREATED]->(e)
+      OPTIONAL MATCH (u)-[:TEAM_MEMBER]->(e)
+      RETURN count(u) > 0 as canAccess
+      `,
+      { eventId, userId }
+    );
+
+    return result.records[0]?.get("canAccess") || false;
+  } finally {
+    await session.close();
+  }
+}
+
+// Get all saved event IDs for a user
+export async function getSavedEventIds(
+  userId: string,
+  authLevel?: number
+): Promise<string[]> {
+  const session = driver.session();
+  try {
+    // Check if user is moderator/admin
+    const isModOrAdmin =
+      authLevel !== undefined && authLevel >= AUTH_LEVELS.MODERATOR;
+
+    // Get all saved events with their status
     const result = await session.run(
       `
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
-      RETURN e.id as eventId
+      OPTIONAL MATCH (creator:User {id: $userId})-[:CREATED]->(e)
+      OPTIONAL MATCH (teamMember:User {id: $userId})-[:TEAM_MEMBER]->(e)
+      WITH e, 
+           (e.status = 'visible' OR e.status IS NULL) as isVisible,
+           (creator IS NOT NULL) as isCreator,
+           (teamMember IS NOT NULL) as isTeamMember
+      WHERE isVisible OR isCreator OR isTeamMember OR $isModOrAdmin
+      RETURN DISTINCT e.id as eventId
       `,
-      { userId }
+      {
+        userId,
+        isModOrAdmin: isModOrAdmin,
+      }
     );
 
     return result.records.map((record) => record.get("eventId") as string);
@@ -2075,17 +2308,155 @@ export async function getSavedEventIds(userId: string): Promise<string[]> {
   }
 }
 
-// Get all saved events for a user with full EventCard data
-export async function getSavedEventsForUser(
+/**
+ * Get event cards for events created by a user
+ * Includes hidden events (since user is the creator)
+ */
+export async function getUserCreatedEventCards(
   userId: string
 ): Promise<TEventCard[]> {
   const session = driver.session();
 
   try {
-    // Get saved events with basic info
+    // Get events created by user (including hidden ones)
+    const eventsResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[:CREATED]->(e:Event)
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
+      WITH DISTINCT e, c, p,
+           [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+      RETURN e.id as eventId, 
+             e.title as title, 
+             e.startDate as startDate,
+             e.dates as dates,
+             e.status as status,
+             c.name as city, 
+             c.id as cityId, 
+             p.url as imageUrl,
+             CASE 
+               WHEN size(eventTypeLabels) > 0 THEN 
+                 CASE eventTypeLabels[0]
+                   WHEN 'BattleEvent' THEN 'Battle'
+                   WHEN 'CompetitionEvent' THEN 'Competition'
+                   WHEN 'ClassEvent' THEN 'Class'
+                   WHEN 'WorkshopEvent' THEN 'Workshop'
+                   WHEN 'SessionEvent' THEN 'Session'
+                   WHEN 'PartyEvent' THEN 'Party'
+                   WHEN 'FestivalEvent' THEN 'Festival'
+                   WHEN 'PerformanceEvent' THEN 'Performance'
+                   ELSE null
+                 END
+               ELSE null 
+             END as eventType
+      ORDER BY e.startDate ASC, e.createdAt ASC
+      `,
+      { userId }
+    );
+
+    // Get all styles for each event
+    const stylesResult = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[:CREATED]->(e:Event)
+      OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
+      WITH e.id as eventId, 
+           collect(DISTINCT eventStyle.name) as eventStyles,
+           collect(DISTINCT sectionStyle.name) as sectionStyles,
+           collect(DISTINCT videoStyle.name) as videoStyles,
+           collect(DISTINCT bracketVideoStyle.name) as bracketVideoStyles
+      WITH eventId, 
+           [style IN eventStyles WHERE style IS NOT NULL] as filteredEventStyles,
+           [style IN sectionStyles WHERE style IS NOT NULL] as filteredSectionStyles,
+           [style IN videoStyles WHERE style IS NOT NULL] as filteredVideoStyles,
+           [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
+      RETURN eventId, 
+             filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
+      `,
+      { userId }
+    );
+
+    // Create a map of eventId -> styles
+    const stylesMap = new Map<string, string[]>();
+    stylesResult.records.forEach((record) => {
+      const eventId = record.get("eventId");
+      const allStyles = (record.get("allStyles") || []) as unknown[];
+      const uniqueStyles = Array.from(
+        new Set(
+          allStyles.filter(
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
+      );
+      stylesMap.set(eventId, uniqueStyles);
+    });
+
+    // Combine event data with styles
+    return eventsResult.records.map((record) => {
+      const eventId = record.get("eventId");
+      const startDate = record.get("startDate");
+      const dates = record.get("dates");
+
+      // Determine date to display
+      let displayDate = "";
+      if (startDate) {
+        displayDate = startDate;
+      } else if (dates) {
+        try {
+          const datesArray =
+            typeof dates === "string" ? JSON.parse(dates) : dates;
+          if (Array.isArray(datesArray) && datesArray.length > 0) {
+            displayDate = datesArray[0].date || "";
+          }
+        } catch (error) {
+          console.error("Error parsing dates array:", error);
+        }
+      }
+
+      const eventType = record.get("eventType") as EventType | null;
+      return {
+        id: eventId,
+        title: record.get("title"),
+        series: undefined,
+        imageUrl: record.get("imageUrl"),
+        date: displayDate,
+        city: record.get("city") || "",
+        cityId: record.get("cityId") as number | undefined,
+        styles: stylesMap.get(eventId) || [],
+        eventType: eventType || undefined,
+        status: (record.get("status") as "hidden" | "visible") || "visible",
+      };
+    });
+  } finally {
+    await session.close();
+  }
+}
+
+// Get all saved events for a user with full EventCard data
+export async function getSavedEventsForUser(
+  userId: string,
+  authLevel?: number
+): Promise<TEventCard[]> {
+  const session = driver.session();
+
+  try {
+    // Check if user is moderator/admin
+    const isModOrAdmin =
+      authLevel !== undefined && authLevel >= AUTH_LEVELS.MODERATOR;
+
+    // Get saved events with basic info, filtering hidden events unless user is authorized
     const eventsResult = await session.run(
       `
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
+      OPTIONAL MATCH (creator:User {id: $userId})-[:CREATED]->(e)
+      OPTIONAL MATCH (teamMember:User {id: $userId})-[:TEAM_MEMBER]->(e)
+      WITH e, r,
+           (e.status = 'visible' OR e.status IS NULL) as isVisible,
+           (creator IS NOT NULL) as isCreator,
+           (teamMember IS NOT NULL) as isTeamMember
+      WHERE isVisible OR isCreator OR isTeamMember OR $isModOrAdmin
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (e)<-[:POSTER_OF]-(p:Image)
       WITH DISTINCT e, c, p, r.createdAt as savedAt,
@@ -2114,13 +2485,24 @@ export async function getSavedEventsForUser(
              END as eventType
       ORDER BY e.startDate ASC, e.createdAt ASC
       `,
-      { userId }
+      {
+        userId,
+        isModOrAdmin: isModOrAdmin,
+      }
     );
 
     // Get all styles for each saved event (from event, sections, and videos)
+    // Only include events that user can access (visible or authorized)
     const stylesResult = await session.run(
       `
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event)
+      OPTIONAL MATCH (creator:User {id: $userId})-[:CREATED]->(e)
+      OPTIONAL MATCH (teamMember:User {id: $userId})-[:TEAM_MEMBER]->(e)
+      WITH e,
+           (e.status = 'visible' OR e.status IS NULL) as isVisible,
+           (creator IS NOT NULL) as isCreator,
+           (teamMember IS NOT NULL) as isTeamMember
+      WHERE isVisible OR isCreator OR isTeamMember OR $isModOrAdmin
       OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
       OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
       OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
@@ -2138,7 +2520,7 @@ export async function getSavedEventsForUser(
       RETURN eventId, 
              filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
       `,
-      { userId }
+      { userId, isModOrAdmin: isModOrAdmin }
     );
 
     // Create a map of eventId -> styles
@@ -2364,6 +2746,7 @@ export const getStyleData = async (
        WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
        UNWIND allEvents as event
        WITH DISTINCT event
+       WHERE (event.status = 'visible' OR event.status IS NULL)
       OPTIONAL MATCH (event)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
       WITH event, c, poster,
@@ -2391,6 +2774,7 @@ export const getStyleData = async (
     // Get sections with this style
     const sectionsResult = await session.run(
       `MATCH (style:Style {name: $styleName})<-[:STYLE]-(s:Section)-[:IN]->(e:Event)
+       WHERE (e.status = 'visible' OR e.status IS NULL)
        RETURN s.id as sectionId, s.title as sectionTitle, e.id as eventId, e.title as eventTitle
        ORDER BY e.startDate DESC, s.title`,
       { styleName: normalizedStyleName }
@@ -2404,7 +2788,7 @@ export const getStyleData = async (
        WITH v, 
             COALESCE(s, s2) as section,
             COALESCE(e, e2) as event
-       WHERE section IS NOT NULL AND event IS NOT NULL
+       WHERE section IS NOT NULL AND event IS NOT NULL AND (event.status = 'visible' OR event.status IS NULL)
        RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
               section.id as sectionId, section.title as sectionTitle,
               event.id as eventId, event.title as eventTitle
@@ -2523,6 +2907,7 @@ export const getStyleData = async (
          WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
          UNWIND allEvents as event
          WITH DISTINCT event
+         WHERE (event.status = 'visible' OR event.status IS NULL)
          OPTIONAL MATCH (event)-[:IN]->(c:City)
          OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
          WITH event, c, poster,
@@ -2557,6 +2942,7 @@ export const getStyleData = async (
          WITH [event IN events1 + events2 + events3 WHERE event IS NOT NULL] as allEvents
          UNWIND allEvents as event
          WITH DISTINCT event
+         WHERE (event.status = 'visible' OR event.status IS NULL)
          OPTIONAL MATCH (event)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
          OPTIONAL MATCH (event)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
          OPTIONAL MATCH (event)<-[:IN]-(s3:Section)<-[:IN]-(b:Bracket)<-[:IN]-(bv:Video)-[:STYLE]->(bracketVideoStyle:Style)
@@ -2837,6 +3223,7 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
     // Get events in this city
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       WHERE (e.status = 'visible' OR e.status IS NULL)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
        WITH e, poster,
             [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
@@ -2954,6 +3341,7 @@ export const getCitySchedule = async (
     // Get events in this city with full details
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       WHERE (e.status = 'visible' OR e.status IS NULL)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
        WITH e, poster,
             [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']][0] as eventTypeLabel
@@ -2972,6 +3360,7 @@ export const getCitySchedule = async (
     // Get event styles (including event-level styles)
     const eventStylesResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
+       WHERE (e.status = 'visible' OR e.status IS NULL)
        OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
@@ -3254,11 +3643,12 @@ export const searchEvents = async (
   const session = driver.session();
 
   try {
-    let query = `MATCH (e:Event)`;
+    let query = `MATCH (e:Event)
+                 WHERE (e.status = 'visible' OR e.status IS NULL)`;
     const params: SearchParams = {};
 
     if (keyword && keyword.trim()) {
-      query += ` WHERE toLower(e.title) CONTAINS toLower($keyword)`;
+      query += ` AND toLower(e.title) CONTAINS toLower($keyword)`;
       params.keyword = keyword.trim();
     }
 

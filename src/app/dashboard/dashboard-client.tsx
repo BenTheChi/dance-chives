@@ -74,6 +74,7 @@ interface DashboardNotification {
   createdAt: Date;
 }
 
+// UserEvent is now TEventCard - keeping for backwards compatibility but will be removed
 interface UserEvent {
   id: string;
   eventId: string;
@@ -98,8 +99,9 @@ export interface DashboardData {
   incomingRequests: DashboardRequests;
   outgoingRequests: DashboardRequests;
   notifications: DashboardNotification[];
-  userEvents: UserEvent[];
+  userEvents: TEventCard[];
   teamMemberships: TeamMembership[];
+  hiddenEvents?: TEventCard[]; // Only for moderators/admins
 }
 
 interface DashboardClientProps {
@@ -510,27 +512,21 @@ export function DashboardClient({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {userEvents.map((event: UserEvent) => (
-                  <div
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {userEvents.map((event: TEventCard) => (
+                  <EventCard
                     key={event.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {event.eventTitle || `Event ID: ${event.eventId}`}
-                      </p>
-                      {event.createdAt && (
-                        <p className="text-sm text-muted-foreground">
-                          Created:{" "}
-                          {new Date(event.createdAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={`/events/${event.eventId}`}>View</a>
-                    </Button>
-                  </div>
+                    id={event.id}
+                    title={event.title}
+                    series={event.series}
+                    imageUrl={event.imageUrl}
+                    date={event.date}
+                    city={event.city}
+                    cityId={event.cityId}
+                    styles={event.styles}
+                    eventType={event.eventType}
+                    isSaved={false}
+                  />
                 ))}
               </div>
             </CardContent>
@@ -572,12 +568,46 @@ export function DashboardClient({
           </Card>
         )}
 
+        {/* Hidden Events Section - Only for moderators/admins */}
+        {initialData?.hiddenEvents && initialData.hiddenEvents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Hidden Events</CardTitle>
+              <CardDescription>
+                All hidden events in the system (
+                {initialData.hiddenEvents.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                {initialData.hiddenEvents.map((event: TEventCard) => (
+                  <EventCard
+                    key={event.id}
+                    id={event.id}
+                    title={event.title}
+                    series={event.series}
+                    imageUrl={event.imageUrl}
+                    date={event.date}
+                    city={event.city}
+                    cityId={event.cityId}
+                    styles={event.styles}
+                    eventType={event.eventType}
+                    isSaved={false}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Empty State */}
         {allIncoming.length === 0 &&
           pendingOutgoing.length === 0 &&
           requestHistory.length === 0 &&
           userEvents.length === 0 &&
-          teamMemberships.length === 0 && (
+          teamMemberships.length === 0 &&
+          (!initialData?.hiddenEvents ||
+            initialData.hiddenEvents.length === 0) && (
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">

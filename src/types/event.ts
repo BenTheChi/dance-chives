@@ -40,6 +40,7 @@ export interface EventDetails {
   city: City;
   styles?: string[]; // danceStyleTags
   eventType: EventType;
+  status?: "hidden" | "visible"; // Event visibility status
 }
 
 // Event interface - unified event structure for all event types
@@ -104,4 +105,5 @@ export interface TEventCard {
   styles: string[];
   eventType?: EventType;
   additionalDatesCount?: number; // Number of additional dates beyond the first one
+  status?: "hidden" | "visible"; // Event visibility status
 }

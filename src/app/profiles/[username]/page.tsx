@@ -178,39 +178,6 @@ export default async function ProfilePage({ params }: PageProps) {
             </div>
           </section>
 
-          {/* Events Created */}
-          {profile.eventsCreated && profile.eventsCreated.length > 0 && (
-            <section className="w-full">
-              <h2 className="text-2xl font-bold mb-4">Events Created</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.eventsCreated.map((event: Event) => {
-                  const eventRoute = `/events/${event.id}`;
-
-                  return (
-                    <EventCard
-                      key={event.id}
-                      id={event.id}
-                      title={event.eventDetails.title}
-                      imageUrl={event.eventDetails.poster?.url}
-                      date={
-                        event.eventDetails.dates &&
-                        event.eventDetails.dates.length > 0
-                          ? event.eventDetails.dates[0].date
-                          : ""
-                      }
-                      city={event.eventDetails.city.name || ""}
-                      cityId={event.eventDetails.city.id}
-                      styles={event.eventDetails.styles || []}
-                      eventType={event.eventDetails.eventType}
-                      href={eventRoute}
-                      isSaved={savedEventIds.has(event.id)}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
           {/* Events with Roles - Tabs */}
           {sortedRoles.length > 0 && (
             <section className="w-full">

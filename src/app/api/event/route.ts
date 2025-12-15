@@ -22,7 +22,11 @@ export async function DELETE(request: NextRequest) {
 
   try {
     // Check authorization - get event to check creator ID
-    const event = await getEvent(id);
+    const event = await getEvent(
+      id,
+      session.user.id,
+      session.user.auth ?? 0
+    );
     if (!event) {
       return NextResponse.json(
         { message: "Event not found" },

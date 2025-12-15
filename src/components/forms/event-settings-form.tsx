@@ -18,12 +18,22 @@ import { toast } from "sonner";
 import {
   updateEventTeamMembers,
   updateEventCreator,
+  updateEventStatus,
 } from "@/lib/server_actions/event_actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export interface EventSettingsFormProps {
   eventId: string;
   initialTeamMembers: UserSearchItem[];
   initialCreator: UserSearchItem | null;
+  initialStatus?: "hidden" | "visible";
 }
 
 async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
@@ -65,6 +75,7 @@ export default function EventSettingsForm({
   eventId,
   initialTeamMembers,
   initialCreator,
+  initialStatus = "visible",
 }: EventSettingsFormProps) {
   const router = useRouter();
   const [teamMembers, setTeamMembers] =
@@ -72,6 +83,7 @@ export default function EventSettingsForm({
   const [selectedCreator, setSelectedCreator] = useState<UserSearchItem | null>(
     initialCreator
   );
+  const [status, setStatus] = useState<"hidden" | "visible">(initialStatus);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -119,16 +131,34 @@ export default function EventSettingsForm({
         eventId,
         teamMembersToSave
       );
-      if (teamResult.status === 200) {
-        if (ownershipChanged) {
-          toast.success("Ownership and team members updated successfully");
-        } else {
-          toast.success("Team members updated successfully");
-        }
-        router.push(`/events/${eventId}`);
-      } else {
+      if (teamResult.status !== 200) {
         toast.error(teamResult.error || "Failed to update team members");
+        setIsSaving(false);
+        return;
       }
+
+      // Update status if changed
+      if (status !== initialStatus) {
+        const statusResult = await updateEventStatus(eventId, status);
+        if (statusResult.status !== 200) {
+          toast.error(
+            "error" in statusResult
+              ? statusResult.error || "Failed to update event status"
+              : "Failed to update event status"
+          );
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      if (ownershipChanged) {
+        toast.success("Ownership and team members updated successfully");
+      } else if (status !== initialStatus) {
+        toast.success("Settings updated successfully");
+      } else {
+        toast.success("Team members updated successfully");
+      }
+      router.push(`/events/${eventId}`);
     } catch (error) {
       console.error("Error saving:", error);
       toast.error("Failed to save changes");
@@ -224,7 +254,9 @@ export default function EventSettingsForm({
     JSON.stringify(teamMembers) !== JSON.stringify(initialTeamMembers);
   const hasCreatorChanges =
     JSON.stringify(selectedCreator) !== JSON.stringify(initialCreator);
-  const hasChanges = hasTeamMembersChanges || hasCreatorChanges;
+  const hasStatusChanges = status !== initialStatus;
+  const hasChanges =
+    hasTeamMembersChanges || hasCreatorChanges || hasStatusChanges;
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
@@ -262,6 +294,29 @@ export default function EventSettingsForm({
         </div>
 
         <div>
+          <h3 className="text-lg font-semibold mb-2">Event Status</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Control the visibility of this event. Hidden events are only visible
+            to creators, team members, moderators, and admins.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={status}
+              onValueChange={(value: "hidden" | "visible") => setStatus(value)}
+            >
+              <SelectTrigger id="status" className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="visible">Visible</SelectItem>
+                <SelectItem value="hidden">Hidden</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div>
           <h3 className="text-lg font-semibold mb-2">Team Members</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Manage team members who have edit access to this event.
@@ -296,6 +351,7 @@ export default function EventSettingsForm({
               onClick={() => {
                 setTeamMembers(initialTeamMembers);
                 setSelectedCreator(initialCreator);
+                setStatus(initialStatus);
               }}
               disabled={isSaving}
             >

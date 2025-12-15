@@ -134,6 +134,9 @@ model EventCard {
   displayDateLocal String?
   additionalDatesCount Int @default(0)
 
+  /// Event visibility status
+  status String @default("visible")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -144,6 +147,7 @@ model EventCard {
   @@index([cityId])
   @@index([eventType])
   @@index([updatedAt])
+  @@index([status])
   @@index([styles], type: Gin)
 }
 

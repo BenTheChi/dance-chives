@@ -444,6 +444,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       originalPoster: props.eventDetails.originalPoster as Image | null,
       eventType: props.eventDetails.eventType || "Other",
       styles: props.eventDetails.styles,
+      status: "visible", // Default status to visible
       city: {
         ...props.eventDetails.city,
         timezone: normalizedTimezone,
@@ -540,7 +541,12 @@ export async function editEvent(
     };
   }
 
-  const oldEvent = await getEventQuery(eventId);
+  // Get old event with authorization check
+  const oldEvent = await getEventQuery(
+    eventId,
+    session.user.id,
+    session.user.auth ?? 0
+  );
 
   if (!oldEvent) {
     return {
@@ -837,6 +843,7 @@ export async function editEvent(
 
     // Create the EventDetails object
     // Ensure eventType is always set (default to "Other" if not provided)
+    // Preserve status from old event (status is managed separately in Event Settings)
     const eventDetails: EventDetails = {
       creatorId: oldEvent.eventDetails.creatorId,
       title: editedEvent.eventDetails.title,
@@ -851,6 +858,7 @@ export async function editEvent(
       originalPoster: editedEvent.eventDetails.originalPoster as Image | null,
       eventType: editedEvent.eventDetails.eventType || "Other",
       styles: editedEvent.eventDetails.styles,
+      status: oldEvent.eventDetails.status || "visible", // Preserve existing status
       city: {
         ...editedEvent.eventDetails.city,
         timezone: timezone,
@@ -1167,7 +1175,8 @@ async function upsertEventReadModels(input: {
       styles,
       displayDateLocal,
       additionalDatesCount,
-    },
+      status: eventDetails.status || "visible",
+    } as any, // Type assertion until Prisma client is regenerated
     create: {
       eventId,
       title: eventDetails.title,
@@ -1181,7 +1190,8 @@ async function upsertEventReadModels(input: {
       styles,
       displayDateLocal,
       additionalDatesCount,
-    },
+      status: eventDetails.status || "visible",
+    } as any, // Type assertion until Prisma client is regenerated
   });
 
   // Rebuild event_dates
@@ -1354,7 +1364,11 @@ export async function getEvent(eventId: string): Promise<response> {
   }
 
   try {
-    const eventData = await getEventQuery(eventId);
+    const eventData = await getEventQuery(
+      eventId,
+      session.user.id,
+      session.user.auth ?? 0
+    );
 
     if (!eventData) {
       return {
@@ -1437,7 +1451,14 @@ export async function getSavedEventIds(): Promise<
   }
 
   try {
-    const eventIds = await getSavedEventIdsQuery(session.user.id);
+    // Get user's auth level
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { auth: true },
+    });
+    const authLevel = user?.auth ?? 0;
+
+    const eventIds = await getSavedEventIdsQuery(session.user.id, authLevel);
     return {
       status: 200,
       eventIds,
@@ -1466,15 +1487,14 @@ export async function updateEventTeamMembers(
 
   try {
     // Check if event exists and user has permission
-    const event = await getEventQuery(eventId);
+    const authLevel = session.user.auth ?? 0;
+    const event = await getEventQuery(eventId, session.user.id, authLevel);
     if (!event) {
       return {
         error: "Event not found",
         status: 404,
       };
     }
-
-    const authLevel = session.user.auth ?? 0;
     const isEventTeamMember = await isTeamMember(eventId, session.user.id);
     const hasPermission = canUpdateEvent(
       authLevel,
@@ -1568,15 +1588,14 @@ export async function updateEventCreator(
 
   try {
     // Check if event exists and user has permission
-    const event = await getEventQuery(eventId);
+    const authLevel = session.user.auth ?? 0;
+    const event = await getEventQuery(eventId, session.user.id, authLevel);
     if (!event) {
       return {
         error: "Event not found",
         status: 404,
       };
     }
-
-    const authLevel = session.user.auth ?? 0;
     const isEventTeamMember = await isTeamMember(eventId, session.user.id);
     const hasPermission = canUpdateEvent(
       authLevel,
@@ -1729,6 +1748,67 @@ export async function updateEventCreator(
     console.error("Error updating creator:", error);
     return {
       error: "Failed to update creator",
+      status: 500,
+    };
+  }
+}
+
+export async function updateEventStatus(
+  eventId: string,
+  status: "hidden" | "visible"
+): Promise<{ status: number } | { status: number; error: string }> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return {
+      error: "Unauthorized",
+      status: 401,
+    };
+  }
+
+  try {
+    // Check if user is the event creator
+    const { isEventCreator } = await import("@/db/queries/team-member");
+    const isCreator = await isEventCreator(eventId, session.user.id);
+
+    if (!isCreator) {
+      return {
+        error: "Only event creators can update event status",
+        status: 403,
+      };
+    }
+
+    // Update status in Neo4j
+    const neo4jSession = driver.session();
+    try {
+      await neo4jSession.run(
+        `
+        MATCH (e:Event {id: $eventId})
+        SET e.status = $status, e.updatedAt = $updatedAt
+        `,
+        {
+          eventId,
+          status,
+          updatedAt: new Date().toISOString(),
+        }
+      );
+    } finally {
+      await neo4jSession.close();
+    }
+
+    // Update status in PostgreSQL EventCard
+    await prisma.eventCard.update({
+      where: { eventId },
+      data: { status } as any, // Type assertion until Prisma client is regenerated
+    });
+
+    return {
+      status: 200,
+    };
+  } catch (error) {
+    console.error("Error updating event status:", error);
+    return {
+      error: "Failed to update event status",
       status: 500,
     };
   }

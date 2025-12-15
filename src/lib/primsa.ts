@@ -1,4 +1,7 @@
-import "server-only";
+// Note: server-only import removed to allow scripts to import this module
+// Scripts (seed files, etc.) need to import this, so we can't use server-only here
+// Client-side usage is prevented by Next.js build-time checks and the fact that
+// this module uses Node.js-specific APIs (Pool, PrismaPg adapter)
 
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";

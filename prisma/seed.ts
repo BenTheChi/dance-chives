@@ -1,8 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import driver from "../src/db/driver";
 import { seedNeo4j } from "../scripts/seed-neo4j";
 
-const prisma = new PrismaClient();
+// Create a Prisma client for scripts (with adapter for connection pooling)
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("🌱 Seeding PostgreSQL database...");
@@ -199,6 +204,7 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
     await driver.close();
     console.log("✅ Database connections closed");
   });

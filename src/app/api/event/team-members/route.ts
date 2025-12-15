@@ -76,7 +76,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if event exists
-    const event = await getEvent(eventId);
+    const event = await getEvent(
+      eventId,
+      session.user.id,
+      session.user.auth ?? 0
+    );
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
@@ -133,7 +137,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if event exists
-    const event = await getEvent(eventId);
+    const event = await getEvent(
+      eventId,
+      session.user.id,
+      session.user.auth ?? 0
+    );
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
