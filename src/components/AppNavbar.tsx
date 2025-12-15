@@ -10,11 +10,7 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "./ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export function AppNavbar() {
   const { data: session } = useSession();

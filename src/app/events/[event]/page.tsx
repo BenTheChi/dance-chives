@@ -210,7 +210,7 @@ export default async function EventPage({ params }: PageProps) {
                 className="w-full"
               />
             </div>
-            <div className="flex flex-col gap-4 w-full sm:grow">
+            <div className="flex flex-col gap-4 w-full sm:w-[500px]">
               {/* Event Details */}
               <section className="bg-misty-seafoam p-4 rounded-md flex flex-col gap-4 border border-black w-full sm:max-w-[500px]">
                 <div>
@@ -440,7 +440,7 @@ export default async function EventPage({ params }: PageProps) {
           </div>
 
           <section className="flex flex-col min-[1180px]:flex-row gap-2 w-full">
-            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black max-w-[500] self-start">
+            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black max-w-[500] self-start w-full">
               <div className="font-semibold text-2xl">Description</div>
               {event.eventDetails.description && (
                 <div className="whitespace-pre-wrap">
@@ -448,7 +448,7 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               )}
             </div>
-            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black max-w-[500px] self-start">
+            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black max-w-[500px] self-start w-full">
               <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
                 Schedule
               </div>
