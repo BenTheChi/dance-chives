@@ -201,13 +201,13 @@ export default async function EventPage({ params }: PageProps) {
         <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15 max-w-[1200px]">
           {/* Details + Roles + Poster */}
           <div className="flex flex-col min-[1180px]:flex-row justify-center gap-5 w-full">
-            <div className="w-full sm:w-[500px] sm:flex-shrink-0 border border-black rounded-lg">
+            <div className="w-full sm:h-[500px] sm:w-[500px] sm:flex-shrink-0">
               <PosterImage
                 poster={event.eventDetails.poster ?? null}
                 originalPoster={event.eventDetails.originalPoster ?? null}
                 width={500}
                 height={500}
-                className="w-full"
+                className="w-full border border-black rounded-lg"
               />
             </div>
             <div className="flex flex-col gap-4 w-full sm:w-[500px]">
@@ -298,6 +298,15 @@ export default async function EventPage({ params }: PageProps) {
                     )}
                   </div>
                 </div>
+
+                {eventStyles.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {eventStyles.map((style) => (
+                      <StyleBadge key={style} style={style} />
+                    ))}
+                  </div>
+                )}
+
                 <div>
                   {showMoreDatesButton && (
                     <EventDatesDialog eventId={event.id} />
@@ -337,34 +346,24 @@ export default async function EventPage({ params }: PageProps) {
                   )}
                 </div>
 
-                {eventStyles.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {eventStyles.map((style) => (
-                      <StyleBadge key={style} style={style} />
-                    ))}
-                  </div>
-                )}
-
-                {event.eventDetails.location && (
-                  <div className="flex flex-row gap-2 items-start">
-                    <MapPin className="mt-1 shrink-0" size={18} />
-                    <div className="whitespace-pre-wrap">
-                      {event.eventDetails.location}
-                    </div>
-                  </div>
-                )}
-
                 {event.eventDetails.cost && (
-                  <div className="flex flex-row gap-2 items-center">
-                    <DollarSign size={18} />
+                  <div className="flex flex-col">
+                    <span className="text-md font-semibold">Cost</span>
                     <span>{event.eventDetails.cost}</span>
                   </div>
                 )}
 
                 {event.eventDetails.prize && (
-                  <div className="flex flex-row gap-2 items-center">
-                    <Trophy size={18} />
+                  <div className="flex flex-col">
+                    <span className="text-md font-semibold">Prize</span>
                     <span>{event.eventDetails.prize}</span>
+                  </div>
+                )}
+
+                {event.eventDetails.location && (
+                  <div className="flex flex-col">
+                    <span className="text-md font-semibold">Location</span>
+                    <span>{event.eventDetails.location}</span>
                   </div>
                 )}
               </section>
@@ -439,7 +438,7 @@ export default async function EventPage({ params }: PageProps) {
             </div>
           </div>
 
-          <section className="flex flex-col min-[1180px]:flex-row gap-2 w-full">
+          <section className="flex flex-col min-[1180px]:flex-row gap-5 w-full">
             <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black max-w-[500] self-start w-full">
               <div className="font-semibold text-2xl">Description</div>
               {event.eventDetails.description && (
