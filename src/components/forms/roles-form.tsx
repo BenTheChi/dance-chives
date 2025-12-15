@@ -80,9 +80,9 @@ export default function RolesForm({
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
+    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full border rounded-md border-border bg-misty-seafoam">
       {roles.length === 0 ? (
-        <div className="border rounded-lg p-6 text-center">
+        <div className="p-6 text-center">
           <div className="text-sm text-muted-foreground mb-6">
             No roles yet. Let&apos;s create one!
           </div>
@@ -91,13 +91,10 @@ export default function RolesForm({
           </div>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2 py-5">
           {roles.map((role, index) => (
-            <div
-              key={role.id}
-              className="border rounded-md bg-card border-border"
-            >
-              <div className="p-5">
+            <div key={role.id}>
+              <div className="px-5 py-2">
                 <div className="flex items-end gap-4">
                   <FormField
                     control={control}

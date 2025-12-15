@@ -224,7 +224,7 @@ export default function UploadFile<T extends FieldValues>({
                       }
                       onBlur={() => handleCaptionBlur(file.id)}
                       maxLength={100}
-                      placeholder="Add a caption (max 100 chars)"
+                      placeholder="Max 100 chars"
                       className="text-sm mt-1"
                     />
                     <p className="text-xs text-gray-400 mt-1">

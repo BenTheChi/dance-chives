@@ -109,6 +109,41 @@ export function PosterUpload({
     const canvas = previewCanvasRef.current;
     if (!canvas) return;
 
+    const drawExistingPoster = (image: HTMLImageElement) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      // Set canvas size to exactly 500×500
+      canvas.width = THUMBNAIL_SIZE;
+      canvas.height = THUMBNAIL_SIZE;
+
+      // Draw the existing thumbnail directly (it's already 500×500 with background)
+      ctx.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+      previewImageRef.current = image;
+    };
+
+    const loadInitialPoster = (src: string, useCors = true) => {
+      const image = new Image();
+      if (useCors) {
+        image.crossOrigin = "anonymous";
+      }
+
+      image.onload = () => {
+        drawExistingPoster(image);
+      };
+
+      image.onerror = () => {
+        // If CORS blocks the image load, retry without the crossOrigin flag
+        if (useCors) {
+          loadInitialPoster(src, false);
+          return;
+        }
+        toast.error("Failed to load existing poster");
+      };
+
+      image.src = src;
+    };
+
     if (posterFile) {
       // Load the selected file and apply preview with background color
       const image = new Image();
@@ -128,27 +163,7 @@ export function PosterUpload({
       image.src = url;
     } else if (initialPoster) {
       // Load the initial poster (existing thumbnail - already has background baked in)
-      const image = new Image();
-      image.crossOrigin = "anonymous";
-
-      image.onload = () => {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
-        // Set canvas size to exactly 500×500
-        canvas.width = THUMBNAIL_SIZE;
-        canvas.height = THUMBNAIL_SIZE;
-
-        // Draw the existing thumbnail directly (it's already 500×500 with background)
-        ctx.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
-        previewImageRef.current = image;
-      };
-
-      image.onerror = () => {
-        toast.error("Failed to load existing poster");
-      };
-
-      image.src = initialPoster;
+      loadInitialPoster(initialPoster);
     } else {
       // Clear canvas
       const ctx = canvas.getContext("2d");

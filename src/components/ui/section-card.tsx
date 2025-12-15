@@ -84,14 +84,14 @@ export function SectionCard({
   }
 
   return (
-    <div className="w-full min-w-[300px] bg-periwinkle rounded-lg border border-black cursor-pointer hover:shadow-lg/100">
+    <div className="w-full max-w-[500px] min-[1180px]:max-w-[1020px] min-w-[300px] bg-periwinkle rounded-lg border border-black cursor-pointer hover:shadow-lg/100 overflow-hidden">
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}
         className="block h-full"
       >
         <div className="flex h-full">
           {/* Poster on left - max 500px width, square aspect */}
-          <div className="relative w-[500px] max-w-[500px] min-w-[200px] aspect-square border-r border-black shrink-0">
+          <div className="relative min-w-[200px] min-[1180px]:min-w-[500px] aspect-square border-r border-black shrink-0 rounded-l-lg">
             {posterUrl ? (
               <NextImage
                 src={posterUrl}
