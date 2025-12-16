@@ -107,7 +107,12 @@ export function UserAvatar({
   );
 
   return (
-    <div className={cn("relative inline-block group", className)}>
+    <div
+      className={cn(
+        "relative inline-block group flex items-center justify-center",
+        className
+      )}
+    >
       {showRemoveButton && onRemove && (
         <button
           onClick={onRemove}

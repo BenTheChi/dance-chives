@@ -44,6 +44,8 @@ export function PosterUpload({
     initialPosterFile
   );
   const prevInitialBgColorRef = useRef<string | undefined>(initialBgColor);
+  const isUserChangingColorRef = useRef<boolean>(false);
+  const onFileChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
   const THUMBNAIL_SIZE = 500;
@@ -65,8 +67,15 @@ export function PosterUpload({
     image: HTMLImageElement,
     canvas: HTMLCanvasElement
   ) => {
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", {
+      alpha: false, // Disable alpha for better performance
+      desynchronized: false, // Better quality
+    });
     if (!ctx) return;
+
+    // Enable high-quality image smoothing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     // Set canvas size to exactly 500×500
     canvas.width = THUMBNAIL_SIZE;
@@ -197,9 +206,14 @@ export function PosterUpload({
   }, [initialPosterFile, initialPoster]);
 
   // Sync bgColor with initialBgColor prop when it changes
+  // Skip sync if user is actively changing the color to prevent infinite loops
   useEffect(() => {
-    // Only update if the prop actually changed
-    if (prevInitialBgColorRef.current !== initialBgColor && initialBgColor) {
+    // Only update if the prop actually changed and user is not actively changing color
+    if (
+      prevInitialBgColorRef.current !== initialBgColor &&
+      initialBgColor &&
+      !isUserChangingColorRef.current
+    ) {
       setBgColor(initialBgColor);
       prevInitialBgColorRef.current = initialBgColor;
     }
@@ -241,12 +255,32 @@ export function PosterUpload({
   };
 
   // Notify parent when bgColor changes (only if we have a file)
+  // Debounce to prevent excessive updates during color picker dragging
   useEffect(() => {
     if (posterFile) {
-      onFileChange({ file: posterFile, bgColor });
+      // Clear any pending timeout
+      if (onFileChangeTimeoutRef.current) {
+        clearTimeout(onFileChangeTimeoutRef.current);
+      }
+
+      // Debounce the onFileChange call to prevent infinite loops during dragging
+      onFileChangeTimeoutRef.current = setTimeout(() => {
+        onFileChange({ file: posterFile, bgColor });
+        // Reset the flag after a short delay to allow prop sync
+        setTimeout(() => {
+          isUserChangingColorRef.current = false;
+        }, 100);
+      }, 50);
     }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (onFileChangeTimeoutRef.current) {
+        clearTimeout(onFileChangeTimeoutRef.current);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bgColor]);
+  }, [bgColor, posterFile]);
 
   const hasPreview = posterFile || initialPoster;
 
@@ -292,7 +326,13 @@ export function PosterUpload({
                     />
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-3" align="start">
-                    <HexColorPicker color={bgColor} onChange={setBgColor} />
+                    <HexColorPicker
+                      color={bgColor}
+                      onChange={(color) => {
+                        isUserChangingColorRef.current = true;
+                        setBgColor(color);
+                      }}
+                    />
                   </PopoverContent>
                 </Popover>
                 <Input
@@ -302,10 +342,12 @@ export function PosterUpload({
                   onChange={(e) => {
                     const value = e.target.value;
                     // Allow any input while typing, but validate on blur
+                    isUserChangingColorRef.current = true;
                     setBgColor(value);
                   }}
                   onBlur={(e) => {
                     const value = e.target.value.trim();
+                    isUserChangingColorRef.current = true;
                     // Validate and normalize hex color format on blur
                     if (!value) {
                       setBgColor("#ffffff");

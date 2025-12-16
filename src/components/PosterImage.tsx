@@ -38,7 +38,7 @@ export function PosterImage({
   return (
     <>
       <div
-        className={`cursor-pointer transition-all duration-200 hover:opacity-90 ${className}`}
+        className={`aspect-square cursor-pointer transition-all duration-200 hover:opacity-90 ${className}`}
         onClick={() => setIsLightboxOpen(true)}
       >
         {poster.url ? (

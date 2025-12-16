@@ -248,14 +248,34 @@ export async function addEvent(props: addEventProps): Promise<response> {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Generate thumbnail (500x500px)
+      // Detect image format
+      const metadata = await sharp(buffer).metadata();
+      const format = metadata.format;
+
+      // Generate thumbnail (500x500px) with quality preservation
       const THUMBNAIL_SIZE = 500;
-      const thumbnailBuffer = await sharp(buffer)
-        .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
-          fit: "contain",
-          background: bgRgb,
-        })
-        .toBuffer();
+      let sharpInstance = sharp(buffer).resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
+        fit: "contain",
+        background: bgRgb,
+        kernel: sharp.kernel.lanczos3, // High-quality resampling
+      });
+
+      // Apply format-specific quality settings
+      if (format === "jpeg" || format === "jpg") {
+        sharpInstance = sharpInstance.jpeg({ quality: 95, mozjpeg: true });
+      } else if (format === "png") {
+        sharpInstance = sharpInstance.png({
+          compressionLevel: 6, // Balance between quality and file size
+          palette: false, // Preserve full color depth
+        });
+      } else if (format === "webp") {
+        sharpInstance = sharpInstance.webp({ quality: 95 });
+      } else if (format === "avif") {
+        sharpInstance = sharpInstance.avif({ quality: 95 });
+      }
+      // For other formats, use default settings
+
+      const thumbnailBuffer = await sharpInstance.toBuffer();
 
       // Create File objects from buffers for upload
       const originalFile = new File([new Uint8Array(buffer)], file.name, {
@@ -622,14 +642,34 @@ export async function editEvent(
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      // Generate thumbnail (500x500px)
+      // Detect image format
+      const metadata = await sharp(buffer).metadata();
+      const format = metadata.format;
+
+      // Generate thumbnail (500x500px) with quality preservation
       const THUMBNAIL_SIZE = 500;
-      const thumbnailBuffer = await sharp(buffer)
-        .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
-          fit: "contain",
-          background: bgRgb,
-        })
-        .toBuffer();
+      let sharpInstance = sharp(buffer).resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
+        fit: "contain",
+        background: bgRgb,
+        kernel: sharp.kernel.lanczos3, // High-quality resampling
+      });
+
+      // Apply format-specific quality settings
+      if (format === "jpeg" || format === "jpg") {
+        sharpInstance = sharpInstance.jpeg({ quality: 95, mozjpeg: true });
+      } else if (format === "png") {
+        sharpInstance = sharpInstance.png({
+          compressionLevel: 6, // Balance between quality and file size
+          palette: false, // Preserve full color depth
+        });
+      } else if (format === "webp") {
+        sharpInstance = sharpInstance.webp({ quality: 95 });
+      } else if (format === "avif") {
+        sharpInstance = sharpInstance.avif({ quality: 95 });
+      }
+      // For other formats, use default settings
+
+      const thumbnailBuffer = await sharpInstance.toBuffer();
 
       // Create File objects from buffers for upload
       const originalFile = new File([new Uint8Array(buffer)], file.name, {
