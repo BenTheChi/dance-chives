@@ -147,7 +147,7 @@ export function AuthorizationRequestForm({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Current Auth Level Display */}
-        <div className="p-3 bg-muted rounded-md">
+        <div className="p-3 bg-muted rounded-sm">
           <div className="text-sm font-medium">
             Your Current Authorization Level
           </div>

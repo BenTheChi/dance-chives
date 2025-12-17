@@ -97,7 +97,7 @@ export function DatePicker<T extends FieldValues>({
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
-                  className="rounded-md border shadow-sm"
+                  className="rounded-sm border shadow-sm"
                   mode="single"
                   selected={dateValue}
                   onSelect={(date) => {

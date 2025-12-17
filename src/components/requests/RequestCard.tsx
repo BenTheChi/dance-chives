@@ -189,7 +189,7 @@ function renderRequestDetails(
   // Message display (for auth level change)
   if (request.message && request.type === "AUTH_LEVEL_CHANGE") {
     details.push(
-      <div key="message" className="mt-2 p-3 bg-muted rounded-md">
+      <div key="message" className="mt-2 p-3 bg-muted rounded-sm">
         <p className="font-medium text-sm mb-1">Message:</p>
         <p className="text-sm whitespace-pre-wrap">{request.message}</p>
       </div>

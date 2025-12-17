@@ -39,14 +39,14 @@ export function VideoEmbed({ title, src }: { title: string; src: string }) {
   if (!convertYouTubeUrlToEmbed(src))
     return (
       <AspectRatio ratio={16 / 9}>
-        <div className="flex items-center justify-center h-full border rounded-md">
+        <div className="flex items-center justify-center h-full border rounded-sm">
           <p className="text-sm text-muted-foreground">No video selected</p>
         </div>
       </AspectRatio>
     );
 
   return (
-    <AspectRatio ratio={16 / 9} className="rounded-md">
+    <AspectRatio ratio={16 / 9} className="rounded-sm">
       <iframe
         loading="lazy"
         src={convertYouTubeUrlToEmbed(src) || ""}

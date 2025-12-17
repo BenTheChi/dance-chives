@@ -891,14 +891,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                           <div
                             key={section.id}
                             onClick={handleSelectOverview}
-                            className={`rounded-md cursor-pointer transition-colors relative ${
+                            className={`rounded-sm cursor-pointer transition-colors relative ${
                               isActiveSection
-                                ? "border-2 border-primary/70 shadow-sm bg-misty-seafoam before:absolute before:inset-0 before:bg-black/5 before:rounded-md before:pointer-events-none"
+                                ? "border-2 border-primary/70 shadow-sm bg-misty-seafoam before:absolute before:inset-0 before:bg-black/5 before:rounded-sm before:pointer-events-none"
                                 : "border border-border bg-misty-seafoam"
                             }`}
                           >
                             <div
-                              className="px-3 py-2 space-y-2 rounded-md"
+                              className="px-3 py-2 space-y-2 rounded-sm"
                               onClick={(e) => {
                                 // Only stop propagation for interactive elements
                                 const target = e.target as HTMLElement;
@@ -1151,7 +1151,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   className={sections.length > 0 ? "flex-1 min-w-0" : "w-full"}
                 >
                   {sections.length === 0 || !sectionsSelection ? (
-                    <div className="border rounded-lg p-6 text-center max-w-3xl mx-auto w-full">
+                    <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-misty-seafoam">
                       <div className="text-sm mb-6">
                         No sections yet. Let&apos;s create one!
                       </div>
@@ -1166,7 +1166,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                       );
                       if (!selectedSection) {
                         return (
-                          <div className="border rounded-lg p-6 text-sm">
+                          <div className="border rounded-sm p-6 text-sm">
                             The selected section no longer exists.
                           </div>
                         );

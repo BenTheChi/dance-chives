@@ -115,7 +115,7 @@ export function EventDetailsForm({
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       {/* Basic Information Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-lg p-5">
+      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Basic Information
@@ -209,7 +209,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Location & Date Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-lg p-5">
+      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             When & Where
@@ -262,7 +262,7 @@ export function EventDetailsForm({
           {fields.map((field, index) => (
             <div
               key={field.id}
-              className="bg-fog-white border border-charcoal rounded-lg p-4 sm:p-5 w-full overflow-hidden"
+              className="bg-fog-white border border-charcoal rounded-sm p-4 sm:p-5 w-full overflow-hidden"
             >
               <div className="space-y-4">
                 {/* Date and All Day Row */}
@@ -396,7 +396,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Event Poster Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-lg p-5">
+      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold">Event Poster</h3>
         </div>
@@ -454,7 +454,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Additional Details Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-lg p-5">
+      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Additional Details
@@ -471,7 +471,7 @@ export function EventDetailsForm({
                 <textarea
                   {...field}
                   value={field.value ?? ""}
-                  className="bg-white min-h-[120px] p-3 rounded-md border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
+                  className="bg-white min-h-[120px] p-3 rounded-sm border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
                   placeholder="Tell people about your event. What makes it special? Who should attend?"
                 />
               </FormControl>
@@ -490,7 +490,7 @@ export function EventDetailsForm({
                 <textarea
                   {...field}
                   value={field.value ?? ""}
-                  className="bg-white min-h-[120px] p-3 rounded-md border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
+                  className="bg-white min-h-[120px] p-3 rounded-sm border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
                   placeholder="Add a detailed schedule or timeline for your event..."
                 />
               </FormControl>

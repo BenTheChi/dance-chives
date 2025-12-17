@@ -52,7 +52,7 @@ export function SectionDetails({
   const hasWinners = section.winners && section.winners.length > 0;
 
   return (
-    <section className="bg-misty-seafoam p-6 rounded-md flex flex-col gap-4 border border-black">
+    <section className="bg-misty-seafoam p-6 rounded-sm flex flex-col gap-4 border border-black">
       <div>
         <h1 className="text-3xl font-bold">{section.title}</h1>
         <div className="text-xl text-muted-foreground font-semibold">

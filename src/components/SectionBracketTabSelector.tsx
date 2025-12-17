@@ -145,7 +145,7 @@ export default function SectionBracketTabSelector({
               key={bracket.id}
               onClick={() => scrollToBracket(bracket.id)}
               className={cn(
-                "px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-200",
+                "px-4 py-2 rounded-sm text-sm font-medium whitespace-nowrap transition-all duration-200",
                 "hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 activeBracket === bracket.id
                   ? "bg-primary text-primary-foreground shadow-sm"
@@ -167,7 +167,7 @@ export default function SectionBracketTabSelector({
             className="scroll-mt-32" // Offset for sticky header
           >
             {/* Video Gallery for this bracket */}
-            <div className="p-2 sm:p-4 lg:px-6 border rounded-md bg-periwinkle">
+            <div className="p-2 sm:p-4 lg:px-6 border rounded-sm bg-periwinkle">
               <h2 className="text-xl font-semibold mt-2 mb-4 text-center">
                 {bracket.title}
               </h2>

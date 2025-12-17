@@ -547,7 +547,7 @@ export function DashboardClient({
                 {teamMemberships.map((membership: TeamMembership) => (
                   <div
                     key={membership.eventId}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    className="flex items-center justify-between rounded-sm border p-3"
                   >
                     <div>
                       <p className="font-medium">

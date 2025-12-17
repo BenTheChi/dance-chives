@@ -53,7 +53,7 @@ export function VideoCard({
     displayStyles && displayStyles.length > 3 ? displayStyles.length - 3 : 0;
 
   return (
-    <div className="group border border-black overflow-hidden rounded-[5px] bg-gray-100 transition-all duration-300 w-full min-w-[300px] relative">
+    <div className="group border border-black overflow-hidden rounded-sm bg-gray-100 transition-all duration-300 w-full min-w-[300px] relative">
       {/* Thumbnail - clickable */}
       <div
         className="w-full aspect-[4/3] border-b border-black relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"

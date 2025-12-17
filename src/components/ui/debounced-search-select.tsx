@@ -135,7 +135,7 @@ function DebouncedSearchSelect<T extends SearchItem>(
         </div>
       )}
       <div className="relative w-full">
-        <div className="flex items-center border rounded-md bg-white">
+        <div className="flex items-center border rounded-sm bg-white">
           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
             placeholder={placeholder}
@@ -157,7 +157,7 @@ function DebouncedSearchSelect<T extends SearchItem>(
           )}
         </div>
         {open && (
-          <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg">
+          <div className="absolute z-50 w-full mt-1 bg-white border rounded-sm shadow-lg">
             <Command className="bg-white">
               <CommandList>
                 <CommandGroup>

@@ -18,10 +18,13 @@ export function GoogleMapEmbed({
   className = "",
 }: GoogleMapEmbedProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  
+
   if (!apiKey) {
     return (
-      <div className={`flex items-center justify-center bg-muted rounded-lg ${className}`} style={{ width, height }}>
+      <div
+        className={`flex items-center justify-center bg-muted rounded-sm ${className}`}
+        style={{ width, height }}
+      >
         <p className="text-muted-foreground text-sm">
           Google Maps API key not configured
         </p>
@@ -45,4 +48,3 @@ export function GoogleMapEmbed({
     />
   );
 }
-

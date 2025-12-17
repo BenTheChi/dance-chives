@@ -73,7 +73,7 @@ export function CalendarEventPopover({
         <div className="space-y-3">
           {/* Poster */}
           {poster?.url ? (
-            <div className="relative w-full h-48 rounded-md overflow-hidden">
+            <div className="relative w-full h-48 rounded-sm overflow-hidden">
               <Image
                 src={poster.url}
                 alt={poster.title || event.title}
@@ -82,7 +82,7 @@ export function CalendarEventPopover({
               />
             </div>
           ) : (
-            <div className="w-full h-48 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
+            <div className="w-full h-48 bg-gray-200 rounded-sm flex items-center justify-center text-gray-400">
               No poster
             </div>
           )}

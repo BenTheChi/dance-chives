@@ -573,7 +573,7 @@ export function SectionForm({
         {resolvedMode === "brackets" && (
           <div>
             {activeSection.brackets.length === 0 ? (
-              <div className="border rounded-lg p-6 text-center">
+              <div className="border rounded-sm p-6 text-center">
                 <div className="text-sm text-muted-foreground mb-6">
                   No brackets yet. Let&apos;s create one!
                 </div>
@@ -646,7 +646,7 @@ export function SectionForm({
                   <AccordionItem
                     key={video.id}
                     value={video.id}
-                    className="border border-border rounded-md overflow-hidden bg-white data-[state=open]:border-primary/50 data-[state=open]:bg-muted/40"
+                    className="border border-border rounded-sm overflow-hidden bg-white data-[state=open]:border-primary/50 data-[state=open]:bg-muted/40"
                   >
                     <div className="flex items-center gap-3 px-4 py-3">
                       <Input

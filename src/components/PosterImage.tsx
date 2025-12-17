@@ -25,7 +25,7 @@ export function PosterImage({
   if (!poster) {
     return (
       <div
-        className={`w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center ${className}`}
+        className={`card w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center ${className}`}
       >
         No poster
       </div>
@@ -38,7 +38,7 @@ export function PosterImage({
   return (
     <>
       <div
-        className={`aspect-square cursor-pointer transition-all duration-200 hover:opacity-90 ${className}`}
+        className={`card aspect-square cursor-pointer transition-all duration-200 ${className}`}
         onClick={() => setIsLightboxOpen(true)}
       >
         {poster.url ? (
@@ -47,7 +47,7 @@ export function PosterImage({
             alt={poster.title}
             width={width}
             height={height}
-            className="object-contain rounded-md w-full"
+            className="object-contain w-full"
           />
         ) : null}
       </div>

@@ -70,7 +70,7 @@ export default async function CityPage({ params }: PageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-lg overflow-hidden">
+                <div className="rounded-sm overflow-hidden">
                   <GoogleMapEmbed
                     latitude={cityData.city.latitude}
                     longitude={cityData.city.longitude}

@@ -25,7 +25,7 @@ export function StyleBadge({
     "text-black bg-white border border-charcoal font-semibold text-xs px-1 py-0.5 rounded inline-flex items-center justify-center leading-none gap-1",
     asLink &&
       !showRemoveButton &&
-      "hover:bg-gray-100 transition-colors cursor-pointer",
+      "hover:bg-mint/50 click:bg-mint/50 transition-colors cursor-pointer",
     className
   );
 

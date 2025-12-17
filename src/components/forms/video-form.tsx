@@ -502,7 +502,7 @@ export function VideoForm({
           )}
         />
       </div>
-      <div className="w-full overflow-hidden rounded-md border border-border bg-muted/30">
+      <div className="w-full overflow-hidden rounded-sm border border-border bg-muted/30">
         {thumbnailUrl ? (
           <div className="relative aspect-video">
             <Image

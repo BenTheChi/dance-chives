@@ -208,7 +208,7 @@ export function AuthorizationChanger() {
 
           {/* User Dropdown */}
           {users.length > 0 && (
-            <div className="border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto z-50">
+            <div className="border rounded-sm bg-white shadow-lg max-h-60 overflow-y-auto z-50">
               {users.map((user) => (
                 <div
                   key={user.username}
@@ -227,7 +227,7 @@ export function AuthorizationChanger() {
         {/* Current Auth Level Display */}
         {selectedUser && (
           <div className="space-y-4">
-            <div className="p-3 bg-muted rounded-md">
+            <div className="p-3 bg-muted rounded-sm">
               <div className="text-sm font-medium">
                 {selectedUser.displayName || selectedUser.username}
               </div>

@@ -264,7 +264,7 @@ export default function UploadFile<T extends FieldValues>({
           <div className="flex items-center justify-center w-full">
             <label
               htmlFor="dropzone-file"
-              className={`flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-lg ${
+              className={`flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-sm ${
                 isAtLimit
                   ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-60 dark:bg-gray-800 dark:border-gray-700"
                   : "border-gray-300 cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"

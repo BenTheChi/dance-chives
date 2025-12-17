@@ -69,11 +69,11 @@ export default async function ProfilePage({ params }: PageProps) {
       <div className="flex justify-center">
         <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15 max-w-[1200px]">
           {/* Profile Header */}
-          <section className="bg-misty-seafoam p-4 rounded-md flex flex-col gap-4 border border-black w-full">
+          <section className="bg-misty-seafoam p-4 rounded-sm flex flex-col gap-4 border border-black w-full">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-4 flex-1">
                 {profile.image ? (
-                  <div className="relative w-[250px] h-[350px] overflow-hidden rounded-[5px] border-2 border-black flex-shrink-0">
+                  <div className="relative w-[250px] h-[350px] overflow-hidden rounded-sm border-2 border-black flex-shrink-0">
                     <Image
                       src={profile.image}
                       alt={profile.displayName || profile.username}
@@ -84,7 +84,7 @@ export default async function ProfilePage({ params }: PageProps) {
                     />
                   </div>
                 ) : (
-                  <div className="w-[250px] h-[350px] rounded-[5px] border-2 border-black bg-gray-200 flex items-center justify-center text-4xl flex-shrink-0">
+                  <div className="w-[250px] h-[350px] rounded-sm border-2 border-black bg-gray-200 flex items-center justify-center text-4xl flex-shrink-0">
                     {profile.displayName || profile.username || "U"}
                   </div>
                 )}

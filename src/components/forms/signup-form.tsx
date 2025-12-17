@@ -274,7 +274,7 @@ export default function SignUpForm({
   };
 
   return (
-    <section className="w-full max-w-lg border-2 border-black rounded-md p-4 bg-misty-seafoam">
+    <section className="w-full max-w-lg border-2 border-black rounded-sm p-4 bg-misty-seafoam">
       <header className="mb-6">
         <h1 className="text-xl font-semibold">
           {isEditMode ? "Edit Profile" : "Complete Your Profile"}

@@ -332,7 +332,9 @@ export const getEvent = async (
       user: user {
         id: user.id,
         displayName: user.displayName,
-        username: user.username
+        username: user.username,
+        avatar: user.avatar,
+        image: user.image
       }
     }) as roles
   `,

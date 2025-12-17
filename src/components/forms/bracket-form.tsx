@@ -215,7 +215,7 @@ export function BracketForm({
             <AccordionItem
               key={video.id}
               value={video.id}
-              className="border border-border rounded-md overflow-hidden bg-periwinkle-light/50 last:border-b"
+              className="border border-border rounded-sm overflow-hidden bg-periwinkle-light/50 last:border-b"
             >
               <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
                 <Input

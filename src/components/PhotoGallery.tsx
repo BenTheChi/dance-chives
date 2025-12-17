@@ -37,10 +37,10 @@ export function PhotoGallery({ images }: PhotoGalleryProps) {
                 alt={image.title || `Gallery image ${index + 1}`}
                 width={200}
                 height={200}
-                className="object-contain w-full max-w-[200px] h-auto rounded-md"
+                className="object-contain w-full max-w-[200px] h-auto rounded-sm"
               />
             ) : null}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-md" />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 rounded-sm" />
           </div>
         ))}
       </div>

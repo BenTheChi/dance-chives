@@ -510,7 +510,7 @@ export function UploadProfilePicture({
         <div className="space-y-4">
           <div className="flex gap-10">
             <div className="space-y-2">
-              <div className="relative h-[350px] w-[250px] overflow-hidden rounded-lg border-2 border-black">
+              <div className="relative h-[350px] w-[250px] overflow-hidden rounded-sm border-2 border-black">
                 <Image
                   src={profilePreview}
                   alt="Profile preview"
@@ -574,14 +574,14 @@ export function UploadProfilePicture({
       )}
 
       {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-sm bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
       {imageSrc && !isAdjustingAvatar && (
         <div className="space-y-4">
-          <div className="relative h-[400px] w-full rounded-lg border bg-gray-100 overflow-hidden">
+          <div className="relative h-[400px] w-full rounded-sm border bg-gray-100 overflow-hidden">
             <Cropper
               image={imageSrc}
               crop={profileCrop}
@@ -621,7 +621,7 @@ export function UploadProfilePicture({
 
       {imageSrc && isAdjustingAvatar && (
         <div className="space-y-4">
-          <div className="relative h-[300px] w-full rounded-lg border bg-gray-100 overflow-hidden">
+          <div className="relative h-[300px] w-full rounded-sm border bg-gray-100 overflow-hidden">
             <Cropper
               image={imageSrc}
               crop={avatarCrop}

@@ -289,7 +289,7 @@ export function PosterUpload({
       {/* Preview Box - 500x500 Canvas */}
       {hasPreview && (
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-[500px] h-[500px] rounded-lg border border-charcoal overflow-hidden">
+          <div className="relative w-[500px] h-[500px] rounded-sm border border-charcoal overflow-hidden">
             <canvas
               ref={previewCanvasRef}
               className="w-full h-full"
@@ -390,7 +390,7 @@ export function PosterUpload({
         <div className="flex items-center justify-center w-full">
           <label
             htmlFor="poster-file"
-            className="flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-lg border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+            className="flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-sm border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
           >
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
               <UploadIcon className="w-10 h-10 text-gray-400" />

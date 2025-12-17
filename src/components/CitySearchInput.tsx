@@ -193,7 +193,7 @@ export function CitySearchInput<T extends FieldValues>({
           <FormItem>
             <FormLabel required={required}>{label}</FormLabel>
             <FormControl>
-              <div className="flex items-center border rounded-md bg-white">
+              <div className="flex items-center border rounded-sm bg-white">
                 <div className="flex items-center w-full">
                   <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   <Input
@@ -225,7 +225,7 @@ export function CitySearchInput<T extends FieldValues>({
                     />
                   )}
                   {open && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-50">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-sm shadow-lg z-50">
                       <Command className="bg-white">
                         <CommandList>
                           <CommandGroup>

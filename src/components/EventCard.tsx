@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Heart, Share2 } from "lucide-react";
 import { TEventCard } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { useToggleSave } from "@/hooks/use-toggle-save";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface EventCardProps extends TEventCard {
   href?: string; // Optional href for the title link, defaults to /events/${id}
@@ -34,11 +35,27 @@ export function EventCard({
     isPending,
   } = useToggleSave(isSaved ?? false, id);
   const [shareCopied, setShareCopied] = useState(false);
+  const prevSavedStateRef = useRef(savedState);
 
-  const handleHeartClick = (e: React.MouseEvent) => {
+  // Show toast when saved state changes (but not on initial mount)
+  useEffect(() => {
+    if (
+      prevSavedStateRef.current !== savedState &&
+      prevSavedStateRef.current !== undefined
+    ) {
+      if (savedState) {
+        toast.success("Event saved");
+      } else {
+        toast.success("Event unsaved");
+      }
+    }
+    prevSavedStateRef.current = savedState;
+  }, [savedState]);
+
+  const handleHeartClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggle();
+    await toggle();
   };
 
   const handleShareClick = async (e: React.MouseEvent) => {
@@ -79,11 +96,11 @@ export function EventCard({
     : "";
 
   return (
-    <div className="group border border-black overflow-hidden rounded-[5px] bg-gray-100 transition-all duration-300 w-[250px] h-[350px] sm:w-[358px] sm:h-[358px] sm:relative">
+    <div className="group card overflow-hidden bg-gray-100 transition-all duration-300 w-[250px] h-[353px] sm:w-[358px] sm:h-[358px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
-        className="block w-full h-[250px] sm:h-[358px] border-b border-black relative flex items-center justify-center bg-gray-200"
+        className="block w-full h-[250px] sm:h-[355px] relative flex items-center justify-center bg-gray-200"
       >
         {imageUrl ? (
           <Image
@@ -98,12 +115,12 @@ export function EventCard({
       </Link>
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
-      <div className="w-full bg-gray-100 sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto sm:bg-gray-100 overflow-hidden flex flex-col justify-end z-10 border-t border-black py-2">
-        <div className="px-3 pb-2 sm:px-6 sm:pb-1 flex flex-col gap-5 sm:gap-7">
+      <div className="w-full bg-misty-seafoam sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t border-black py-[5px] sm:py-[7px]">
+        <div className="px-3 pb-3 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}
             <div className="flex flex-col">
-              <h3 className="font-bold text-md sm:text-lg">{title}</h3>
+              <h3 className="font-bold text-sm sm:text-lg">{title}</h3>
               <span className="text-xs sm:text-md text-gray-500">
                 {formattedDate}
               </span>
@@ -126,7 +143,7 @@ export function EventCard({
             </div>
           </div>
 
-          {/* Style tags and action buttons - same line on mobile, separate on desktop */}
+          {/* Style tags and action buttons */}
           <div className="flex items-center justify-between gap-2">
             {/* Style tags */}
             <div className="flex flex-wrap gap-1 items-center sm:flex-wrap sm:mb-2 max-w-[180px]">
@@ -164,20 +181,20 @@ export function EventCard({
             <div className="flex items-center gap-2 sm:justify-end">
               <button
                 onClick={handleShareClick}
-                className="w-6 h-6 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center transition-colors"
+                className="border border-black w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center transition-colors hover:bg-blue-300"
                 aria-label="Share event"
                 title={shareCopied ? "Copied!" : "Copy event URL"}
               >
-                <Share2 className="h-3 w-3 text-white" />
+                <Share2 className="h-3 w-3 text-white mb-[1px] mr-[1px]" />
               </button>
               <button
                 onClick={handleHeartClick}
                 disabled={isPending}
                 className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center transition-colors",
+                  "border border-black w-6 h-6 rounded-full flex items-center justify-center transition-colors",
                   savedState
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-blue-500 hover:bg-blue-600",
+                    ? "bg-red-500 hover:bg-red-300"
+                    : "bg-blue-500 hover:bg-blue-300",
                   isPending && "opacity-50 cursor-not-allowed"
                 )}
                 aria-label={savedState ? "Unsave event" : "Save event"}

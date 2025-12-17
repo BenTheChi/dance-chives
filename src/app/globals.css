@@ -180,4 +180,46 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
+
+  /* Card with border and hard shadow on hover */
+  .card {
+    border: 2px solid black;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .card:hover {
+    box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
+  }
+
+  .shadow-hover:hover {
+    box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
+  }
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 450;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+p,
+span {
+  font-size: 14px;
+  font-weight: 400;
+  font-family: var(--font-ibm-plex-sans);
 }

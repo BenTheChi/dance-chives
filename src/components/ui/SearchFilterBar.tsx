@@ -42,7 +42,7 @@ export default function SearchFilterBar() {
               <input
                 type="text"
                 placeholder="Search events, people, or series..."
-                className="w-50% pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-50% pl-10 pr-4 py-2 rounded-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -77,7 +77,7 @@ export default function SearchFilterBar() {
             </div>
 
             {/* Filter Button */}
-            <button className="p-2 rounded-md hover:bg-gray-100 transition-colors flex items-center gap-1">
+            <button className="p-2 rounded-sm hover:bg-gray-100 transition-colors flex items-center gap-1">
               <Filter className="h-5 w-5 text-gray-600" />
               <span className="text-sm font-medium hidden sm:inline">
                 Filters
