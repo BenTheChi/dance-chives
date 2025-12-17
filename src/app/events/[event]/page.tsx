@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Event } from "@/types/event";
 import { DollarSign, MapPin, Pencil, Settings, Trophy } from "lucide-react";
@@ -204,300 +205,362 @@ export default async function EventPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex justify-center">
-        <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15 max-w-[1200px]">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-full w-[360px] sm:w-[500px] aspect-square">
-              <PosterImage
-                poster={event.eventDetails.poster ?? null}
-                originalPoster={event.eventDetails.originalPoster ?? null}
-                width={500}
-                height={500}
-                className="w-full border border-black rounded-lg"
-              />
-            </div>
-            {/* Details + Roles + Poster */}
-            <div className="flex flex-col min-[1180px]:flex-row justify-center gap-5 w-full border border p-4 bg-misty-seafoam p-4 rounded-md ">
+      <div className="flex flex-col min-h-[calc(100vh-3.6rem)]">
+        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
+          <div className="flex flex-col gap-4 py-5 px-3 sm:px-10 lg:px-15 max-w-full md:max-w-[816px] lg:max-w-[1016px] w-full">
+            {/* Row 1: Image + Details - using flex for exact sizing */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              {/* Image */}
+              <div className="w-full sm:flex-1 sm:max-w-[50%] md:max-w-[400px] lg:max-w-[500px]">
+                <div className="w-full aspect-square">
+                  <PosterImage
+                    poster={event.eventDetails.poster ?? null}
+                    originalPoster={event.eventDetails.originalPoster ?? null}
+                    width={500}
+                    height={500}
+                    className="w-full h-full border border-black rounded-lg object-cover"
+                  />
+                </div>
+              </div>
               {/* Event Details */}
-              <section className="flex flex-col">
-                {eventStyles.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-5 justify-center">
-                    {eventStyles.map((style) => (
-                      <StyleBadge key={style} style={style} />
-                    ))}
+              <div className="w-full sm:flex-1 sm:max-w-[50%] md:max-w-[400px] lg:max-w-[500px]">
+                <div className="border border p-4 bg-misty-seafoam rounded-md w-full h-full">
+                  <section className="flex flex-col">
+                    {/* Title - centered */}
+                    <div>
+                      <h1 className="text-3xl font-bold text-center">
+                        {event.eventDetails.title}
+                      </h1>
+                      {event.eventDetails.status === "hidden" && (
+                        <p className="text-sm text-muted-foreground mt-1 text-center">
+                          (hidden)
+                        </p>
+                      )}
+                    </div>
+
+                    {/* City | Event type */}
+                    <div className="text-xl text-muted-foreground font-semibold text-center mb-1">
+                      {event.eventDetails.city.id ? (
+                        <Link
+                          href={`/cities/${event.eventDetails.city.id}`}
+                          className="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
+                        >
+                          {event.eventDetails.city.name}
+                        </Link>
+                      ) : (
+                        event.eventDetails.city.name
+                      )}
+
+                      {event.eventDetails.eventType && (
+                        <span className="text-muted-foreground">
+                          {` | `}
+                          {event.eventDetails.eventType}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Style badges */}
+                    {eventStyles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-6 justify-center">
+                        {eventStyles.map((style) => (
+                          <StyleBadge key={style} style={style} />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Dates, Location, Cost, Prize - dynamic layout */}
+                    {(() => {
+                      const hasDates =
+                        pastDates.length > 0 || upcomingDates.length > 0;
+                      const hasLocation = !!event.eventDetails.location;
+                      const hasCost = !!event.eventDetails.cost;
+                      const hasPrize = !!event.eventDetails.prize;
+
+                      const items: Array<{
+                        key: string;
+                        content: React.ReactElement;
+                      }> = [];
+
+                      if (hasDates) {
+                        items.push({
+                          key: "dates",
+                          content: (
+                            <div className="flex flex-col gap-3">
+                              {showMoreDatesButton && (
+                                <EventDatesDialog eventId={event.id} />
+                              )}
+                              {pastDates.length > 0 && (
+                                <div className="flex flex-col">
+                                  <span className="text-md font-semibold text-center">
+                                    Past Date
+                                  </span>
+                                  <div className="flex flex-col text-sm text-center">
+                                    {pastDates.map((d, idx) => (
+                                      <span key={`past-${d.date}-${idx}`}>
+                                        {formatEventDateRow(d)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {upcomingDates.length > 0 && (
+                                <div className="flex flex-col">
+                                  <span className="text-md font-semibold text-center">
+                                    Future Date(s)
+                                  </span>
+                                  <div className="flex flex-col text-sm text-center">
+                                    {upcomingDates.map((d, idx) => (
+                                      <span key={`upcoming-${d.date}-${idx}`}>
+                                        {formatEventDateRow(d)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ),
+                        });
+                      }
+
+                      if (hasLocation) {
+                        items.push({
+                          key: "location",
+                          content: (
+                            <div className="flex flex-col">
+                              <span className="text-md font-semibold text-center">
+                                Location
+                              </span>
+                              <span className="text-center">
+                                {event.eventDetails.location}
+                              </span>
+                            </div>
+                          ),
+                        });
+                      }
+
+                      if (hasCost) {
+                        items.push({
+                          key: "cost",
+                          content: (
+                            <div className="flex flex-col">
+                              <span className="text-md font-semibold text-center">
+                                Cost
+                              </span>
+                              <span className="text-center">
+                                {event.eventDetails.cost}
+                              </span>
+                            </div>
+                          ),
+                        });
+                      }
+
+                      if (hasPrize) {
+                        items.push({
+                          key: "prize",
+                          content: (
+                            <div className="flex flex-col">
+                              <span className="text-md font-semibold text-center">
+                                Prize
+                              </span>
+                              <span className="text-center">
+                                {event.eventDetails.prize}
+                              </span>
+                            </div>
+                          ),
+                        });
+                      }
+
+                      const itemCount = items.length;
+
+                      if (itemCount === 0) return null;
+
+                      if (itemCount === 1) {
+                        return (
+                          <div className="flex justify-center">
+                            <div className="w-full max-w-md">
+                              {items[0].content}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (itemCount === 2) {
+                        return (
+                          <div className="grid grid-cols-2 gap-4">
+                            {items.map((item) => (
+                              <div
+                                key={item.key}
+                                className="flex justify-center"
+                              >
+                                {item.content}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+
+                      // 3 or more items - use 2x2 grid
+                      return (
+                        <div className="grid grid-cols-2 gap-4">
+                          {items.map((item) => (
+                            <div key={item.key}>{item.content}</div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </section>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
+            <div className="grid grid-cols-6 gap-4 w-full">
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md border border-black">
+                <div className="font-semibold text-2xl">Description</div>
+                {event.eventDetails.description && (
+                  <div className="whitespace-pre-wrap">
+                    {event.eventDetails.description}
                   </div>
                 )}
-
-                <div className="mb-10">
-                  {/* Mobile: buttons above title */}
-                  {(canEdit || isCreator) && (
-                    <div className="flex gap-2 mb-2 sm:hidden">
-                      {isCreator && (
-                        <Button
-                          asChild
-                          size="icon"
-                          className="bg-periwinkle text-black border-black"
-                        >
-                          <Link href={`/events/${event.id}/settings`}>
-                            <Settings className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
-                      {(canEdit || isCreator) && (
-                        <Button
-                          asChild
-                          size="icon"
-                          className="bg-periwinkle text-black border-black"
-                        >
-                          <Link href={`/events/${event.id}/edit`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  <h1 className="text-3xl font-bold text-center">
-                    {event.eventDetails.title}
-                  </h1>
-                  {event.eventDetails.status === "hidden" && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      (hidden)
-                    </p>
-                  )}
-
-                  {(canEdit || isCreator) && (
-                    <div className="flex gap-2">
-                      {isCreator && (
-                        <Button
-                          asChild
-                          size="icon"
-                          className="bg-periwinkle text-black border-black"
-                        >
-                          <Link href={`/events/${event.id}/settings`}>
-                            <Settings className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
-                      {(canEdit || isCreator) && (
-                        <Button
-                          asChild
-                          size="icon"
-                          className="bg-periwinkle text-black border-black"
-                        >
-                          <Link href={`/events/${event.id}/edit`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="text-xl text-muted-foreground font-semibold text-center">
-                    {event.eventDetails.city.id ? (
-                      <Link
-                        href={`/cities/${event.eventDetails.city.id}`}
-                        className="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
-                      >
-                        {event.eventDetails.city.name}
-                      </Link>
-                    ) : (
-                      event.eventDetails.city.name
-                    )}
-
-                    {event.eventDetails.eventType && (
-                      <span className="text-muted-foreground">
-                        {` | `}
-                        {event.eventDetails.eventType}
+              </div>
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md border border-black">
+                <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
+                  Schedule
+                </div>
+                {event.eventDetails.schedule && (
+                  <div className="whitespace-pre-wrap">
+                    {event.eventDetails.schedule}
+                  </div>
+                )}
+              </div>
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-misty-seafoam rounded-md border border-black">
+                <div className="flex gap-2 justify-center items-center font-semibold text-2xl">
+                  <h2>Roles</h2>
+                  <TagSelfCircleButton
+                    eventId={event.id}
+                    currentUserRoles={currentUserRoles}
+                    isTeamMember={isEventTeamMember}
+                    canTagDirectly={canTagDirectly}
+                    size="sm"
+                  />
+                </div>
+                {Array.from(rolesByTitle.entries()).map(
+                  ([roleTitle, roles]) => (
+                    <div
+                      key={roleTitle}
+                      className="flex flex-row gap-2 items-center flex-wrap"
+                    >
+                      <span>
+                        {fromNeo4jRoleFormat(roleTitle) || roleTitle}:{" "}
                       </span>
-                    )}
-                  </div>
-                </div>
+                      {roles.map((role, index) =>
+                        role.user?.username ? (
+                          <UserAvatar
+                            key={`${role.id}-${index}`}
+                            username={role.user.username}
+                            displayName={
+                              role.user.displayName || role.user.username
+                            }
+                            avatar={
+                              (role.user as { avatar?: string | null }).avatar
+                            }
+                            image={
+                              (role.user as { image?: string | null }).image
+                            }
+                            showHoverCard
+                            city={(role.user as { city?: string }).city || ""}
+                            styles={(role.user as { styles?: string[] }).styles}
+                          />
+                        ) : (
+                          <span key={`${role.id}-${index}`}>
+                            {role.user?.displayName || role.user?.username}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    {showMoreDatesButton && (
-                      <EventDatesDialog eventId={event.id} />
-                    )}
-                    {(pastDates.length > 0 || upcomingDates.length > 0) && (
-                      <div className="flex flex-col gap-3">
-                        {pastDates.length > 0 && (
-                          <div className="flex flex-col">
-                            <span className="text-md font-semibold text-center">
-                              Past Date
-                            </span>
-                            <div className="flex flex-col text-sm text-center">
-                              {pastDates.map((d, idx) => (
-                                <span key={`past-${d.date}-${idx}`}>
-                                  {formatEventDateRow(d)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+            {/* Sections - each takes up full width */}
+            {event.sections && event.sections.length > 0 && (
+              <>
+                {event.sections.map((section) => (
+                  <div key={section.id} className="w-full">
+                    <SectionCard
+                      section={section}
+                      eventId={event.id}
+                      eventTitle={event.eventDetails.title}
+                    />
+                  </div>
+                ))}
+              </>
+            )}
 
-                        {upcomingDates.length > 0 && (
-                          <div className="flex flex-col">
-                            <span className="text-md font-semibold text-center">
-                              Future Date(s)
-                            </span>
-                            <div className="flex flex-col text-sm text-center">
-                              {upcomingDates.map((d, idx) => (
-                                <span key={`upcoming-${d.date}-${idx}`}>
-                                  {formatEventDateRow(d)}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    {event.eventDetails.location && (
-                      <div className="flex flex-col">
-                        <span className="text-md font-semibold text-center">
-                          Location
-                        </span>
-                        <span className="text-center">
-                          {event.eventDetails.location}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    {event.eventDetails.cost && (
-                      <div className="flex flex-col">
-                        <span className="text-md font-semibold text-center">
-                          Cost
-                        </span>
-                        <span className="text-center">
-                          {event.eventDetails.cost}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    {event.eventDetails.prize && (
-                      <div className="flex flex-col">
-                        <span className="text-md font-semibold text-center">
-                          Prize
-                        </span>
-                        <span className="text-center">
-                          {event.eventDetails.prize}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* Photo Gallery - takes up full width */}
+            {event.gallery.length > 0 && (
+              <section className="flex flex-col bg-misty-seafoam rounded-md p-4 w-full">
+                <h2 className="text-2xl font-bold mb-2 text-center">
+                  Photo Gallery
+                </h2>
+                <PhotoGallery images={event.gallery} />
               </section>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-center w-full">
+          <div className="w-full max-w-full md:max-w-[816px] lg:max-w-[1016px] px-3 sm:px-10 lg:px-15">
+            <hr className="border-charcoal/50 my-4" />
+            <div className="flex flex-row gap-10 items-center justify-center mb-4">
+              {creator && (
+                <div className="flex flex-row gap-2 items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Page Owner:{" "}
+                  </span>
+                  <UserAvatar
+                    username={creator.username || ""}
+                    displayName={creator.displayName || creator.username || ""}
+                    avatar={(creator as { avatar?: string | null }).avatar}
+                    image={(creator as { image?: string | null }).image}
+                    isSmall={true}
+                    showHoverCard
+                    city={creator.city || ""}
+                    styles={creator.styles}
+                  />
+                </div>
+              )}
+              {/* Settings and Edit buttons - top right row */}
+              {(canEdit || isCreator) && (
+                <div className="flex gap-2">
+                  {isCreator && (
+                    <Button
+                      asChild
+                      size="icon"
+                      className="bg-periwinkle text-black border-black"
+                    >
+                      <Link href={`/events/${event.id}/settings`}>
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
+                  {(canEdit || isCreator) && (
+                    <Button
+                      asChild
+                      size="icon"
+                      className="bg-periwinkle text-black border-black"
+                    >
+                      <Link href={`/events/${event.id}/edit`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          <section className="flex flex-col min-[1000px]:flex-row gap-5 w-full">
-            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black w-full">
-              <div className="font-semibold text-2xl">Description</div>
-              {event.eventDetails.description && (
-                <div className="whitespace-pre-wrap">
-                  {event.eventDetails.description}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black w-full">
-              <div className="flex flex-row items-center gap-2 font-semibold text-2xl">
-                Schedule
-              </div>
-              {event.eventDetails.schedule && (
-                <div className="whitespace-pre-wrap">
-                  {event.eventDetails.schedule}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2 flex-1 p-4 bg-misty-seafoam rounded-md border border-black w-full">
-              <div className="flex gap-2 justify-center items-center font-semibold text-2xl">
-                <h2>Roles</h2>
-                <TagSelfCircleButton
-                  eventId={event.id}
-                  currentUserRoles={currentUserRoles}
-                  isTeamMember={isEventTeamMember}
-                  canTagDirectly={canTagDirectly}
-                  size="sm"
-                />
-              </div>
-              {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
-                <div
-                  key={roleTitle}
-                  className="flex flex-row gap-2 items-center flex-wrap"
-                >
-                  <span>{fromNeo4jRoleFormat(roleTitle) || roleTitle}: </span>
-                  {roles.map((role, index) =>
-                    role.user?.username ? (
-                      <UserAvatar
-                        key={`${role.id}-${index}`}
-                        username={role.user.username}
-                        displayName={
-                          role.user.displayName || role.user.username
-                        }
-                        avatar={
-                          (role.user as { avatar?: string | null }).avatar
-                        }
-                        image={(role.user as { image?: string | null }).image}
-                        showHoverCard
-                        city={(role.user as { city?: string }).city || ""}
-                        styles={(role.user as { styles?: string[] }).styles}
-                      />
-                    ) : (
-                      <span key={`${role.id}-${index}`}>
-                        {role.user?.displayName || role.user?.username}
-                      </span>
-                    )
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Sections - full width flex row */}
-          {event.sections && event.sections.length > 0 && (
-            <>
-              {event.sections.map((section) => (
-                <SectionCard
-                  key={section.id}
-                  section={section}
-                  eventId={event.id}
-                  eventTitle={event.eventDetails.title}
-                />
-              ))}
-            </>
-          )}
-
-          {/* Photo Gallery */}
-          {event.gallery.length > 0 && (
-            <section className="flex flex-col bg-misty-seafoam rounded-md p-4 w-full">
-              <h2 className="text-2xl font-bold mb-2 text-center">
-                Photo Gallery
-              </h2>
-              <PhotoGallery images={event.gallery} />
-            </section>
-          )}
         </div>
       </div>
-      <hr className="border-charcoal/50 my-4" />
-      {creator && (
-        <div className="flex flex-row gap-2 items-center justify-center flex-wrap mb-4">
-          <span className="text-sm text-muted-foreground">Page Owner: </span>
-          <UserAvatar
-            username={creator.username || ""}
-            displayName={creator.displayName || creator.username || ""}
-            avatar={(creator as { avatar?: string | null }).avatar}
-            image={(creator as { image?: string | null }).image}
-            isSmall={true}
-            showHoverCard
-            city={creator.city || ""}
-            styles={creator.styles}
-          />
-        </div>
-      )}
     </>
   );
 }
