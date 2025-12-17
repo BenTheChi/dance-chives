@@ -194,6 +194,51 @@
   .shadow-hover:hover {
     box-shadow: 2px 2px 0 0 rgb(0, 0, 0);
   }
+
+  /* Neobrutalism sidebar styling */
+  .sidebar-neobrutal {
+    border-right: 3px solid var(--charcoal);
+    background: var(--fog-white);
+  }
+
+  .sidebar-item-neobrutal {
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+  }
+
+  .sidebar-item-neobrutal:hover {
+    border-color: var(--charcoal);
+    box-shadow: 4px 4px 0 0 var(--charcoal);
+  }
+
+  .sidebar-item-neobrutal:active {
+    box-shadow: 2px 2px 0 0 var(--charcoal);
+  }
+
+  /* Sidebar icon rotation on hover */
+  .sidebar-icon-wrapper {
+    transition: transform 0.2s ease;
+  }
+
+  .group\/link:hover .sidebar-icon-wrapper:not(.active) {
+    transform: rotate(calc(var(--base-rotation, 0deg) - 5deg)) scale(1.1);
+  }
+
+  /* Keep right border when collapsed, remove left border */
+  [data-collapsible="icon"] [data-slot="sidebar-container"] {
+    border-left: none !important;
+  }
+
+  /* Remove faint square background for active collapsed menu items */
+  [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"] {
+    background-color: transparent !important;
+  }
+
+  /* Prevent white square on hover for active collapsed menu items */
+  [data-collapsible="icon"]
+    [data-sidebar="menu-button"][data-active="true"]:hover {
+    background-color: transparent !important;
+  }
 }
 
 h1 {
