@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCitiesInNeo4j } from "@/db/queries/event";
-import { searchPlaces } from "@/lib/google-places";
+import { searchPlaces, getPlaceDetails } from "@/lib/google-places";
 import { CitySearchItem } from "@/types/city";
 
 /**
@@ -41,14 +41,31 @@ export async function GET(request: NextRequest) {
         const googlePredictions = await searchPlaces(keyword);
 
         // Map Google Places predictions to CitySearchItem
+        // Fetch place details for any that don't have country codes
         fromGoogle = await Promise.all(
           googlePredictions.map(async (prediction) => {
-            // Extract country code from types or secondary text
-            // For now, we'll need to get it from place details if needed
-            // But for autocomplete, we can try to extract from secondary_text
             const secondaryText =
               prediction.structured_formatting.secondary_text;
-            const countryCode = extractCountryCode(secondaryText);
+            let countryCode = extractCountryCode(secondaryText);
+
+            // If we couldn't extract country code, fetch place details
+            if (!countryCode || countryCode.trim() === "") {
+              try {
+                const placeDetails = await getPlaceDetails(prediction.place_id);
+                const countryComponent = placeDetails.address_components.find(
+                  (ac) => ac.types.includes("country")
+                );
+                if (countryComponent) {
+                  countryCode = countryComponent.short_name;
+                }
+              } catch (error) {
+                console.error(
+                  `Error fetching place details for ${prediction.place_id}:`,
+                  error
+                );
+                // Continue with empty country code if fetch fails
+              }
+            }
 
             return {
               id: prediction.place_id,
