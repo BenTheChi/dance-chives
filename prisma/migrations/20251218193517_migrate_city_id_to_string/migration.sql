@@ -1,16 +1,5 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `sessionId` on the `TaggingRequest` table. All the data in the column will be lost.
-
-*/
--- DropIndex
-DROP INDEX "TaggingRequest_sessionId_idx";
-
 -- AlterTable
-ALTER TABLE "TaggingRequest" DROP COLUMN "sessionId";
-
--- AlterTable
+-- Only change cityId types, skip sessionId operations that don't exist
 ALTER TABLE "event_cards" ALTER COLUMN "cityId" SET DATA TYPE TEXT;
 
 -- AlterTable
