@@ -34,29 +34,40 @@ interface CitySearchInputProps<T extends FieldValues> {
   className?: string;
 }
 
-async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
-  return fetch(`/api/geodb/places?keyword=${encodeURIComponent(keyword)}`)
+interface CitySearchResponse {
+  results: CitySearchItem[];
+  fromNeo4j: CitySearchItem[];
+  fromGoogle?: CitySearchItem[];
+  hasMore: boolean;
+}
+
+async function getCitySearchItems(
+  keyword: string,
+  includeGoogle: boolean = false
+): Promise<CitySearchResponse> {
+  const url = `/api/cities/search?keyword=${encodeURIComponent(keyword)}${
+    includeGoogle ? "&includeGoogle=true" : ""
+  }`;
+
+  return fetch(url)
     .then((response) => {
       if (!response.ok) {
         console.error("Failed to fetch cities", response.statusText);
-        return [];
+        return {
+          results: [],
+          fromNeo4j: [],
+          hasMore: false,
+        };
       }
       return response.json();
     })
-    .then((data) => {
-      return data.data
-        .map((city: CitySearchItem) => ({
-          id: city.id,
-          name: city.name,
-          region: city.region,
-          countryCode: city.countryCode,
-          population: city.population,
-        }))
-        .reverse();
-    })
     .catch((error) => {
       console.error(error);
-      return [];
+      return {
+        results: [],
+        fromNeo4j: [],
+        hasMore: false,
+      };
     });
 }
 
@@ -90,11 +101,10 @@ function normalizeCity(
   if (!parsed) return null;
 
   return {
-    id: parsed.id,
+    id: String(parsed.id),
     name: parsed.name,
     region: parsed.region,
     countryCode: parsed.countryCode,
-    population: parsed.population,
     timezone: "timezone" in parsed ? parsed.timezone : undefined,
     latitude: "latitude" in parsed ? parsed.latitude : undefined,
     longitude: "longitude" in parsed ? parsed.longitude : undefined,
@@ -117,6 +127,8 @@ export function CitySearchInput<T extends FieldValues>({
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [items, setItems] = useState<CitySearchItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const fieldValue = useWatch({ control, name });
 
   const debouncedValue = useDebounce(inputValue, 300);
@@ -142,36 +154,69 @@ export function CitySearchInput<T extends FieldValues>({
     setInputValue((prev) => (prev === displayValue ? prev : displayValue));
   }, [value, fieldValue]);
 
-  // Fetch cities when debounced value changes
+  // Fetch cities when debounced value changes - Neo4j first
   useEffect(() => {
     const fetchCities = async () => {
       if (debouncedValue.trim()) {
         setIsLoading(true);
+        setIsLoadingGoogle(false);
         try {
-          const results = await getCitySearchItems(debouncedValue);
-          setItems(results);
+          // Search Neo4j first (fast, free, no API calls)
+          const response = await getCitySearchItems(debouncedValue, false);
+          setItems(response.results);
+          setHasMore(response.hasMore);
+
+          // If Neo4j returned 0 results, auto-search Google Places
+          if (response.results.length === 0) {
+            setIsLoadingGoogle(true);
+            const googleResponse = await getCitySearchItems(
+              debouncedValue,
+              true
+            );
+            setItems(googleResponse.results);
+            setHasMore(false);
+            setIsLoadingGoogle(false);
+          }
         } catch (error) {
           console.error("Error fetching cities:", error);
           setItems([]);
+          setHasMore(false);
         } finally {
           setIsLoading(false);
+          setIsLoadingGoogle(false);
         }
       } else {
         setItems([]);
+        setHasMore(false);
       }
     };
 
     fetchCities();
   }, [debouncedValue]);
 
+  // Handle "Find More" button click
+  const handleFindMore = async () => {
+    if (!debouncedValue.trim()) return;
+
+    setIsLoadingGoogle(true);
+    try {
+      const response = await getCitySearchItems(debouncedValue, true);
+      setItems(response.results);
+      setHasMore(false);
+    } catch (error) {
+      console.error("Error fetching more cities:", error);
+    } finally {
+      setIsLoadingGoogle(false);
+    }
+  };
+
   const handleSelect = (cityItem: CitySearchItem): City => {
-    // Convert CitySearchItem to City (fetch timezone if needed)
+    // Convert CitySearchItem to City
     const city: City = {
       id: cityItem.id,
       name: cityItem.name,
       region: cityItem.region,
       countryCode: cityItem.countryCode,
-      population: cityItem.population,
     };
 
     setSelectedCity(city);
@@ -216,7 +261,7 @@ export function CitySearchInput<T extends FieldValues>({
                     className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
                     disabled={disabled}
                   />
-                  {isLoading ? (
+                  {isLoading || isLoadingGoogle ? (
                     <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
                   ) : (
                     <ChevronsUpDown
@@ -229,29 +274,49 @@ export function CitySearchInput<T extends FieldValues>({
                       <Command className="bg-white">
                         <CommandList>
                           <CommandGroup>
-                            {items.length === 0 && !isLoading ? (
+                            {items.length === 0 &&
+                            !isLoading &&
+                            !isLoadingGoogle ? (
                               <CommandEmpty>No results found.</CommandEmpty>
+                            ) : isLoading || isLoadingGoogle ? (
+                              <CommandEmpty>
+                                {isLoadingGoogle
+                                  ? "Searching Google Places..."
+                                  : "Searching..."}
+                              </CommandEmpty>
                             ) : (
-                              items.map((item) => (
-                                <CommandItem
-                                  key={item.id}
-                                  onSelect={() => {
-                                    const city = handleSelect(item);
-                                    field.onChange(city);
-                                  }}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      selectedCity &&
-                                        selectedCity.id === item.id
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                  {getDisplayValue(item)}
-                                </CommandItem>
-                              ))
+                              <>
+                                {items.map((item) => (
+                                  <CommandItem
+                                    key={item.id}
+                                    onSelect={() => {
+                                      const city = handleSelect(item);
+                                      field.onChange(city);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedCity &&
+                                          selectedCity.id === item.id
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {getDisplayValue(item)}
+                                  </CommandItem>
+                                ))}
+                                {hasMore && !isLoadingGoogle && (
+                                  <CommandItem
+                                    onSelect={handleFindMore}
+                                    className="text-muted-foreground cursor-pointer"
+                                  >
+                                    <span className="ml-2">
+                                      🔍 Find More Cities...
+                                    </span>
+                                  </CommandItem>
+                                )}
+                              </>
                             )}
                           </CommandGroup>
                         </CommandList>

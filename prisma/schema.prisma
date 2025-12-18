@@ -119,7 +119,7 @@ model EventCard {
   title     String
   eventType String?
 
-  cityId       Int?
+  cityId       String?
   cityName     String?
   region       String?
   countryCode  String?
@@ -206,7 +206,7 @@ model UserCard {
 
   imageUrl String?
 
-  cityId   Int?
+  cityId   String?
   cityName String?
 
   styles String[] @default([])

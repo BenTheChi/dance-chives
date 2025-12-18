@@ -371,7 +371,7 @@ export async function getUserProfile(userIdOrUsername: string) {
              e.createdAt as createdAt, e.updatedAt as updatedAt, u.id as creatorId,
              poster.id as posterId, poster.title as posterTitle, poster.url as imageUrl, 
              c.name as cityName, c.id as cityId, c.countryCode as cityCountryCode, 
-             c.region as cityRegion, c.population as cityPopulation, c.timezone as cityTimezone,
+             c.region as cityRegion, c.timezone as cityTimezone,
              collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
@@ -411,19 +411,17 @@ export async function getUserProfile(userIdOrUsername: string) {
       // Build City object
       const city: City = cityId
         ? {
-            id: cityId as number,
+            id: String(cityId),
             name: cityName || "",
             countryCode: record.get("cityCountryCode") || "",
             region: record.get("cityRegion") || "",
-            population: (record.get("cityPopulation") as number) || 0,
             timezone: record.get("cityTimezone") || undefined,
           }
         : {
-            id: 0,
+            id: "",
             name: "",
             countryCode: "",
             region: "",
-            population: 0,
           };
 
       // Build eventDetails
@@ -478,7 +476,6 @@ export async function getUserProfile(userIdOrUsername: string) {
              head(collect(DISTINCT c.id)) as cityId,
              head(collect(DISTINCT c.countryCode)) as cityCountryCode,
              head(collect(DISTINCT c.region)) as cityRegion,
-             head(collect(DISTINCT c.population)) as cityPopulation,
              head(collect(DISTINCT c.timezone)) as cityTimezone,
              collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
@@ -521,19 +518,17 @@ export async function getUserProfile(userIdOrUsername: string) {
         // Build City object
         const city: City = cityId
           ? {
-              id: cityId as number,
+              id: String(cityId),
               name: cityName || "",
               countryCode: record.get("cityCountryCode") || "",
               region: record.get("cityRegion") || "",
-              population: (record.get("cityPopulation") as number) || 0,
               timezone: record.get("cityTimezone") || undefined,
             }
           : {
-              id: 0,
+              id: "",
               name: "",
               countryCode: "",
               region: "",
-              population: 0,
             };
 
         // Build eventDetails
@@ -762,7 +757,7 @@ export async function getUserProfile(userIdOrUsername: string) {
         createdAt: record.get("eventCreatedAt"),
         imageUrl: record.get("imageUrl"),
         city: record.get("city"),
-        cityId: record.get("cityId") as number | undefined,
+        cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
       };
     });
 

@@ -118,11 +118,10 @@ const eventDetailsSchema = z.object({
   creatorId: z.string().nullable().optional(), // Set server-side from session, can be null
   title: z.string().min(1, "Event title is required"), // switch to min for all non-optional
   city: z.object({
-    id: z.number(),
+    id: z.string().min(1, "City ID is required"),
     name: z.string().min(1, "City name is required"),
     countryCode: z.string().min(1, "Country code is required"),
     region: z.string().min(1, "Region is required"),
-    population: z.number(),
   }),
   // Dates array - required, must have at least one entry
   // The year of this date should be between 1900 and 2300
@@ -289,11 +288,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         creatorId: "",
         title: "",
         city: {
-          id: 0,
+          id: "",
           name: "",
           countryCode: "",
           region: "",
-          population: 0,
         },
         dates: [
           {

@@ -40,12 +40,17 @@ export const getUser = async (id: string) => {
     let city: City | null = null;
     if (cityNode) {
       city = {
-        id: cityNode.properties.id,
+        id: String(cityNode.properties.id),
         name: cityNode.properties.name,
         region: cityNode.properties.region || "",
         countryCode: cityNode.properties.countryCode || "",
-        population: cityNode.properties.population || 0,
-        timezone: cityNode.properties.timezone,
+        timezone: cityNode.properties.timezone || undefined,
+        latitude: cityNode.properties.latitude
+          ? Number(cityNode.properties.latitude)
+          : undefined,
+        longitude: cityNode.properties.longitude
+          ? Number(cityNode.properties.longitude)
+          : undefined,
       };
     }
 
@@ -129,11 +134,10 @@ export const signupUser = async (
         // If parsing fails, create a minimal city object from string
         // This handles legacy data where city was just a name
         cityData = {
-          id: 0,
+          id: "",
           name: user.city,
           region: "",
           countryCode: "",
-          population: 0,
         };
       }
     } else {
@@ -176,10 +180,16 @@ export const signupUser = async (
         c.name = $city.name,
         c.countryCode = $city.countryCode,
         c.region = $city.region,
-        c.population = $city.population,
-        c.timezone = $city.timezone
+        c.timezone = $city.timezone,
+        c.latitude = $city.latitude,
+        c.longitude = $city.longitude
       ON MATCH SET
-        c.population = $city.population
+        c.name = $city.name,
+        c.countryCode = $city.countryCode,
+        c.region = $city.region,
+        c.timezone = $city.timezone,
+        c.latitude = $city.latitude,
+        c.longitude = $city.longitude
       MERGE (u)-[:LOCATED_IN]->(c)
       RETURN u
       `,
@@ -264,10 +274,16 @@ export const updateUser = async (
           c.name = $city.name,
           c.countryCode = $city.countryCode,
           c.region = $city.region,
-          c.population = $city.population,
-          c.timezone = $city.timezone
+          c.timezone = $city.timezone,
+          c.latitude = $city.latitude,
+          c.longitude = $city.longitude
         ON MATCH SET
-          c.population = $city.population
+          c.name = $city.name,
+          c.countryCode = $city.countryCode,
+          c.region = $city.region,
+          c.timezone = $city.timezone,
+          c.latitude = $city.latitude,
+          c.longitude = $city.longitude
         MERGE (u)-[:LOCATED_IN]->(c)
         `,
         { id, city: cityData }
@@ -333,12 +349,17 @@ export const getUserWithStyles = async (id: string) => {
     let city: City | null = null;
     if (cityNode) {
       city = {
-        id: cityNode.properties.id,
+        id: String(cityNode.properties.id),
         name: cityNode.properties.name,
         region: cityNode.properties.region || "",
         countryCode: cityNode.properties.countryCode || "",
-        population: cityNode.properties.population || 0,
-        timezone: cityNode.properties.timezone,
+        timezone: cityNode.properties.timezone || undefined,
+        latitude: cityNode.properties.latitude
+          ? Number(cityNode.properties.latitude)
+          : undefined,
+        longitude: cityNode.properties.longitude
+          ? Number(cityNode.properties.longitude)
+          : undefined,
       };
     }
 

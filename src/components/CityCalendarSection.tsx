@@ -11,10 +11,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface CityCalendarSectionProps {
-  cityId: number;
+  cityId: string;
 }
 
-async function CalendarContent({ cityId }: { cityId: number }) {
+async function CalendarContent({ cityId }: { cityId: string }) {
   const scheduleData = await getCitySchedule(cityId);
 
   if (!scheduleData) {

@@ -45,30 +45,46 @@ interface EventDetailsFormProps {
   register: UseFormRegister<FormValues>;
 }
 
+interface CitySearchResponse {
+  results: CitySearchItem[];
+  fromNeo4j: CitySearchItem[];
+  fromGoogle?: CitySearchItem[];
+  hasMore: boolean;
+}
+
 async function getCitySearchItems(keyword: string): Promise<CitySearchItem[]> {
-  return fetch(`/api/geodb/places?keyword=${encodeURIComponent(keyword)}`)
-    .then((response) => {
-      if (!response.ok) {
-        console.error("Failed to fetch cities", response.statusText);
-        return [];
-      }
-      return response.json();
-    })
-    .then((data) => {
-      return data.data
-        .map((city: CitySearchItem) => ({
-          id: city.id,
-          name: city.name,
-          region: city.region,
-          countryCode: city.countryCode,
-          population: city.population,
-        }))
-        .reverse();
-    })
-    .catch((error) => {
-      console.error(error);
+  // Search Neo4j first (fast, free, no API calls)
+  const url = `/api/cities/search?keyword=${encodeURIComponent(keyword)}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error("Failed to fetch cities", response.statusText);
       return [];
-    });
+    }
+
+    const data: CitySearchResponse = await response.json();
+
+    // If Neo4j returned results, return them
+    if (data.results.length > 0) {
+      return data.results;
+    }
+
+    // If Neo4j returned 0 results, auto-search Google Places
+    const googleUrl = `/api/cities/search?keyword=${encodeURIComponent(
+      keyword
+    )}&includeGoogle=true`;
+    const googleResponse = await fetch(googleUrl);
+    if (!googleResponse.ok) {
+      return [];
+    }
+
+    const googleData: CitySearchResponse = await googleResponse.json();
+    return googleData.results;
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    return [];
+  }
 }
 
 export function EventDetailsForm({

@@ -302,12 +302,17 @@ async function extractNeo4jData() {
         date: user.date || null,
         city: city
           ? {
-              id: city.properties.id,
+              id: String(city.properties.id),
               name: city.properties.name,
               countryCode: city.properties.countryCode,
               region: city.properties.region || null,
-              population: city.properties.population || null,
               timezone: city.properties.timezone || null,
+              latitude: city.properties.latitude
+                ? Number(city.properties.latitude)
+                : null,
+              longitude: city.properties.longitude
+                ? Number(city.properties.longitude)
+                : null,
             }
           : null,
         styles: styles.filter((s: any) => s !== null),
@@ -325,12 +330,13 @@ async function extractNeo4jData() {
     data.cities = citiesResult.records.map((record) => {
       const city = record.get("c").properties;
       return {
-        id: city.id,
+        id: String(city.id),
         name: city.name,
         countryCode: city.countryCode,
         region: city.region || null,
-        population: city.population || null,
         timezone: city.timezone || null,
+        latitude: city.latitude ? Number(city.latitude) : null,
+        longitude: city.longitude ? Number(city.longitude) : null,
       };
     });
     console.log(`  ✅ Extracted ${data.cities.length} cities`);

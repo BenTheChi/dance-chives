@@ -31,11 +31,10 @@ import { UploadProfilePicture } from "@/components/UploadProfilePicture";
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
 const citySchema = z.object({
-  id: z.number(),
+  id: z.string().min(1, "City ID is required"),
   name: z.string(),
   region: z.string(),
   countryCode: z.string(),
-  population: z.number(),
   timezone: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),

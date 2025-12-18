@@ -14,6 +14,8 @@ import {
   getEvent as getEventQuery,
   toggleSaveCypher,
   getSavedEventIds as getSavedEventIdsQuery,
+  getCityFromNeo4j,
+  storeCityData,
 } from "@/db/queries/event";
 import { Event, EventDetails, Section, Video } from "@/types/event";
 import { Image } from "@/types/image";
@@ -42,6 +44,8 @@ import {
   zonedStartOfDayToUtc,
   localIsoDateInTimeZone,
 } from "@/lib/utils/timezone-utils";
+import { getPlaceDetails, getTimezone } from "@/lib/google-places";
+import { City } from "@/types/city";
 
 // Unified form props interface - matches FormValues from event-form.tsx
 interface addEventProps {
@@ -49,11 +53,10 @@ interface addEventProps {
     creatorId?: string;
     title: string;
     city: {
-      id: number;
+      id: string;
       name: string;
       countryCode: string;
       region: string;
-      population: number;
     };
     dates: {
       // Required: Array of dates for events (at least one)
@@ -395,25 +398,78 @@ export async function addEvent(props: addEventProps): Promise<response> {
       }
     });
 
-    // Get timezone for city
-    const response = await fetch(
-      `http://geodb-free-service.wirefreethought.com/v1/geo/places/${props.eventDetails.city.id}`
-    );
+    // Get timezone for city - check Neo4j first to avoid API calls
+    let normalizedTimezone = "";
+    const existingCity = await getCityFromNeo4j(props.eventDetails.city.id);
 
-    if (!response.ok) {
-      console.error("Failed to fetch city", response.statusText);
-      return {
-        error: "Failed to fetch city",
-        status: 500,
-        event: null,
-      };
+    if (
+      existingCity?.timezone &&
+      existingCity?.latitude &&
+      existingCity?.longitude
+    ) {
+      // Use stored data - NO API CALLS
+      normalizedTimezone = existingCity.timezone;
+    } else if (existingCity?.latitude && existingCity?.longitude) {
+      // Only fetch timezone - 1 API CALL
+      try {
+        const timezoneResult = await getTimezone(
+          existingCity.latitude!,
+          existingCity.longitude!
+        );
+        normalizedTimezone = timezoneResult.timeZoneId;
+        // Update city in Neo4j with timezone
+        await storeCityData({
+          ...existingCity,
+          timezone: normalizedTimezone,
+        });
+      } catch (error) {
+        console.error("Failed to fetch timezone", error);
+        return {
+          error: "Failed to fetch timezone",
+          status: 500,
+          event: null,
+        };
+      }
+    } else {
+      // Fetch place details + timezone - 2 API CALLS (only for new cities)
+      try {
+        const placeDetails = await getPlaceDetails(props.eventDetails.city.id);
+        const timezoneResult = await getTimezone(
+          placeDetails.geometry.location.lat,
+          placeDetails.geometry.location.lng
+        );
+        normalizedTimezone = timezoneResult.timeZoneId;
+
+        // Extract city data from place details
+        const region =
+          placeDetails.address_components.find((ac) =>
+            ac.types.includes("administrative_area_level_1")
+          )?.short_name || "";
+        const countryCode =
+          placeDetails.address_components.find((ac) =>
+            ac.types.includes("country")
+          )?.short_name || "";
+
+        // Store in Neo4j for future use
+        const cityData: City = {
+          id: placeDetails.place_id,
+          name: placeDetails.name || placeDetails.formatted_address,
+          region,
+          countryCode,
+          latitude: placeDetails.geometry.location.lat,
+          longitude: placeDetails.geometry.location.lng,
+          timezone: normalizedTimezone,
+        };
+        await storeCityData(cityData);
+      } catch (error) {
+        console.error("Failed to fetch city details", error);
+        return {
+          error: "Failed to fetch city details",
+          status: 500,
+          event: null,
+        };
+      }
     }
-
-    const timezoneData = await response.json();
-
-    // Normalize timezone format (GeoDB may return underscores instead of slashes)
-    const rawTimezone = timezoneData.data?.timezone || "";
-    const normalizedTimezone = rawTimezone.replace(/__/g, "/");
 
     // Normalize dates: if isAllDay is true, set times to empty strings
     // Remove isAllDay field before storing (it's form-only)
@@ -821,30 +877,85 @@ export async function editEvent(
       }
     });
 
-    // Normalize timezone format (GeoDB may return underscores instead of slashes)
-    let timezone = (oldEvent.eventDetails.city.timezone || "").replace(
-      /__/g,
-      "/"
-    );
+    // Get timezone for city - check Neo4j first to avoid API calls
+    let timezone = oldEvent.eventDetails.city.timezone || "";
 
+    // Only make API calls if city changed AND new city data is missing
     if (editedEvent.eventDetails.city.id !== oldEvent.eventDetails.city.id) {
-      // Get timezone for city
-      const response = await fetch(
-        `http://geodb-free-service.wirefreethought.com/v1/geo/places/${editedEvent.eventDetails.city.id}`
+      const existingCity = await getCityFromNeo4j(
+        editedEvent.eventDetails.city.id
       );
 
-      if (!response.ok) {
-        console.error("Failed to fetch city", response.statusText);
-        return {
-          error: "Failed to fetch city",
-          status: 500,
-          event: null,
-        };
-      }
+      if (
+        existingCity?.timezone &&
+        existingCity?.latitude &&
+        existingCity?.longitude
+      ) {
+        // Use stored data - NO API CALLS
+        timezone = existingCity.timezone;
+      } else if (existingCity?.latitude && existingCity?.longitude) {
+        // Only fetch timezone - 1 API CALL
+        try {
+          const timezoneResult = await getTimezone(
+            existingCity.latitude!,
+            existingCity.longitude!
+          );
+          timezone = timezoneResult.timeZoneId;
+          // Update city in Neo4j with timezone
+          await storeCityData({
+            ...existingCity,
+            timezone,
+          });
+        } catch (error) {
+          console.error("Failed to fetch timezone", error);
+          return {
+            error: "Failed to fetch timezone",
+            status: 500,
+            event: null,
+          };
+        }
+      } else {
+        // Fetch place details + timezone - 2 API CALLS (only for new cities)
+        try {
+          const placeDetails = await getPlaceDetails(
+            editedEvent.eventDetails.city.id
+          );
+          const timezoneResult = await getTimezone(
+            placeDetails.geometry.location.lat,
+            placeDetails.geometry.location.lng
+          );
+          timezone = timezoneResult.timeZoneId;
 
-      const responseData = await response.json();
-      const rawTimezone = responseData.data?.timezone || "";
-      timezone = rawTimezone.replace(/__/g, "/");
+          // Extract city data from place details
+          const region =
+            placeDetails.address_components.find((ac) =>
+              ac.types.includes("administrative_area_level_1")
+            )?.short_name || "";
+          const countryCode =
+            placeDetails.address_components.find((ac) =>
+              ac.types.includes("country")
+            )?.short_name || "";
+
+          // Store in Neo4j for future use
+          const cityData: City = {
+            id: placeDetails.place_id,
+            name: placeDetails.name || placeDetails.formatted_address,
+            region,
+            countryCode,
+            latitude: placeDetails.geometry.location.lat,
+            longitude: placeDetails.geometry.location.lng,
+            timezone,
+          };
+          await storeCityData(cityData);
+        } catch (error) {
+          console.error("Failed to fetch city details", error);
+          return {
+            error: "Failed to fetch city details",
+            status: 500,
+            event: null,
+          };
+        }
+      }
     }
 
     // Normalize dates: if isAllDay is true, set times to empty strings
@@ -1190,7 +1301,7 @@ async function upsertEventReadModels(input: {
 }): Promise<void> {
   const { eventId, eventDetails, sections } = input;
 
-  // Normalize timezone format (fix double underscores from GeoDB API)
+  // Normalize timezone format (handle any legacy double underscores)
   const rawTimezone = eventDetails.city.timezone || "";
   const eventTimezone = rawTimezone.replace(/__/g, "/") || null;
   const displayDateLocal = eventDetails.dates?.[0]?.date || null;

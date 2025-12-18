@@ -1,17 +1,15 @@
 export interface CitySearchItem {
-  id: number;
+  id: string;
   name: string;
   countryCode: string;
   region: string;
-  population: number;
 }
 
 export interface City {
-  id: number;
+  id: string;
   name: string;
   countryCode: string;
   region: string;
-  population: number;
   timezone?: string;
   latitude?: number;
   longitude?: number;

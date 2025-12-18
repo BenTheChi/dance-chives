@@ -21,9 +21,10 @@ type PageProps = {
 
 export default async function CityPage({ params }: PageProps) {
   const paramResult = await params;
-  const cityId = parseInt(paramResult.cityId, 10);
+  const cityId = paramResult.cityId;
 
-  if (isNaN(cityId)) {
+  // Validate place_id format (basic check - place_ids are typically long alphanumeric strings)
+  if (!cityId || cityId.trim().length === 0) {
     notFound();
   }
 

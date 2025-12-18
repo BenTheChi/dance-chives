@@ -311,7 +311,6 @@ export const getEvent = async (
       name: c.name,
       countryCode: c.countryCode,
       region: c.region,
-      population: c.population,
       timezone: c.timezone
     } as city
   `,
@@ -808,11 +807,10 @@ export const getEvent = async (
     poster: poster || null,
     originalPoster: originalPoster || null,
     city: city || {
-      id: 0,
+      id: "",
       name: "",
       countryCode: "",
       region: "",
-      population: 0,
     },
     dates: dates || [],
     styles: eventStyles,
@@ -1537,10 +1535,16 @@ export const insertEvent = async (
         c.name = $city.name,
         c.countryCode = $city.countryCode,
         c.region = $city.region,
-        c.population = $city.population,
-        c.timezone = $city.timezone
+        c.timezone = $city.timezone,
+        c.latitude = $city.latitude,
+        c.longitude = $city.longitude
       ON MATCH SET
-        c.population = $city.population
+        c.name = $city.name,
+        c.countryCode = $city.countryCode,
+        c.region = $city.region,
+        c.timezone = $city.timezone,
+        c.latitude = $city.latitude,
+        c.longitude = $city.longitude
       MERGE (e)-[:IN]->(c)
 
       WITH e
@@ -1821,10 +1825,16 @@ export const editEvent = async (
          c.name = $city.name,
          c.countryCode = $city.countryCode,
          c.region = $city.region,
-         c.population = $city.population,
-         c.timezone = $city.timezone
+         c.timezone = $city.timezone,
+         c.latitude = $city.latitude,
+         c.longitude = $city.longitude
        ON MATCH SET
-         c.population = $city.population
+         c.name = $city.name,
+         c.countryCode = $city.countryCode,
+         c.region = $city.region,
+         c.timezone = $city.timezone,
+         c.latitude = $city.latitude,
+         c.longitude = $city.longitude
        MERGE (e)-[:IN]->(c)`,
       { id, city: eventDetails.city }
     );
@@ -2230,7 +2240,7 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
         imageUrl: record.get("imageUrl"),
         date: displayDate,
         city: record.get("city") || "",
-        cityId: record.get("cityId") as number | undefined,
+        cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
         styles: stylesMap.get(eventId) || [],
         eventType: eventType || undefined,
         status: "hidden" as const,
@@ -2425,7 +2435,7 @@ export async function getUserCreatedEventCards(
         imageUrl: record.get("imageUrl"),
         date: displayDate,
         city: record.get("city") || "",
-        cityId: record.get("cityId") as number | undefined,
+        cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
         styles: stylesMap.get(eventId) || [],
         eventType: eventType || undefined,
         status: (record.get("status") as "hidden" | "visible") || "visible",
@@ -2571,7 +2581,7 @@ export async function getSavedEventsForUser(
         imageUrl: record.get("imageUrl"),
         date: displayDate,
         city: record.get("city") || "",
-        cityId: record.get("cityId") as number | undefined,
+        cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
         styles: stylesMap.get(eventId) || [],
         eventType: eventType || undefined,
       };
@@ -2581,38 +2591,130 @@ export async function getSavedEventsForUser(
   }
 }
 
-// Helper function to fetch city coordinates from GeoDB API
-async function fetchCityCoordinates(
-  cityId: number
-): Promise<{ latitude: number; longitude: number } | null> {
+// City helper functions for Neo4j operations
+
+/**
+ * Search Neo4j for cities matching keyword (name, region)
+ * Uses text matching with indexes on name and region
+ */
+export async function searchCitiesInNeo4j(keyword: string): Promise<City[]> {
+  const session = driver.session();
+
   try {
-    const response = await fetch(
-      `http://geodb-free-service.wirefreethought.com/v1/geo/places/${cityId}`
+    const result = await session.run(
+      `MATCH (c:City)
+       WHERE toLower(c.name) CONTAINS toLower($keyword)
+          OR toLower(c.region) CONTAINS toLower($keyword)
+       RETURN c.id as id, c.name as name, c.region as region,
+              c.countryCode as countryCode, c.timezone as timezone,
+              c.latitude as latitude, c.longitude as longitude
+       ORDER BY c.name ASC
+       LIMIT 5`,
+      { keyword }
     );
 
-    if (!response.ok) {
-      console.warn(`Failed to fetch coordinates for city ${cityId}`);
+    return result.records.map((record) => ({
+      id: String(record.get("id")),
+      name: record.get("name") as string,
+      region: record.get("region") || "",
+      countryCode: record.get("countryCode") || "",
+      timezone: record.get("timezone") || undefined,
+      latitude: record.get("latitude")
+        ? Number(record.get("latitude"))
+        : undefined,
+      longitude: record.get("longitude")
+        ? Number(record.get("longitude"))
+        : undefined,
+    }));
+  } catch (error) {
+    console.error("Error searching cities in Neo4j:", error);
+    return [];
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get city from Neo4j by place_id
+ * Returns stored data including timezone and coordinates
+ */
+export async function getCityFromNeo4j(placeId: string): Promise<City | null> {
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `MATCH (c:City {id: $placeId})
+       RETURN c.id as id, c.name as name, c.region as region,
+              c.countryCode as countryCode, c.timezone as timezone,
+              c.latitude as latitude, c.longitude as longitude`,
+      { placeId }
+    );
+
+    if (result.records.length === 0) {
       return null;
     }
 
-    const data = await response.json();
-    const place = data.data;
-
-    if (
-      place &&
-      place.latitude !== undefined &&
-      place.longitude !== undefined
-    ) {
-      return {
-        latitude: place.latitude,
-        longitude: place.longitude,
-      };
-    }
-
-    return null;
+    const record = result.records[0];
+    return {
+      id: String(record.get("id")),
+      name: record.get("name") as string,
+      region: record.get("region") || "",
+      countryCode: record.get("countryCode") || "",
+      timezone: record.get("timezone") || undefined,
+      latitude: record.get("latitude")
+        ? Number(record.get("latitude"))
+        : undefined,
+      longitude: record.get("longitude")
+        ? Number(record.get("longitude"))
+        : undefined,
+    };
   } catch (error) {
-    console.error(`Error fetching coordinates for city ${cityId}:`, error);
+    console.error(`Error fetching city from Neo4j: ${placeId}`, error);
     return null;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Store/update city data in Neo4j
+ * Stores: id, name, region, countryCode, latitude, longitude, timezone
+ */
+export async function storeCityData(cityData: City): Promise<void> {
+  const session = driver.session();
+
+  try {
+    await session.run(
+      `MERGE (c:City {id: $id})
+       ON CREATE SET
+         c.name = $name,
+         c.region = $region,
+         c.countryCode = $countryCode,
+         c.latitude = $latitude,
+         c.longitude = $longitude,
+         c.timezone = $timezone
+       ON MATCH SET
+         c.name = $name,
+         c.region = $region,
+         c.countryCode = $countryCode,
+         c.latitude = $latitude,
+         c.longitude = $longitude,
+         c.timezone = $timezone`,
+      {
+        id: cityData.id,
+        name: cityData.name,
+        region: cityData.region || "",
+        countryCode: cityData.countryCode || "",
+        latitude: cityData.latitude ?? null,
+        longitude: cityData.longitude ?? null,
+        timezone: cityData.timezone || null,
+      }
+    );
+  } catch (error) {
+    console.error("Error storing city data in Neo4j:", error);
+    throw error;
+  } finally {
+    await session.close();
   }
 }
 
@@ -2719,7 +2821,7 @@ export interface CityScheduleData {
 
 export const getStyleData = async (
   styleName: string,
-  cityId?: number
+  cityId?: string
 ): Promise<StyleData | null> => {
   const session = driver.session();
 
@@ -2989,7 +3091,7 @@ export const getStyleData = async (
         imageUrl: record.get("imageUrl"),
         date: record.get("date"),
         city: record.get("city"),
-        cityId: record.get("cityId") as number | undefined,
+        cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
         styles: eventStylesMap.get(eventId) || [],
         eventType: record.get("eventType") as EventType | undefined,
       };
@@ -3061,7 +3163,9 @@ export const getStyleData = async (
             imageUrl: record.get("imageUrl"),
             date: record.get("date"),
             city: record.get("city"),
-            cityId: record.get("cityId") as number | undefined,
+            cityId: record.get("cityId")
+              ? String(record.get("cityId"))
+              : undefined,
             styles: cityFilteredEventStylesMap.get(eventId) || [],
             eventType: record.get("eventType") as EventType | undefined,
           };
@@ -3167,20 +3271,25 @@ export const getAllCities = async (): Promise<City[]> => {
     const result = await session.run(
       `MATCH (c:City)
        RETURN DISTINCT c.id as id, c.name as name, c.region as region, 
-              c.countryCode as countryCode, c.population as population,
-              c.timezone as timezone
+              c.countryCode as countryCode, c.timezone as timezone,
+              c.latitude as latitude, c.longitude as longitude
        ORDER BY c.name ASC`
     );
 
     await session.close();
 
     return result.records.map((record) => ({
-      id: record.get("id") as number,
+      id: String(record.get("id")),
       name: record.get("name") as string,
       region: record.get("region") || "",
       countryCode: record.get("countryCode") || "",
-      population: record.get("population") || 0,
-      timezone: record.get("timezone"),
+      timezone: record.get("timezone") || undefined,
+      latitude: record.get("latitude")
+        ? Number(record.get("latitude"))
+        : undefined,
+      longitude: record.get("longitude")
+        ? Number(record.get("longitude"))
+        : undefined,
     }));
   } catch (error) {
     console.error("Error fetching all cities:", error);
@@ -3189,16 +3298,16 @@ export const getAllCities = async (): Promise<City[]> => {
   }
 };
 
-export const getCityData = async (cityId: number): Promise<CityData | null> => {
+export const getCityData = async (cityId: string): Promise<CityData | null> => {
   const session = driver.session();
 
   try {
-    // Check if city exists
+    // Check if city exists - use stored coordinates from Neo4j (no API calls)
     const cityCheckResult = await session.run(
       `MATCH (c:City {id: $cityId})
        RETURN c.id as id, c.name as name, c.region as region,
-              c.countryCode as countryCode, c.population as population,
-              c.timezone as timezone`,
+              c.countryCode as countryCode, c.timezone as timezone,
+              c.latitude as latitude, c.longitude as longitude`,
       { cityId }
     );
 
@@ -3208,18 +3317,18 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
 
     const cityRecord = cityCheckResult.records[0];
 
-    // Fetch coordinates from GeoDB API
-    const coordinates = await fetchCityCoordinates(cityId);
-
     const city: City = {
-      id: cityRecord.get("id") as number,
+      id: String(cityRecord.get("id")),
       name: cityRecord.get("name") as string,
       region: cityRecord.get("region") || "",
       countryCode: cityRecord.get("countryCode") || "",
-      population: cityRecord.get("population") || 0,
-      timezone: cityRecord.get("timezone"),
-      latitude: coordinates?.latitude,
-      longitude: coordinates?.longitude,
+      timezone: cityRecord.get("timezone") || undefined,
+      latitude: cityRecord.get("latitude")
+        ? Number(cityRecord.get("latitude"))
+        : undefined,
+      longitude: cityRecord.get("longitude")
+        ? Number(cityRecord.get("longitude"))
+        : undefined,
     };
 
     // Get events in this city
@@ -3335,7 +3444,7 @@ export const getCityData = async (cityId: number): Promise<CityData | null> => {
 };
 
 export const getCitySchedule = async (
-  cityId: number
+  cityId: string
 ): Promise<CityScheduleData | null> => {
   const session = driver.session();
 

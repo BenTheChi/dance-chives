@@ -19,7 +19,7 @@ export default async function StylePage({ params }: PageProps) {
 
   // Get current user and their city
   const session = await auth();
-  let cityId: number | undefined = undefined;
+  let cityId: string | undefined = undefined;
   let cityName: string = "";
   if (session?.user?.id) {
     const user = await getUser(session.user.id);

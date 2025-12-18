@@ -88,12 +88,13 @@ async function seedNeo4j() {
           displayName: "Base User",
           username: "baseuser",
           city: {
-            id: 128526,
+            id: "ChIJVTPpYqBvqkARlBKGEkAs8BY", // Seattle place_id
             name: "Seattle",
             countryCode: "US",
             region: "Washington",
-            population: 737015,
             timezone: "America/Los_Angeles",
+            latitude: 47.6062,
+            longitude: -122.3321,
           },
           date: "01/01/1990",
           bio: "Dance enthusiast from Seattle",
@@ -109,12 +110,13 @@ async function seedNeo4j() {
           displayName: "Creator",
           username: "creator",
           city: {
-            id: 123214,
+            id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
             name: "New York City",
             countryCode: "US",
             region: "New York",
-            population: 8804190,
             timezone: "America/New_York",
+            latitude: 40.7128,
+            longitude: -74.006,
           },
           date: "01/01/1990",
           bio: "Event creator and organizer",
@@ -130,12 +132,13 @@ async function seedNeo4j() {
           displayName: "Moderator",
           username: "moderator",
           city: {
-            id: 123214,
+            id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
             name: "New York City",
             countryCode: "US",
             region: "New York",
-            population: 8804190,
             timezone: "America/New_York",
+            latitude: 40.7128,
+            longitude: -74.006,
           },
           date: "01/01/1990",
           bio: "Community moderator",
@@ -150,12 +153,13 @@ async function seedNeo4j() {
           displayName: "Admin",
           username: "admin",
           city: {
-            id: 128526,
+            id: "ChIJVTPpYqBvqkARlBKGEkAs8BY", // Seattle place_id
             name: "Seattle",
             countryCode: "US",
             region: "Washington",
-            population: 737015,
             timezone: "America/Los_Angeles",
+            latitude: 47.6062,
+            longitude: -122.3321,
           },
           date: "01/01/1990",
           bio: "Platform administrator",
@@ -171,12 +175,13 @@ async function seedNeo4j() {
           displayName: "Super Admin",
           username: "superadmin",
           city: {
-            id: 123214,
+            id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
             name: "New York City",
             countryCode: "US",
             region: "New York",
-            population: 8804190,
             timezone: "America/New_York",
+            latitude: 40.7128,
+            longitude: -74.006,
           },
           date: "01/01/1990",
           bio: "Super administrator with full access",
@@ -235,12 +240,13 @@ async function seedNeo4j() {
         schedule:
           "6:00 PM - Doors Open\n7:00 PM - Preliminaries\n8:00 PM - Semi-Finals\n9:00 PM - Finals\n10:00 PM - Awards",
         city: {
-          id: 123214,
+          id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
           name: "New York City",
           countryCode: "US",
           region: "New York",
-          population: 8804190,
           timezone: "America/New_York",
+          latitude: 40.7128,
+          longitude: -74.006,
         },
         styles: ["Breaking", "Hip-Hop"],
         eventType: "Battle",
@@ -363,12 +369,13 @@ async function seedNeo4j() {
         schedule:
           "7:00 PM - Open Cypher\n8:00 PM - Featured Performances\n9:00 PM - Open Freestyle",
         city: {
-          id: 128526,
+          id: "ChIJVTPpYqBvqkARlBKGEkAs8BY", // Seattle place_id
           name: "Seattle",
           countryCode: "US",
           region: "Washington",
-          population: 737015,
           timezone: "America/Los_Angeles",
+          latitude: 47.6062,
+          longitude: -122.3321,
         },
         styles: ["Hip-Hop"],
         eventType: "Session",
@@ -434,12 +441,13 @@ async function seedNeo4j() {
         schedule:
           "7:30 PM - Doors Open\n8:00 PM - Showcase Begins\n9:30 PM - Meet & Greet",
         city: {
-          id: 123214,
+          id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
           name: "New York City",
           countryCode: "US",
           region: "New York",
-          population: 8804190,
           timezone: "America/New_York",
+          latitude: 40.7128,
+          longitude: -74.006,
         },
         styles: ["Hip-Hop"],
         eventType: "Performance",

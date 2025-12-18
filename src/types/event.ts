@@ -101,7 +101,7 @@ export interface TEventCard {
   imageUrl?: string;
   date: string;
   city: string;
-  cityId?: number;
+  cityId?: string;
   styles: string[];
   eventType?: EventType;
   additionalDatesCount?: number; // Number of additional dates beyond the first one

@@ -331,7 +331,7 @@ export async function getUserTeamMemberships(
 
 /**
  * Get event city ID from Neo4j
- * Note: cityId is stored as number in Neo4j but as string in PostgreSQL
+ * Note: cityId is stored as string (place_id) in both Neo4j and PostgreSQL
  */
 export async function getEventCityId(eventId: string): Promise<string | null> {
   const session = driver.session();
@@ -350,7 +350,7 @@ export async function getEventCityId(eventId: string): Promise<string | null> {
     }
 
     const cityId = result.records[0].get("cityId");
-    // Convert Neo4j numeric cityId to string for PostgreSQL
+    // cityId is already a string (place_id)
     return cityId != null ? String(cityId) : null;
   } finally {
     await session.close();
