@@ -53,10 +53,10 @@ export function VideoCard({
     displayStyles && displayStyles.length > 3 ? displayStyles.length - 3 : 0;
 
   return (
-    <div className="group border border-black overflow-hidden rounded-sm bg-gray-100 transition-all duration-300 w-full min-w-[300px] relative">
+    <div className="group card rounded-sm overflow-hidden transition-all duration-300 w-full min-w-[300px] relative">
       {/* Thumbnail - clickable */}
       <div
-        className="w-full aspect-[4/3] border-b border-black relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"
+        className="w-full aspect-[4/3] rounded-sm relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"
         onClick={onClick}
       >
         {thumbnailUrl ? (
@@ -73,8 +73,8 @@ export function VideoCard({
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
       <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden z-10 flex flex-col">
-        <div className="flex justify-between items-start bg-gray-100 px-3 py-2 border-b border-black">
-          <h3 className="font-bold text-lg">{video.title}</h3>
+        <div className="flex justify-between items-baseline bg-fog-white px-3 py-2 border-b border-black">
+          <h3 className="!text-[14px]">{video.title}</h3>
 
           {/* Title */}
           <div className="flex flex-col gap-1 items-end">
@@ -119,7 +119,7 @@ export function VideoCard({
         {/* Play button - absolutely centered */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            className="bg-mint/85 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform cursor-pointer pointer-events-auto border-2 border-pulse-green"
+            className="bg-mint/85 hover:bg-mint/95 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform cursor-pointer pointer-events-auto border-2 border-pulse-green"
             onClick={onClick}
           >
             <Play className="w-6 h-6 text-pulse-green fill-pulse-green ml-0.5 size-6" />

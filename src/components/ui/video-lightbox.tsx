@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -146,6 +146,192 @@ export function VideoLightbox({
   // State for spoiler functionality - winners hidden by default
   const [showWinners, setShowWinners] = useState(false);
 
+  // Swipe gesture state
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchEndRef = useRef<{ x: number; y: number } | null>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Check if screen is small
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 640); // sm breakpoint
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  // Reset drag state when video changes or dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setDragOffset({ x: 0, y: 0 });
+      setIsDragging(false);
+      setIsTransitioning(false);
+    }
+  }, [isOpen, video.id]);
+
+  // Sync refs with state
+  useEffect(() => {
+    dragOffsetRef.current = dragOffset;
+  }, [dragOffset]);
+
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+
+  // Swipe gesture handlers (using native events to allow preventDefault)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !isSmallScreen || !isOpen) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      touchEndRef.current = null;
+      setIsDragging(true);
+      setIsTransitioning(false);
+      setDragOffset({ x: 0, y: 0 });
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current || !isDraggingRef.current) return;
+      const touch = e.touches[0];
+      let deltaX = touch.clientX - touchStartRef.current.x;
+      let deltaY = touch.clientY - touchStartRef.current.y;
+
+      // Prevent default scrolling if horizontal drag is dominant
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        e.preventDefault();
+      }
+
+      // Add resistance/elasticity when dragging beyond limits
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+
+      // Horizontal resistance - reduce drag if trying to go beyond available videos
+      if (deltaX > 0 && !hasPrev) {
+        // Dragging right but no previous video - add resistance
+        deltaX = deltaX * 0.3;
+      } else if (deltaX < 0 && !hasNext) {
+        // Dragging left but no next video - add resistance
+        deltaX = deltaX * 0.3;
+      } else if (Math.abs(deltaX) > screenWidth * 0.5) {
+        // Add slight resistance when dragging very far
+        const excess = Math.abs(deltaX) - screenWidth * 0.5;
+        deltaX =
+          deltaX > 0
+            ? screenWidth * 0.5 + excess * 0.3
+            : -(screenWidth * 0.5 + excess * 0.3);
+      }
+
+      // Vertical resistance - add resistance when dragging very far
+      if (Math.abs(deltaY) > screenHeight * 0.5) {
+        const excess = Math.abs(deltaY) - screenHeight * 0.5;
+        deltaY =
+          deltaY > 0
+            ? screenHeight * 0.5 + excess * 0.3
+            : -(screenHeight * 0.5 + excess * 0.3);
+      }
+
+      // Update drag offset in real-time
+      const newOffset = { x: deltaX, y: deltaY };
+      setDragOffset(newOffset);
+      dragOffsetRef.current = newOffset;
+      touchEndRef.current = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const handleTouchEnd = () => {
+      if (!touchStartRef.current || !isDraggingRef.current) return;
+
+      const deltaX = dragOffsetRef.current.x;
+      const deltaY = dragOffsetRef.current.y;
+      const absDeltaX = Math.abs(deltaX);
+      const absDeltaY = Math.abs(deltaY);
+
+      // Minimum swipe distance threshold (50px)
+      const minSwipeDistance = 50;
+      // Threshold for completing the transition (30% of screen width/height)
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      const completeThresholdX = screenWidth * 0.3;
+      const completeThresholdY = screenHeight * 0.3;
+
+      setIsDragging(false);
+      setIsTransitioning(true);
+
+      // Determine if horizontal or vertical swipe is dominant
+      if (absDeltaX > absDeltaY && absDeltaX > minSwipeDistance) {
+        // Horizontal swipe - navigate videos
+        if (deltaX > 0 && hasPrev && absDeltaX > completeThresholdX) {
+          // Swipe right - go to previous video
+          setDragOffset({ x: screenWidth, y: 0 });
+          setTimeout(() => {
+            onPrev();
+            setDragOffset({ x: 0, y: 0 });
+            setIsTransitioning(false);
+          }, 300);
+        } else if (deltaX < 0 && hasNext && absDeltaX > completeThresholdX) {
+          // Swipe left - go to next video
+          setDragOffset({ x: -screenWidth, y: 0 });
+          setTimeout(() => {
+            onNext();
+            setDragOffset({ x: 0, y: 0 });
+            setIsTransitioning(false);
+          }, 300);
+        } else {
+          // Snap back
+          setDragOffset({ x: 0, y: 0 });
+          setTimeout(() => setIsTransitioning(false), 300);
+        }
+      } else if (absDeltaY > absDeltaX && absDeltaY > minSwipeDistance) {
+        // Vertical swipe - close video
+        if (absDeltaY > completeThresholdY) {
+          // Complete close animation (swipe down closes)
+          setDragOffset({ x: 0, y: deltaY > 0 ? screenHeight : -screenHeight });
+          setTimeout(() => {
+            onClose();
+            setDragOffset({ x: 0, y: 0 });
+            setIsTransitioning(false);
+          }, 300);
+        } else {
+          // Snap back
+          setDragOffset({ x: 0, y: 0 });
+          setTimeout(() => setIsTransitioning(false), 300);
+        }
+      } else {
+        // No significant swipe - snap back
+        setDragOffset({ x: 0, y: 0 });
+        setTimeout(() => setIsTransitioning(false), 300);
+      }
+
+      // Reset touch positions
+      touchStartRef.current = null;
+      touchEndRef.current = null;
+    };
+
+    // Attach event listeners with { passive: false } to allow preventDefault
+    container.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isSmallScreen, isOpen, hasNext, hasPrev, onNext, onPrev, onClose]);
+
   // Get video type, defaulting to "battle" for backwards compatibility
   const videoType = video?.type || "battle";
 
@@ -204,15 +390,23 @@ export function VideoLightbox({
       <DialogTitle className="sr-only">{video.title}</DialogTitle>
       <DialogContent
         closeButton={false}
-        className="sm:h-[90vh] p-0 gap-0 !max-w-[100vw] sm:!max-w-[95vw] !w-[100vw] sm:!w-[95vw]"
+        className="h-[360px] sm:h-[98vh] p-0 gap-0 !max-w-[100vw] sm:!max-w-[80vw] !w-[100vw] sm:!w-[95vw] bg-transparent border-none overflow-hidden"
       >
-        <div className="flex flex-col h-full w-full bg-black">
+        <div
+          ref={containerRef}
+          className="flex flex-col h-full w-full bg-black"
+          style={{
+            transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
+            transition: isTransitioning ? "transform 0.3s ease-out" : "none",
+            touchAction: isSmallScreen ? "pan-y pan-x" : "auto",
+          }}
+        >
           {/* Video Header */}
           <div className="pt-2 px-4 bg-black text-white border-b border-white/10">
             {/* First line: Title, metadata, and controls */}
-            <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2">
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
               <div className="flex items-center flex-wrap gap-2 sm:gap-4 min-w-0 flex-1">
-                <h2 className="text-sm sm:text-lg font-semibold truncate">
+                <h2 className="!text-[14px] sm:text-lg font-semibold whitespace-wrap">
                   {video.title}
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
@@ -245,7 +439,7 @@ export function VideoLightbox({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+              <div className="items-center space-x-1 sm:space-x-2 flex-shrink-0 hidden sm:flex">
                 {hasPrev && (
                   <Button
                     variant="ghost"
@@ -281,7 +475,7 @@ export function VideoLightbox({
 
             {/* Second line: Style tags */}
             {displayStyles.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1 sm:gap-2 pb-2">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2 py-1 sm:py-2">
                 {displayStyles.map((style) => (
                   <StyleBadge key={style} style={style} />
                 ))}

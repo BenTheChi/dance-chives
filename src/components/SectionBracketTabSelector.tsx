@@ -167,7 +167,7 @@ export default function SectionBracketTabSelector({
             className="scroll-mt-32" // Offset for sticky header
           >
             {/* Video Gallery for this bracket */}
-            <div className="p-2 sm:p-4 lg:px-6 border rounded-sm bg-periwinkle">
+            <div className="p-2 sm:p-4 lg:px-6 border-2 rounded-sm bg-periwinkle">
               <h2 className="text-xl font-semibold mt-2 mb-4 text-center">
                 {bracket.title}
               </h2>

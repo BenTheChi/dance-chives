@@ -96,19 +96,14 @@ export function EventCard({
     : "";
 
   return (
-    <div className="group card overflow-hidden bg-gray-100 transition-all duration-300 w-[250px] h-[353px] sm:w-[358px] sm:h-[358px] sm:relative">
+    <div className="group card overflow-hidden transition-all duration-300 w-[250px] h-[353px] sm:w-[355px] sm:h-[354px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
-        className="block w-full h-[250px] sm:h-[355px] relative flex items-center justify-center bg-gray-200"
+        className="block w-full h-[250px] sm:h-[357px] relative flex items-center justify-center bg-gray-200"
       >
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={title}
-            fill
-            className="object-cover sm:object-contain"
-          />
+          <Image src={imageUrl} alt={title} fill className="object-cover" />
         ) : (
           <h3 className="font-bold text-sm text-center px-4">{title}</h3>
         )}
