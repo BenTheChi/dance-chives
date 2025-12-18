@@ -96,11 +96,11 @@ export function EventCard({
     : "";
 
   return (
-    <div className="group card overflow-hidden transition-all duration-300 w-[250px] h-[353px] sm:w-[355px] sm:h-[354px] sm:relative">
+    <div className="bg-misty-seafoam group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
-        className="block w-full h-[250px] sm:h-[357px] relative flex items-center justify-center bg-gray-200"
+        className="block w-full h-[330px] sm:h-[357px] relative flex items-center justify-center bg-gray-200"
       >
         {imageUrl ? (
           <Image src={imageUrl} alt={title} fill className="object-cover" />
@@ -111,35 +111,34 @@ export function EventCard({
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
       <div className="w-full bg-misty-seafoam sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t border-black py-[5px] sm:py-[7px]">
-        <div className="sm:pt-3 px-3 pb-3 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
+        <div className="pt-4 sm:pt-3 px-5 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}
             <div className="flex flex-col">
-              <h2 className="!text-[16px] sm:!text-[20px]">{title}</h2>
-              <span className="!text-[14px] sm:!text-md text-gray-500">
+              <h2 className="!text-[18px] sm:!text-[20px] line-clamp-2">
+                {title}
+              </h2>
+              <span className="!text-[12px] sm:!text-md text-gray-500">
                 {formattedDate}
               </span>
               {additionalDatesCount && additionalDatesCount > 0 && (
-                <span className="text-xs sm:text-md text-gray-500">
+                <span className="!text-[12px] sm:!text-md text-gray-500">
                   +{additionalDatesCount} more dates
                 </span>
               )}
             </div>
             <div className="flex flex-col gap-1 items-end">
               {eventType && (
-                <span className="text-xs text-gray-500">{eventType}</span>
+                <span className="!text-[12px] text-gray-500">{eventType}</span>
               )}
               {city && (
-                <span className="text-xs text-gray-500">
-                  {city}
-                  {cityId ? `, US` : ""}
-                </span>
+                <span className="!text-[12px] text-gray-500">{city}</span>
               )}
             </div>
           </div>
 
           {/* Style tags and action buttons */}
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
             {/* Style tags */}
             <div className="flex flex-wrap gap-1 items-center sm:flex-wrap sm:mb-2 max-w-[180px]">
               {/* First style - visible on both mobile and desktop */}

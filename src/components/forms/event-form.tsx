@@ -84,7 +84,10 @@ const imageSchema = z.object({
   url: z.string(),
   type: z.enum(["gallery", "profile", "poster"]).default("poster"),
   file: z.instanceof(File).nullable(),
-  caption: z.string().optional(),
+  caption: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().optional()
+  ),
 });
 
 const sectionSchema = z.object({

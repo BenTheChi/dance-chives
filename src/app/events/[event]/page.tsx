@@ -207,7 +207,7 @@ export default async function EventPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-3.6rem)]">
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-4 py-5 px-3 sm:px-10 lg:px-15 max-w-full md:max-w-[816px] lg:max-w-[1016px] w-full">
+          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-full md:max-w-[816px] lg:max-w-[1016px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Image */}
@@ -481,7 +481,7 @@ export default async function EventPage({ params }: PageProps) {
 
             {/* Photo Gallery - takes up full width */}
             {event.gallery.length > 0 && (
-              <section className="flex flex-col bg-misty-seafoam rounded-sm p-4 w-full">
+              <section className="flex flex-col bg-misty-seafoam rounded-sm p-4 w-full border-2 border-black">
                 <h2 className="text-2xl font-bold mb-2 text-center">
                   Photo Gallery
                 </h2>
