@@ -162,7 +162,7 @@ export function BracketForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <span className="text-sm font-medium">Bracket Title</span>
+        <label className="text-sm font-medium">Bracket Title</label>
         <Input
           value={bracket.title}
           placeholder="Untitled Bracket"
@@ -215,7 +215,7 @@ export function BracketForm({
             <AccordionItem
               key={video.id}
               value={video.id}
-              className="border border-border rounded-sm overflow-hidden bg-periwinkle-light/50 last:border-b"
+              className="border border-border rounded-sm bg-periwinkle-light/50 last:border-b"
             >
               <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
                 <Input
@@ -251,15 +251,17 @@ export function BracketForm({
                   className="h-9"
                 />
 
-                <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
-                  <span className="sr-only">Toggle video</span>
-                </AccordionTrigger>
+                <div className="flex items-center gap-5 px-3">
+                  <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
+                    <span className="sr-only">Toggle video</span>
+                  </AccordionTrigger>
 
-                <CircleXButton
-                  size="md"
-                  aria-label={`Remove ${video.title || "video"}`}
-                  onClick={() => removeVideoFromBracket(video.id)}
-                />
+                  <CircleXButton
+                    size="md"
+                    aria-label={`Remove ${video.title || "video"}`}
+                    onClick={() => removeVideoFromBracket(video.id)}
+                  />
+                </div>
               </div>
               <AccordionContent className="px-4 pb-4 bg-periwinkle-light/50">
                 <VideoForm

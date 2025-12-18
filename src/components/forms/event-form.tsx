@@ -893,8 +893,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                             onClick={handleSelectOverview}
                             className={`rounded-sm cursor-pointer transition-colors relative ${
                               isActiveSection
-                                ? "border-2 border-primary/70 shadow-sm bg-misty-seafoam before:absolute before:inset-0 before:bg-black/5 before:rounded-sm before:pointer-events-none"
-                                : "border border-border bg-misty-seafoam"
+                                ? "border-2 border-black bg-misty-seafoam shadow-[2px_2px_0_0_rgb(0,0,0)]"
+                                : "border-2 border-black bg-misty-seafoam"
                             }`}
                           >
                             <div
@@ -1015,7 +1015,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
                             {isActiveSection && (
                               <div
-                                className="border-t px-3 py-2 space-y-1 text-sm bg-misty-seafoam rounded-b relative before:absolute before:inset-0 before:bg-black/5 before:rounded-b before:pointer-events-none"
+                                className="border-t px-3 py-2 space-y-1 text-sm bg-misty-seafoam rounded-b relative"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <button

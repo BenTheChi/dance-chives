@@ -111,12 +111,12 @@ export function EventCard({
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
       <div className="w-full bg-misty-seafoam sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t border-black py-[5px] sm:py-[7px]">
-        <div className="px-3 pb-3 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
+        <div className="sm:pt-3 px-3 pb-3 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}
             <div className="flex flex-col">
-              <h3 className="font-bold text-sm sm:text-lg">{title}</h3>
-              <span className="text-xs sm:text-md text-gray-500">
+              <h2 className="!text-[16px] sm:!text-[20px]">{title}</h2>
+              <span className="!text-[14px] sm:!text-md text-gray-500">
                 {formattedDate}
               </span>
               {additionalDatesCount && additionalDatesCount > 0 && (

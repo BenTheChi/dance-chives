@@ -437,7 +437,7 @@ export function VideoForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 items-end">
+      <div className="flex justify-between items-end">
         <FormField
           control={control}
           name={getVideoFieldPath("styles")}
@@ -487,7 +487,7 @@ export function VideoForm({
                   handleTypeChange(value as Video["type"]);
                 }}
               >
-                <SelectTrigger className="w-[140px] h-9 bg-white">
+                <SelectTrigger className="w-[110px] h-9 bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

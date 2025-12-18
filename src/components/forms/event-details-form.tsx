@@ -115,7 +115,7 @@ export function EventDetailsForm({
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
       {/* Basic Information Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
+      <div className="bg-misty-seafoam space-y-5 border-2 border-black rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Basic Information
@@ -209,7 +209,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Location & Date Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
+      <div className="bg-misty-seafoam space-y-5 border-2 border-black rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             When & Where
@@ -396,7 +396,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Event Poster Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
+      <div className="bg-misty-seafoam space-y-5 border-2 border-black rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold">Event Poster</h3>
         </div>
@@ -454,7 +454,7 @@ export function EventDetailsForm({
       </div>
 
       {/* Additional Details Section */}
-      <div className="bg-misty-seafoam space-y-5 border border-charcoal rounded-sm p-5">
+      <div className="bg-misty-seafoam space-y-5 border-2 border-black rounded-sm p-5">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Additional Details
