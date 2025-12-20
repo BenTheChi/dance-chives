@@ -312,10 +312,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       // For other formats, use default settings
 
       const thumbnailBuffer = await sharpInstance.toBuffer();
-      const { originalBuffer, thumbnailBuffer } = await buildPosterBuffers(
-        file,
-        bgColor
-      );
+      const originalBuffer = buffer;
 
       // Create File objects from buffers for upload
       const originalFile = new File(
@@ -781,10 +778,7 @@ export async function editEvent(
       // For other formats, use default settings
 
       const thumbnailBuffer = await sharpInstance.toBuffer();
-      const { originalBuffer, thumbnailBuffer } = await buildPosterBuffers(
-        file,
-        bgColor
-      );
+      const originalBuffer = buffer;
 
       // Create File objects from buffers for upload
       const originalFile = new File(
