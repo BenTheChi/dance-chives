@@ -114,6 +114,7 @@ export default async function EditEventPage({
   const formattedSections = (currEvent.sections || []).map((section) => ({
     ...section,
     description: section.description ?? "",
+  bgColor: section.bgColor || "#ffffff",
     poster: section.poster
       ? {
           ...section.poster,

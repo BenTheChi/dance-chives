@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -29,7 +28,6 @@ import { FormValues } from "./event-form";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
-import UploadFile from "../ui/uploadfile";
 import { Image } from "@/types/image";
 import {
   getDefaultVideoType,
@@ -48,6 +46,7 @@ import {
 import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PosterUpload } from "../ui/poster-upload";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
   return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
@@ -87,6 +86,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
     ...section,
     description: section.description ?? "",
     sectionType: section.sectionType ?? "Battle",
+    bgColor: section.bgColor || "#ffffff",
   }));
 }
 
@@ -432,41 +432,71 @@ export function SectionForm({
   };
 
   return (
-    <section className="bg-misty-seafoam border-2 space-y-4 p-6 rounded-sm border-black">
-      {resolvedMode === "overview" && (
-        <>
-          <FormField
-            key={`poster-${activeSectionId}`}
-            control={control}
-            name={`sections.${activeSectionIndex}.poster`}
-            render={() => (
+    <Card className="bg-misty-seafoam">
+      <CardContent className="space-y-4">
+        {resolvedMode === "overview" && (
+          <>
+            <FormField
+              key={`poster-${activeSectionId}`}
+              control={control}
+              name={`sections.${activeSectionIndex}.poster`}
+              render={() => (
               <FormItem className="w-full">
                 <FormLabel>Poster Upload</FormLabel>
                 <FormControl>
-                  <UploadFile
-                    register={register}
-                    name={`sections.${activeSectionIndex}.poster`}
-                    onFileChange={(file) => {
+                  <PosterUpload
+                    initialPoster={activeSection.poster?.url || null}
+                    initialPosterFile={activeSection.poster?.file || null}
+                    initialBgColor={activeSection.bgColor || "#ffffff"}
+                    onFileChange={({ file, bgColor }) => {
+                      setValue(
+                        `sections.${activeSectionIndex}.bgColor`,
+                        bgColor,
+                        {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                          shouldTouch: true,
+                        }
+                      );
+
                       if (file) {
-                        const posterImage = Array.isArray(file)
-                          ? file[0]
-                          : file;
-                        setValue(`sections.${activeSectionIndex}.poster`, {
-                          ...posterImage,
-                          type: "poster" as const,
-                        } as Image);
+                        const posterImage: Image = {
+                          id: activeSection.poster?.id || crypto.randomUUID(),
+                          title:
+                            activeSection.poster?.title || "Section Poster",
+                          url: activeSection.poster?.url || "",
+                          type: "poster",
+                          file,
+                        };
+
+                        setValue(
+                          `sections.${activeSectionIndex}.poster`,
+                          posterImage,
+                          {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          }
+                        );
                       } else {
-                        setValue(`sections.${activeSectionIndex}.poster`, null);
+                        setValue(
+                          `sections.${activeSectionIndex}.poster`,
+                          null,
+                          {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          }
+                        );
                       }
                     }}
-                    className="bg-[#E8E7E7]"
+                    editable={Boolean(eventId)}
                     maxFiles={1}
-                    files={activeSection.poster || null}
                   />
                 </FormControl>
               </FormItem>
             )}
-          />
+            />
 
           <FormField
             key={`description-${activeSectionId}`}

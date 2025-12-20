@@ -371,6 +371,7 @@ export const getEvent = async (
         ELSE null 
       END,
       hasBrackets: size(brackets) > 0,
+      bgColor: s.bgColor,
       poster: CASE WHEN poster IS NOT NULL THEN {
         id: poster.id,
         title: poster.title,
@@ -1162,11 +1163,13 @@ const createSections = async (eventId: string, sections: Section[]) => {
          ON CREATE SET
            s.title = $title,
            s.description = $description,
-           s.applyStylesToVideos = $applyStylesToVideos
+           s.applyStylesToVideos = $applyStylesToVideos,
+           s.bgColor = $bgColor
          ON MATCH SET
            s.title = $title,
            s.description = $description,
-           s.applyStylesToVideos = $applyStylesToVideos
+           s.applyStylesToVideos = $applyStylesToVideos,
+           s.bgColor = $bgColor
          WITH s, e
          // Remove old section type labels if section type changed
          CALL apoc.create.removeLabels(s, $sectionTypeLabels) YIELD node as removedNode
@@ -1178,6 +1181,7 @@ const createSections = async (eventId: string, sections: Section[]) => {
           title: sec.title,
           description: sec.description || null,
           applyStylesToVideos: sec.applyStylesToVideos || false,
+          bgColor: sec.bgColor || null,
           sectionTypeLabels: getAllSectionTypeLabels(),
         }
       );

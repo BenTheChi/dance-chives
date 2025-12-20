@@ -27,6 +27,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
   return sections.map((section) => ({
     ...section,
     description: section.description ?? "",
+    bgColor: section.bgColor || "#ffffff",
   }));
 }
 
