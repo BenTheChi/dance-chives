@@ -84,6 +84,7 @@ export interface Section {
   applyStylesToVideos?: boolean;
   applyVideoTypeToVideos?: boolean; // Apply video type to all videos in section
   winners?: UserSearchItem[]; // Section winners (optional, depends on section type)
+  bgColor?: string; // Form-only background color for poster thumbnail
   poster?: Image | null;
 }
 

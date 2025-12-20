@@ -111,6 +111,7 @@ const sectionSchema = z.object({
   styles: z.array(z.string()).optional(),
   applyStylesToVideos: z.boolean().optional(),
   winners: z.array(userSearchItemSchema).optional(),
+  bgColor: z.string().optional(),
   poster: imageSchema.nullable().optional(),
 });
 
@@ -254,6 +255,7 @@ function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
     ...section,
     description: section.description ?? "",
     sectionType: section.sectionType ?? "Battle",
+    bgColor: section.bgColor || "#ffffff",
     poster: section.poster
       ? {
           ...section.poster,
@@ -393,6 +395,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       hasBrackets: false,
       videos: [],
       brackets: [],
+    bgColor: "#ffffff",
       poster: null,
     };
     setValue("sections", normalizeSectionsForForm([...sections, newSection]));

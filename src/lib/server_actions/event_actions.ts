@@ -47,6 +47,38 @@ import {
 import { getPlaceDetails, getTimezone } from "@/lib/google-places";
 import { City } from "@/types/city";
 
+const DEFAULT_POSTER_BG_COLOR = "#ffffff";
+
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 255, g: 255, b: 255 };
+};
+
+const buildPosterBuffers = async (
+  file: File,
+  bgColor: string | undefined
+): Promise<{ originalBuffer: Buffer; thumbnailBuffer: Buffer }> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const bgRgb = hexToRgb(bgColor || DEFAULT_POSTER_BG_COLOR);
+  const THUMBNAIL_SIZE = 500;
+
+  const thumbnailBuffer = await sharp(buffer)
+    .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, {
+      fit: "contain",
+      background: bgRgb,
+    })
+    .toBuffer();
+
+  return { originalBuffer: buffer, thumbnailBuffer };
+};
+
 // Unified form props interface - matches FormValues from event-form.tsx
 interface addEventProps {
   eventDetails: {
@@ -112,6 +144,7 @@ interface addEventProps {
     hasBrackets: boolean;
     styles?: string[];
     applyStylesToVideos?: boolean;
+    bgColor?: string;
     videos: {
       id: string;
       title: string;
@@ -230,7 +263,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
     // Upload eventDetails poster if exists
     if (props.eventDetails.poster?.file) {
-      const bgColor = props.eventDetails.bgColor || "#ffffff";
+      const bgColor = props.eventDetails.bgColor || DEFAULT_POSTER_BG_COLOR;
       const file = props.eventDetails.poster.file;
 
       // Parse background color to RGB for sharp
@@ -279,11 +312,16 @@ export async function addEvent(props: addEventProps): Promise<response> {
       // For other formats, use default settings
 
       const thumbnailBuffer = await sharpInstance.toBuffer();
+      const originalBuffer = buffer;
 
       // Create File objects from buffers for upload
-      const originalFile = new File([new Uint8Array(buffer)], file.name, {
-        type: file.type,
-      });
+      const originalFile = new File(
+        [new Uint8Array(originalBuffer)],
+        file.name,
+        {
+          type: file.type,
+        }
+      );
       const thumbnailFile = new File(
         [new Uint8Array(thumbnailBuffer)],
         `thumbnail-${file.name}`,
@@ -350,8 +388,18 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Upload section posters
     for (const section of props.sections) {
       if (section.poster?.file) {
-        const posterResult = await uploadSectionPosterToR2(
+        const { thumbnailBuffer } = await buildPosterBuffers(
           section.poster.file,
+          section.bgColor
+        );
+        const thumbnailFile = new File(
+          [new Uint8Array(thumbnailBuffer)],
+          `thumbnail-${section.poster.file.name}`,
+          { type: section.poster.file.type }
+        );
+
+        const posterResult = await uploadSectionPosterToR2(
+          thumbnailFile,
           eventId,
           section.id
         );
@@ -363,6 +411,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
             file: null,
             type: "poster" as const,
           };
+          section.bgColor = section.bgColor || DEFAULT_POSTER_BG_COLOR;
         }
       }
     }
@@ -385,6 +434,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           brackets: section.brackets,
           videos: [],
           poster,
+          bgColor: section.bgColor || DEFAULT_POSTER_BG_COLOR,
         };
       } else {
         return {
@@ -394,6 +444,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           brackets: [],
           videos: section.videos,
           poster,
+          bgColor: section.bgColor || DEFAULT_POSTER_BG_COLOR,
         };
       }
     });
@@ -677,7 +728,8 @@ export async function editEvent(
         await deleteFromR2(oldEvent.eventDetails.originalPoster.url);
       }
 
-      const bgColor = editedEvent.eventDetails.bgColor || "#ffffff";
+      const bgColor =
+        editedEvent.eventDetails.bgColor || DEFAULT_POSTER_BG_COLOR;
       const file = editedEvent.eventDetails.poster.file;
 
       // Parse background color to RGB for sharp
@@ -726,11 +778,16 @@ export async function editEvent(
       // For other formats, use default settings
 
       const thumbnailBuffer = await sharpInstance.toBuffer();
+      const originalBuffer = buffer;
 
       // Create File objects from buffers for upload
-      const originalFile = new File([new Uint8Array(buffer)], file.name, {
-        type: file.type,
-      });
+      const originalFile = new File(
+        [new Uint8Array(originalBuffer)],
+        file.name,
+        {
+          type: file.type,
+        }
+      );
       const thumbnailFile = new File(
         [new Uint8Array(thumbnailBuffer)],
         `thumbnail-${file.name}`,
@@ -829,8 +886,18 @@ export async function editEvent(
           await deleteFromR2(oldSection.poster.url);
         }
 
-        const posterResult = await uploadSectionPosterToR2(
+        const { thumbnailBuffer } = await buildPosterBuffers(
           section.poster.file,
+          section.bgColor
+        );
+        const thumbnailFile = new File(
+          [new Uint8Array(thumbnailBuffer)],
+          `thumbnail-${section.poster.file.name}`,
+          { type: section.poster.file.type }
+        );
+
+        const posterResult = await uploadSectionPosterToR2(
+          thumbnailFile,
           eventId,
           section.id
         );
@@ -842,6 +909,7 @@ export async function editEvent(
             file: null,
             type: "poster" as const,
           };
+          section.bgColor = section.bgColor || DEFAULT_POSTER_BG_COLOR;
         }
       }
     }
@@ -864,6 +932,7 @@ export async function editEvent(
           brackets: section.brackets,
           videos: [],
           poster,
+          bgColor: section.bgColor || DEFAULT_POSTER_BG_COLOR,
         };
       } else {
         return {
@@ -873,6 +942,7 @@ export async function editEvent(
           brackets: [],
           videos: section.videos,
           poster,
+          bgColor: section.bgColor || DEFAULT_POSTER_BG_COLOR,
         };
       }
     });
