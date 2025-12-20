@@ -90,8 +90,8 @@ export default async function SectionPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col justify-center items-center gap-2 py-5 px-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min w-full max-w-6xl">
+      <div className="flex flex-col justify-center items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px]">
           <PosterImage
             poster={section.poster ?? null}
             className="md:col-span-1"

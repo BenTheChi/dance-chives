@@ -1125,8 +1125,6 @@ export async function editEvent(
     // Call editEventQuery with the properly structured Event object and team members
     const result = await editEventQuery(event, processedTeamMembers);
 
-    console.log("🟢 [editEvent] editEventQuery result:", result);
-
     if (result) {
       // Helper function to get userId from UserSearchItem
       const getUserId = async (user: UserSearchItem): Promise<string> => {

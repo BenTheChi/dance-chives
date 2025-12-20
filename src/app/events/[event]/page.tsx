@@ -207,7 +207,7 @@ export default async function EventPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-3.6rem)]">
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1016px] w-full">
+          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Image */}
@@ -223,7 +223,7 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               </div>
               {/* Event Details */}
-              <div className="w-full sm:flex-1 lg:max-w-[500px]">
+              <div className="w-full sm:flex-1 lg:max-w-[700px]">
                 <div className="border-2 border-black p-4 bg-misty-seafoam rounded-sm w-full h-full">
                   <section className="flex flex-col">
                     {/* Title - centered */}
