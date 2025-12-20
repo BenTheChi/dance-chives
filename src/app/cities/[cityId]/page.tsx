@@ -92,82 +92,48 @@ export default async function CityPage({ params }: PageProps) {
 
         {/* Events Section */}
         {cityData.events.length > 0 && (
-          <section className="mb-12">
-            <article
-              className={cn(
-                "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border shadow-sm py-6"
-              )}
-            >
-              <header
-                className={cn(
-                  "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6"
-                )}
-              >
-                <h2 className={cn("leading-none font-semibold font-display")}>
-                  Events
-                </h2>
-                <p className={cn("text-muted-foreground text-sm")}>
-                  Events in this city ({cityData.events.length})
-                </p>
-              </header>
-              <div className={cn("px-5")}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {cityData.events.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      id={event.id}
-                      title={event.title}
-                      series={event.series}
-                      imageUrl={event.imageUrl}
-                      date={event.date}
-                      city={event.city}
-                      cityId={cityData.city.id}
-                      styles={event.styles}
-                      eventType={event.eventType}
-                      isSaved={savedEventIds.has(event.id)}
-                    />
-                  ))}
-                </div>
+          <section className="bg-charcoal/40 rounded-sm p-4 border-2 border-black container mx-auto">
+            <h2 className="mb-6 !font-rubik-mono-one text-center">Events</h2>
+            <div className={cn("px-5")}>
+              <div className="flex flex-wrap gap-6">
+                {cityData.events.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    id={event.id}
+                    title={event.title}
+                    series={event.series}
+                    imageUrl={event.imageUrl}
+                    date={event.date}
+                    city={event.city}
+                    cityId={cityData.city.id}
+                    styles={event.styles}
+                    eventType={event.eventType}
+                    isSaved={savedEventIds.has(event.id)}
+                  />
+                ))}
               </div>
-            </article>
+            </div>
           </section>
         )}
 
         {/* Users Section */}
         {cityData.users.length > 0 && (
-          <section className="mb-12">
-            <article
-              className={cn(
-                "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border shadow-sm py-6"
-              )}
-            >
-              <header
-                className={cn(
-                  "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6"
-                )}
-              >
-                <h2 className={cn("leading-none font-semibold font-display")}>
-                  Users
-                </h2>
-                <p className={cn("text-muted-foreground text-sm")}>
-                  Users from this city ({cityData.users.length})
-                </p>
-              </header>
-              <div className={cn("px-5")}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {cityData.users.map((user) => (
-                    <UserCard
-                      key={user.id}
-                      displayName={user.displayName}
-                      username={user.username}
-                      image={user.image}
-                      styles={user.styles}
-                      city={cityData.city.name}
-                    />
-                  ))}
-                </div>
+          <section className="bg-charcoal/40 rounded-sm p-4 border-2 border-black container mx-auto">
+            <h2 className="mb-6 !font-rubik-mono-one text-center">Users</h2>
+            <div className={cn("px-5")}>
+              <div className="flex flex-wrap gap-6">
+                {cityData.users.map((user) => (
+                  <UserCard
+                    key={user.id}
+                    displayName={user.displayName}
+                    username={user.username}
+                    image={user.image}
+                    styles={user.styles}
+                    city={cityData.city.name}
+                  />
+                ))}
               </div>
-            </article>
+            </div>
           </section>
         )}
 

@@ -97,7 +97,7 @@ export function SectionCard({
   }
 
   return (
-    <div className="w-full card min-[1180px]:max-w-[1020px] min-w-[300px] bg-periwinkle-light cursor-pointer !border-3 hover:shadow-lg/100 overflow-hidden">
+    <div className="w-full glow card min-[1180px]:max-w-[1020px] min-w-[300px] bg-periwinkle-light cursor-pointer !border-3 hover:shadow-lg/100 overflow-hidden">
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}
         className="block h-full"

@@ -9,10 +9,10 @@ export default async function CitiesPage() {
     <>
       <AppNavbar />
       <div className="flex flex-col items-center justify-center">
-        <h1 className="!text-[60px] my-5">Cities</h1>
+        <h1 className="!text-[60px] mt-5 mb-12">Cities</h1>
 
         {cities.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 sm:gap-10">
             {cities.map((city) => (
               <CityCard key={city.id} city={city} href={`/cities/${city.id}`} />
             ))}

@@ -21,8 +21,8 @@ export default async function EventsPage() {
     <>
       <main>
         <AppNavbar />
-        <div className="container flex flex-col items-center px-4 py-8">
-          <h1 className="text-3xl font-bold mb-6">All Events</h1>
+        <div className="flex flex-col items-center px-4 py-8">
+          <h1 className="!text-[60px] mt-5 mb-12">All Events</h1>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {events.map((event: TEventCard) => (
               <EventCard

@@ -8,11 +8,8 @@ export default async function ProfilesPage() {
   return (
     <>
       <AppNavbar />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Profiles</h1>
-        <p className="text-muted-foreground mb-8">
-          Browse all user profiles in the community
-        </p>
+      <div className="flex flex-col items-center justify-center px-4 py-8">
+        <h1 className="!text-[60px] mt-5 mb-12">Profiles</h1>
 
         {users.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
