@@ -110,7 +110,7 @@ export default function SectionBracketTabSelector({
   // Render section without brackets
   if (!section?.hasBrackets) {
     return (
-      <div className="w-full">
+      <div className="w-full p-2 sm:p-4 lg:px-6 border-2 rounded-sm bg-periwinkle-light">
         <VideoGallery
           videos={section?.videos}
           eventLink={`/events/${eventId}`}
