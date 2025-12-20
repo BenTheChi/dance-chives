@@ -37,25 +37,17 @@ function CalendarSkeleton() {
   return (
     <div className="space-y-4">
       <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-[600px] w-full" />
+      <Skeleton className="h-[400px] sm:h-[500px] md:h-[600px] w-full" />
     </div>
   );
 }
 
 export function CityCalendarSection({ cityId }: CityCalendarSectionProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Schedule</CardTitle>
-        <CardDescription>
-          View all events, workshops, and sessions in this city
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Suspense fallback={<CalendarSkeleton />}>
-          <CalendarContent cityId={cityId} />
-        </Suspense>
-      </CardContent>
-    </Card>
+    <section className="p-6 bg-neutral-50 rounded-sm border-2 border-black">
+      <Suspense fallback={<CalendarSkeleton />}>
+        <CalendarContent cityId={cityId} />
+      </Suspense>
+    </section>
   );
 }

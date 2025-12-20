@@ -5,15 +5,9 @@ import { EventCard } from "@/components/EventCard";
 import { UserCard } from "@/components/UserCard";
 import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
 import { CityCalendarSection } from "@/components/CityCalendarSection";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { auth } from "@/auth";
 import { getSavedEventIds } from "@/lib/server_actions/event_actions";
+import { cn } from "@/lib/utils";
 
 type PageProps = {
   params: Promise<{ cityId: string }>;
@@ -44,12 +38,9 @@ export default async function CityPage({ params }: PageProps) {
       : []
   );
 
-  const cityDisplay =
-    cityData.city.region && cityData.city.countryCode
-      ? `${cityData.city.name}, ${cityData.city.region}, ${cityData.city.countryCode}`
-      : cityData.city.region
-      ? `${cityData.city.name}, ${cityData.city.region}`
-      : cityData.city.name;
+  const cityDisplay = cityData.city.region
+    ? `${cityData.city.name}, ${cityData.city.region}`
+    : cityData.city.name;
 
   return (
     <>
@@ -63,14 +54,24 @@ export default async function CityPage({ params }: PageProps) {
         {/* Map Section */}
         {cityData.city.latitude && cityData.city.longitude && (
           <section className="mb-12">
-            <Card>
-              <CardHeader>
-                <CardTitle>Location</CardTitle>
-                <CardDescription>
+            <article
+              className={cn(
+                "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border shadow-sm py-6"
+              )}
+            >
+              <header
+                className={cn(
+                  "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6"
+                )}
+              >
+                <h2 className={cn("leading-none font-semibold font-display")}>
+                  Location
+                </h2>
+                <p className={cn("text-muted-foreground text-sm")}>
                   Map showing the location of {cityData.city.name}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </header>
+              <div className={cn("px-5")}>
                 <div className="rounded-sm overflow-hidden">
                   <GoogleMapEmbed
                     latitude={cityData.city.latitude}
@@ -79,8 +80,8 @@ export default async function CityPage({ params }: PageProps) {
                     height="450px"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           </section>
         )}
 
@@ -92,14 +93,24 @@ export default async function CityPage({ params }: PageProps) {
         {/* Events Section */}
         {cityData.events.length > 0 && (
           <section className="mb-12">
-            <Card>
-              <CardHeader>
-                <CardTitle>Events</CardTitle>
-                <CardDescription>
+            <article
+              className={cn(
+                "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border shadow-sm py-6"
+              )}
+            >
+              <header
+                className={cn(
+                  "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6"
+                )}
+              >
+                <h2 className={cn("leading-none font-semibold font-display")}>
+                  Events
+                </h2>
+                <p className={cn("text-muted-foreground text-sm")}>
                   Events in this city ({cityData.events.length})
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </header>
+              <div className={cn("px-5")}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {cityData.events.map((event) => (
                     <EventCard
@@ -117,22 +128,32 @@ export default async function CityPage({ params }: PageProps) {
                     />
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           </section>
         )}
 
         {/* Users Section */}
         {cityData.users.length > 0 && (
           <section className="mb-12">
-            <Card>
-              <CardHeader>
-                <CardTitle>Users</CardTitle>
-                <CardDescription>
+            <article
+              className={cn(
+                "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border shadow-sm py-6"
+              )}
+            >
+              <header
+                className={cn(
+                  "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6"
+                )}
+              >
+                <h2 className={cn("leading-none font-semibold font-display")}>
+                  Users
+                </h2>
+                <p className={cn("text-muted-foreground text-sm")}>
                   Users from this city ({cityData.users.length})
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+                </p>
+              </header>
+              <div className={cn("px-5")}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                   {cityData.users.map((user) => (
                     <UserCard
@@ -145,8 +166,8 @@ export default async function CityPage({ params }: PageProps) {
                     />
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </article>
           </section>
         )}
 

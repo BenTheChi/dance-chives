@@ -129,6 +129,8 @@ export function convertEventToCalendarEvents(
           dateEntry: dateEntry, // Store the specific date entry for reference
           poster: event.poster,
           styles: event.styles,
+          location: event.location,
+          cityName: event.cityName,
         },
       };
     });
@@ -152,6 +154,8 @@ export function convertEventToCalendarEvents(
           originalData: event,
           poster: event.poster,
           styles: event.styles,
+          location: event.location,
+          cityName: event.cityName,
         },
       },
     ];
@@ -182,6 +186,8 @@ export function convertEventToCalendarEvent(
         originalData: event,
         poster: event.poster,
         styles: event.styles,
+        location: event.location,
+        cityName: event.cityName,
       },
     };
   }

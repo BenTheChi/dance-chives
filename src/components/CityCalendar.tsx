@@ -172,9 +172,14 @@ function CustomToolbar({
   };
 
   return (
-    <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={goToToday} className="h-8">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={goToToday}
+          className="h-8 text-xs sm:text-sm"
+        >
           Today
         </Button>
         <div className="flex gap-1">
@@ -196,12 +201,15 @@ function CustomToolbar({
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select
           value={currentMonth.toString()}
           onValueChange={handleMonthChange}
         >
-          <SelectTrigger size="sm" className="w-[140px] h-8">
+          <SelectTrigger
+            size="sm"
+            className="w-[120px] sm:w-[140px] h-8 text-xs sm:text-sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -213,7 +221,10 @@ function CustomToolbar({
           </SelectContent>
         </Select>
         <Select value={currentYear.toString()} onValueChange={handleYearChange}>
-          <SelectTrigger size="sm" className="w-[100px] h-8">
+          <SelectTrigger
+            size="sm"
+            className="w-[80px] sm:w-[100px] h-8 text-xs sm:text-sm"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -225,7 +236,7 @@ function CustomToolbar({
           </SelectContent>
         </Select>
         {view !== "month" && (
-          <div className="rbc-toolbar-label text-lg font-semibold ml-2">
+          <div className="rbc-toolbar-label text-sm sm:text-lg font-semibold">
             {label()}
           </div>
         )}
@@ -235,7 +246,7 @@ function CustomToolbar({
           variant={view === "month" ? "default" : "outline"}
           size="sm"
           onClick={() => onView("month")}
-          className="h-8"
+          className="h-8 text-xs sm:text-sm"
         >
           Month
         </Button>
@@ -243,7 +254,7 @@ function CustomToolbar({
           variant={view === "week" ? "default" : "outline"}
           size="sm"
           onClick={() => onView("week")}
-          className="h-8"
+          className="h-8 text-xs sm:text-sm"
         >
           Week
         </Button>
@@ -251,7 +262,7 @@ function CustomToolbar({
           variant={view === "day" ? "default" : "outline"}
           size="sm"
           onClick={() => onView("day")}
-          className="h-8"
+          className="h-8 text-xs sm:text-sm"
         >
           Day
         </Button>
@@ -375,49 +386,55 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
   }, [popoverOpen]);
 
   return (
-    <div ref={calendarRef} className="relative">
+    <div ref={calendarRef} className="relative w-full">
       {/* Legend */}
-      <div className="mb-4 flex flex-wrap gap-4 items-center">
-        <span className="text-sm font-medium">Event Types:</span>
+      <div className="mb-4 flex flex-wrap gap-2 sm:gap-4 items-center">
         {(Object.keys(EVENT_TYPE_LABELS) as Array<EventType | "event">)
           .filter(
             (type) =>
               type !== "event" && type !== "Competition" && type !== "Festival"
           ) // Exclude "event", "Competition", and "Festival" from legend
           .map((type) => (
-            <div key={type} className="flex items-center gap-2">
+            <div key={type} className="flex items-center gap-1.5 sm:gap-2">
               <div
-                className="w-4 h-4 rounded"
+                className="w-3 h-3 sm:w-4 sm:h-4 rounded"
                 style={{
                   backgroundColor: EVENT_COLORS[type],
                 }}
               />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 {EVENT_TYPE_LABELS[type]}
               </span>
             </div>
           ))}
       </div>
-      <Calendar
-        localizer={localizer}
-        events={calendarEvents}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 600 }}
-        eventPropGetter={eventPropGetter}
-        onSelectEvent={handleSelectEvent}
-        view={currentView}
-        onView={handleViewChange}
-        date={currentDate}
-        onNavigate={handleNavigate}
-        views={["month", "week", "day"]}
-        components={{
-          toolbar: (props) => (
-            <CustomToolbar {...props} onDateChange={handleNavigate} />
-          ),
-        }}
-        popup
-      />
+      <div className="w-full overflow-x-auto">
+        <Calendar
+          localizer={localizer}
+          events={calendarEvents}
+          startAccessor="start"
+          endAccessor="end"
+          style={{
+            height: "calc(100vh - 250px)",
+            minHeight: "300px",
+            maxHeight: "800px",
+          }}
+          className="rbc-calendar-responsive"
+          eventPropGetter={eventPropGetter}
+          onSelectEvent={handleSelectEvent}
+          view={currentView}
+          onView={handleViewChange}
+          date={currentDate}
+          onNavigate={handleNavigate}
+          views={["month", "week", "day"]}
+          components={{
+            toolbar: (props) => (
+              <CustomToolbar {...props} onDateChange={handleNavigate} />
+            ),
+          }}
+          popup
+        />
+      </div>
       {selectedEvent && (
         <CalendarEventPopover
           event={selectedEvent}

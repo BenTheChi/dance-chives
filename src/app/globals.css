@@ -267,3 +267,136 @@ p {
   font-size: 14px;
   font-family: var(--font-ibm-plex-sans);
 }
+
+/* Responsive styles for react-big-calendar */
+@layer utilities {
+  /* Make calendar responsive on mobile */
+  .rbc-calendar {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Responsive toolbar and calendar sizing */
+  @media (max-width: 640px) {
+    .rbc-calendar-responsive {
+      height: calc(100vh - 200px) !important;
+      min-height: 300px !important;
+    }
+
+    .rbc-toolbar {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .rbc-toolbar button {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .rbc-header {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.25rem;
+    }
+
+    .rbc-date-cell {
+      font-size: 0.75rem;
+    }
+
+    .rbc-event {
+      font-size: 0.7rem;
+      padding: 0.125rem 0.25rem;
+    }
+
+    .rbc-time-slot {
+      font-size: 0.7rem;
+    }
+
+    .rbc-time-header-content {
+      font-size: 0.7rem;
+    }
+
+    .rbc-day-slot .rbc-time-slot {
+      border-top: 1px solid #000000;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .rbc-calendar-responsive {
+      height: calc(100vh - 250px) !important;
+      min-height: 400px !important;
+    }
+  }
+
+  /* Ensure calendar doesn't overflow on small screens */
+  .rbc-calendar {
+    overflow-x: auto;
+  }
+
+  .rbc-month-view,
+  .rbc-time-view,
+  .rbc-day-view {
+    min-width: 0;
+  }
+
+  /* Make event labels more readable on mobile */
+  @media (max-width: 640px) {
+    .rbc-event-label {
+      font-size: 0.65rem;
+    }
+  }
+
+  /* Make all calendar lines black */
+  .rbc-month-view,
+  .rbc-time-view,
+  .rbc-day-view {
+    border-color: #000000 !important;
+  }
+
+  .rbc-header {
+    border-color: #000000 !important;
+  }
+
+  .rbc-date-cell {
+    border-color: #000000 !important;
+  }
+
+  .rbc-day-slot .rbc-time-slot {
+    border-top-color: #000000 !important;
+  }
+
+  .rbc-time-content {
+    border-top-color: #000000 !important;
+  }
+
+  .rbc-time-header-content {
+    border-left-color: #000000 !important;
+  }
+
+  .rbc-time-header {
+    border-bottom-color: #000000 !important;
+  }
+
+  .rbc-day-bg {
+    border-color: #000000 !important;
+  }
+
+  .rbc-off-range-bg {
+    border-color: #000000 !important;
+  }
+
+  .rbc-today {
+    border-color: #000000 !important;
+  }
+
+  .rbc-row {
+    border-color: #000000 !important;
+  }
+
+  .rbc-row-segment {
+    border-color: #000000 !important;
+  }
+
+  .rbc-selected-cell {
+    border-color: #000000 !important;
+  }
+}

@@ -12,12 +12,6 @@ export function CityCard({ city, href }: CityCardProps) {
       <h2 className="text-center mb-4">{city.name}</h2>
       <div className="flex flex-row gap-2 items-center justify-center flex-wrap">
         {city.region && <h3 className="text-center">{city.region}</h3>}
-        {city.region && city.countryCode && (
-          <span className="text-center">•</span>
-        )}
-        {city.countryCode && (
-          <h3 className="text-center">{city.countryCode}</h3>
-        )}
       </div>
     </div>
   );

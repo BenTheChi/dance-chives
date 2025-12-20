@@ -1578,6 +1578,7 @@ export const insertEvent = async (
       )
 
       WITH e
+      // This MATCH will fail if the user doesn't exist, causing the query to return no results
       MATCH (creator:User {id: $creatorId})
       MERGE (creator)-[:CREATED]->(e)
 
@@ -1631,10 +1632,11 @@ export const insertEvent = async (
     );
 
     // Check if query returned results
+    // If the user doesn't exist, the MATCH will fail and this will catch it
     if (!result.records || result.records.length === 0) {
       await session.close();
       throw new Error(
-        `Failed to create event ${event.id}: No records returned from query`
+        `Failed to create event ${event.id}: No records returned from query. User with ID ${eventDetails.creatorId} may not exist in Neo4j.`
       );
     }
 
@@ -2776,6 +2778,8 @@ export interface CalendarEventData {
     endTime?: string;
   }>;
   eventType?: EventType;
+  location?: string;
+  cityName?: string;
   poster?: {
     id: string;
     title: string;
@@ -3454,10 +3458,11 @@ export const getCitySchedule = async (
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
        WHERE (e.status = 'visible' OR e.status IS NULL)
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
-       WITH e, poster,
+       WITH e, poster, c,
             [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']][0] as eventTypeLabel
        RETURN e.id as id, e.title as title, e.startDate as startDate,
               e.startTime as startTime, e.endTime as endTime, e.dates as dates,
+              e.location as location, c.name as cityName,
               eventTypeLabel,
               CASE WHEN poster IS NOT NULL THEN {
                 id: poster.id,
@@ -3529,6 +3534,8 @@ export const getCitySchedule = async (
         eventType: eventTypeLabel
           ? getEventTypeFromLabel(eventTypeLabel) || "Other"
           : "Other",
+        location: record.get("location") || undefined,
+        cityName: record.get("cityName") || undefined,
         poster: record.get("poster") || null,
         styles: eventStylesMap.get(eventId) || [],
       };
@@ -3540,6 +3547,7 @@ export const getCitySchedule = async (
        OPTIONAL MATCH (wPoster:Image)-[:POSTER_OF]->(w)
        RETURN w.id as id, w.title as title, w.startDate as startDate,
               w.startTime as startTime, w.endTime as endTime,
+              w.location as location, c.name as cityName,
               CASE WHEN wPoster IS NOT NULL THEN {
                 id: wPoster.id,
                 title: wPoster.title,
@@ -3601,6 +3609,8 @@ export const getCitySchedule = async (
           endTime: record.get("endTime") || undefined,
           dates: undefined, // Workshops use single date
           eventType: "Workshop" as EventType,
+          location: record.get("location") || undefined,
+          cityName: record.get("cityName") || undefined,
           poster: record.get("poster") || null,
           styles: allStyles,
         };
@@ -3705,6 +3715,8 @@ export const getCitySchedule = async (
               ? parsedDates
               : undefined,
           eventType: "Session" as EventType,
+          location: record.get("location") || undefined,
+          cityName: record.get("cityName") || undefined,
           poster: record.get("poster") || null,
           styles: allStyles,
         };
