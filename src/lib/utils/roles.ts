@@ -30,6 +30,12 @@ export const VIDEO_ROLE_WINNER = "Winner";
 export const SECTION_ROLE_WINNER = "Winner";
 
 /**
+ * Section-only role for judges
+ * This role can only be assigned to users in sections, not events
+ */
+export const SECTION_ROLE_JUDGE = "Judge";
+
+/**
  * Available roles for workshops
  * These are the only roles that can be assigned to users in workshops
  */
@@ -77,10 +83,10 @@ export function isValidVideoRole(role: string): boolean {
 
 /**
  * Check if a role is valid for sections
- * Currently only supports Winner role, but extensible for future roles
+ * Supports Winner and Judge roles
  */
 export function isValidSectionRole(role: string): boolean {
-  return role === SECTION_ROLE_WINNER;
+  return role === SECTION_ROLE_WINNER || role === SECTION_ROLE_JUDGE;
 }
 
 /**

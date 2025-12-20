@@ -193,8 +193,10 @@
     border: 2px solid black;
     border-radius: 4px;
     overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .card:hover {
+    transform: translateY(-5px);
     box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
   }
 

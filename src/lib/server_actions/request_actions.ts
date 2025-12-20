@@ -17,7 +17,9 @@ import {
   setVideoRoles,
   setSectionWinner,
   setSectionWinners,
+  setSectionJudges,
   getSectionWinnerIds,
+  getSectionJudgeIds,
   setEventRoles, // Still needed for event roles (not part of this refactor)
   getUserTeamMemberships,
   eventExists,
@@ -26,6 +28,7 @@ import {
   isUserTaggedInVideo,
   isUserTaggedInVideoWithRole,
   isUserWinnerOfSection,
+  isUserJudgeOfSection,
   getVideoType,
   getEventTitle,
   getEventType,
@@ -43,6 +46,7 @@ import {
   VIDEO_ROLE_DANCER,
   VIDEO_ROLE_WINNER,
   SECTION_ROLE_WINNER,
+  SECTION_ROLE_JUDGE,
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
@@ -1928,7 +1932,7 @@ export async function tagSelfInSection(
   // Validate section role
   if (!isValidSectionRole(role)) {
     throw new Error(
-      `Invalid section role: ${role}. Must be: ${SECTION_ROLE_WINNER}`
+      `Invalid section role: ${role}. Must be: ${SECTION_ROLE_WINNER} or ${SECTION_ROLE_JUDGE}`
     );
   }
 
@@ -1955,16 +1959,29 @@ export async function tagSelfInSection(
     console.log("Applying section tag in Neo4j");
 
     // User has permission - tag directly with specified role
-    // Get current winners and add this user to the list (don't remove existing winners)
     try {
-      const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
-      // Check if user is already a winner
-      if (!currentWinnerIds.includes(userId)) {
-        const updatedWinnerIds = [...currentWinnerIds, userId];
-        await setSectionWinners(eventId, sectionId, updatedWinnerIds);
-        console.log("✅ [tagSelfInSection] Tag applied successfully");
-      } else {
-        console.log("✅ [tagSelfInSection] User is already a winner");
+      if (role === SECTION_ROLE_WINNER) {
+        // Get current winners and add this user to the list (don't remove existing winners)
+        const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
+        // Check if user is already a winner
+        if (!currentWinnerIds.includes(userId)) {
+          const updatedWinnerIds = [...currentWinnerIds, userId];
+          await setSectionWinners(eventId, sectionId, updatedWinnerIds);
+          console.log("✅ [tagSelfInSection] Winner tag applied successfully");
+        } else {
+          console.log("✅ [tagSelfInSection] User is already a winner");
+        }
+      } else if (role === SECTION_ROLE_JUDGE) {
+        // Get current judges and add this user to the list (don't remove existing judges)
+        const currentJudgeIds = await getSectionJudgeIds(eventId, sectionId);
+        // Check if user is already a judge
+        if (!currentJudgeIds.includes(userId)) {
+          const updatedJudgeIds = [...currentJudgeIds, userId];
+          await setSectionJudges(eventId, sectionId, updatedJudgeIds);
+          console.log("✅ [tagSelfInSection] Judge tag applied successfully");
+        } else {
+          console.log("✅ [tagSelfInSection] User is already a judge");
+        }
       }
       return { success: true, directTag: true };
     } catch (error) {
@@ -2110,6 +2127,18 @@ export async function checkUserWinnerOfSection(
   userId: string
 ): Promise<boolean> {
   return await isUserWinnerOfSection(eventId, sectionId, userId);
+}
+
+/**
+ * Check if a user is a judge of a section
+ * Server action wrapper for client components
+ */
+export async function checkUserJudgeOfSection(
+  eventId: string,
+  sectionId: string,
+  userId: string
+): Promise<boolean> {
+  return await isUserJudgeOfSection(eventId, sectionId, userId);
 }
 
 /**

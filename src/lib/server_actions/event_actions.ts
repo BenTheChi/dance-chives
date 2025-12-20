@@ -26,6 +26,7 @@ import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import {
   setVideoRoles,
   setSectionWinners,
+  setSectionJudges,
   isTeamMember,
   addTeamMember,
 } from "@/db/queries/team-member";
@@ -1220,6 +1221,50 @@ export async function editEvent(
               console.error(
                 `❌ [editEvent] Error setting section winners:`,
                 winnerError
+              );
+            }
+          }
+
+          // Process section judges
+          const oldJudges = oldSection?.judges || [];
+          const newJudges = newSection.judges || [];
+
+          const oldJudgeUsernames = new Set(
+            oldJudges.map((j) => j.username).filter(Boolean)
+          );
+          const newJudgeUsernames = new Set(
+            newJudges.map((j) => j.username).filter(Boolean)
+          );
+
+          const judgesChanged =
+            oldJudgeUsernames.size !== newJudgeUsernames.size ||
+            [...oldJudgeUsernames].some(
+              (username) => !newJudgeUsernames.has(username)
+            ) ||
+            [...newJudgeUsernames].some(
+              (username) => !oldJudgeUsernames.has(username)
+            );
+
+          if (judgesChanged) {
+            try {
+              if (newJudges.length > 0) {
+                const judgeUserIds = await Promise.all(
+                  newJudges.map((judge) => getUserId(judge))
+                );
+                console.log(
+                  `🟢 [editEvent] Setting ${judgeUserIds.length} judges for section ${newSection.id}`
+                );
+                await setSectionJudges(eventId, newSection.id, judgeUserIds);
+              } else {
+                console.log(
+                  `🟢 [editEvent] Removing all judges from section ${newSection.id}`
+                );
+                await setSectionJudges(eventId, newSection.id, []);
+              }
+            } catch (judgeError) {
+              console.error(
+                `❌ [editEvent] Error setting section judges:`,
+                judgeError
               );
             }
           }

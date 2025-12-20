@@ -21,6 +21,7 @@ import {
 import {
   AVAILABLE_ROLES,
   SECTION_ROLE_WINNER,
+  SECTION_ROLE_JUDGE,
   VIDEO_ROLE_DANCER,
   VIDEO_ROLE_WINNER,
 } from "@/lib/utils/roles";
@@ -60,6 +61,8 @@ interface TagSelfCircleButtonProps {
   onPendingRolesChange?: (roles: string[]) => void;
   // Button size
   size?: "sm" | "md" | "lg";
+  // Default role to pre-select in dialog (for section-level tagging)
+  defaultRole?: string;
 }
 
 export function TagSelfCircleButton({
@@ -78,6 +81,7 @@ export function TagSelfCircleButton({
   currentVideoRoles = [],
   onPendingRolesChange,
   size = "md",
+  defaultRole,
 }: TagSelfCircleButtonProps) {
   const { data: session } = useSession();
   const [selectedRole, setSelectedRole] = useState<string>("");
@@ -92,13 +96,19 @@ export function TagSelfCircleButton({
     [currentUserRoles]
   );
 
-  // For section-level tagging, only show "Winner" role
+  // For section-level tagging, show "Winner" and "Judge" roles
   // For video-level tagging, show roles based on video type
   // For event-level tagging, show all available roles except those already assigned
   const availableRoles = useMemo(() => {
     if (target === "section") {
-      // Only show "Winner" role for sections
-      return isUserTagged ? [] : [SECTION_ROLE_WINNER];
+      // If defaultRole is provided, only show that role (for pre-selected dialogs)
+      // Otherwise show both "Winner" and "Judge" roles for sections
+      // If user is already tagged, don't show any roles (they can't tag again)
+      if (isUserTagged) return [];
+      if (defaultRole) {
+        return [defaultRole];
+      }
+      return [SECTION_ROLE_WINNER, SECTION_ROLE_JUDGE];
     }
     if (target === "video") {
       // Video roles based on video type
@@ -142,6 +152,7 @@ export function TagSelfCircleButton({
     safeCurrentUserRoles,
     videoType,
     currentVideoRoles,
+    defaultRole,
   ]);
 
   // Memoize the available roles string for dependency tracking
@@ -229,12 +240,16 @@ export function TagSelfCircleButton({
     (role) => !pendingRoles.has(role)
   );
 
-  // Auto-select role if only one is available (e.g., section-level Winner)
+  // Auto-select role if only one is available, or if defaultRole is provided
   useEffect(() => {
-    if (selectableRoles.length === 1 && !selectedRole && isDialogOpen) {
-      setSelectedRole(selectableRoles[0]);
+    if (isDialogOpen && !selectedRole) {
+      if (defaultRole && selectableRoles.includes(defaultRole)) {
+        setSelectedRole(defaultRole);
+      } else if (selectableRoles.length === 1) {
+        setSelectedRole(selectableRoles[0]);
+      }
     }
-  }, [selectableRoles, isDialogOpen, selectedRole]);
+  }, [selectableRoles, isDialogOpen, selectedRole, defaultRole]);
 
   // Reset selected role when dialog closes
   useEffect(() => {

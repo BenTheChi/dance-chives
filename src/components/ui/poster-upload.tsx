@@ -147,7 +147,12 @@ export function PosterUpload({
           loadInitialPoster(src, false);
           return;
         }
-        toast.error("Failed to load existing poster");
+        // If poster fails to load, silently clear canvas instead of showing error
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+        }
+        previewImageRef.current = null;
       };
 
       image.src = src;
@@ -296,7 +301,7 @@ export function PosterUpload({
               width={THUMBNAIL_SIZE}
               height={THUMBNAIL_SIZE}
             />
-            {posterFile && (
+            {(posterFile || (editable && initialPoster && !posterFile)) && (
               <button
                 onClick={handleRemove}
                 className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm opacity-0 hover:opacity-100 transition-opacity"
@@ -385,34 +390,38 @@ export function PosterUpload({
         </div>
       )}
 
-      {/* File Input */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-center w-full">
-          <label
-            htmlFor="poster-file"
-            className="flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-sm border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-          >
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <UploadIcon className="w-10 h-10 text-gray-400" />
-              <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                <span className="font-semibold">Click to upload</span> or drag
-                and drop
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                SVG, PNG, JPG or GIF (MAX. 8MB)
-              </p>
-            </div>
-            <input
-              id="poster-file"
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileSelect}
-            />
-          </label>
+      {/* File Input - Show when editable, even if there's an existing poster */}
+      {editable && !posterFile && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-center w-full">
+            <label
+              htmlFor="poster-file"
+              className="flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-sm border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <UploadIcon className="w-10 h-10 text-gray-400" />
+                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="font-semibold">
+                    {initialPoster ? "Click to replace" : "Click to upload"}
+                  </span>{" "}
+                  or drag and drop
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  SVG, PNG, JPG or GIF (MAX. 8MB)
+                </p>
+              </div>
+              <input
+                id="poster-file"
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileSelect}
+              />
+            </label>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

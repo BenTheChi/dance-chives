@@ -622,6 +622,132 @@ export async function setSectionWinners(
 }
 
 /**
+ * Set section judge declaratively
+ * Uses :JUDGE relationship type instead of :IN with property
+ * If userId is null, removes all judges from the section
+ */
+export async function setSectionJudge(
+  eventId: string,
+  sectionId: string,
+  userId: string | null
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate event exists
+    const eventExistsCheck = await eventExists(eventId);
+    if (!eventExistsCheck) {
+      throw new Error(`Event ${eventId} does not exist`);
+    }
+
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      throw new Error(
+        `Section ${sectionId} does not exist in event ${eventId}`
+      );
+    }
+
+    if (userId === null) {
+      // Remove all judges from section
+      console.log(
+        `✅ [setSectionJudge] Removing all judges from section ${sectionId}`
+      );
+      await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})<-[r:JUDGE]-(u:User)
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        DELETE r
+        `,
+        { eventId, sectionId }
+      );
+    } else {
+      // Set user as judge (remove all other judges first, then add this one)
+      console.log(
+        `✅ [setSectionJudge] Setting user ${userId} as judge of section ${sectionId}`
+      );
+      await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})<-[r:JUDGE]-(u:User)
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        DELETE r
+        WITH s
+        MATCH (u:User {id: $userId})
+        MATCH (s:Section {id: $sectionId})
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        MERGE (u)-[:JUDGE]->(s)
+        `,
+        { eventId, sectionId, userId }
+      );
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Set multiple section judges declaratively
+ * Uses :JUDGE relationship type instead of :IN with property
+ * If userIds is empty array, removes all judges from the section
+ * Replaces all existing judges with the new set
+ */
+export async function setSectionJudges(
+  eventId: string,
+  sectionId: string,
+  userIds: string[]
+): Promise<void> {
+  const session = driver.session();
+  try {
+    // Validate event exists
+    const eventExistsCheck = await eventExists(eventId);
+    if (!eventExistsCheck) {
+      throw new Error(`Event ${eventId} does not exist`);
+    }
+
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      throw new Error(
+        `Section ${sectionId} does not exist in event ${eventId}`
+      );
+    }
+
+    // Remove all existing judges first
+    await session.run(
+      `
+      MATCH (s:Section {id: $sectionId})<-[r:JUDGE]-(u:User)
+      WHERE (s)-[:IN]->(:Event {id: $eventId})
+      DELETE r
+      `,
+      { eventId, sectionId }
+    );
+
+    // Add new judges if any
+    if (userIds.length > 0) {
+      console.log(
+        `✅ [setSectionJudges] Setting ${userIds.length} judges for section ${sectionId}`
+      );
+      await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})
+        WHERE (s)-[:IN]->(:Event {id: $eventId})
+        WITH s
+        UNWIND $userIds as userId
+        MATCH (u:User {id: userId})
+        MERGE (u)-[:JUDGE]->(s)
+        `,
+        { eventId, sectionId, userIds }
+      );
+    } else {
+      console.log(
+        `✅ [setSectionJudges] Removed all judges from section ${sectionId}`
+      );
+    }
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Set event role for a user in Neo4j
  * Creates a relationship between the user and event with the specified role
  * Throws error if event doesn't exist or role is invalid
@@ -1089,6 +1215,39 @@ export async function isUserWinnerOfSection(
 }
 
 /**
+ * Check if a user is a judge of a section
+ * Returns true if user has :JUDGE relationship with the section
+ */
+export async function isUserJudgeOfSection(
+  eventId: string,
+  sectionId: string,
+  userId: string
+): Promise<boolean> {
+  const session = driver.session();
+  try {
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      return false;
+    }
+
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r:JUDGE]->(s:Section {id: $sectionId})
+      WHERE (s)-[:IN]->(:Event {id: $eventId})
+      RETURN count(s) as count
+      `,
+      { eventId, sectionId, userId }
+    );
+
+    const count = result.records[0]?.get("count")?.toNumber() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Get all winner user IDs for a section
  * Returns array of user IDs who are winners of the section
  */
@@ -1115,6 +1274,38 @@ export async function getSectionWinnerIds(
 
     const winnerIds = result.records[0]?.get("winnerIds") || [];
     return winnerIds;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get all judge user IDs for a section
+ * Returns array of user IDs who are judges of the section
+ */
+export async function getSectionJudgeIds(
+  eventId: string,
+  sectionId: string
+): Promise<string[]> {
+  const session = driver.session();
+  try {
+    // Validate section exists and belongs to event
+    const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+    if (!sectionExists) {
+      return [];
+    }
+
+    const result = await session.run(
+      `
+      MATCH (u:User)-[r:JUDGE]->(s:Section {id: $sectionId})
+      WHERE (s)-[:IN]->(:Event {id: $eventId})
+      RETURN collect(u.id) as judgeIds
+      `,
+      { eventId, sectionId }
+    );
+
+    const judgeIds = result.records[0]?.get("judgeIds") || [];
+    return judgeIds;
   } finally {
     await session.close();
   }

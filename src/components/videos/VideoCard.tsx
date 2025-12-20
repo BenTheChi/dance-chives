@@ -73,11 +73,11 @@ export function VideoCard({
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
       <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden z-10 flex flex-col">
-        <div className="flex justify-between items-baseline bg-fog-white px-3 py-2 border-b border-black">
+        <div className="flex flex-col items-baseline bg-fog-white px-3 py-2 border-b border-black">
           <h3 className="!text-[14px]">{video.title}</h3>
 
           {/* Title */}
-          <div className="flex flex-col gap-1 items-end">
+          <div className="flex gap-1 items-end justify-between w-full">
             <Link
               href={eventLink}
               className="text-sm text-gray-500 hover:text-blue-600 text-end"
@@ -119,7 +119,7 @@ export function VideoCard({
         {/* Play button - absolutely centered */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            className="bg-mint/85 hover:bg-mint/95 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform cursor-pointer pointer-events-auto border-2 border-pulse-green"
+            className="bg-mint/85 hover:bg-mint/95 rounded-full p-3 scale-100 sm:scale-90 sm:group-hover:scale-100 transition-transform cursor-pointer pointer-events-auto border-2 border-pulse-green mt-8"
             onClick={onClick}
           >
             <Play className="w-6 h-6 text-pulse-green fill-pulse-green ml-0.5 size-6" />

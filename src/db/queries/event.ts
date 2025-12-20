@@ -556,6 +556,21 @@ export const getEvent = async (
     { id }
   );
 
+  // Get section judges using :JUDGE relationship type
+  const sectionJudgesResult = await session.run(
+    `
+    MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[r:JUDGE]-(u:User)
+    RETURN s.id as sectionId, collect({
+      id: u.id,
+      displayName: u.displayName,
+      username: u.username,
+      avatar: u.avatar,
+      image: u.image
+    }) as judges
+  `,
+    { id }
+  );
+
   // Get section styles
   const sectionStylesResult = await session.run(
     `
@@ -693,12 +708,23 @@ export const getEvent = async (
     sectionWinnersMap.set(sectionId, winners);
   });
 
+  // Create map of section judges
+  const sectionJudgesMap = new Map<string, UserSearchItem[]>();
+  sectionJudgesResult.records.forEach((record) => {
+    const sectionId = record.get("sectionId");
+    const judges = (record.get("judges") || []).filter(
+      (j: UserSearchItem) => j.id !== null && j.id !== undefined
+    );
+    sectionJudgesMap.set(sectionId, judges);
+  });
+
   // Update sections with bracket videos and tagged users
   sections.forEach((section: Section) => {
     section.styles = sectionStylesMap.get(section.id) || [];
     section.applyStylesToVideos =
       sectionApplyStylesMap.get(section.id) || false;
     section.winners = sectionWinnersMap.get(section.id) || [];
+    section.judges = sectionJudgesMap.get(section.id) || [];
     // Poster is already included in the query result
 
     // Add tagged users and styles to direct section videos
@@ -1317,7 +1343,14 @@ const createBracketVideos = async (sections: Section[]) => {
           // Create user relationships based on video type
           await createVideoUserRelationships(vid, vid.id);
 
-          // Create video style relationships
+          // Update video style relationships - delete old ones first
+          await session.run(
+            `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)
+             DELETE r`,
+            { videoId: vid.id }
+          );
+
+          // Create new video style relationships
           const videoStyles = vid.styles || [];
           if (videoStyles.length > 0) {
             const normalizedStyles = normalizeStyleNames(videoStyles);
@@ -1385,7 +1418,14 @@ const createSectionVideos = async (sections: Section[]) => {
         // Create user relationships based on video type
         await createVideoUserRelationships(vid, vid.id);
 
-        // Create video style relationships
+        // Update video style relationships - delete old ones first
+        await session.run(
+          `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)
+           DELETE r`,
+          { videoId: vid.id }
+        );
+
+        // Create new video style relationships
         const videoStyles = vid.styles || [];
         if (videoStyles.length > 0) {
           const normalizedStyles = normalizeStyleNames(videoStyles);
@@ -1679,6 +1719,26 @@ export const insertEvent = async (
               `MATCH (s:Section {id: $sectionId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:WINNER]->(s)`,
+              { sectionId: section.id, userId }
+            );
+          }
+        } finally {
+          await session.close();
+        }
+      }
+    }
+
+    // Create section judges
+    for (const section of event.sections) {
+      if (section.judges && section.judges.length > 0) {
+        const session = driver.session();
+        try {
+          for (const judge of section.judges) {
+            const userId = await getUserIdFromUserSearchItem(judge);
+            await session.run(
+              `MATCH (s:Section {id: $sectionId})
+               MERGE (u:User {id: $userId})
+               MERGE (u)-[:JUDGE]->(s)`,
               { sectionId: section.id, userId }
             );
           }
@@ -2016,6 +2076,26 @@ export const editEvent = async (
               `MATCH (s:Section {id: $sectionId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:WINNER]->(s)`,
+              { sectionId: section.id, userId }
+            );
+          }
+        } finally {
+          await session.close();
+        }
+      }
+    }
+
+    // Create section judges
+    for (const section of event.sections) {
+      if (section.judges && section.judges.length > 0) {
+        const session = driver.session();
+        try {
+          for (const judge of section.judges) {
+            const userId = await getUserIdFromUserSearchItem(judge);
+            await session.run(
+              `MATCH (s:Section {id: $sectionId})
+               MERGE (u:User {id: $userId})
+               MERGE (u)-[:JUDGE]->(s)`,
               { sectionId: section.id, userId }
             );
           }

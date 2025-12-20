@@ -7,6 +7,9 @@ export type VideoType = Video["type"];
 export const sectionTypeSupportsWinners = (sectionType?: string): boolean =>
   ["Battle", "Tournament", "Competition"].includes(sectionType || "");
 
+export const sectionTypeSupportsJudges = (sectionType?: string): boolean =>
+  ["Battle", "Tournament", "Competition"].includes(sectionType || "");
+
 export const sectionTypeRequiresBrackets = (sectionType?: string): boolean =>
   ["Battle", "Tournament"].includes(sectionType || "");
 
@@ -41,9 +44,11 @@ export function updateSectionType(
     const requiresBrackets = sectionTypeRequiresBrackets(newType);
     const disallowsBrackets = sectionTypeDisallowsBrackets(newType);
     const supportsWinners = sectionTypeSupportsWinners(newType);
+    const supportsJudges = sectionTypeSupportsJudges(newType);
     const defaultVideoType = getDefaultVideoType(newType);
 
     const winners = supportsWinners ? section.winners || [] : [];
+    const judges = supportsJudges ? section.judges || [] : [];
 
     const hasBrackets = requiresBrackets
       ? true
@@ -87,6 +92,7 @@ export function updateSectionType(
       sectionType: (newType || "Battle") as Section["sectionType"],
       hasBrackets,
       winners,
+      judges,
       videos: updatedVideos,
       brackets: updatedBrackets,
     };

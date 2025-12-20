@@ -34,6 +34,7 @@ import {
   sectionTypeDisallowsBrackets,
   sectionTypeRequiresBrackets,
   sectionTypeSupportsWinners,
+  sectionTypeSupportsJudges,
   updateVideoTypeForId,
   VideoType,
 } from "@/lib/utils/section-helpers";
@@ -134,6 +135,7 @@ export function SectionForm({
     }
   };
   const [sectionWinners, setSectionWinners] = useState<UserSearchItem[]>([]);
+  const [sectionJudges, setSectionJudges] = useState<UserSearchItem[]>([]);
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [isAddingVideo, setIsAddingVideo] = useState(false);
 
@@ -154,6 +156,24 @@ export function SectionForm({
       setSectionWinners([]);
     }
   }, [activeSectionId, activeSection?.winners]);
+
+  // Load existing section judges from activeSection.judges
+  // Use a Map to deduplicate judges by username
+  useEffect(() => {
+    if (activeSection?.judges && Array.isArray(activeSection.judges)) {
+      // Deduplicate judges by username to prevent duplicates
+      const uniqueJudges = Array.from(
+        new Map(
+          activeSection.judges
+            .filter((j) => j && j.username)
+            .map((j) => [j.username, j])
+        ).values()
+      );
+      setSectionJudges(uniqueJudges);
+    } else {
+      setSectionJudges([]);
+    }
+  }, [activeSectionId, activeSection?.judges]);
 
   // Ensure hasBrackets is set correctly based on section type when editing
   useEffect(() => {
@@ -545,6 +565,41 @@ export function SectionForm({
                   value={sectionWinners}
                   name="sectionWinners"
                   label="Section Winners"
+                />
+              </div>
+            )}
+
+            {/* Section Judges - only show if section type supports judges */}
+            {sectionTypeSupportsJudges(activeSection.sectionType) && (
+              <div className="space-y-2">
+                <DebouncedSearchMultiSelect<UserSearchItem>
+                  onSearch={searchUsers}
+                  placeholder="Search users to mark as section judges..."
+                  getDisplayValue={(item) =>
+                    `${item.displayName} (${item.username})`
+                  }
+                  getItemId={(item) => item.username}
+                  onChange={(users) => {
+                    // Update section judges in form state with the complete list
+                    const updatedSections = sections.map((section) => {
+                      if (section.id !== activeSectionId) return section;
+                      return {
+                        ...section,
+                        judges: users,
+                      };
+                    });
+
+                    setValue(
+                      "sections",
+                      normalizeSectionsForForm(updatedSections)
+                    );
+
+                    // Update local judges state for display
+                    setSectionJudges(users);
+                  }}
+                  value={sectionJudges}
+                  name="sectionJudges"
+                  label="Section Judges"
                 />
               </div>
             )}
