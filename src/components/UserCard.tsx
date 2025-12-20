@@ -21,11 +21,10 @@ export function UserCard({
   return (
     <Link
       href={`/profiles/${username}`}
-      className="card flex flex-col items-center h-[425px] w-[250px] justify-between pb-2"
+      className="card flex flex-col items-center w-[250px] justify-between pb-2 bg-periwinkle-light"
     >
-      <div className="flex flex-col items-center my-1 w-full border-b border-black pb-1">
-        <span className="text-md font-bold leading-tight">{displayName}</span>
-        <span className="text-sm text-gray-500 leading-tight">@{username}</span>
+      <div className="flex flex-col text-center py-3 w-full border-b border-black bg-misty-seafoam">
+        <h2>{displayName}</h2>
       </div>
 
       <div className="border-1 border-black my-2 rounded-sm w-fit">
@@ -39,7 +38,7 @@ export function UserCard({
             />
           </div>
         ) : (
-          <div className="w-[215px] h-[300px] bg-gray-200 flex items-center justify-center text-lg rounded-sm">
+          <div className="w-[215px] h-[300px] bg-gray-200 px-2 flex items-center justify-center text-center text-lg rounded-sm">
             {displayName}
           </div>
         )}

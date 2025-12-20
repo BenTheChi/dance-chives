@@ -60,13 +60,9 @@ export function SectionCard({
 
   // Get styles - either from section.styles or aggregated from videos
   let displayStyles: string[] = [];
-  if (
-    section.applyStylesToVideos &&
-    section.styles &&
-    section.styles.length > 0
-  ) {
-    displayStyles = section.styles;
-  } else if (!section.applyStylesToVideos && videos.length > 0) {
+
+  // Helper function to aggregate styles from videos
+  const aggregateVideoStyles = () => {
     const videoStyles = new Set<string>();
     videos.forEach((video: Video) => {
       if (video.styles) {
@@ -80,11 +76,28 @@ export function SectionCard({
         }
       });
     });
-    displayStyles = Array.from(videoStyles);
+    return Array.from(videoStyles);
+  };
+
+  if (section.applyStylesToVideos === true) {
+    // When explicitly true, use section styles
+    if (section.styles && section.styles.length > 0) {
+      displayStyles = section.styles;
+    }
+  } else if (section.applyStylesToVideos === false) {
+    // When explicitly false, aggregate from videos
+    displayStyles = aggregateVideoStyles();
+  } else {
+    // When undefined, prefer section styles if available, otherwise use video styles
+    if (section.styles && section.styles.length > 0) {
+      displayStyles = section.styles;
+    } else {
+      displayStyles = aggregateVideoStyles();
+    }
   }
 
   return (
-    <div className="w-full card min-[1180px]:max-w-[1020px] min-w-[300px] bg-periwinkle cursor-pointer hover:shadow-lg/100 overflow-hidden">
+    <div className="w-full card min-[1180px]:max-w-[1020px] min-w-[300px] bg-periwinkle-light cursor-pointer !border-3 hover:shadow-lg/100 overflow-hidden">
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}
         className="block h-full"
@@ -107,25 +120,23 @@ export function SectionCard({
           </div>
 
           {/* Content on right - expands as needed */}
-          <div className="flex flex-col justify-between p-3 sm:p-4 flex-1 min-w-0">
+          <div className="flex flex-col justify-between py-3 px-3 sm:py-10 flex-1 min-w-0">
             <div className="flex flex-col gap-4">
-              {/* Section type badge in top right */}
-              {sectionType && (
-                <span className="text-sm text-gray-600 self-end">
-                  {sectionType}
-                </span>
-              )}
-
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center justify-center gap-5">
                 {/* Title */}
-                <h2 className="sm:!text-[28px]">{sectionTitle}</h2>
-
+                <h2 className="sm:!text-[24px] !text-[16px] !font-rubik-mono-one ![word-spacing:-8px] text-center">
+                  {sectionTitle}
+                </h2>
+                {/* Section type badge in top right */}
+                {sectionType && (
+                  <h3 className="sm:!text-[25px]">{sectionType}</h3>
+                )}
                 {/* Video count - only show if we have video data */}
                 {totalVideoCount > 0 && (
-                  <span className="text-sm text-gray-600 b">
+                  <h3 className="sm:!text-[25px]">
                     {totalVideoCount}{" "}
                     {totalVideoCount === 1 ? "Video" : "Videos"}
-                  </span>
+                  </h3>
                 )}
               </div>
             </div>

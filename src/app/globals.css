@@ -12,7 +12,8 @@
   --breakpoint-xl: 120rem;
   --font-sans: var(--font-ibm-plex-sans);
   --font-mono: var(--font-ibm-plex-sans);
-  --font-display: var(--font-sora);
+  --font-display: var(--font-archivo);
+  --font-rubik-mono-one: var(--font-rubik-mono-one);
   --color-fog-white: #f5f5f5;
   --color-charcoal: #313131;
   --color-periwinkle: #8e92ca;
@@ -165,7 +166,7 @@
   h5,
   h6 {
     font-family: var(
-      --font-sora,
+      --font-archivo,
       var(--font-ibm-plex-sans, ui-sans-serif, system-ui, sans-serif)
     );
   }
@@ -242,29 +243,27 @@
 }
 
 h1 {
-  font-size: 30px;
-  font-weight: 800;
-  font-family: var(--font-display);
+  font-size: 24px;
+  font-family: var(--font-rubik-mono-one);
+  word-spacing: -10px;
   line-height: 1;
 }
 
 h2 {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 550;
   font-family: var(--font-display);
   line-height: 1;
 }
 
 h3 {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 450;
   font-family: var(--font-display);
   line-height: 1;
 }
 
-p,
-span {
+p {
   font-size: 14px;
-  font-weight: 400;
   font-family: var(--font-ibm-plex-sans);
 }

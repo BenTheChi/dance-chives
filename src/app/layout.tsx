@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Sora } from "next/font/google";
+import { IBM_Plex_Sans, Archivo, Rubik_Mono_One } from "next/font/google";
 import "./globals.css";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -14,10 +14,16 @@ const ibmPlexSans = IBM_Plex_Sans({
   weight: ["100", "200", "300", "400", "500", "600", "700"],
 });
 
-const sora = Sora({
-  variable: "--font-sora",
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800"],
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+});
+
+const rubikMonoOne = Rubik_Mono_One({
+  variable: "--font-rubik-mono-one",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -33,7 +39,10 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="en" className={`${ibmPlexSans.variable} ${sora.variable}`}>
+    <html
+      lang="en"
+      className={`${ibmPlexSans.variable} ${archivo.variable} ${rubikMonoOne.variable}`}
+    >
       <head>
         <link rel="shortcut icon" href="logo.svg" />
         <meta

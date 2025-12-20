@@ -289,8 +289,8 @@ export function CitySearchInput<T extends FieldValues>({
                                 {items.map((item) => (
                                   <CommandItem
                                     key={item.id}
-                                    onSelect={() => {
-                                      const city = handleSelect(item);
+                                    onSelect={async () => {
+                                      const city = await handleSelect(item);
                                       field.onChange(city);
                                     }}
                                   >

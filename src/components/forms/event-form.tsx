@@ -1311,7 +1311,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               Next
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting Event..." : "Finish"}
+              {isSubmitting ? "Submitting Event..." : "Save"}
             </Button>
           </div>
         </form>

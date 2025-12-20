@@ -207,11 +207,11 @@ export default async function EventPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-3.6rem)]">
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-full md:max-w-[816px] lg:max-w-[1016px] w-full">
+          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1016px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Image */}
-              <div className="w-full sm:flex-1 sm:max-w-[50%] md:max-w-[400px] lg:max-w-[500px]">
+              <div className="w-full sm:flex-1 lg:max-w-[500px]">
                 <div className="w-full aspect-square">
                   <PosterImage
                     poster={event.eventDetails.poster ?? null}
@@ -223,12 +223,12 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               </div>
               {/* Event Details */}
-              <div className="w-full sm:flex-1 sm:max-w-[50%] md:max-w-[400px] lg:max-w-[500px]">
+              <div className="w-full sm:flex-1 lg:max-w-[500px]">
                 <div className="border-2 border-black p-4 bg-misty-seafoam rounded-sm w-full h-full">
                   <section className="flex flex-col">
                     {/* Title - centered */}
                     <div>
-                      <h1 className="text-3xl font-bold text-center">
+                      <h1 className="text-center">
                         {event.eventDetails.title}
                       </h1>
                       {event.eventDetails.status === "hidden" && (
@@ -239,29 +239,31 @@ export default async function EventPage({ params }: PageProps) {
                     </div>
 
                     {/* City | Event type */}
-                    <div className="text-xl text-muted-foreground font-semibold text-center mb-1">
+                    <div className="flex flex-row gap-1 items-center justify-center mt-4">
                       {event.eventDetails.city.id ? (
                         <Link
                           href={`/cities/${event.eventDetails.city.id}`}
-                          className="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
+                          className="hover:text-blue-400 hover:underline transition-colors"
                         >
-                          {event.eventDetails.city.name}
+                          <h2 className="!text-[22px]">
+                            {event.eventDetails.city.name}
+                          </h2>
                         </Link>
                       ) : (
                         event.eventDetails.city.name
                       )}
 
                       {event.eventDetails.eventType && (
-                        <span className="text-muted-foreground">
+                        <h2 className="!text-[22px]">
                           {` | `}
                           {event.eventDetails.eventType}
-                        </span>
+                        </h2>
                       )}
                     </div>
 
                     {/* Style badges */}
                     {eventStyles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 mt-3 justify-center">
+                      <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 mt-2 justify-center">
                         {eventStyles.map((style) => (
                           <StyleBadge key={style} style={style} />
                         ))}
@@ -291,8 +293,10 @@ export default async function EventPage({ params }: PageProps) {
                               )}
                               {pastDates.length > 0 && (
                                 <div className="flex flex-col justify-center gap-1">
-                                  <h3>Past Date</h3>
-                                  <div className="flex flex-col text-sm text-center">
+                                  <h3 className="text-center underline">
+                                    Past Date
+                                  </h3>
+                                  <div className="flex flex-col text-sm">
                                     {pastDates.map((d, idx) => (
                                       <span key={`past-${d.date}-${idx}`}>
                                         {formatEventDateRow(d)}
@@ -303,7 +307,9 @@ export default async function EventPage({ params }: PageProps) {
                               )}
                               {upcomingDates.length > 0 && (
                                 <div className="flex flex-col justify-center gap-1">
-                                  <h3>Future Date(s)</h3>
+                                  <h3 className="text-center underline">
+                                    Future Date(s)
+                                  </h3>
                                   <div className="flex flex-col text-sm text-center">
                                     {upcomingDates.map((d, idx) => (
                                       <span key={`upcoming-${d.date}-${idx}`}>
@@ -322,9 +328,13 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "location",
                           content: (
-                            <div className="flex flex-col justify-center gap-1">
-                              <h3 className="text-center">Location</h3>
-                              <p>{event.eventDetails.location}</p>
+                            <div className="flex flex-col gap-1">
+                              <h3 className="text-center underline">
+                                Location
+                              </h3>
+                              <p className="text-left">
+                                {event.eventDetails.location}
+                              </p>
                             </div>
                           ),
                         });
@@ -334,9 +344,11 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "cost",
                           content: (
-                            <div className="flex flex-col justify-center gap-1">
-                              <h3>Cost</h3>
-                              <p>{event.eventDetails.cost}</p>
+                            <div className="flex flex-col gap-1">
+                              <h3 className="text-center underline">Cost</h3>
+                              <p className="text-left">
+                                {event.eventDetails.cost}
+                              </p>
                             </div>
                           ),
                         });
@@ -346,11 +358,11 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "prize",
                           content: (
-                            <div className="flex flex-col justify-center gap-1">
-                              <h3>Prize</h3>
-                              <span className="text-center">
+                            <div className="flex flex-col gap-1">
+                              <h3 className="text-center underline">Prize</h3>
+                              <p className="text-left">
                                 {event.eventDetails.prize}
-                              </span>
+                              </p>
                             </div>
                           ),
                         });
@@ -372,7 +384,7 @@ export default async function EventPage({ params }: PageProps) {
 
                       if (itemCount === 2) {
                         return (
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 gap-5">
                             {items.map((item) => (
                               <div
                                 key={item.key}
@@ -387,9 +399,14 @@ export default async function EventPage({ params }: PageProps) {
 
                       // 3 or more items - use 2x2 grid
                       return (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-5">
                           {items.map((item) => (
-                            <div key={item.key}>{item.content}</div>
+                            <div
+                              key={item.key}
+                              className="flex justify-center mb-3"
+                            >
+                              {item.content}
+                            </div>
                           ))}
                         </div>
                       );
@@ -400,7 +417,7 @@ export default async function EventPage({ params }: PageProps) {
             </div>
 
             {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
-            <div className="grid grid-cols-6 gap-4 w-full">
+            <div className="grid grid-cols-6 gap-5 w-full">
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-misty-seafoam rounded-sm border-2 border-black">
                 <h2 className="text-center mx-auto">Description</h2>
                 {event.eventDetails.description && (

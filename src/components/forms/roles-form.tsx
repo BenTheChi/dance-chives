@@ -83,7 +83,7 @@ export default function RolesForm({
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full border-2 rounded-sm border-black bg-misty-seafoam">
       {roles.length === 0 ? (
         <div className="p-6 text-center">
-          <div className="text-sm text-muted-foreground mb-6">
+          <div className="text-sm mb-6">
             No roles yet. Let&apos;s create one!
           </div>
           <div className="flex justify-center">
