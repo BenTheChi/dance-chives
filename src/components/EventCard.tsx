@@ -1,14 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import Link from "next/link";
-import { Heart, Share2 } from "lucide-react";
 import { TEventCard } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { useToggleSave } from "@/hooks/use-toggle-save";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
 
 interface EventCardProps extends TEventCard {
   href?: string; // Optional href for the title link, defaults to /events/${id}
@@ -29,48 +26,6 @@ export function EventCard({
   eventType,
 }: EventCardProps) {
   const titleHref = href || `/events/${id}`;
-  const {
-    isSaved: savedState,
-    toggle,
-    isPending,
-  } = useToggleSave(isSaved ?? false, id);
-  const [shareCopied, setShareCopied] = useState(false);
-  const prevSavedStateRef = useRef(savedState);
-
-  // Show toast when saved state changes (but not on initial mount)
-  useEffect(() => {
-    if (
-      prevSavedStateRef.current !== savedState &&
-      prevSavedStateRef.current !== undefined
-    ) {
-      if (savedState) {
-        toast.success("Event saved");
-      } else {
-        toast.success("Event unsaved");
-      }
-    }
-    prevSavedStateRef.current = savedState;
-  }, [savedState]);
-
-  const handleHeartClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    await toggle();
-  };
-
-  const handleShareClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const eventUrl = `${window.location.origin}${titleHref}`;
-    try {
-      await navigator.clipboard.writeText(eventUrl);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
-    }
-  };
 
   // Show 1 style on mobile, 3 on desktop, then "+x more styles"
   const firstStyle = styles?.[0];
@@ -173,33 +128,12 @@ export function EventCard({
 
             {/* Action buttons */}
             <div className="flex items-center gap-2 sm:justify-end">
-              <button
-                onClick={handleShareClick}
-                className="border border-black w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center transition-colors hover:bg-blue-300"
-                aria-label="Share event"
-                title={shareCopied ? "Copied!" : "Copy event URL"}
-              >
-                <Share2 className="h-3 w-3 text-white mb-[1px] mr-[1px]" />
-              </button>
-              <button
-                onClick={handleHeartClick}
-                disabled={isPending}
-                className={cn(
-                  "border border-black w-6 h-6 rounded-full flex items-center justify-center transition-colors",
-                  savedState
-                    ? "bg-red-500 hover:bg-red-300"
-                    : "bg-blue-500 hover:bg-blue-300",
-                  isPending && "opacity-50 cursor-not-allowed"
-                )}
-                aria-label={savedState ? "Unsave event" : "Save event"}
-              >
-                <Heart
-                  className={cn(
-                    "h-3 w-3",
-                    savedState ? "fill-white text-white" : "text-white"
-                  )}
-                />
-              </button>
+              <EventShareSaveButtons
+                eventId={id}
+                initialSaved={isSaved ?? false}
+                variant="small"
+                eventHref={titleHref}
+              />
             </div>
           </div>
         </div>

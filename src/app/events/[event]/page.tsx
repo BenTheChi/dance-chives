@@ -20,6 +20,8 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
 import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 import { enrichUserWithCardData } from "@/db/queries/user-cards";
+import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
+import { isEventSavedByUser } from "@/db/queries/event";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -202,6 +204,9 @@ export default async function EventPage({ params }: PageProps) {
     return `${dateEntry.date} (${timeStr})`;
   };
 
+  // Check if event is saved by user
+  const isSaved = userId ? await isEventSavedByUser(userId, event.id) : false;
+
   return (
     <>
       <AppNavbar />
@@ -224,8 +229,8 @@ export default async function EventPage({ params }: PageProps) {
               </div>
               {/* Event Details */}
               <div className="w-full sm:flex-1 lg:max-w-[700px]">
-                <div className="border-2 border-black p-4 bg-misty-seafoam rounded-sm w-full h-full">
-                  <section className="flex flex-col">
+                <section className="border-2 border-black py-8 px-4 bg-misty-seafoam rounded-sm w-full h-full flex flex-col justify-between">
+                  <div className="flex flex-col">
                     {/* Title - centered */}
                     <div>
                       <h1 className="text-center">
@@ -411,8 +416,15 @@ export default async function EventPage({ params }: PageProps) {
                         </div>
                       );
                     })()}
-                  </section>
-                </div>
+                  </div>
+                  <div className="mt-4">
+                    {/* Share and Save buttons - centered at bottom */}
+                    <EventShareSaveButtons
+                      eventId={event.id}
+                      initialSaved={isSaved}
+                    />
+                  </div>
+                </section>
               </div>
             </div>
 

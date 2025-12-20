@@ -11,6 +11,7 @@ import {
 import { CalendarEvent, formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { EventDate } from "@/types/event";
+import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
 
 interface CalendarEventPopoverProps {
   event: CalendarEvent;
@@ -160,6 +161,14 @@ export function CalendarEventPopover({
                 ))}
               </div>
             )}
+
+            {/* Share and Save buttons - centered at bottom */}
+            <EventShareSaveButtons
+              eventId={originalData.id}
+              initialSaved={false}
+              variant="large"
+              eventHref={getLinkUrl()}
+            />
           </div>
         </div>
       </DialogContent>
