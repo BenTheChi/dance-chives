@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { SectionDetails } from "@/components/sections/SectionDetails";
+import { DescriptionWinnerColumns } from "@/components/sections/DescriptionWinnerColumns";
 
 type PageProps = {
   params: Promise<{ event: string; section: string }>;
@@ -102,6 +103,13 @@ export default async function SectionPage({ params }: PageProps) {
               displayStyles={displayStyles}
               eventId={event.id}
               eventTitle={event.eventDetails.title}
+              canTagDirectly={canTagDirectly}
+              currentUserId={session?.user?.id}
+            />
+            {/* Description and Winner Columns */}
+            <DescriptionWinnerColumns
+              section={section}
+              eventId={event.id}
               canTagDirectly={canTagDirectly}
               currentUserId={session?.user?.id}
             />

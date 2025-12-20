@@ -168,8 +168,8 @@ export default function SectionBracketTabSelector({
           >
             {/* Video Gallery for this bracket */}
             <div className="p-2 sm:p-4 lg:px-6 border-2 rounded-sm bg-periwinkle-light">
-              <h2 className="text-xl font-semibold mt-2 mb-4 text-center">
-                {bracket.title}
+              <h2 className="!font-extrabold mb-4 text-center">
+                {bracket.title.toUpperCase()}
               </h2>
               <VideoGallery
                 videos={bracket.videos}

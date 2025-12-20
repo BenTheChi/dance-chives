@@ -239,7 +239,7 @@ export default async function EventPage({ params }: PageProps) {
                     </div>
 
                     {/* City | Event type */}
-                    <div className="flex flex-row gap-1 items-center justify-center mt-4">
+                    <div className="flex flex-row gap-1 items-center justify-center my-4">
                       {event.eventDetails.city.id ? (
                         <Link
                           href={`/cities/${event.eventDetails.city.id}`}
@@ -263,7 +263,7 @@ export default async function EventPage({ params }: PageProps) {
 
                     {/* Style badges */}
                     {eventStyles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 mt-2 justify-center">
+                      <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
                         {eventStyles.map((style) => (
                           <StyleBadge key={style} style={style} />
                         ))}
