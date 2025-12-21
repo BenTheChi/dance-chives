@@ -109,7 +109,7 @@ export default function RolesForm({
                             }}
                             value={roles[index].title}
                           >
-                            <SelectTrigger className="bg-white w-full">
+                            <SelectTrigger className="bg-neutral-300 w-full">
                               <SelectValue placeholder="Select Role" />
                             </SelectTrigger>
                             <SelectContent>

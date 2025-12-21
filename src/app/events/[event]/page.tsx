@@ -211,7 +211,7 @@ export default async function EventPage({ params }: PageProps) {
     <>
       <AppNavbar />
       <div className="flex flex-col">
-        <h1 className="!text-[60px] py-7 text-center border-b-2 border-primary-light">
+        <h1 className="py-7 border-b-2 border-primary-light">
           {event.eventDetails.title}
         </h1>
         <div className="mt-0 sm:mt-4">

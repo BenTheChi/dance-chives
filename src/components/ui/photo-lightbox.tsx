@@ -122,7 +122,7 @@ export function PhotoLightbox({
                   variant="ghost"
                   size="icon"
                   onClick={onPrev}
-                  className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                  className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                   aria-label="Previous image"
                 >
                   <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -134,7 +134,7 @@ export function PhotoLightbox({
                   variant="ghost"
                   size="icon"
                   onClick={onNext}
-                  className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                  className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                   aria-label="Next image"
                 >
                   <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -145,7 +145,7 @@ export function PhotoLightbox({
                 variant="ghost"
                 size="icon"
                 onClick={handleFullscreen}
-                className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                 aria-label="Toggle fullscreen"
               >
                 <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -156,7 +156,7 @@ export function PhotoLightbox({
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                 aria-label="Close lightbox"
               >
                 <X className="w-4 h-4 sm:w-5 sm:h-5" />

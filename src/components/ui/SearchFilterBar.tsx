@@ -32,7 +32,7 @@ export default function SearchFilterBar() {
   }, [activeTab, tabs]);
 
   return (
-    <div className="w-full bg-white shadow-sm px-4">
+    <div className="w-full bg-fog-white shadow-sm px-4">
       <div className="w-full mx-auto">
         <div className="flex items-center justify-between h-20 px-6 border-b-2 border-gray-300 relative">
           {/* Search Bar - Left Side */}

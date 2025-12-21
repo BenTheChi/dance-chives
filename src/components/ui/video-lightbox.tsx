@@ -445,7 +445,7 @@ export function VideoLightbox({
                     variant="ghost"
                     size="icon"
                     onClick={onPrev}
-                    className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                    className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                   >
                     <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
@@ -456,7 +456,7 @@ export function VideoLightbox({
                     variant="ghost"
                     size="icon"
                     onClick={onNext}
-                    className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                    className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                   >
                     <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                   </Button>
@@ -466,7 +466,7 @@ export function VideoLightbox({
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="text-white hover:bg-white/20 h-8 w-8 sm:h-10 sm:w-10"
+                  className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
                 >
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>

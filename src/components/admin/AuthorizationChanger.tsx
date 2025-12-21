@@ -208,7 +208,7 @@ export function AuthorizationChanger() {
 
           {/* User Dropdown */}
           {users.length > 0 && (
-            <div className="border rounded-sm bg-white shadow-lg max-h-60 overflow-y-auto z-50">
+            <div className="border rounded-sm bg-fog-white shadow-lg max-h-60 overflow-y-auto z-50">
               {users.map((user) => (
                 <div
                   key={user.username}

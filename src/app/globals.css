@@ -91,9 +91,9 @@
   --radius: 0.625rem;
   --background: var(--charcoal);
   --foreground: white;
-  --card: oklch(1 0 0);
+  --card: var(--fog-white);
   --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
+  --popover: var(--fog-white);
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.21 0.006 285.885);
   --primary-foreground: oklch(0.985 0 0);
@@ -270,10 +270,17 @@
 }
 
 h1 {
-  font-size: 24px;
+  font-size: 60px;
   font-family: var(--font-rubik-mono-one);
   word-spacing: -10px;
   line-height: 1;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: 45px;
+  }
 }
 
 h2 {

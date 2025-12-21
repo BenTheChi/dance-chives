@@ -181,7 +181,7 @@ function DebouncedSearchSelect<
                 {required && <span className="text-red-500">*</span>}
               </FormLabel>
               <FormControl>
-                <div className="flex items-center border rounded-sm bg-white">
+                <div className="flex items-center border rounded-sm bg-neutral-300">
                   <div className="flex items-center w-full">
                     <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     <Input
@@ -225,7 +225,7 @@ function DebouncedSearchSelect<
                           setIsUserTyping(false);
                         }, 100);
                       }}
-                      className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
+                      className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-neutral-300"
                       disabled={disabled}
                     />
                     {isLoading ? (
@@ -237,8 +237,8 @@ function DebouncedSearchSelect<
                       />
                     )}
                     {open && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-sm shadow-lg z-50">
-                        <Command className="bg-white">
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-neutral-300 border rounded-sm shadow-lg z-50">
+                        <Command className="bg-neutral-300">
                           <CommandList>
                             <CommandGroup>
                               {items.length === 0 && !isLoading ? (

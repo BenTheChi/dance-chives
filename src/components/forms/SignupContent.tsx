@@ -149,7 +149,7 @@ export function SignupContent() {
 
             <form onSubmit={handleSendMagicLink} className="space-y-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="email">
+                <label className="text-sm font-medium text-white" htmlFor="email">
                   Email address
                 </label>
                 <Input

@@ -930,7 +930,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                       <FormControl>
                                         <Input
                                           {...field}
-                                          className="h-8 text-xs bg-white"
+                                          className="h-8 text-xs bg-neutral-300"
                                           placeholder="Section title"
                                         />
                                       </FormControl>
@@ -977,7 +977,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                                     );
                                   }}
                                 >
-                                  <SelectTrigger className="w-[130px] h-8 text-xs bg-white">
+                                  <SelectTrigger className="w-[130px] h-8 text-xs bg-neutral-300">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>

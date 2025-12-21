@@ -495,14 +495,12 @@ export function UploadProfilePicture({
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full"
+            className="w-full bg-neutral-300 text-black"
           >
             <Upload className="mr-2 h-4 w-4" />
             Upload Photo
           </Button>
-          <p className="text-xs text-muted-foreground">
-            Image must be at least 250×350 pixels
-          </p>
+          <p className="text-xs">Image must be at least 250×350 pixels</p>
         </div>
       )}
 
@@ -539,6 +537,7 @@ export function UploadProfilePicture({
                     variant="outline"
                     size="sm"
                     onClick={handleAdjustAvatar}
+                    className="text-black"
                   >
                     Adjust Avatar Crop
                   </Button>
@@ -564,7 +563,7 @@ export function UploadProfilePicture({
                 ) as HTMLInputElement;
                 input?.click();
               }}
-              className="w-full"
+              className="w-full bg-neutral-300 text-black"
             >
               <Upload className="mr-2 h-4 w-4" />
               Upload New Photo
@@ -612,8 +611,12 @@ export function UploadProfilePicture({
             >
               Confirm Profile Crop
             </Button>
-            <Button type="button" variant="outline" onClick={handleRemoveImage}>
-              <X className="h-4 w-4" />
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleRemoveImage}
+            >
+              <X className="text-black" />
             </Button>
           </div>
         </div>
@@ -655,7 +658,7 @@ export function UploadProfilePicture({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="destructive"
               onClick={() => setIsAdjustingAvatar(false)}
             >
               Cancel

@@ -163,7 +163,7 @@ export function BracketForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Bracket Title</label>
+        <label className="text-sm font-medium text-white">Bracket Title</label>
         <Input
           value={bracket.title}
           placeholder="Untitled Bracket"

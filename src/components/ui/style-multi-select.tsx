@@ -69,7 +69,10 @@ export function StyleMultiSelect({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className={cn(
+              "w-full justify-between bg-neutral-300",
+              value.length === 0 ? "text-charcoal" : "text-black"
+            )}
             disabled={disabled}
           >
             {placeholder}

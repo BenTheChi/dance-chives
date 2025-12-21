@@ -21,13 +21,13 @@ export function UserCard({
   return (
     <Link
       href={`/profiles/${username}`}
-      className="card flex flex-col items-center w-[250px] justify-between pb-2 bg-periwinkle-light"
+      className="card flex flex-col items-center w-[250px] justify-between pb-2 bg-secondary-dark"
     >
-      <div className="flex flex-col text-center py-3 w-full border-b border-black bg-primary">
+      <div className="flex flex-col text-center py-3 w-full border-b-4 border-primary-light bg-primary-dark">
         <h2>{displayName}</h2>
       </div>
 
-      <div className="border-1 border-black my-2 rounded-sm w-fit">
+      <div className="my-2 rounded-sm w-fit">
         {image ? (
           <div className="relative w-[215px] h-[300px] rounded-sm">
             <Image
@@ -48,14 +48,12 @@ export function UserCard({
           <>
             <StyleBadge key={styles[0]} style={styles[0]} asLink={false} />
             {styles.length > 1 && (
-              <span className="text-sm text-gray-500">
-                +{styles.length - 1}
-              </span>
+              <span className="text-sm">+{styles.length - 1}</span>
             )}
           </>
         )}
       </div>
-      <span className="text-sm text-gray-500">{city}</span>
+      <span className="text-sm">{city}</span>
     </Link>
   );
 }

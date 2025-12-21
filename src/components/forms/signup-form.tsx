@@ -279,9 +279,6 @@ export default function SignUpForm({
           {isEditMode ? "Edit Profile" : "Complete Your Profile"}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {isEditMode
-            ? "Update your profile information"
-            : "You've signed in with OAuth. Complete your profile to verify your account and access all features."}
           {!isEditMode && isAdminUser && (
             <span className="block mt-2">
               <Badge variant="default" className="text-xs">
@@ -329,13 +326,11 @@ export default function SignUpForm({
             {/* Username display - only show in edit mode */}
             {isEditMode && currentUser?.username && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-white">
                   Username
                 </label>
                 <Input value={currentUser.username} disabled />
-                <p className="text-xs text-gray-500">
-                  Username cannot be changed
-                </p>
+                <p className="text-xs">Username cannot be changed</p>
               </div>
             )}
 

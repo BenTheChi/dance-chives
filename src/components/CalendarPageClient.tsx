@@ -135,72 +135,66 @@ export function CalendarPageClient({
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-3.6rem)]">
+    <div className="flex flex-col">
+      <h1 className="py-7 border-b-2 border-primary-light">Calendar</h1>
       <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col px-5 gap-4 sm:gap-8 py-3 sm:py-5 px-0 sm:px-10 lg:px-15 max-w-full sm:max-w-[1000px] lg:max-w-[1200px] w-full">
-          {/* Header */}
-          <div className="flex flex-col items-center gap-3 sm:gap-4">
-            <h1 className="!text-[40px] sm:!text-[60px] mt-2 sm:mt-5">
-              Calendar
-            </h1>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:max-w-2xl min-w-0">
-              {/* City Dropdown */}
-              <div>
-                <label className="block text-sm font-medium mb-2">City</label>
-                <Select
-                  value={
-                    selectedCity
-                      ? selectedCity.slug || generateCitySlug(selectedCity)
-                      : ""
-                  }
-                  onValueChange={handleCityChange}
-                >
-                  <SelectTrigger className="w-full min-w-0">
-                    <SelectValue placeholder="Select City" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cities.map((city) => {
-                      const citySlug = city.slug || generateCitySlug(city);
-                      return (
-                        <SelectItem key={city.id} value={citySlug}>
-                          {city.name}
-                          {city.region && `, ${city.region}`}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Style Dropdown */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Style</label>
-                <Select
-                  value={
-                    selectedStyle
-                      ? formatStyleNameForDisplay(selectedStyle)
-                      : "all"
-                  }
-                  onValueChange={handleStyleChange}
-                >
-                  <SelectTrigger className="w-full min-w-0">
-                    <SelectValue placeholder="Select a style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">ALL</SelectItem>
-                    {styles.map((style) => (
-                      <SelectItem
-                        key={style}
-                        value={formatStyleNameForDisplay(style)}
-                      >
-                        {formatStyleNameForDisplay(style)}
+          {/* Filters */}
+          <div className="flex flex-col justify-center items-center sm:flex-row gap-3 sm:gap-4 w-full">
+            {/* City Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-2">City</label>
+              <Select
+                value={
+                  selectedCity
+                    ? selectedCity.slug || generateCitySlug(selectedCity)
+                    : ""
+                }
+                onValueChange={handleCityChange}
+              >
+                <SelectTrigger className="w-full min-w-0">
+                  <SelectValue placeholder="Select City" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map((city) => {
+                    const citySlug = city.slug || generateCitySlug(city);
+                    return (
+                      <SelectItem key={city.id} value={citySlug}>
+                        {city.name}
+                        {city.region && `, ${city.region}`}
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Style Dropdown */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Style</label>
+              <Select
+                value={
+                  selectedStyle
+                    ? formatStyleNameForDisplay(selectedStyle)
+                    : "all"
+                }
+                onValueChange={handleStyleChange}
+              >
+                <SelectTrigger className="w-full min-w-0">
+                  <SelectValue placeholder="Select a style" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ALL</SelectItem>
+                  {styles.map((style) => (
+                    <SelectItem
+                      key={style}
+                      value={formatStyleNameForDisplay(style)}
+                    >
+                      {formatStyleNameForDisplay(style)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

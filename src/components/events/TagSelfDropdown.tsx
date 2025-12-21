@@ -174,7 +174,7 @@ export function TagSelfDropdown({
         onValueChange={handleRoleSelect}
         disabled={isPending}
       >
-        <SelectTrigger className="w-full bg-white">
+        <SelectTrigger className="w-full bg-fog-white">
           <SelectValue placeholder="Select a role" />
         </SelectTrigger>
         <SelectContent>

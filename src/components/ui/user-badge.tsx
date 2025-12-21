@@ -21,7 +21,7 @@ export function UserBadge({
   onRemove,
 }: UserBadgeProps) {
   const badgeClasses = cn(
-    "text-black bg-white border border-black font-semibold text-xs px-1 py-1 rounded flex items-center justify-center leading-none gap-1.5",
+    "text-black bg-fog-white border border-black font-semibold text-xs px-1 py-1 rounded flex items-center justify-center leading-none gap-1.5",
     className
   );
 

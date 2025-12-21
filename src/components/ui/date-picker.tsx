@@ -81,8 +81,8 @@ export function DatePicker<T extends FieldValues>({
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dateValue && "text-muted-foreground"
+                      "w-full justify-start text-left font-normal bg-neutral-300",
+                      !dateValue ? "text-charcoal" : "text-black"
                     )}
                     disabled={disabled}
                   >

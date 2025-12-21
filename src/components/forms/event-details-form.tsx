@@ -133,9 +133,7 @@ export function EventDetailsForm({
       {/* Basic Information Section */}
       <div className="bg-primary space-y-5 border-2 border-black rounded-sm p-5">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Basic Information
-          </h3>
+          <h3 className="mb-4">Basic Information</h3>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-5 w-full">
@@ -151,7 +149,7 @@ export function EventDetailsForm({
                 <FormControl>
                   <Input
                     {...field}
-                    className="bg-white w-full"
+                    className="bg-neutral-300 w-full"
                     placeholder="e.g., Summer Dance Battle 2024"
                   />
                 </FormControl>
@@ -177,7 +175,7 @@ export function EventDetailsForm({
                     value={value}
                   >
                     <FormControl>
-                      <SelectTrigger className="bg-white w-full min-w-0">
+                      <SelectTrigger className="bg-neutral-300 w-full min-w-0">
                         <SelectValue placeholder="Select event type" />
                       </SelectTrigger>
                     </FormControl>
@@ -227,9 +225,7 @@ export function EventDetailsForm({
       {/* Location & Date Section */}
       <div className="bg-primary space-y-5 border-2 border-black rounded-sm p-5">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            When & Where
-          </h3>
+          <h3 className="mb-4">When & Where</h3>
         </div>
 
         {/* City and Location */}
@@ -263,7 +259,7 @@ export function EventDetailsForm({
                   <Input
                     {...field}
                     value={field.value ?? ""}
-                    className="bg-white w-full"
+                    className="bg-neutral-300 w-full"
                     placeholder="e.g., Central Park, Studio 54"
                   />
                 </FormControl>
@@ -278,7 +274,7 @@ export function EventDetailsForm({
           {fields.map((field, index) => (
             <div
               key={field.id}
-              className="bg-fog-white border border-charcoal rounded-sm p-4 sm:p-5 w-full overflow-hidden"
+              className="bg-neutral-300 border border-charcoal rounded-sm p-4 sm:p-5 w-full overflow-hidden"
             >
               <div className="space-y-4">
                 {/* Date and All Day Row */}
@@ -357,7 +353,7 @@ export function EventDetailsForm({
                                 type="time"
                                 {...field}
                                 value={field.value ?? ""}
-                                className="bg-white w-full"
+                                className="bg-neutral-300 w-full"
                               />
                             </FormControl>
                             <FormMessage />
@@ -378,7 +374,7 @@ export function EventDetailsForm({
                                 type="time"
                                 {...field}
                                 value={field.value ?? ""}
-                                className="bg-white w-full"
+                                className="bg-neutral-300 w-full"
                               />
                             </FormControl>
                             <FormMessage />
@@ -472,9 +468,7 @@ export function EventDetailsForm({
       {/* Additional Details Section */}
       <div className="bg-primary space-y-5 border-2 border-black rounded-sm p-5">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Additional Details
-          </h3>
+          <h3 className="mb-4">Additional Details</h3>
         </div>
 
         <FormField
@@ -487,7 +481,7 @@ export function EventDetailsForm({
                 <textarea
                   {...field}
                   value={field.value ?? ""}
-                  className="bg-white min-h-[120px] p-3 rounded-sm border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
+                  className="bg-neutral-300 min-h-[120px] p-3 rounded-sm border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0 placeholder:text-charcoal text-black"
                   placeholder="Tell people about your event. What makes it special? Who should attend?"
                 />
               </FormControl>
@@ -506,7 +500,7 @@ export function EventDetailsForm({
                 <textarea
                   {...field}
                   value={field.value ?? ""}
-                  className="bg-white min-h-[120px] p-3 rounded-sm border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0"
+                  className="bg-neutral-300 min-h-[120px] p-3 rounded-sm border border-charcoal focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y w-full min-w-0 placeholder:text-charcoal text-black"
                   placeholder="Add a detailed schedule or timeline for your event..."
                 />
               </FormControl>
@@ -526,7 +520,7 @@ export function EventDetailsForm({
                   <Input
                     {...field}
                     value={field.value ?? ""}
-                    className="bg-white w-full"
+                    className="bg-neutral-300 w-full"
                     placeholder="e.g., $20, Free, $10-15"
                   />
                 </FormControl>
@@ -544,7 +538,7 @@ export function EventDetailsForm({
                   <Input
                     {...field}
                     value={field.value ?? ""}
-                    className="bg-white w-full"
+                    className="bg-neutral-300 w-full"
                     placeholder="e.g., $500, Trophy, Gift card"
                   />
                 </FormControl>

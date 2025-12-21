@@ -488,7 +488,7 @@ export function VideoForm({
                   handleTypeChange(value as Video["type"]);
                 }}
               >
-                <SelectTrigger className="w-[110px] h-9 bg-white">
+                <SelectTrigger className="w-[110px] h-9 bg-neutral-300">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

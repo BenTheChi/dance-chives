@@ -131,7 +131,9 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     <div
       className={cn("flex flex-col debounced-search-multi-select", className)}
     >
-      {label && <label className="text-sm font-medium block">{label}</label>}
+      {label && (
+        <label className="text-sm font-medium block text-white">{label}</label>
+      )}
       <div className="flex flex-wrap gap-1 mb-2">
         {deduplicatedValue.map((item) => {
           const itemId = getItemId(item);
@@ -177,7 +179,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
         })}
       </div>
       <div className="relative w-full">
-        <div className="flex items-center border rounded-sm bg-white">
+        <div className="flex items-center border rounded-sm bg-neutral-300">
           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
             placeholder={placeholder}
@@ -186,7 +188,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
               setInputValue(e.target.value);
               setOpen(true);
             }}
-            className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-white"
+            className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-neutral-300"
             disabled={disabled}
           />
           {isLoading ? (
@@ -199,8 +201,8 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
           )}
         </div>
         {open && (
-          <div className="absolute z-50 w-full mt-1 bg-white border rounded-sm shadow-lg">
-            <Command className="bg-white">
+          <div className="absolute z-50 w-full mt-1 bg-neutral-300 border rounded-sm shadow-lg">
+            <Command className="bg-neutral-300">
               <CommandList>
                 <CommandGroup>
                   {searchResults.length === 0 && !isLoading ? (

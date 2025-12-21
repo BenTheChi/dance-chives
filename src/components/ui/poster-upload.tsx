@@ -381,7 +381,7 @@ export function PosterUpload({
                       setBgColor("#ffffff");
                     }
                   }}
-                  className="w-24 bg-white"
+                  className="w-24 bg-fog-white"
                   placeholder="#ffffff"
                 />
               </div>

@@ -86,7 +86,7 @@ export function UserAvatar({
         </Link>
       </HoverCardTrigger>
       <HoverCardContent
-        className="w-auto p-0 bg-white"
+        className="w-auto p-0 bg-fog-white"
         sideOffset={8}
         collisionPadding={16}
       >
