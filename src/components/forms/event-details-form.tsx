@@ -296,7 +296,7 @@ export function EventDetailsForm({
                       name={`eventDetails.dates.${index}.isAllDay`}
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                          <FormLabel className="cursor-pointer whitespace-nowrap text-sm font-normal">
+                          <FormLabel className="cursor-pointer whitespace-nowrap text-sm font-normal text-black">
                             All Day Event
                           </FormLabel>
                           <FormControl>
@@ -347,7 +347,9 @@ export function EventDetailsForm({
                         name={`eventDetails.dates.${index}.startTime`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Start Time</FormLabel>
+                            <FormLabel className="text-black">
+                              Start Time
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="time"
@@ -368,7 +370,9 @@ export function EventDetailsForm({
                         name={`eventDetails.dates.${index}.endTime`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>End Time</FormLabel>
+                            <FormLabel className="text-black">
+                              End Time
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 type="time"
@@ -390,7 +394,7 @@ export function EventDetailsForm({
 
           <Button
             variant="outline"
-            className="w-full sm:w-auto border-2 border-dashed hover:border-solid hover:bg-gray-50"
+            className="w-full sm:w-auto border-2 border-dashed hover:border-solid hover:bg-gray-50 text-black"
             onClick={() =>
               append({
                 date: "",
@@ -401,7 +405,7 @@ export function EventDetailsForm({
             }
             type="button"
           >
-            <PlusIcon className="mr-2 h-4 w-4" />
+            <PlusIcon className="mr-2 h-4 w-4 text-black" />
             Add Another Date
           </Button>
         </div>

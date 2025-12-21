@@ -5,9 +5,9 @@ export default function SignupPage() {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col items-center justify-center min-h-screen bg-fog-white">
+      <main className="container mx-auto flex flex-col items-center justify-center min-h-screen">
         <SignupContent />
-      </div>
+      </main>
     </>
   );
 }

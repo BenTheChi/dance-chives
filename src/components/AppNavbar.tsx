@@ -5,7 +5,6 @@ import { Button } from "./ui/button";
 import { UserMenu } from "./UserMenu";
 import { useSession } from "next-auth/react";
 import { SidebarTrigger } from "./ui/sidebar";
-import { TestLoginDropdown } from "./TestLoginDropdown";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
@@ -142,12 +141,11 @@ export function AppNavbar() {
                   <p>Report Issue</p>
                 </TooltipContent>
               </Tooltip>
-              {process.env.NODE_ENV === "development" && <TestLoginDropdown />}
               <Link href="/login">
                 <Button size="sm">Login</Button>
               </Link>
               <Link href="/signup">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="secondary">
                   Sign Up
                 </Button>
               </Link>

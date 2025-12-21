@@ -74,7 +74,11 @@ export function DatePicker<T extends FieldValues>({
 
         return (
           <FormItem className="w-full">
-            {label && <FormLabel required={required}>{label}</FormLabel>}
+            {label && (
+              <FormLabel required={required} className="text-black">
+                {label}
+              </FormLabel>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <FormControl>

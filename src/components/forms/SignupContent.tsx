@@ -8,13 +8,6 @@ import { useEffect, useState } from "react";
 import { signInWithGoogle } from "@/lib/server_actions/auth_actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 import SignUpForm from "./signup-form";
 
@@ -92,97 +85,87 @@ export function SignupContent() {
     // If we just came from a magic link, wait for the session refresh
     if (fromMagicLink && (!hasRefreshedSession || status === "loading")) {
       return (
-        <div className="flex flex-col items-center justify-center w-full">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">
-                Finishing your signup...
-              </CardTitle>
-              <CardDescription className="text-center">
+        <>
+          <h1 className="mb-6">Finishing your signup...</h1>
+          <section className="w-full max-w-md bg-primary border-2 border-black rounded-sm p-5 space-y-6">
+            <header>
+              <p className="text-center">
                 Please wait while we finalize your session.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center text-sm text-muted-foreground">
-                This should only take a moment.
               </p>
-            </CardContent>
-          </Card>
-        </div>
+            </header>
+            <p className="text-center text-sm text-muted-foreground">
+              This should only take a moment.
+            </p>
+          </section>
+        </>
       );
     }
 
     return (
-      <div className="flex flex-col items-center justify-center w-full">
-        <Card className="w-full max-w-md bg-primary">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">
-              Create your account
-            </CardTitle>
-            <CardDescription className="text-center">
-              Sign up with Google or use a one-time magic link to create your
-              account.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <Button
-                onClick={signInWithGoogle}
-                className="w-full flex items-center justify-center"
-              >
-                <Image
-                  src="/GLogo.svg"
-                  alt="Google"
-                  width={20}
-                  height={20}
-                  className="mr-2"
-                />
-                Sign up with Google
-              </Button>
+      <>
+        <h1 className="mb-6">Sign Up</h1>
+        <section className="w-full max-w-md bg-primary border-2 border-black rounded-sm p-5 space-y-6">
+          <header>
+            <p className="text-center">Sign up with Google email.</p>
+          </header>
+
+          <div className="space-y-3">
+            <Button
+              onClick={signInWithGoogle}
+              className="w-full flex items-center justify-center"
+            >
+              <Image
+                src="/GLogo.svg"
+                alt="Google"
+                width={20}
+                height={20}
+                className="mr-2"
+              />
+              Sign up with Google
+            </Button>
+          </div>
+
+          <hr className="my-4 border-primary-light" />
+
+          <p className="text-center mb-4">
+            Or sign up with a one-time magic link sent to your email.
+          </p>
+
+          <form onSubmit={handleSendMagicLink} className="space-y-3">
+            <div className="space-y-4">
+              <label className="text-sm font-medium" htmlFor="email">
+                Email address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                disabled={isSending}
+              />
             </div>
-
-            <hr className="my-4 border-black" />
-
-            <div className="text-muted-foreground text-center mb-0">
-              Or sign up with magic link
-            </div>
-
-            <form onSubmit={handleSendMagicLink} className="space-y-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-white" htmlFor="email">
-                  Email address
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  disabled={isSending}
-                />
-              </div>
-              {error && (
-                <p className="text-sm text-red-500" role="alert">
-                  {error}
-                </p>
-              )}
-              {message && !error && (
-                <p className="text-sm text-green-600">{message}</p>
-              )}
-              <Button type="submit" className="w-full" disabled={isSending}>
-                {isSending ? "Sending link..." : "Send signup link"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+            {error && (
+              <p className="text-sm text-red-500" role="alert">
+                {error}
+              </p>
+            )}
+            {message && !error && (
+              <p className="text-sm text-green-600">{message}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={isSending}>
+              {isSending ? "Sending link..." : "Send signup link"}
+            </Button>
+          </form>
+        </section>
+      </>
     );
   }
 
   // If the user is logged in, but not registered show the signup form
   return (
-    <div className="flex items-start justify-center w-full max-w-4xl px-4 py-5">
+    <div className="w-full max-w-4xl">
       <SignUpForm />
     </div>
   );

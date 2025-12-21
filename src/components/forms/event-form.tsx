@@ -26,6 +26,7 @@ import {
   sectionTypeRequiresBrackets,
   sectionTypeDisallowsBrackets,
 } from "@/lib/utils/section-helpers";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -804,21 +805,32 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit, onError)}>
           {/* Main Navigation - Text Style Tabs */}
-          <div className="flex justify-center gap-8 mb-8">
-            {mainTabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveMainTab(tab)}
-                className={`text-lg font-medium pb-2 border-b-2 transition-colors ${
-                  activeMainTab === tab
-                    ? "text-primary border-primary"
-                    : "border-transparent hover:text-foreground"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="flex justify-center gap-2 mb-8">
+            {mainTabs.map((tab) => {
+              const isActive = activeMainTab === tab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveMainTab(tab)}
+                  className={cn(
+                    "px-4 py-2 rounded-sm transition-all duration-200",
+                    "border-2 border-transparent",
+                    "hover:border-charcoal hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
+                    "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
+                    "text-base font-bold uppercase tracking-wide",
+                    "font-display",
+                    isActive &&
+                      "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
+                    !isActive &&
+                      "text-secondary-light hover:bg-[#dfdfeb] hover:text-periwinkle"
+                  )}
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
+                  {tab}
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab Content */}

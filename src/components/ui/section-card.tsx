@@ -104,7 +104,7 @@ export function SectionCard({
       >
         <div className="flex h-full">
           {/* Poster on left - max 500px width, square aspect */}
-          <div className="relative min-w-[200px] min-[1180px]:min-w-[350px] aspect-square border-r border-black shrink-0 rounded-l-sm">
+          <div className="relative min-w-[200px] min-[1180px]:min-w-[350px] aspect-square border-r-4 border-secondary-light shrink-0 rounded-l-sm">
             {posterUrl ? (
               <NextImage
                 src={posterUrl}

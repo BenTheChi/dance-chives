@@ -90,41 +90,52 @@ export default async function SectionPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col justify-center items-center">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 auto-rows-min py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px]">
-          <PosterImage
-            poster={section.poster ?? null}
-            className="md:col-span-1"
-          />
+      <div className="flex flex-col">
+        <h1 className="py-7 border-b-2 border-primary-light">
+          {section.title}
+        </h1>
+        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
+          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+            {/* Row 1: Image + Details - using flex for exact sizing */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              {/* Image */}
+              <div className="w-full sm:flex-1 lg:max-w-[400px]">
+                <div className="w-full aspect-square">
+                  <PosterImage
+                    poster={section.poster ?? null}
+                    width={400}
+                    height={400}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              {/* Section Details, Description, and Winner/Judge */}
+              <div className="w-full sm:flex-1 lg:max-w-[800px] flex flex-col gap-4">
+                <SectionDetails
+                  section={section}
+                  displayStyles={displayStyles}
+                  eventId={event.id}
+                  eventTitle={event.eventDetails.title}
+                  canTagDirectly={canTagDirectly}
+                  currentUserId={session?.user?.id}
+                />
+                <DescriptionWinnerColumns
+                  section={section}
+                  eventId={event.id}
+                  canTagDirectly={canTagDirectly}
+                  currentUserId={session?.user?.id}
+                />
+              </div>
+            </div>
 
-          <div className="flex flex-col gap-4 md:col-span-1">
-            <SectionDetails
-              section={section}
-              displayStyles={displayStyles}
-              eventId={event.id}
-              eventTitle={event.eventDetails.title}
-              canTagDirectly={canTagDirectly}
-              currentUserId={session?.user?.id}
-            />
-            {/* Description and Winner Columns */}
-            <DescriptionWinnerColumns
-              section={section}
-              eventId={event.id}
-              canTagDirectly={canTagDirectly}
-              currentUserId={session?.user?.id}
-            />
-          </div>
-
-          {/* Brackets/Video Gallery */}
-          <div
-            className="w-full col-span-1 md:col-span-2"
-            style={{ boxSizing: "content-box" }}
-          >
-            <SectionBracketTabSelector
-              section={section}
-              eventTitle={event.eventDetails.title}
-              eventId={event.id}
-            />
+            {/* Row 3: Brackets/Video Gallery */}
+            <div className="w-full">
+              <SectionBracketTabSelector
+                section={section}
+                eventTitle={event.eventDetails.title}
+                eventId={event.id}
+              />
+            </div>
           </div>
         </div>
       </div>

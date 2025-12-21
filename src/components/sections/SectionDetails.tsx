@@ -49,31 +49,34 @@ export function SectionDetails({
   }, [currentUserId, section, eventId]);
 
   return (
-    <section className="bg-primary py-4 rounded-sm flex flex-col border-2 border-black">
-      <h1 className="text-center">{section.title}</h1>
-      <div className="flex flex-row gap-1 items-center justify-center mt-4">
-        <Link
-          href={`/events/${eventId}`}
-          className="hover:text-blue-400 hover:underline transition-colors"
-        >
-          <h2 className="!text-[22px]">{eventTitle}</h2>
-        </Link>
+    <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
+      <div className="flex flex-col">
+        {/* Event Title | Section Type */}
+        <div className="flex flex-row gap-1 items-center justify-center mb-4">
+          <Link
+            href={`/events/${eventId}`}
+            className="hover:text-blue-400 hover:underline transition-colors"
+          >
+            <h2>{eventTitle}</h2>
+          </Link>
 
-        {section.sectionType && (
-          <h2 className="!text-[22px]">
-            {` | `}
-            {section.sectionType}
-          </h2>
+          {section.sectionType && (
+            <h2>
+              {` | `}
+              {section.sectionType}
+            </h2>
+          )}
+        </div>
+
+        {/* Style badges */}
+        {displayStyles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
+            {displayStyles.map((style) => (
+              <StyleBadge key={style} style={style} />
+            ))}
+          </div>
         )}
       </div>
-
-      {displayStyles.length > 0 && (
-        <div className="flex flex-wrap gap-2 justify-center mt-4">
-          {displayStyles.map((style) => (
-            <StyleBadge key={style} style={style} />
-          ))}
-        </div>
-      )}
     </section>
   );
 }

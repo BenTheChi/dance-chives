@@ -82,41 +82,62 @@ export function DescriptionWinnerColumns({
   const hasJudges = section.judges && section.judges.length > 0;
 
   const supportsBoth = supportsWinners || supportsJudges;
+  const hasTaggedUsers = hasWinners || hasJudges;
+  const hasDescription = !!section.description;
+
+  // Determine if we should show winner/judge section
+  // Show if section type supports it AND (there are tagged users OR current user exists to potentially tag themselves)
+  // Hide if no users are tagged and no current user (can't tag themselves)
+  const showWinnerJudgeSection =
+    supportsBoth && (hasTaggedUsers || !!currentUserId);
+
+  // Determine column spans based on what's visible
+  const showBoth = hasDescription && showWinnerJudgeSection;
+  const colSpan = showBoth ? "col-span-6 sm:col-span-3" : "col-span-6";
+
+  // Don't render anything if both sections are hidden
+  if (!hasDescription && !showWinnerJudgeSection) {
+    return null;
+  }
 
   return (
-    <>
-      {/* Description Column */}
-      <div className="bg-primary p-4 rounded-sm flex flex-col border-2 border-black md:col-span-1">
-        <h2 className="text-xl font-bold text-center">Description</h2>
-        {section.description && (
-          <p className="whitespace-pre-wrap mt-4">{section.description}</p>
-        )}
-      </div>
+    <div className="grid grid-cols-6 gap-4 w-full">
+      {/* Description Column - only show if description exists */}
+      {hasDescription && (
+        <div
+          className={`${colSpan} flex flex-col gap-2 p-4 bg-primary-dark rounded-sm border-2 border-primary-light`}
+        >
+          <h2 className="text-center mx-auto">Description</h2>
+          <div className="text-sm whitespace-pre-wrap">
+            {section.description}
+          </div>
+        </div>
+      )}
 
-      {/* Winner & Judge Column - only show if section type supports winners or judges */}
-      {supportsBoth && (
-        <div className="bg-primary p-4 rounded-sm flex flex-col gap-4 border-2 border-black md:col-span-1">
+      {/* Winner & Judge Column - only show if section type supports winners or judges and has tagged users or user can tag */}
+      {showWinnerJudgeSection && (
+        <div
+          className={`${colSpan} flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light`}
+        >
           {/* Winner Section */}
           {supportsWinners && (
             <div className="flex flex-col gap-2">
-              <div className="flex flex-row gap-2 justify-center items-baseline">
-                <h2 className="text-xl font-bold text-center">Winner</h2>
+              <div className="flex gap-2 justify-center items-center">
+                <h2>Winner</h2>
                 {currentUserId && section?.id && !isUserWinner && (
-                  <div className="flex justify-center mt-2">
-                    <TagSelfCircleButton
-                      eventId={eventId}
-                      target="section"
-                      targetId={section.id}
-                      currentUserId={currentUserId}
-                      isUserTagged={isUserWinner}
-                      canTagDirectly={canTagDirectly}
-                      pendingLabel="Winner tag request pending"
-                      successLabel="Tagged as Winner"
-                      dialogTitle={`Tag yourself as a winner of ${section.title}?`}
-                      size="sm"
-                      defaultRole="Winner"
-                    />
-                  </div>
+                  <TagSelfCircleButton
+                    eventId={eventId}
+                    target="section"
+                    targetId={section.id}
+                    currentUserId={currentUserId}
+                    isUserTagged={isUserWinner}
+                    canTagDirectly={canTagDirectly}
+                    pendingLabel="Winner tag request pending"
+                    successLabel="Tagged as Winner"
+                    dialogTitle={`Tag yourself as a winner of ${section.title}?`}
+                    size="sm"
+                    defaultRole="Winner"
+                  />
                 )}
               </div>
               {hasWinners && (
@@ -164,24 +185,22 @@ export function DescriptionWinnerColumns({
           {/* Judge Section */}
           {supportsJudges && (
             <div className="flex flex-col gap-2">
-              <div className="flex flex-row gap-2 justify-center items-baseline">
-                <h2 className="text-xl font-bold text-center">Judge</h2>
+              <div className="flex gap-2 justify-center items-center">
+                <h2>Judge</h2>
                 {currentUserId && section?.id && !isUserJudge && (
-                  <div className="flex justify-center mt-2">
-                    <TagSelfCircleButton
-                      eventId={eventId}
-                      target="section"
-                      targetId={section.id}
-                      currentUserId={currentUserId}
-                      isUserTagged={isUserJudge}
-                      canTagDirectly={canTagDirectly}
-                      pendingLabel="Judge tag request pending"
-                      successLabel="Tagged as Judge"
-                      dialogTitle={`Tag yourself as a judge of ${section.title}?`}
-                      size="sm"
-                      defaultRole="Judge"
-                    />
-                  </div>
+                  <TagSelfCircleButton
+                    eventId={eventId}
+                    target="section"
+                    targetId={section.id}
+                    currentUserId={currentUserId}
+                    isUserTagged={isUserJudge}
+                    canTagDirectly={canTagDirectly}
+                    pendingLabel="Judge tag request pending"
+                    successLabel="Tagged as Judge"
+                    dialogTitle={`Tag yourself as a judge of ${section.title}?`}
+                    size="sm"
+                    defaultRole="Judge"
+                  />
                 )}
               </div>
               {hasJudges && (
@@ -214,6 +233,6 @@ export function DescriptionWinnerColumns({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
