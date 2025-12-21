@@ -37,7 +37,16 @@ import {
   sectionTypeSupportsJudges,
   updateVideoTypeForId,
   VideoType,
+  SectionType,
+  updateSectionType,
 } from "@/lib/utils/section-helpers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Accordion,
   AccordionContent,
@@ -48,7 +57,7 @@ import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PosterUpload } from "../ui/poster-upload";
-import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
   return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
@@ -134,10 +143,43 @@ export function SectionForm({
       onActiveBracketChange(bracketId);
     }
   };
+
+  // Ensure active bracket is set when brackets exist and mode is brackets
+  useEffect(() => {
+    if (mode === "brackets" && activeSection.brackets.length > 0) {
+      const isValidBracket = activeSection.brackets.some(
+        (b) => b.id === activeBracketId
+      );
+      if (!isValidBracket || !activeBracketId) {
+        const firstBracketId = activeSection.brackets[0]?.id;
+        if (firstBracketId) {
+          if (!externalActiveBracketId) {
+            setInternalActiveBracketId(firstBracketId);
+          }
+          if (onActiveBracketChange) {
+            onActiveBracketChange(firstBracketId);
+          }
+        }
+      }
+    } else if (mode === "brackets" && activeSection.brackets.length === 0) {
+      // Clear active bracket if no brackets exist
+      if (activeBracketId && !externalActiveBracketId) {
+        setInternalActiveBracketId("");
+      }
+    }
+  }, [
+    mode,
+    activeSection.brackets,
+    activeBracketId,
+    externalActiveBracketId,
+    onActiveBracketChange,
+  ]);
   const [sectionWinners, setSectionWinners] = useState<UserSearchItem[]>([]);
   const [sectionJudges, setSectionJudges] = useState<UserSearchItem[]>([]);
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [isAddingVideo, setIsAddingVideo] = useState(false);
+  const [newBracketTitle, setNewBracketTitle] = useState("");
+  const [bracketTitleError, setBracketTitleError] = useState<string>("");
 
   // Load existing section winners from activeSection.winners
   // Use a Map to deduplicate winners by username
@@ -222,7 +264,7 @@ export function SectionForm({
     getValues,
   ]);
 
-  const addBracket = () => {
+  const addBracket = (title?: string) => {
     if (!activeSection) return;
 
     // Prevent adding brackets if section type disallows them
@@ -230,9 +272,21 @@ export function SectionForm({
       return;
     }
 
+    // Validate bracket title is not blank
+    const titleToValidate = title?.trim() || newBracketTitle.trim();
+    if (!titleToValidate) {
+      setBracketTitleError("Bracket title cannot be blank");
+      return;
+    }
+
+    // Clear any previous error
+    setBracketTitleError("");
+
+    const bracketTitle = titleToValidate;
+
     const newBracket: Bracket = {
       id: Date.now().toString(),
-      title: `New Bracket ${activeSection.brackets.length + 1}`,
+      title: bracketTitle,
       videos: [],
     };
 
@@ -247,6 +301,8 @@ export function SectionForm({
       shouldValidate: true,
     });
     handleSetActiveBracketId(newBracket.id);
+    // Clear the input after creating
+    setNewBracketTitle("");
   };
 
   const removeVideoFromSection = (videoId: string) => {
@@ -262,6 +318,34 @@ export function SectionForm({
     );
 
     setValue("sections", normalizeSectionsForForm(updatedSections));
+  };
+
+  const removeBracket = (bracketId: string) => {
+    if (!activeSection) return;
+
+    const updatedBrackets = activeSection.brackets.filter(
+      (bracket) => bracket.id !== bracketId
+    );
+    const updatedSections = sections.map((section) =>
+      section.id === activeSectionId
+        ? { ...section, brackets: updatedBrackets }
+        : section
+    );
+
+    setValue("sections", normalizeSectionsForForm(updatedSections), {
+      shouldValidate: true,
+    });
+
+    // If we removed the active bracket, switch to the first available bracket
+    if (activeBracketId === bracketId) {
+      if (updatedBrackets.length > 0) {
+        handleSetActiveBracketId(updatedBrackets[0].id);
+      } else {
+        if (!externalActiveBracketId) {
+          setInternalActiveBracketId("");
+        }
+      }
+    }
   };
 
   const handleStylesChange = (styles: string[]) => {
@@ -453,298 +537,63 @@ export function SectionForm({
   };
 
   return (
-    <Card className="bg-primary">
-      <CardContent className="space-y-4">
-        {resolvedMode === "overview" && (
-          <>
-            <FormField
-              key={`poster-${activeSectionId}`}
-              control={control}
-              name={`sections.${activeSectionIndex}.poster`}
-              render={() => (
-                <FormItem className="w-full">
-                  <FormLabel>Poster Upload</FormLabel>
-                  <FormControl>
-                    <PosterUpload
-                      initialPoster={activeSection.poster?.url || null}
-                      initialPosterFile={activeSection.poster?.file || null}
-                      initialBgColor={activeSection.bgColor || "#ffffff"}
-                      onFileChange={({ file, bgColor }) => {
-                        setValue(
-                          `sections.${activeSectionIndex}.bgColor`,
-                          bgColor,
-                          {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                            shouldTouch: true,
-                          }
-                        );
-
-                        if (file) {
-                          const posterImage: Image = {
-                            id: activeSection.poster?.id || crypto.randomUUID(),
-                            title:
-                              activeSection.poster?.title || "Section Poster",
-                            url: activeSection.poster?.url || "",
-                            type: "poster",
-                            file,
-                          };
-
-                          setValue(
-                            `sections.${activeSectionIndex}.poster`,
-                            posterImage,
-                            {
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true,
-                            }
-                          );
-                        } else {
-                          setValue(
-                            `sections.${activeSectionIndex}.poster`,
-                            null,
-                            {
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true,
-                            }
-                          );
-                        }
-                      }}
-                      editable={true}
-                      maxFiles={1}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              key={`description-${activeSectionId}`}
-              control={control}
-              name={`sections.${activeSectionIndex}.description`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Section Winners - only show if section type supports winners */}
-            {sectionTypeSupportsWinners(activeSection.sectionType) && (
-              <div className="space-y-2">
-                <DebouncedSearchMultiSelect<UserSearchItem>
-                  onSearch={searchUsers}
-                  placeholder="Search users to mark as section winners..."
-                  getDisplayValue={(item) =>
-                    `${item.displayName} (${item.username})`
-                  }
-                  getItemId={(item) => item.username}
-                  onChange={(users) => {
-                    // Update section winners in form state with the complete list
-                    const updatedSections = sections.map((section) => {
-                      if (section.id !== activeSectionId) return section;
-                      return {
-                        ...section,
-                        winners: users,
-                      };
-                    });
-
-                    setValue(
-                      "sections",
-                      normalizeSectionsForForm(updatedSections)
-                    );
-
-                    // Update local winners state for display
-                    setSectionWinners(users);
-                  }}
-                  value={sectionWinners}
-                  name="sectionWinners"
-                  label="Section Winners"
-                />
-              </div>
+    <section className="bg-primary space-y-4 p-6 border-2 border-primary-light rounded-sm">
+      {resolvedMode === "overview" && (
+        <>
+          {/* Section Title */}
+          <FormField
+            control={control}
+            name={`sections.${activeSectionIndex}.title`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Section Title <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    className="bg-neutral-300"
+                    placeholder="Section title"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
+          />
 
-            {/* Section Judges - only show if section type supports judges */}
-            {sectionTypeSupportsJudges(activeSection.sectionType) && (
-              <div className="space-y-2">
-                <DebouncedSearchMultiSelect<UserSearchItem>
-                  onSearch={searchUsers}
-                  placeholder="Search users to mark as section judges..."
-                  getDisplayValue={(item) =>
-                    `${item.displayName} (${item.username})`
-                  }
-                  getItemId={(item) => item.username}
-                  onChange={(users) => {
-                    // Update section judges in form state with the complete list
-                    const updatedSections = sections.map((section) => {
-                      if (section.id !== activeSectionId) return section;
-                      return {
-                        ...section,
-                        judges: users,
-                      };
-                    });
-
-                    setValue(
-                      "sections",
-                      normalizeSectionsForForm(updatedSections)
-                    );
-
-                    // Update local judges state for display
-                    setSectionJudges(users);
-                  }}
-                  value={sectionJudges}
-                  name="sectionJudges"
-                  label="Section Judges"
-                />
-              </div>
-            )}
-
+          {/* Type and Use Brackets Switch - Above Poster Upload */}
+          <div className="flex items-center gap-4">
             <FormField
-              key={`applyStylesToVideos-${activeSectionId}`}
               control={control}
-              name={`sections.${activeSectionIndex}.applyStylesToVideos`}
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center space-x-2">
-                    <FormControl>
-                      <Switch
-                        checked={field.value || false}
-                        onCheckedChange={(checked) => {
-                          field.onChange(checked);
-                          handleApplyStylesToVideosChange(checked);
-                        }}
-                      />
-                    </FormControl>
-                    <FormLabel>Apply same style tags to all videos</FormLabel>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {activeSection.applyStylesToVideos && (
-              <FormField
-                key={`styles-${activeSectionId}`}
-                control={control}
-                name={`sections.${activeSectionIndex}.styles`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Section Dance Styles</FormLabel>
-                    <FormControl>
-                      <StyleMultiSelect
-                        value={field.value || []}
-                        onChange={(styles) => {
-                          field.onChange(styles);
-                          handleStylesChange(styles);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-          </>
-        )}
-
-        {resolvedMode === "brackets" && (
-          <div>
-            {activeSection.brackets.length === 0 ? (
-              <div className="border rounded-sm p-6 text-center">
-                <div className="text-sm text-muted-foreground mb-6">
-                  No brackets yet. Let&apos;s create one!
-                </div>
-                <div className="flex justify-center">
-                  <CirclePlusButton size="lg" onClick={addBracket} />
-                </div>
-              </div>
-            ) : (
-              (() => {
-                const bracketIndex = activeSection.brackets.findIndex(
-                  (b) => b.id === activeBracketId
+              name={`sections.${activeSectionIndex}.sectionType`}
+              render={({ field }) => {
+                const value = field.value || "Battle";
+                const requiresBrackets = sectionTypeRequiresBrackets(
+                  value as SectionType
                 );
-                const effectiveBracketIndex =
-                  bracketIndex === -1 ? 0 : bracketIndex;
-                const bracket = activeSection.brackets[effectiveBracketIndex];
-
-                if (!bracket) {
-                  return null;
-                }
+                const disallowsBrackets = sectionTypeDisallowsBrackets(
+                  value as SectionType
+                );
+                const switchDisabled = requiresBrackets || disallowsBrackets;
+                const switchChecked = requiresBrackets
+                  ? true
+                  : disallowsBrackets
+                  ? false
+                  : Boolean(activeSection.hasBrackets);
 
                 return (
-                  <BracketForm
-                    control={control}
-                    setValue={setValue}
-                    getValues={getValues}
-                    activeSectionIndex={activeSectionIndex}
-                    activeBracketIndex={effectiveBracketIndex}
-                    bracket={bracket}
-                    sections={sections}
-                    activeSectionId={activeSectionId}
-                    activeBracketId={bracket.id}
-                    eventId={eventId}
-                  />
-                );
-              })()
-            )}
-          </div>
-        )}
-
-        {resolvedMode === "videos" && !activeSection.hasBrackets && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Videos</h3>
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
-                <Input
-                  placeholder="Enter YouTube URL"
-                  value={newVideoUrl}
-                  onChange={(e) => setNewVideoUrl(e.target.value)}
-                />
-              </div>
-              {isAddingVideo ? (
-                <div className="rounded-full bg-pulse-green border border-charcoal w-[50px] h-[50px] flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-black" />
-                </div>
-              ) : (
-                <CirclePlusButton size="lg" onClick={handleAddVideoFromUrl} />
-              )}
-            </div>
-
-            {activeSection.videos.length > 0 && (
-              <Accordion
-                type="single"
-                collapsible
-                value={activeVideoId ?? undefined}
-                onValueChange={(val) => setActiveVideoId(val || null)}
-                className="space-y-3"
-              >
-                {activeSection.videos.map((video, index) => (
-                  <AccordionItem
-                    key={video.id}
-                    value={video.id}
-                    className="border border-border rounded-sm bg-periwinkle-light/50 last:border-b"
-                  >
-                    <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
-                      <Input
-                        value={video.title}
-                        onChange={(e) => {
-                          const title = e.target.value;
+                  <>
+                    <FormItem className="flex-1">
+                      <FormLabel>Type</FormLabel>
+                      <Select
+                        onValueChange={(newValue) => {
+                          field.onChange(newValue);
                           const currentSections = getValues("sections") ?? [];
-                          const updated = currentSections.map((section) => {
-                            if (section.id !== activeSectionId) return section;
-                            return {
-                              ...section,
-                              videos: section.videos.map((v) =>
-                                v.id === video.id ? { ...v, title } : v
-                              ),
-                            };
-                          });
+                          const updated = updateSectionType(
+                            currentSections,
+                            activeSectionId,
+                            newValue as SectionType
+                          );
                           setValue(
                             "sections",
                             normalizeSectionsForForm(updated),
@@ -754,43 +603,489 @@ export function SectionForm({
                             }
                           );
                         }}
-                        className="h-9"
-                      />
+                        value={value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-neutral-300">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Battle">Battle</SelectItem>
+                          <SelectItem value="Class">Class</SelectItem>
+                          <SelectItem value="Mixed">Mixed</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="Performance">
+                            Performance
+                          </SelectItem>
+                          <SelectItem value="Session">Session</SelectItem>
+                          <SelectItem value="Showcase">Showcase</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
 
-                      <div className="flex items-center gap-5 px-3">
-                        <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
-                          <span className="sr-only">Toggle video</span>
-                        </AccordionTrigger>
+                    <FormField
+                      control={control}
+                      name={`sections.${activeSectionIndex}.hasBrackets`}
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                          <FormLabel className="cursor-pointer whitespace-nowrap">
+                            Use Brackets
+                          </FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={switchChecked}
+                              disabled={switchDisabled}
+                              onCheckedChange={(checked) => {
+                                if (switchDisabled) return;
+                                field.onChange(checked);
+                                const currentSections =
+                                  getValues("sections") ?? [];
+                                const updatedSections = currentSections.map(
+                                  (section) =>
+                                    section.id === activeSectionId
+                                      ? {
+                                          ...section,
+                                          hasBrackets: checked,
+                                        }
+                                      : section
+                                );
+                                setValue(
+                                  "sections",
+                                  normalizeSectionsForForm(updatedSections),
+                                  {
+                                    shouldValidate: true,
+                                    shouldDirty: true,
+                                  }
+                                );
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                );
+              }}
+            />
+          </div>
 
-                        <CircleXButton
-                          size="md"
-                          aria-label={`Remove ${video.title || "video"}`}
-                          onClick={() => removeVideoFromSection(video.id)}
-                        />
-                      </div>
-                    </div>
-                    <AccordionContent className="px-4 pb-4 bg-periwinkle-light/50">
-                      <VideoForm
-                        key={video.id}
-                        control={control}
-                        setValue={setValue}
-                        getValues={getValues}
-                        video={video}
-                        videoIndex={index}
-                        sectionIndex={activeSectionIndex}
-                        sections={sections}
-                        activeSectionId={activeSectionId}
-                        context="section"
-                        eventId={eventId}
-                      />
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+          <FormField
+            key={`poster-${activeSectionId}`}
+            control={control}
+            name={`sections.${activeSectionIndex}.poster`}
+            render={() => (
+              <FormItem className="w-full">
+                <FormLabel>Poster Upload</FormLabel>
+                <FormControl>
+                  <PosterUpload
+                    initialPoster={activeSection.poster?.url || null}
+                    initialPosterFile={activeSection.poster?.file || null}
+                    initialBgColor={activeSection.bgColor || "#ffffff"}
+                    onFileChange={({ file, bgColor }) => {
+                      setValue(
+                        `sections.${activeSectionIndex}.bgColor`,
+                        bgColor,
+                        {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                          shouldTouch: true,
+                        }
+                      );
+
+                      if (file) {
+                        const posterImage: Image = {
+                          id: activeSection.poster?.id || crypto.randomUUID(),
+                          title:
+                            activeSection.poster?.title || "Section Poster",
+                          url: activeSection.poster?.url || "",
+                          type: "poster",
+                          file,
+                        };
+
+                        setValue(
+                          `sections.${activeSectionIndex}.poster`,
+                          posterImage,
+                          {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          }
+                        );
+                      } else {
+                        setValue(
+                          `sections.${activeSectionIndex}.poster`,
+                          null,
+                          {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          }
+                        );
+                      }
+                    }}
+                    editable={true}
+                    maxFiles={1}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            key={`description-${activeSectionId}`}
+            control={control}
+            name={`sections.${activeSectionIndex}.description`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Section Winners - only show if section type supports winners */}
+          {sectionTypeSupportsWinners(activeSection.sectionType) && (
+            <div className="space-y-2">
+              <DebouncedSearchMultiSelect<UserSearchItem>
+                onSearch={searchUsers}
+                placeholder="Search users to mark as section winners..."
+                getDisplayValue={(item) =>
+                  `${item.displayName} (${item.username})`
+                }
+                getItemId={(item) => item.username}
+                onChange={(users) => {
+                  // Update section winners in form state with the complete list
+                  const updatedSections = sections.map((section) => {
+                    if (section.id !== activeSectionId) return section;
+                    return {
+                      ...section,
+                      winners: users,
+                    };
+                  });
+
+                  setValue(
+                    "sections",
+                    normalizeSectionsForForm(updatedSections)
+                  );
+
+                  // Update local winners state for display
+                  setSectionWinners(users);
+                }}
+                value={sectionWinners}
+                name="sectionWinners"
+                label="Section Winners"
+              />
+            </div>
+          )}
+
+          {/* Section Judges - only show if section type supports judges */}
+          {sectionTypeSupportsJudges(activeSection.sectionType) && (
+            <div className="space-y-2">
+              <DebouncedSearchMultiSelect<UserSearchItem>
+                onSearch={searchUsers}
+                placeholder="Search users to mark as section judges..."
+                getDisplayValue={(item) =>
+                  `${item.displayName} (${item.username})`
+                }
+                getItemId={(item) => item.username}
+                onChange={(users) => {
+                  // Update section judges in form state with the complete list
+                  const updatedSections = sections.map((section) => {
+                    if (section.id !== activeSectionId) return section;
+                    return {
+                      ...section,
+                      judges: users,
+                    };
+                  });
+
+                  setValue(
+                    "sections",
+                    normalizeSectionsForForm(updatedSections)
+                  );
+
+                  // Update local judges state for display
+                  setSectionJudges(users);
+                }}
+                value={sectionJudges}
+                name="sectionJudges"
+                label="Section Judges"
+              />
+            </div>
+          )}
+
+          <FormField
+            key={`applyStylesToVideos-${activeSectionId}`}
+            control={control}
+            name={`sections.${activeSectionIndex}.applyStylesToVideos`}
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center space-x-2">
+                  <FormControl>
+                    <Switch
+                      checked={field.value || false}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked);
+                        handleApplyStylesToVideosChange(checked);
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel>Apply same style tags to all videos</FormLabel>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {activeSection.applyStylesToVideos && (
+            <FormField
+              key={`styles-${activeSectionId}`}
+              control={control}
+              name={`sections.${activeSectionIndex}.styles`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Section Dance Styles</FormLabel>
+                  <FormControl>
+                    <StyleMultiSelect
+                      value={field.value || []}
+                      onChange={(styles) => {
+                        field.onChange(styles);
+                        handleStylesChange(styles);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </>
+      )}
+
+      {resolvedMode === "brackets" && (
+        <div className="space-y-4">
+          {/* Bracket Title Input - In its own container */}
+          <section>
+            <FormLabel>New Bracket</FormLabel>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <Input
+                  placeholder="Ex. Prelims, Top 16, Semi Finals, etc"
+                  value={newBracketTitle}
+                  onChange={(e) => {
+                    setNewBracketTitle(e.target.value);
+                    // Clear error when user starts typing
+                    if (bracketTitleError) {
+                      setBracketTitleError("");
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addBracket();
+                    }
+                  }}
+                  className={bracketTitleError ? "border-red-500" : ""}
+                />
+                {bracketTitleError && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {bracketTitleError}
+                  </p>
+                )}
+              </div>
+              <CirclePlusButton
+                size="lg"
+                onClick={() => addBracket()}
+                aria-label="Add bracket"
+              />
+            </div>
+          </section>
+
+          {/* Bracket Tabs */}
+          {activeSection.brackets.length > 0 && (
+            <div className="flex flex-wrap justify-center items-center gap-2">
+              {activeSection.brackets.map((bracket, index) => {
+                const isActive = activeBracketId === bracket.id;
+                return (
+                  <div key={bracket.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => handleSetActiveBracketId(bracket.id)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-sm transition-all duration-200",
+                        "border-2 border-transparent",
+                        "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
+                        "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
+                        "text-sm font-bold uppercase tracking-wide",
+                        "font-display",
+                        isActive &&
+                          "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
+                        !isActive &&
+                          "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
+                      )}
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {bracket.title || `Bracket ${index + 1}`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeBracket(bracket.id);
+                      }}
+                      className={cn(
+                        "absolute -top-2 -right-2",
+                        "w-5 h-5 rounded-full",
+                        "bg-destructive text-destructive-foreground",
+                        "border-2 border-charcoal",
+                        "flex items-center justify-center",
+                        "opacity-0 group-hover:opacity-100",
+                        "transition-opacity duration-200",
+                        "hover:bg-destructive/90",
+                        "z-10",
+                        "shadow-[2px_2px_0_0_rgb(49,49,49)]"
+                      )}
+                      aria-label={`Delete ${bracket.title || "bracket"}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Active Bracket Container - Outside input container */}
+          {activeSection.brackets.length > 0 &&
+            activeBracketId &&
+            (() => {
+              const bracketIndex = activeSection.brackets.findIndex(
+                (b) => b.id === activeBracketId
+              );
+              const effectiveBracketIndex =
+                bracketIndex === -1 ? 0 : bracketIndex;
+              const bracket = activeSection.brackets[effectiveBracketIndex];
+
+              if (!bracket) {
+                return null;
+              }
+
+              return (
+                <BracketForm
+                  control={control}
+                  setValue={setValue}
+                  getValues={getValues}
+                  activeSectionIndex={activeSectionIndex}
+                  activeBracketIndex={effectiveBracketIndex}
+                  bracket={bracket}
+                  sections={sections}
+                  activeSectionId={activeSectionId}
+                  activeBracketId={bracket.id}
+                  eventId={eventId}
+                />
+              );
+            })()}
+        </div>
+      )}
+
+      {resolvedMode === "videos" && !activeSection.hasBrackets && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <Input
+                placeholder="Enter YouTube URL"
+                value={newVideoUrl}
+                onChange={(e) => setNewVideoUrl(e.target.value)}
+              />
+            </div>
+            {isAddingVideo ? (
+              <div className="rounded-sm bg-pulse-green border border-charcoal w-[50px] h-[50px] flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-black" />
+              </div>
+            ) : (
+              <CirclePlusButton size="lg" onClick={handleAddVideoFromUrl} />
             )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {activeSection.videos.length > 0 && (
+            <Accordion
+              type="single"
+              collapsible
+              value={activeVideoId ?? undefined}
+              onValueChange={(val) => setActiveVideoId(val || null)}
+              className="space-y-3"
+            >
+              {activeSection.videos.map((video, index) => (
+                <AccordionItem
+                  key={video.id}
+                  value={video.id}
+                  className="border border-border rounded-sm bg-periwinkle-light/50 last:border-b"
+                >
+                  <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
+                    <Input
+                      value={video.title}
+                      onChange={(e) => {
+                        const title = e.target.value;
+                        const currentSections = getValues("sections") ?? [];
+                        const updated = currentSections.map((section) => {
+                          if (section.id !== activeSectionId) return section;
+                          return {
+                            ...section,
+                            videos: section.videos.map((v) =>
+                              v.id === video.id ? { ...v, title } : v
+                            ),
+                          };
+                        });
+                        setValue(
+                          "sections",
+                          normalizeSectionsForForm(updated),
+                          {
+                            shouldValidate: true,
+                            shouldDirty: true,
+                          }
+                        );
+                      }}
+                      className="h-9"
+                    />
+
+                    <div className="flex items-center gap-5 px-3">
+                      <AccordionTrigger className="h-9 w-9 shrink-0 rounded-sm border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
+                        <span className="sr-only">Toggle video</span>
+                      </AccordionTrigger>
+
+                      <CircleXButton
+                        size="md"
+                        aria-label={`Remove ${video.title || "video"}`}
+                        onClick={() => removeVideoFromSection(video.id)}
+                      />
+                    </div>
+                  </div>
+                  <AccordionContent className="px-4 pb-4 bg-periwinkle-light/50">
+                    <VideoForm
+                      key={video.id}
+                      control={control}
+                      setValue={setValue}
+                      getValues={getValues}
+                      video={video}
+                      videoIndex={index}
+                      sectionIndex={activeSectionIndex}
+                      sections={sections}
+                      activeSectionId={activeSectionId}
+                      context="section"
+                      eventId={eventId}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </div>
+      )}
+    </section>
   );
 }

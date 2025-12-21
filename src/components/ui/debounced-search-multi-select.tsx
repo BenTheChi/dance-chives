@@ -28,6 +28,7 @@ interface DebouncedSearchMultiSelectProps<T extends SearchItem> {
   value: T[];
   name: string;
   label?: string;
+  labelColor?: string;
   className?: string;
   disabled?: boolean;
   required?: boolean;
@@ -46,6 +47,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     value,
     name,
     label,
+    labelColor = "text-white",
     className,
     disabled = false,
     required = false,
@@ -132,7 +134,9 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
       className={cn("flex flex-col debounced-search-multi-select", className)}
     >
       {label && (
-        <label className="text-sm font-medium block text-white">{label}</label>
+        <label className={cn("text-sm font-medium block", labelColor)}>
+          {label}
+        </label>
       )}
       <div className="flex flex-wrap gap-1 mb-2">
         {deduplicatedValue.map((item) => {
@@ -180,7 +184,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
       </div>
       <div className="relative w-full">
         <div className="flex items-center border rounded-sm bg-neutral-300">
-          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50 text-black" />
           <Input
             placeholder={placeholder}
             value={inputValue}
@@ -195,7 +199,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
             <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
           ) : (
             <ChevronsUpDown
-              className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer"
+              className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer text-black"
               onClick={() => setOpen(!open)}
             />
           )}

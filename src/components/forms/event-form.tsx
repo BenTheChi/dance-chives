@@ -833,6 +833,78 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             })}
           </div>
 
+          {/* Section Tabs - Only show when Sections tab is active */}
+          {activeMainTab === "Sections" && (
+            <div className="flex flex-wrap justify-center items-center gap-2 mb-6">
+              {sections.length === 0 ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    No sections yet.
+                  </span>
+                  <CirclePlusButton size="lg" onClick={addSection} />
+                </>
+              ) : (
+                <>
+                  {sections.map((section, index) => {
+                    const isActive = activeSectionId === section.id;
+                    return (
+                      <div key={section.id} className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveSectionId(section.id);
+                            setSectionsSelection({
+                              type: "sectionOverview",
+                              sectionId: section.id,
+                            });
+                          }}
+                          className={cn(
+                            "px-3 py-1.5 rounded-sm transition-all duration-200",
+                            "border-2 border-transparent",
+                            "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
+                            "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
+                            "text-sm font-bold uppercase tracking-wide",
+                            "font-display",
+                            isActive &&
+                              "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
+                            !isActive &&
+                              "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
+                          )}
+                          style={{ fontFamily: "var(--font-display)" }}
+                        >
+                          {section.title || `Section ${index + 1}`}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeSection(section.id);
+                          }}
+                          className={cn(
+                            "absolute -top-2 -right-2",
+                            "w-5 h-5 rounded-full",
+                            "bg-destructive text-destructive-foreground",
+                            "border-2 border-charcoal",
+                            "flex items-center justify-center",
+                            "opacity-0 group-hover:opacity-100",
+                            "transition-opacity duration-200",
+                            "hover:bg-destructive/90",
+                            "z-10",
+                            "shadow-[2px_2px_0_0_rgb(49,49,49)]"
+                          )}
+                          aria-label={`Delete ${section.title || "section"}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <CirclePlusButton size="lg" onClick={addSection} />
+                </>
+              )}
+            </div>
+          )}
+
           {/* Tab Content */}
           {activeMainTab === "Details" && (
             <EventDetailsForm
@@ -853,411 +925,75 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {activeMainTab === "Sections" && (
             <div className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6 max-w-5xl mx-auto w-full">
-                {/* Left sidebar: sections + nested items - only show if sections exist */}
-                {sections.length > 0 && (
-                  <div className="w-full md:w-80 md:flex-shrink-0 ">
-                    <div className="space-y-2 ">
-                      {sections.map((section, sectionIndex) => {
-                        const isActiveSection =
-                          sectionsSelection?.sectionId === section.id ||
-                          (!sectionsSelection &&
-                            activeSectionId === section.id);
-
-                        const handleSelectOverview = () => {
-                          setActiveSectionId(section.id);
-                          setSectionsSelection({
-                            type: "sectionOverview",
-                            sectionId: section.id,
-                          });
-                        };
-
-                        const handleSelectVideos = () => {
-                          setActiveSectionId(section.id);
-                          setSectionsSelection({
-                            type: "sectionVideos",
-                            sectionId: section.id,
-                          });
-                        };
-
-                        const handleSelectBracket = (bracketId: string) => {
-                          setActiveSectionId(section.id);
-                          setSectionsSelection({
-                            type: "bracket",
-                            sectionId: section.id,
-                            bracketId,
-                          });
-                        };
-
-                        const requiresBrackets = sectionTypeRequiresBrackets(
-                          section.sectionType
-                        );
-                        const disallowsBrackets = sectionTypeDisallowsBrackets(
-                          section.sectionType
-                        );
-                        const switchDisabled =
-                          requiresBrackets || disallowsBrackets;
-                        const switchChecked = requiresBrackets
-                          ? true
-                          : disallowsBrackets
-                          ? false
-                          : Boolean(section.hasBrackets);
-
-                        return (
-                          <div
-                            key={section.id}
-                            onClick={handleSelectOverview}
-                            className={`rounded-sm cursor-pointer transition-colors relative ${
-                              isActiveSection
-                                ? "border-2 border-black bg-primary shadow-[2px_2px_0_0_rgb(0,0,0)]"
-                                : "border-2 border-black bg-primary"
-                            }`}
-                          >
-                            <div
-                              className="px-3 py-2 space-y-2 rounded-sm"
-                              onClick={(e) => {
-                                // Only stop propagation for interactive elements
-                                const target = e.target as HTMLElement;
-                                const isInteractiveElement =
-                                  target.tagName === "INPUT" ||
-                                  target.tagName === "BUTTON" ||
-                                  target.tagName === "SELECT" ||
-                                  target.closest("button") !== null ||
-                                  target.closest("[role='combobox']") !==
-                                    null ||
-                                  target.closest("[role='switch']") !== null ||
-                                  target.closest("label") !== null;
-
-                                if (isInteractiveElement) {
-                                  e.stopPropagation();
-                                }
-                              }}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <FormField
-                                  control={control}
-                                  name={`sections.${sectionIndex}.title`}
-                                  render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                      <FormControl>
-                                        <Input
-                                          {...field}
-                                          className="h-8 text-xs bg-neutral-300"
-                                          placeholder="Section title"
-                                        />
-                                      </FormControl>
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeSection(section.id);
-                                  }}
-                                  className="h-6 w-6 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
-                                  aria-label={`Remove ${section.title}`}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-
-                              <div className="flex items-center justify-between gap-2">
-                                <Select
-                                  value={
-                                    (section.sectionType ||
-                                      "Battle") as SectionType
-                                  }
-                                  onValueChange={(value) => {
-                                    const currentSections =
-                                      getValues("sections") ?? [];
-                                    const updated = updateSectionType(
-                                      currentSections,
-                                      section.id,
-                                      value as SectionType
-                                    );
-                                    setValue(
-                                      "sections",
-                                      normalizeSectionsForForm(updated),
-                                      {
-                                        shouldValidate: true,
-                                        shouldDirty: true,
-                                      }
-                                    );
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[130px] h-8 text-xs bg-neutral-300">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Battle">
-                                      Battle
-                                    </SelectItem>
-                                    <SelectItem value="Class">Class</SelectItem>
-                                    <SelectItem value="Mixed">Mixed</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                    <SelectItem value="Performance">
-                                      Performance
-                                    </SelectItem>
-                                    <SelectItem value="Session">
-                                      Session
-                                    </SelectItem>
-                                    <SelectItem value="Showcase">
-                                      Showcase
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-
-                                <div className="flex items-center gap-2 text-xs">
-                                  <Switch
-                                    checked={switchChecked}
-                                    disabled={switchDisabled}
-                                    onCheckedChange={(checked) => {
-                                      if (switchDisabled) return;
-                                      updateSectionHasBrackets(
-                                        section.id,
-                                        checked
-                                      );
-                                    }}
-                                    aria-label={`Toggle brackets for ${section.title}`}
-                                  />
-                                  <span>Use Brackets</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {isActiveSection && (
-                              <div
-                                className="border-t px-3 py-2 space-y-1 text-sm bg-primary rounded-b relative"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={handleSelectOverview}
-                                  className={`block w-full text-left rounded px-2 py-1 ${
-                                    sectionsSelection?.type ===
-                                      "sectionOverview" &&
-                                    sectionsSelection.sectionId === section.id
-                                      ? "bg-primary/10 text-primary"
-                                      : "hover:bg-muted"
-                                  }`}
-                                >
-                                  Overview
-                                </button>
-
-                                {!section.hasBrackets && (
-                                  <button
-                                    type="button"
-                                    onClick={handleSelectVideos}
-                                    className={`block w-full text-left rounded px-2 py-1 ${
-                                      sectionsSelection?.type ===
-                                        "sectionVideos" &&
-                                      sectionsSelection.sectionId === section.id
-                                        ? "bg-primary/10 text-primary"
-                                        : "hover:bg-muted"
-                                    }`}
-                                  >
-                                    Videos
-                                    {section.videos.length > 0 && (
-                                      <span className="ml-1 text-xs">
-                                        ({section.videos.length})
-                                      </span>
-                                    )}
-                                  </button>
-                                )}
-
-                                {section.hasBrackets && (
-                                  <>
-                                    <div
-                                      className={`flex items-center justify-between rounded pl-2 py-1 ${
-                                        sectionsSelection?.type ===
-                                          "sectionBrackets" &&
-                                        sectionsSelection.sectionId ===
-                                          section.id
-                                          ? "bg-primary/10 text-primary"
-                                          : ""
-                                      }`}
-                                    >
-                                      <span className="text-xs">
-                                        Brackets
-                                        {section.brackets.length > 0 && (
-                                          <span className="ml-1 text-xs">
-                                            ({section.brackets.length})
-                                          </span>
-                                        )}
-                                      </span>
-                                      <CirclePlusButton
-                                        size="sm"
-                                        onClick={() =>
-                                          addBracketFromSidebar(section.id)
-                                        }
-                                        className="ml-1"
-                                        aria-label={`Add bracket to ${section.title}`}
-                                      />
-                                    </div>
-
-                                    {section.brackets.map((bracket) => {
-                                      const isActiveBracketSelection =
-                                        sectionsSelection?.type === "bracket" &&
-                                        sectionsSelection.sectionId ===
-                                          section.id &&
-                                        sectionsSelection.bracketId ===
-                                          bracket.id;
-                                      return (
-                                        <div
-                                          key={bracket.id}
-                                          className="flex items-center justify-between"
-                                        >
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              handleSelectBracket(bracket.id)
-                                            }
-                                            className={`w-full text-left rounded pl-2 py-1 mx-2 text-xs ${
-                                              isActiveBracketSelection
-                                                ? "bg-primary/10 text-primary"
-                                                : "hover:bg-muted"
-                                            }`}
-                                          >
-                                            {bracket.title}
-                                            {bracket.videos.length > 0 && (
-                                              <span className="ml-1 text-[10px]">
-                                                ({bracket.videos.length} videos)
-                                              </span>
-                                            )}
-                                          </button>
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() =>
-                                              removeBracketFromSidebar(
-                                                section.id,
-                                                bracket.id
-                                              )
-                                            }
-                                            className="ml-1 h-5 w-5 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10"
-                                            aria-label={`Remove ${bracket.title}`}
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      );
-                                    })}
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex justify-center mt-6">
-                      <CirclePlusButton size="lg" onClick={addSection} />
-                    </div>
+              {sections.length === 0 ? (
+                <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
+                  <div className="text-sm mb-6">
+                    No sections yet. Let&apos;s create one!
                   </div>
-                )}
-
-                {/* Right content pane */}
-                <div
-                  className={sections.length > 0 ? "flex-1 min-w-0" : "w-full"}
-                >
-                  {sections.length === 0 || !sectionsSelection ? (
-                    <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
-                      <div className="text-sm mb-6">
-                        No sections yet. Let&apos;s create one!
+                  <div className="flex justify-center">
+                    <CirclePlusButton size="lg" onClick={addSection} />
+                  </div>
+                </div>
+              ) : (
+                (() => {
+                  const selectedSection = sections.find(
+                    (s) => s.id === activeSectionId
+                  );
+                  if (!selectedSection) {
+                    return (
+                      <div className="border rounded-sm p-6 text-sm">
+                        Please select a section.
                       </div>
-                      <div className="flex justify-center">
-                        <CirclePlusButton size="lg" onClick={addSection} />
+                    );
+                  }
+
+                  const selectedSectionIndex = sections.findIndex(
+                    (s) => s.id === selectedSection.id
+                  );
+                  if (selectedSectionIndex === -1) {
+                    return null;
+                  }
+
+                  const commonProps = {
+                    control,
+                    setValue,
+                    getValues,
+                    register,
+                    activeSectionIndex: selectedSectionIndex,
+                    activeSection: selectedSection,
+                    sections,
+                    activeSectionId: selectedSection.id,
+                    eventId: isEditing
+                      ? pathname[pathname.length - 2]
+                      : undefined,
+                  };
+
+                  return (
+                    <div className="flex flex-col md:flex-row gap-6 max-w-5xl mx-auto w-full">
+                      {/* Left Column: Section Overview */}
+                      <div className="w-full md:w-1/2 md:flex-shrink-0">
+                        <SectionForm {...commonProps} mode="overview" />
                       </div>
-                    </div>
-                  ) : (
-                    (() => {
-                      const selectedSection = sections.find(
-                        (s) => s.id === sectionsSelection.sectionId
-                      );
-                      if (!selectedSection) {
-                        return (
-                          <div className="border rounded-sm p-6 text-sm">
-                            The selected section no longer exists.
-                          </div>
-                        );
-                      }
 
-                      const selectedSectionIndex = sections.findIndex(
-                        (s) => s.id === selectedSection.id
-                      );
-                      if (selectedSectionIndex === -1) {
-                        return null;
-                      }
-
-                      const commonProps = {
-                        control,
-                        setValue,
-                        getValues,
-                        register,
-                        activeSectionIndex: selectedSectionIndex,
-                        activeSection: selectedSection,
-                        sections,
-                        activeSectionId: selectedSection.id,
-                        eventId: isEditing
-                          ? pathname[pathname.length - 2]
-                          : undefined,
-                      };
-
-                      if (sectionsSelection.type === "sectionOverview") {
-                        return <SectionForm {...commonProps} mode="overview" />;
-                      }
-
-                      if (sectionsSelection.type === "sectionVideos") {
-                        return <SectionForm {...commonProps} mode="videos" />;
-                      }
-
-                      if (sectionsSelection.type === "sectionBrackets") {
-                        return (
+                      {/* Right Column: Videos or Brackets */}
+                      <div className="w-full md:w-1/2 md:flex-shrink-0">
+                        {selectedSection.hasBrackets ? (
                           <SectionForm
                             {...commonProps}
                             mode="brackets"
                             externalActiveBracketId={null}
-                            onActiveBracketChange={(bracketId) =>
-                              setSectionsSelection({
-                                type: "bracket",
-                                sectionId: selectedSection.id,
-                                bracketId,
-                              })
-                            }
+                            onActiveBracketChange={(bracketId) => {
+                              // Keep track of active bracket but don't change selection type
+                            }}
                           />
-                        );
-                      }
-
-                      if (sectionsSelection.type === "bracket") {
-                        return (
-                          <SectionForm
-                            {...commonProps}
-                            mode="brackets"
-                            externalActiveBracketId={
-                              sectionsSelection.bracketId
-                            }
-                            onActiveBracketChange={(bracketId) =>
-                              setSectionsSelection({
-                                type: "bracket",
-                                sectionId: selectedSection.id,
-                                bracketId,
-                              })
-                            }
-                          />
-                        );
-                      }
-
-                      return null;
-                    })()
-                  )}
-                </div>
-              </div>
+                        ) : (
+                          <SectionForm {...commonProps} mode="videos" />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
             </div>
           )}
 

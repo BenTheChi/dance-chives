@@ -530,6 +530,7 @@ export function VideoForm({
         value={video.taggedDancers ?? []}
         name="taggedDancers"
         label="Tagged Dancers"
+        labelColor="text-black"
       />
 
       {/* Tagged Winners - only for battle videos */}
@@ -555,6 +556,7 @@ export function VideoForm({
                   value={isUserSearchItemArray(field.value) ? field.value : []}
                   name="taggedWinners"
                   label="Tagged Winners"
+                  labelColor="text-black"
                 />
               </FormControl>
               <FormMessage />
