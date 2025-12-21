@@ -210,47 +210,43 @@ export default async function EventPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col min-h-[calc(100vh-3.6rem)]">
+      <div className="flex flex-col">
+        <h1 className="!text-[60px] py-7 text-center border-b-2 border-primary-light">
+          {event.eventDetails.title}
+        </h1>
+        <div className="mt-0 sm:mt-4">
+          {event.eventDetails.status === "hidden" && (
+            <p className="text-medium mt-1 text-center">(hidden)</p>
+          )}
+        </div>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Image */}
-              <div className="w-full sm:flex-1 lg:max-w-[500px]">
+              <div className="w-full sm:flex-1 lg:max-w-[400px]">
                 <div className="w-full aspect-square">
                   <PosterImage
                     poster={event.eventDetails.poster ?? null}
                     originalPoster={event.eventDetails.originalPoster ?? null}
-                    width={500}
-                    height={500}
+                    width={400}
+                    height={400}
                     className="w-full h-full object-cover"
                   />
                 </div>
               </div>
               {/* Event Details */}
-              <div className="w-full sm:flex-1 lg:max-w-[700px]">
-                <section className="border-4 border-primary-light py-8 px-4 bg-primary-dark rounded-sm w-full h-full flex flex-col justify-between">
+              <div className="w-full sm:flex-1 lg:max-w-[800px]">
+                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
                   <div className="flex flex-col">
-                    {/* Title - centered */}
-                    <div className="mt-0 sm:mt-4">
-                      <h1 className="!text-[30px] sm:!text-[40px] text-center">
-                        {event.eventDetails.title}
-                      </h1>
-                      {event.eventDetails.status === "hidden" && (
-                        <p className="text-sm mt-1 text-center">(hidden)</p>
-                      )}
-                    </div>
-
                     {/* City | Event type */}
-                    <div className="flex flex-row gap-1 items-center justify-center my-4">
+                    <div className="flex flex-row gap-1 items-center justify-center mb-4">
                       {event.eventDetails.city.name && (
-                        <h2 className="!text-[22px]">
-                          {event.eventDetails.city.name}
-                        </h2>
+                        <h2>{event.eventDetails.city.name}</h2>
                       )}
 
                       {event.eventDetails.eventType && (
-                        <h2 className="!text-[22px]">
+                        <h2>
                           {` | `}
                           {event.eventDetails.eventType}
                         </h2>
@@ -408,7 +404,7 @@ export default async function EventPage({ params }: PageProps) {
                       );
                     })()}
                   </div>
-                  <div className="mt-4">
+                  <div className="mt-10">
                     {/* Share and Save buttons - centered at bottom */}
                     <EventShareSaveButtons
                       eventId={event.id}
@@ -511,8 +507,8 @@ export default async function EventPage({ params }: PageProps) {
           </div>
         </div>
         <div className="flex justify-center w-full">
-          <div className="w-full max-w-full md:max-w-[816px] lg:max-w-[1016px] px-3 sm:px-10 lg:px-15">
-            <hr className="border-charcoal/50 my-4" />
+          <div className="w-full max-w-[920px]">
+            <hr className="border-primary-light my-4" />
             <div className="flex flex-row gap-10 items-center justify-center mb-4">
               {creator && (
                 <div className="flex flex-row gap-2 items-center">

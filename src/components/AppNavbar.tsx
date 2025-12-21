@@ -48,12 +48,16 @@ export function AppNavbar() {
   const canCreateEvents = authLevel >= AUTH_LEVELS.CREATOR;
 
   return (
-    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary px-4">
+    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary px-4 py-2">
       <div className="flex h-14 items-center w-full justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="border-1 border-grey cursor-pointer sm:hidden" />
           {canCreateEvents && (
-            <Button asChild className="hidden sm:inline-flex">
+            <Button
+              asChild
+              className="hidden sm:inline-flex"
+              variant="secondary"
+            >
               <Link href="/add-event">Add Event</Link>
             </Button>
           )}
@@ -80,7 +84,7 @@ export function AppNavbar() {
                   isActive &&
                     "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
                   !isActive &&
-                    "text-charcoal hover:bg-[#dfdfeb] hover:text-periwinkle"
+                    "text-secondary-light hover:bg-[#dfdfeb] hover:text-periwinkle"
                 )}
                 style={{ fontFamily: "var(--font-display)" }}
               >

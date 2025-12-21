@@ -51,7 +51,7 @@ export function EventCard({
     : "";
 
   return (
-    <div className="bg-primary group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
+    <div className="bg-primary-dark group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
@@ -65,7 +65,7 @@ export function EventCard({
       </Link>
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
-      <div className="w-full bg-primary sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t border-black py-[5px] sm:py-[7px]">
+      <div className="w-full bg-primary-dark sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t-4 border-primary-light py-[5px] sm:py-[7px]">
         <div className="pt-4 sm:pt-3 px-5 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}
@@ -73,22 +73,16 @@ export function EventCard({
               <h2 className="!text-[18px] sm:!text-[20px] line-clamp-2">
                 {title}
               </h2>
-              <span className="!text-[12px] sm:!text-md text-gray-500">
-                {formattedDate}
-              </span>
+              <span className="!text-[12px] sm:!text-md ">{formattedDate}</span>
               {additionalDatesCount && additionalDatesCount > 0 && (
-                <span className="!text-[12px] sm:!text-md text-gray-500">
+                <span className="!text-[12px] sm:!text-md ">
                   +{additionalDatesCount} more dates
                 </span>
               )}
             </div>
             <div className="flex flex-col gap-1 items-end">
-              {eventType && (
-                <span className="!text-[12px] text-gray-500">{eventType}</span>
-              )}
-              {city && (
-                <span className="!text-[12px] text-gray-500">{city}</span>
-              )}
+              {eventType && <span className="!text-[12px] ">{eventType}</span>}
+              {city && <span className="!text-[12px] ">{city}</span>}
             </div>
           </div>
 
@@ -115,12 +109,12 @@ export function EventCard({
               ))}
               {/* Additional count - different for mobile vs desktop */}
               {mobileAdditionalCount > 0 && (
-                <span className="text-xs text-gray-500 sm:hidden">
+                <span className="text-xs  sm:hidden">
                   +{mobileAdditionalCount} more
                 </span>
               )}
               {desktopAdditionalCount > 0 && (
-                <span className="hidden sm:inline text-xs text-gray-500">
+                <span className="hidden sm:inline text-xs ">
                   +{desktopAdditionalCount} more
                 </span>
               )}

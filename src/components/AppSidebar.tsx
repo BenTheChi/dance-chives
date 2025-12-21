@@ -158,7 +158,7 @@ export function AppSidebar() {
                             "font-display",
                             isActive && "text-primary",
                             !isActive &&
-                              "text-charcoal group-hover/link:text-periwinkle"
+                              "text-secondary-light group-hover/link:text-periwinkle"
                           )}
                           style={{ fontFamily: "var(--font-display)" }}
                         >
