@@ -1,13 +1,17 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { getAllCities } from "@/db/queries/event";
 import { CityCard } from "@/components/CityCard";
+import { UnderConstruction } from "@/components/UnderConstruction";
 
 export default async function CitiesPage() {
-  const cities = await getAllCities();
+  // Keep existing code for future use
+  // const cities = await getAllCities();
 
   return (
     <>
       <AppNavbar />
+      <UnderConstruction />
+      {/* 
       <div className="flex flex-col items-center justify-center">
         <h1 className="!text-[60px] mt-5 mb-12">Cities</h1>
 
@@ -29,6 +33,7 @@ export default async function CitiesPage() {
           </div>
         )}
       </div>
+      */}
     </>
   );
 }

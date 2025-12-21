@@ -8,50 +8,56 @@ import { CityCalendarSection } from "@/components/CityCalendarSection";
 import { auth } from "@/auth";
 import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 import { cn } from "@/lib/utils";
+import { UnderConstruction } from "@/components/UnderConstruction";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
 export default async function CityPage({ params }: PageProps) {
-  const paramResult = await params;
-  const slug = paramResult.slug;
+  // Keep existing code for future use
+  // const paramResult = await params;
+  // const slug = paramResult.slug;
 
-  // Validate slug format
-  if (!slug || slug.trim().length === 0) {
-    notFound();
-  }
+  // // Validate slug format
+  // if (!slug || slug.trim().length === 0) {
+  //   notFound();
+  // }
 
-  const cityData = await getCityData(slug);
+  // const cityData = await getCityData(slug);
 
-  if (!cityData) {
-    notFound();
-  }
+  // if (!cityData) {
+  //   notFound();
+  // }
 
-  const session = await auth();
-  const savedResult = session?.user?.id
-    ? await getSavedEventIds()
-    : { status: 200, eventIds: [] };
-  const savedEventIds = new Set(
-    savedResult.status === 200 && "eventIds" in savedResult
-      ? savedResult.eventIds
-      : []
-  );
+  // const session = await auth();
+  // const savedResult = session?.user?.id
+  //   ? await getSavedEventIds()
+  //   : { status: 200, eventIds: [] };
+  // const savedEventIds = new Set(
+  //   savedResult.status === 200 && "eventIds" in savedResult
+  //     ? savedResult.eventIds
+  //     : []
+  // );
 
-  const cityDisplay = cityData.city.region
-    ? `${cityData.city.name}, ${cityData.city.region}`
-    : cityData.city.name;
+  // const cityDisplay = cityData.city.region
+  //   ? `${cityData.city.name}, ${cityData.city.region}`
+  //   : cityData.city.name;
 
   return (
     <>
       <AppNavbar />
+      <UnderConstruction />
+      {/* 
+      Original code preserved for future use:
+      
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">{cityDisplay}</h1>
         <p className="text-muted-foreground mb-8">
           Explore events and users from this city
         </p>
 
-        {/* Map Section */}
+        Map Section
         {cityData.city.latitude && cityData.city.longitude && (
           <section className="mb-12">
             <article
@@ -85,12 +91,12 @@ export default async function CityPage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Calendar Section */}
+        Calendar Section
         <section className="mb-12">
           <CityCalendarSection citySlug={cityData.city.slug || slug} />
         </section>
 
-        {/* Events Section */}
+        Events Section
         {cityData.events.length > 0 && (
           <section className="bg-charcoal/40 rounded-sm p-4 border-2 border-black container mx-auto">
             <h2 className="mb-6 !font-rubik-mono-one text-center">Events</h2>
@@ -116,7 +122,7 @@ export default async function CityPage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Users Section */}
+        Users Section
         {cityData.users.length > 0 && (
           <section className="bg-charcoal/40 rounded-sm p-4 border-2 border-black container mx-auto">
             <h2 className="mb-6 !font-rubik-mono-one text-center">Users</h2>
@@ -145,6 +151,7 @@ export default async function CityPage({ params }: PageProps) {
           </div>
         )}
       </div>
+      */}
     </>
   );
 }

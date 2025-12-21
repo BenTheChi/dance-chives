@@ -114,34 +114,16 @@ export default async function ProfilePage({ params }: PageProps) {
                   <div className="flex gap-4 mt-4">
                     {profile.city && (
                       <div className="text-sm text-muted-foreground">
-                        {typeof profile.city === "object" && profile.city.id ? (
-                          <Link
-                            href={
-                              profile.city.slug
-                                ? `/cities/${profile.city.slug}`
-                                : `/cities/${profile.city.id}`
-                            }
-                            className="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
-                          >
-                            📍{" "}
-                            {`${profile.city.name}${
-                              profile.city.region
-                                ? `, ${profile.city.region}`
-                                : ""
-                            }`}
-                          </Link>
-                        ) : (
-                          <span>
-                            📍{" "}
-                            {typeof profile.city === "object"
-                              ? `${profile.city.name}${
-                                  profile.city.region
-                                    ? `, ${profile.city.region}`
-                                    : ""
-                                }`
-                              : profile.city}
-                          </span>
-                        )}
+                        <span className="text-gray-600">
+                          📍{" "}
+                          {typeof profile.city === "object"
+                            ? `${profile.city.name}${
+                                profile.city.region
+                                  ? `, ${profile.city.region}`
+                                  : ""
+                              }`
+                            : profile.city}
+                        </span>
                       </div>
                     )}
                   </div>

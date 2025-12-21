@@ -5,8 +5,8 @@ import {
   Calendar,
   dateFnsLocalizer,
   View,
-  Navigate,
   ToolbarProps,
+  Navigate,
 } from "react-big-calendar";
 import {
   format,
@@ -14,6 +14,8 @@ import {
   startOfWeek,
   getDay,
   addDays,
+  addMonths,
+  subMonths,
   setMonth,
   setYear,
   getMonth,
@@ -29,6 +31,7 @@ import {
 import { EventType, EventDate } from "@/types/event";
 import { CalendarEventPopover } from "./CalendarEventPopover";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -36,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const locales = {
   "en-US": enUS,
@@ -53,6 +55,7 @@ const localizer = dateFnsLocalizer({
 interface CityCalendarProps {
   events: CalendarEventData[]; // Includes all event types (competitions, workshops, sessions, etc.)
   sessions?: CalendarSessionData[]; // Optional for backward compatibility, but events array should contain all
+  onDateChange?: (date: Date) => void; // Callback when the calendar date changes
 }
 
 // Predefined colors for each event type
@@ -124,18 +127,6 @@ function CustomToolbar({
   const currentYear = getYear(date);
   const yearOptions = getYearOptions();
 
-  const goToToday = () => {
-    onNavigate(Navigate.TODAY);
-  };
-
-  const goToBack = () => {
-    onNavigate(Navigate.PREVIOUS);
-  };
-
-  const goToNext = () => {
-    onNavigate(Navigate.NEXT);
-  };
-
   const handleMonthChange = (monthIndex: string) => {
     const newDate = setMonth(date, parseInt(monthIndex));
     if (onDateChange) {
@@ -151,6 +142,36 @@ function CustomToolbar({
       onDateChange(newDate);
     } else {
       onNavigate(Navigate.DATE, newDate);
+    }
+  };
+
+  const handleNavigate = (action: "PREV" | "NEXT" | "TODAY") => {
+    if (onDateChange) {
+      // Calculate new date based on action and current view
+      let newDate: Date;
+      if (action === "TODAY") {
+        newDate = new Date();
+      } else if (action === "PREV") {
+        if (view === "month") {
+          newDate = subMonths(date, 1);
+        } else if (view === "week") {
+          newDate = addDays(date, -7);
+        } else {
+          newDate = addDays(date, -1);
+        }
+      } else {
+        // NEXT
+        if (view === "month") {
+          newDate = addMonths(date, 1);
+        } else if (view === "week") {
+          newDate = addDays(date, 7);
+        } else {
+          newDate = addDays(date, 1);
+        }
+      }
+      onDateChange(newDate);
+    } else {
+      onNavigate(action as any);
     }
   };
 
@@ -172,44 +193,13 @@ function CustomToolbar({
   };
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={goToToday}
-          className="h-8 text-xs sm:text-sm"
-        >
-          Today
-        </Button>
-        <div className="flex gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToBack}
-            className="h-8 px-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToNext}
-            className="h-8 px-2"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col sm:flex-row justify-center sm:justify-between items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={currentMonth.toString()}
           onValueChange={handleMonthChange}
         >
-          <SelectTrigger
-            size="sm"
-            className="w-[120px] sm:w-[140px] h-8 text-xs sm:text-sm"
-          >
+          <SelectTrigger size="sm" className="h-8 text-xs sm:text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -221,10 +211,7 @@ function CustomToolbar({
           </SelectContent>
         </Select>
         <Select value={currentYear.toString()} onValueChange={handleYearChange}>
-          <SelectTrigger
-            size="sm"
-            className="w-[80px] sm:w-[100px] h-8 text-xs sm:text-sm"
-          >
+          <SelectTrigger size="sm" className="h-8 text-xs sm:text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -236,42 +223,79 @@ function CustomToolbar({
           </SelectContent>
         </Select>
         {view !== "month" && (
-          <div className="rbc-toolbar-label text-sm sm:text-lg font-semibold">
+          <div className="rbc-toolbar-label text-xs sm:text-lg font-semibold truncate">
             {label()}
           </div>
         )}
       </div>
-      <div className="rbc-btn-group flex gap-1">
-        <Button
-          variant={view === "month" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onView("month")}
-          className="h-8 text-xs sm:text-sm"
-        >
-          Month
-        </Button>
-        <Button
-          variant={view === "week" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onView("week")}
-          className="h-8 text-xs sm:text-sm"
-        >
-          Week
-        </Button>
-        <Button
-          variant={view === "day" ? "default" : "outline"}
-          size="sm"
-          onClick={() => onView("day")}
-          className="h-8 text-xs sm:text-sm"
-        >
-          Day
-        </Button>
+      <div className="flex items-center gap-2">
+        {/* Navigation buttons */}
+        <div className="rbc-btn-group flex gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleNavigate("PREV")}
+            className="h-8 w-8 p-0"
+            title="Previous"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleNavigate("TODAY")}
+            className="h-8 text-xs sm:text-sm"
+            title="Today"
+          >
+            Today
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleNavigate("NEXT")}
+            className="h-8 w-8 p-0"
+            title="Next"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {/* View buttons */}
+        <div className="rbc-btn-group flex gap-1">
+          <Button
+            variant={view === "month" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onView("month")}
+            className="h-8 text-xs sm:text-sm flex-1 sm:flex-initial"
+          >
+            Month
+          </Button>
+          <Button
+            variant={view === "week" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onView("week")}
+            className="h-8 text-xs sm:text-sm flex-1 sm:flex-initial"
+          >
+            Week
+          </Button>
+          <Button
+            variant={view === "day" ? "default" : "outline"}
+            size="sm"
+            onClick={() => onView("day")}
+            className="h-8 text-xs sm:text-sm flex-1 sm:flex-initial"
+          >
+            Day
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-export function CityCalendar({ events, sessions }: CityCalendarProps) {
+export function CityCalendar({
+  events,
+  sessions,
+  onDateChange,
+}: CityCalendarProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
@@ -365,6 +389,9 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
   // Handle navigation
   const handleNavigate = (newDate: Date) => {
     setCurrentDate(newDate);
+    if (onDateChange) {
+      onDateChange(newDate);
+    }
   };
 
   // Close popover when clicking outside
@@ -388,7 +415,7 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
   return (
     <div ref={calendarRef} className="relative w-full">
       {/* Legend */}
-      <div className="mb-4 flex flex-wrap gap-2 sm:gap-4 items-center">
+      <div className="mb-4 grid grid-cols-3 sm:flex sm:flex-wrap gap-1 sm:gap-4 items-center">
         {(Object.keys(EVENT_TYPE_LABELS) as Array<EventType | "event">)
           .filter(
             (type) =>
@@ -397,7 +424,7 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
           .map((type) => (
             <div key={type} className="flex items-center gap-1.5 sm:gap-2">
               <div
-                className="w-3 h-3 sm:w-4 sm:h-4 rounded"
+                className="w-3 h-3 sm:w-4 sm:h-4 rounded flex-shrink-0"
                 style={{
                   backgroundColor: EVENT_COLORS[type],
                 }}
@@ -408,32 +435,34 @@ export function CityCalendar({ events, sessions }: CityCalendarProps) {
             </div>
           ))}
       </div>
-      <div className="w-full overflow-x-auto">
-        <Calendar
-          localizer={localizer}
-          events={calendarEvents}
-          startAccessor="start"
-          endAccessor="end"
-          style={{
-            height: "calc(100vh - 250px)",
-            minHeight: "300px",
-            maxHeight: "800px",
-          }}
-          className="rbc-calendar-responsive"
-          eventPropGetter={eventPropGetter}
-          onSelectEvent={handleSelectEvent}
-          view={currentView}
-          onView={handleViewChange}
-          date={currentDate}
-          onNavigate={handleNavigate}
-          views={["month", "week", "day"]}
-          components={{
-            toolbar: (props) => (
-              <CustomToolbar {...props} onDateChange={handleNavigate} />
-            ),
-          }}
-          popup
-        />
+      <div className="w-full min-w-0 mx-0 sm:mx-0 overflow-x-auto">
+        <div className="px-0 sm:px-0 min-w-0 w-full">
+          <Calendar
+            localizer={localizer}
+            events={calendarEvents}
+            startAccessor="start"
+            endAccessor="end"
+            style={{
+              height: "calc(100vh - 300px)",
+              minHeight: "400px",
+              maxHeight: "800px",
+              width: "100%",
+            }}
+            eventPropGetter={eventPropGetter}
+            onSelectEvent={handleSelectEvent}
+            view={currentView}
+            onView={handleViewChange}
+            date={currentDate}
+            onNavigate={handleNavigate}
+            views={["month", "week", "day"]}
+            components={{
+              toolbar: (props) => (
+                <CustomToolbar {...props} onDateChange={handleNavigate} />
+              ),
+            }}
+            popup
+          />
+        </div>
       </div>
       {selectedEvent && (
         <CalendarEventPopover

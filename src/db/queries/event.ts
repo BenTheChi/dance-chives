@@ -32,6 +32,7 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
 import { type Record as Neo4jRecord } from "neo4j-driver";
+import { generateCitySlug } from "@/lib/utils/city-slug";
 
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
@@ -3532,15 +3533,31 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
 };
 
 export const getCitySchedule = async (
-  cityId: string
+  cityId: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<CityScheduleData | null> => {
   const session = driver.session();
 
   try {
+    // Build date filter conditions
+    let dateFilter = "";
+    const params: { cityId: string; startDate?: string; endDate?: string } = { cityId };
+    
+    if (startDate) {
+      params.startDate = startDate;
+      dateFilter += " AND (e.startDate >= $startDate OR e.dates IS NOT NULL)";
+    }
+    
+    if (endDate) {
+      params.endDate = endDate;
+      dateFilter += " AND (e.startDate <= $endDate OR e.dates IS NOT NULL)";
+    }
+
     // Get events in this city with full details
     const eventsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
-       WHERE (e.status = 'visible' OR e.status IS NULL)
+       WHERE (e.status = 'visible' OR e.status IS NULL)${dateFilter}
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
        WITH e, poster, c,
             [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']][0] as eventTypeLabel
@@ -3554,13 +3571,13 @@ export const getCitySchedule = async (
                 url: poster.url,
                 type: poster.type
               } ELSE null END as poster`,
-      { cityId }
+      params
     );
 
     // Get event styles (including event-level styles)
     const eventStylesResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(e:Event)
-       WHERE (e.status = 'visible' OR e.status IS NULL)
+       WHERE (e.status = 'visible' OR e.status IS NULL)${dateFilter}
        OPTIONAL MATCH (e)-[:STYLE]->(eventStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
        OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(v:Video)-[:STYLE]->(videoStyle:Style)
@@ -3577,7 +3594,7 @@ export const getCitySchedule = async (
             [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
        RETURN eventId,
               filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-      { cityId }
+      params
     );
 
     // Create styles map for events
@@ -3595,39 +3612,79 @@ export const getCitySchedule = async (
       eventStylesMap.set(eventId, uniqueStyles);
     });
 
-    // Build events array
-    const events: CalendarEventData[] = eventsResult.records.map((record) => {
-      const eventId = record.get("id");
-      const dates = record.get("dates");
-      const eventTypeLabel = record.get("eventTypeLabel");
-      let parsedDates: EventDate[] = [];
-      if (dates) {
-        try {
-          parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
-        } catch {
-          parsedDates = [];
+    // Build events array and filter by date range if provided
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    
+    const events: CalendarEventData[] = eventsResult.records
+      .map((record) => {
+        const eventId = record.get("id");
+        const dates = record.get("dates");
+        const eventTypeLabel = record.get("eventTypeLabel");
+        let parsedDates: EventDate[] = [];
+        if (dates) {
+          try {
+            parsedDates = typeof dates === "string" ? JSON.parse(dates) : dates;
+          } catch {
+            parsedDates = [];
+          }
         }
-      }
-      return {
-        id: eventId,
-        title: record.get("title"),
-        startDate: record.get("startDate"), // Keep for backward compatibility
-        startTime: record.get("startTime") || undefined,
-        endTime: record.get("endTime") || undefined,
-        dates: Array.isArray(parsedDates) ? parsedDates : undefined,
-        eventType: eventTypeLabel
-          ? getEventTypeFromLabel(eventTypeLabel) || "Other"
-          : "Other",
-        location: record.get("location") || undefined,
-        cityName: record.get("cityName") || undefined,
-        poster: record.get("poster") || null,
-        styles: eventStylesMap.get(eventId) || [],
-      };
-    });
+        return {
+          id: eventId,
+          title: record.get("title"),
+          startDate: record.get("startDate"), // Keep for backward compatibility
+          startTime: record.get("startTime") || undefined,
+          endTime: record.get("endTime") || undefined,
+          dates: Array.isArray(parsedDates) ? parsedDates : undefined,
+          eventType: eventTypeLabel
+            ? getEventTypeFromLabel(eventTypeLabel) || "Other"
+            : "Other",
+          location: record.get("location") || undefined,
+          cityName: record.get("cityName") || undefined,
+          poster: record.get("poster") || null,
+          styles: eventStylesMap.get(eventId) || [],
+        };
+      })
+      .filter((event) => {
+        // If no date range specified, include all events
+        if (!start && !end) return true;
+        
+        // Check if event has dates array
+        if (event.dates && event.dates.length > 0) {
+          // Include if any date in the array falls within the range
+          return event.dates.some((dateObj: EventDate) => {
+            const eventDate = new Date(dateObj.date);
+            if (start && eventDate < start) return false;
+            if (end && eventDate > end) return false;
+            return true;
+          });
+        }
+        
+        // Check startDate for events without dates array
+        if (event.startDate) {
+          const eventDate = new Date(event.startDate);
+          if (start && eventDate < start) return false;
+          if (end && eventDate > end) return false;
+          return true;
+        }
+        
+        // If no date information, exclude from filtered results
+        return false;
+      });
+
+    // Build workshop date filter
+    let workshopDateFilter = "";
+    if (startDate) {
+      workshopDateFilter += " AND w.startDate >= $startDate";
+    }
+    if (endDate) {
+      workshopDateFilter += " AND w.startDate <= $endDate";
+    }
 
     // Get workshops in this city
     const workshopsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)
+       WHERE 1=1${workshopDateFilter}
        OPTIONAL MATCH (wPoster:Image)-[:POSTER_OF]->(w)
        RETURN w.id as id, w.title as title, w.startDate as startDate,
               w.startTime as startTime, w.endTime as endTime,
@@ -3638,24 +3695,26 @@ export const getCitySchedule = async (
                 url: wPoster.url,
                 type: wPoster.type
               } ELSE null END as poster`,
-      { cityId }
+      params
     );
 
     // Get workshop styles
     const workshopStylesResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)
+       WHERE 1=1${workshopDateFilter}
        OPTIONAL MATCH (w)-[:STYLE]->(style:Style)
        WITH w.id as workshopId, collect(DISTINCT style.name) as styles
        RETURN workshopId, styles`,
-      { cityId }
+      params
     );
 
     // Get video styles for workshops
     const workshopVideoStylesResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(w:Workshop)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+       WHERE 1=1${workshopDateFilter}
        WITH w.id as workshopId, collect(DISTINCT style.name) as styles
        RETURN workshopId, styles`,
-      { cityId }
+      params
     );
 
     // Create styles maps for workshops
@@ -3675,9 +3734,9 @@ export const getCitySchedule = async (
       );
     });
 
-    // Convert workshops to CalendarEventData format and add to events array
-    const workshopEvents: CalendarEventData[] = workshopsResult.records.map(
-      (record) => {
+    // Convert workshops to CalendarEventData format and filter by date range
+    const workshopEvents: CalendarEventData[] = workshopsResult.records
+      .map((record) => {
         const workshopId = record.get("id");
         const workshopStyles = workshopStylesMap.get(workshopId) || [];
         const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
@@ -3698,8 +3757,21 @@ export const getCitySchedule = async (
           poster: record.get("poster") || null,
           styles: allStyles,
         };
-      }
-    );
+      })
+      .filter((workshop) => {
+        // If no date range specified, include all workshops
+        if (!start && !end) return true;
+        
+        // Filter by startDate
+        if (workshop.startDate) {
+          const workshopDate = new Date(workshop.startDate);
+          if (start && workshopDate < start) return false;
+          if (end && workshopDate > end) return false;
+          return true;
+        }
+        
+        return false;
+      });
 
     // Build workshops array for backward compatibility
     const workshops: CalendarWorkshopData[] = workshopsResult.records.map(
@@ -3723,7 +3795,7 @@ export const getCitySchedule = async (
       }
     );
 
-    // Get sessions in this city
+    // Get sessions in this city (sessions use dates array, so we filter in code)
     const sessionsResult = await session.run(
       `MATCH (c:City {id: $cityId})<-[:IN]-(s:Session)
        OPTIONAL MATCH (sPoster:Image)-[:POSTER_OF]->(s)
@@ -3829,19 +3901,104 @@ export const getCitySchedule = async (
 
     await session.close();
 
+    // Filter sessions by date range if provided (sessions use dates array)
+    let filteredSessionEvents = sessionEvents;
+    let filteredSessions = sessions;
+    
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      
+      filteredSessionEvents = sessionEvents.filter((session) => {
+        if (!session.dates || session.dates.length === 0) {
+          return false;
+        }
+        return session.dates.some((dateObj: EventDate) => {
+          const eventDate = new Date(dateObj.date);
+          if (start && eventDate < start) return false;
+          if (end && eventDate > end) return false;
+          return true;
+        });
+      });
+      
+      filteredSessions = sessions.filter((session) => {
+        let parsedDates: EventDate[] = [];
+        try {
+          const datesStr = session.dates || "[]";
+          parsedDates = typeof datesStr === "string" ? JSON.parse(datesStr) : datesStr;
+        } catch {
+          return false;
+        }
+        return parsedDates.some((dateObj: EventDate) => {
+          const eventDate = new Date(dateObj.date);
+          if (start && eventDate < start) return false;
+          if (end && eventDate > end) return false;
+          return true;
+        });
+      });
+    }
+
     // Merge all events into a single array
-    const allEvents = [...events, ...workshopEvents, ...sessionEvents];
+    const allEvents = [...events, ...workshopEvents, ...filteredSessionEvents];
 
     return {
       events: allEvents, // All events including workshops and sessions
       workshops, // Kept for backward compatibility
-      sessions, // Kept for backward compatibility
+      sessions: filteredSessions, // Kept for backward compatibility
     };
   } catch (error) {
     console.error("Error fetching city schedule:", error);
     await session.close();
     return null;
   }
+};
+
+/**
+ * Get calendar events for a city by slug, optionally filtered by style and date range
+ * @param citySlug - The city slug (e.g., "vancouver-bc-ca")
+ * @param style - Optional style name to filter events
+ * @param startDate - Optional start date for filtering events (ISO string)
+ * @param endDate - Optional end date for filtering events (ISO string)
+ * @returns Array of CalendarEventData
+ */
+export const getCalendarEvents = async (
+  citySlug: string,
+  style?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<CalendarEventData[]> => {
+  // Get all cities to find the one with matching slug
+  const cities = await getAllCities();
+  const city = cities.find((c) => {
+    const computedSlug = generateCitySlug(c);
+    return computedSlug === citySlug;
+  });
+
+  if (!city) {
+    return [];
+  }
+
+  // Get city schedule with date range
+  const schedule = await getCitySchedule(city.id, startDate, endDate);
+
+  if (!schedule) {
+    return [];
+  }
+
+  let events = schedule.events;
+
+  // Filter by style if provided
+  if (style) {
+    const normalizedStyle = normalizeStyleName(style);
+    events = events.filter((event) => {
+      const eventStyles = event.styles || [];
+      return eventStyles.some(
+        (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle
+      );
+    });
+  }
+
+  return events;
 };
 
 export const searchEvents = async (

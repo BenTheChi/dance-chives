@@ -1,6 +1,12 @@
 "use client";
 
-import { CalendarIcon, SearchIcon, Sparkles, Map, Users } from "lucide-react";
+import {
+  CalendarIcon,
+  SearchIcon,
+  Sparkles,
+  HouseIcon,
+  Users,
+} from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,
@@ -29,10 +35,18 @@ const menuItems = [
   {
     title: "Events",
     url: "/events",
-    icon: CalendarIcon,
+    icon: HouseIcon,
     color: "pulse-green",
     hoverColor: "mint",
     iconRotation: -3,
+  },
+  {
+    title: "Calendar",
+    url: "/calendar",
+    icon: CalendarIcon,
+    color: "periwinkle",
+    hoverColor: "periwinkle-light",
+    iconRotation: 2,
   },
   {
     title: "Styles",
@@ -49,14 +63,6 @@ const menuItems = [
     color: "pulse-green",
     hoverColor: "mint",
     iconRotation: 3,
-  },
-  {
-    title: "Cities",
-    url: "/cities",
-    icon: Map,
-    color: "periwinkle",
-    hoverColor: "periwinkle-light",
-    iconRotation: 2,
   },
 ];
 

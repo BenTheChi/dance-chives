@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { City } from "@/types/city";
 
 interface CityCardProps {
@@ -15,14 +14,6 @@ export function CityCard({ city, href }: CityCardProps) {
       </div>
     </div>
   );
-
-  if (href) {
-    return (
-      <Link href={href} className="block w-full max-w-[500px]">
-        {content}
-      </Link>
-    );
-  }
 
   return <div className="w-full max-w-[500px]">{content}</div>;
 }

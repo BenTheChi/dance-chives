@@ -245,21 +245,10 @@ export default async function EventPage({ params }: PageProps) {
 
                     {/* City | Event type */}
                     <div className="flex flex-row gap-1 items-center justify-center my-4">
-                      {event.eventDetails.city.id ? (
-                        <Link
-                          href={
-                            event.eventDetails.city.slug
-                              ? `/cities/${event.eventDetails.city.slug}`
-                              : `/cities/${event.eventDetails.city.id}`
-                          }
-                          className="hover:text-blue-400 hover:underline transition-colors"
-                        >
-                          <h2 className="!text-[22px]">
-                            {event.eventDetails.city.name}
-                          </h2>
-                        </Link>
-                      ) : (
-                        event.eventDetails.city.name
+                      {event.eventDetails.city.name && (
+                        <h2 className="!text-[22px]">
+                          {event.eventDetails.city.name}
+                        </h2>
                       )}
 
                       {event.eventDetails.eventType && (

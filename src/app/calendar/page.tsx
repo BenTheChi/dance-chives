@@ -1,10 +1,19 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getAllCities, getAllStyles, getCalendarEvents } from "@/db/queries/event";
+import {
+  getAllCities,
+  getAllStyles,
+  getCalendarEvents,
+} from "@/db/queries/event";
 import { redirect } from "next/navigation";
 import { CalendarPageClient } from "@/components/CalendarPageClient";
-import { parseCityFromUrl, parseStyleFromUrl } from "@/lib/utils/calendar-url-utils";
+import {
+  parseCityFromUrl,
+  parseStyleFromUrl,
+} from "@/lib/utils/calendar-url-utils";
 import { auth } from "@/auth";
 import { getUser } from "@/db/queries/user";
+import { generateCitySlug } from "@/lib/utils/city-slug";
+import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 
 type PageProps = {
   searchParams: Promise<{ city?: string; style?: string }>;
@@ -16,7 +25,12 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const styleParam = params.style;
 
   // Fetch all cities and styles
-  const cities = await getAllCities();
+  const citiesRaw = await getAllCities();
+  // Compute slugs for all cities
+  const cities = citiesRaw.map((city) => ({
+    ...city,
+    slug: generateCitySlug(city),
+  }));
   const styles = await getAllStyles();
 
   // Get current user's city if logged in
@@ -56,8 +70,18 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     ? parseStyleFromUrl(styleParam, styles)
     : null;
 
+  // Calculate 3-month date range: month before, current month, month after
+  const currentDate = new Date();
+  const startDate = startOfMonth(subMonths(currentDate, 1));
+  const endDate = endOfMonth(addMonths(currentDate, 1));
+
   const events = selectedCity
-    ? await getCalendarEvents(selectedCity.slug!, selectedStyle || undefined)
+    ? await getCalendarEvents(
+        selectedCity.slug!,
+        selectedStyle || undefined,
+        startDate.toISOString().split("T")[0],
+        endDate.toISOString().split("T")[0]
+      )
     : [];
 
   return (
@@ -73,4 +97,3 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     </>
   );
 }
-
