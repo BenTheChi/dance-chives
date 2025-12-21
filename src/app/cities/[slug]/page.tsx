@@ -10,19 +10,19 @@ import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 import { cn } from "@/lib/utils";
 
 type PageProps = {
-  params: Promise<{ cityId: string }>;
+  params: Promise<{ slug: string }>;
 };
 
 export default async function CityPage({ params }: PageProps) {
   const paramResult = await params;
-  const cityId = paramResult.cityId;
+  const slug = paramResult.slug;
 
-  // Validate place_id format (basic check - place_ids are typically long alphanumeric strings)
-  if (!cityId || cityId.trim().length === 0) {
+  // Validate slug format
+  if (!slug || slug.trim().length === 0) {
     notFound();
   }
 
-  const cityData = await getCityData(cityId);
+  const cityData = await getCityData(slug);
 
   if (!cityData) {
     notFound();
@@ -87,7 +87,7 @@ export default async function CityPage({ params }: PageProps) {
 
         {/* Calendar Section */}
         <section className="mb-12">
-          <CityCalendarSection cityId={cityData.city.id} />
+          <CityCalendarSection citySlug={cityData.city.slug || slug} />
         </section>
 
         {/* Events Section */}

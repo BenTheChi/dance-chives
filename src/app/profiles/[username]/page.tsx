@@ -116,7 +116,11 @@ export default async function ProfilePage({ params }: PageProps) {
                       <div className="text-sm text-muted-foreground">
                         {typeof profile.city === "object" && profile.city.id ? (
                           <Link
-                            href={`/cities/${profile.city.id}`}
+                            href={
+                              profile.city.slug
+                                ? `/cities/${profile.city.slug}`
+                                : `/cities/${profile.city.id}`
+                            }
                             className="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
                           >
                             📍{" "}

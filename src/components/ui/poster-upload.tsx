@@ -391,7 +391,7 @@ export function PosterUpload({
       )}
 
       {/* File Input - Show when editable, even if there's an existing poster */}
-      {editable && !posterFile && (
+      {editable && (
         <div className="space-y-2">
           <div className="flex items-center justify-center w-full">
             <label

@@ -247,7 +247,11 @@ export default async function EventPage({ params }: PageProps) {
                     <div className="flex flex-row gap-1 items-center justify-center my-4">
                       {event.eventDetails.city.id ? (
                         <Link
-                          href={`/cities/${event.eventDetails.city.id}`}
+                          href={
+                            event.eventDetails.city.slug
+                              ? `/cities/${event.eventDetails.city.slug}`
+                              : `/cities/${event.eventDetails.city.id}`
+                          }
                           className="hover:text-blue-400 hover:underline transition-colors"
                         >
                           <h2 className="!text-[22px]">

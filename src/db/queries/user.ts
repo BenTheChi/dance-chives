@@ -1,6 +1,7 @@
 import driver from "../driver";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { City } from "@/types/city";
+import { generateCitySlug } from "@/lib/utils/city-slug";
 
 export interface UpdateUserInput {
   id?: string;
@@ -51,6 +52,7 @@ export const getUser = async (id: string) => {
         longitude: cityNode.properties.longitude
           ? Number(cityNode.properties.longitude)
           : undefined,
+        slug: cityNode.properties.slug || undefined,
       };
     }
 
@@ -169,6 +171,9 @@ export const signupUser = async (
 
     const setClause = setClauses.join(", ");
 
+    // Generate slug for city if not provided
+    const citySlug = cityData.slug || generateCitySlug(cityData);
+
     // Create/update user and connect to City node
     const result = await session.run(
       `
@@ -182,14 +187,16 @@ export const signupUser = async (
         c.region = $city.region,
         c.timezone = $city.timezone,
         c.latitude = $city.latitude,
-        c.longitude = $city.longitude
+        c.longitude = $city.longitude,
+        c.slug = $citySlug
       ON MATCH SET
         c.name = $city.name,
         c.countryCode = $city.countryCode,
         c.region = $city.region,
         c.timezone = $city.timezone,
         c.latitude = $city.latitude,
-        c.longitude = $city.longitude
+        c.longitude = $city.longitude,
+        c.slug = $citySlug
       MERGE (u)-[:LOCATED_IN]->(c)
       RETURN u
       `,
@@ -206,6 +213,7 @@ export const signupUser = async (
           avatar: user.avatar,
         },
         city: cityData,
+        citySlug: citySlug,
       }
     );
 
@@ -360,6 +368,7 @@ export const getUserWithStyles = async (id: string) => {
         longitude: cityNode.properties.longitude
           ? Number(cityNode.properties.longitude)
           : undefined,
+        slug: cityNode.properties.slug || undefined,
       };
     }
 

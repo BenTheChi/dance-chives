@@ -511,7 +511,7 @@ export function SectionForm({
                           );
                         }
                       }}
-                      editable={Boolean(eventId)}
+                      editable={true}
                       maxFiles={1}
                     />
                   </FormControl>

@@ -459,7 +459,7 @@ export function EventDetailsForm({
                       });
                     }
                   }}
-                  editable={isEditing}
+                  editable={true}
                   maxFiles={1}
                 />
               </FormControl>

@@ -10,8 +10,8 @@
   --breakpoint-md: 60rem;
   --breakpoint-lg: 90rem;
   --breakpoint-xl: 120rem;
-  --font-sans: var(--font-ibm-plex-sans);
-  --font-mono: var(--font-ibm-plex-sans);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-archivo);
   --font-display: var(--font-archivo);
   --font-rubik-mono-one: var(--font-rubik-mono-one);
   --color-fog-white: #f5f5f5;
@@ -143,21 +143,11 @@
     @apply border-border outline-ring/50;
   }
   html {
-    font-family: var(
-      --font-ibm-plex-sans,
-      ui-sans-serif,
-      system-ui,
-      sans-serif
-    );
+    font-family: var(--font-archivo, ui-sans-serif, system-ui, sans-serif);
   }
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: var(
-      --font-ibm-plex-sans,
-      ui-sans-serif,
-      system-ui,
-      sans-serif
-    );
+    font-family: var(--font-archivo, ui-sans-serif, system-ui, sans-serif);
   }
   h1,
   h2,
@@ -167,7 +157,7 @@
   h6 {
     font-family: var(
       --font-archivo,
-      var(--font-ibm-plex-sans, ui-sans-serif, system-ui, sans-serif)
+      var(--font-archivo, ui-sans-serif, system-ui, sans-serif)
     );
   }
 }
@@ -273,7 +263,7 @@ h3 {
 
 p {
   font-size: 14px;
-  font-family: var(--font-ibm-plex-sans);
+  font-family: var(--font-archivo);
 }
 
 /* Responsive styles for react-big-calendar */

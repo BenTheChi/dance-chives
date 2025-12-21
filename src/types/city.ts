@@ -13,4 +13,5 @@ export interface City {
   timezone?: string;
   latitude?: number;
   longitude?: number;
+  slug?: string;
 }

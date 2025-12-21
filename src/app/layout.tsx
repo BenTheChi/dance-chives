@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Archivo, Rubik_Mono_One } from "next/font/google";
+import { Archivo, Rubik_Mono_One } from "next/font/google";
 import "./globals.css";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -7,12 +7,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
-
-const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-ibm-plex-sans",
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700"],
-});
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -39,10 +33,7 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html
-      lang="en"
-      className={`${ibmPlexSans.variable} ${archivo.variable} ${rubikMonoOne.variable}`}
-    >
+    <html lang="en" className={`${archivo.variable} ${rubikMonoOne.variable}`}>
       <head>
         <link rel="shortcut icon" href="logo.svg" />
         <meta

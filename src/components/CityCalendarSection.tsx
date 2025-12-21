@@ -11,11 +11,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface CityCalendarSectionProps {
-  cityId: string;
+  citySlug: string;
 }
 
-async function CalendarContent({ cityId }: { cityId: string }) {
-  const scheduleData = await getCitySchedule(cityId);
+async function CalendarContent({ citySlug }: { citySlug: string }) {
+  const scheduleData = await getCitySchedule(citySlug);
 
   if (!scheduleData) {
     return (
@@ -42,11 +42,11 @@ function CalendarSkeleton() {
   );
 }
 
-export function CityCalendarSection({ cityId }: CityCalendarSectionProps) {
+export function CityCalendarSection({ citySlug }: CityCalendarSectionProps) {
   return (
     <section className="p-6 bg-neutral-50 rounded-sm border-2 border-black">
       <Suspense fallback={<CalendarSkeleton />}>
-        <CalendarContent cityId={cityId} />
+        <CalendarContent citySlug={citySlug} />
       </Suspense>
     </section>
   );
