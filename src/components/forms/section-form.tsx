@@ -542,6 +542,7 @@ export function SectionForm({
         <>
           {/* Section Title */}
           <FormField
+            key={`title-${activeSectionId}`}
             control={control}
             name={`sections.${activeSectionIndex}.title`}
             render={({ field }) => (
@@ -564,6 +565,7 @@ export function SectionForm({
           {/* Type and Use Brackets Switch - Above Poster Upload */}
           <div className="flex items-center gap-4">
             <FormField
+              key={`sectionType-${activeSectionId}`}
               control={control}
               name={`sections.${activeSectionIndex}.sectionType`}
               render={({ field }) => {
@@ -626,6 +628,7 @@ export function SectionForm({
                     </FormItem>
 
                     <FormField
+                      key={`hasBrackets-${activeSectionId}`}
                       control={control}
                       name={`sections.${activeSectionIndex}.hasBrackets`}
                       render={({ field }) => (
@@ -818,7 +821,12 @@ export function SectionForm({
               />
             </div>
           )}
+        </>
+      )}
 
+      {resolvedMode === "brackets" && (
+        <div className="space-y-4">
+          {/* Apply same style tags to all videos */}
           <FormField
             key={`applyStylesToVideos-${activeSectionId}`}
             control={control}
@@ -864,11 +872,7 @@ export function SectionForm({
               )}
             />
           )}
-        </>
-      )}
 
-      {resolvedMode === "brackets" && (
-        <div className="space-y-4">
           {/* Bracket Title Input - In its own container */}
           <section>
             <FormLabel>New Bracket</FormLabel>
