@@ -86,7 +86,7 @@ export function DescriptionWinnerColumns({
   return (
     <>
       {/* Description Column */}
-      <div className="bg-misty-seafoam p-4 rounded-sm flex flex-col border-2 border-black md:col-span-1">
+      <div className="bg-primary p-4 rounded-sm flex flex-col border-2 border-black md:col-span-1">
         <h2 className="text-xl font-bold text-center">Description</h2>
         {section.description && (
           <p className="whitespace-pre-wrap mt-4">{section.description}</p>
@@ -95,7 +95,7 @@ export function DescriptionWinnerColumns({
 
       {/* Winner & Judge Column - only show if section type supports winners or judges */}
       {supportsBoth && (
-        <div className="bg-misty-seafoam p-4 rounded-sm flex flex-col gap-4 border-2 border-black md:col-span-1">
+        <div className="bg-primary p-4 rounded-sm flex flex-col gap-4 border-2 border-black md:col-span-1">
           {/* Winner Section */}
           {supportsWinners && (
             <div className="flex flex-col gap-2">

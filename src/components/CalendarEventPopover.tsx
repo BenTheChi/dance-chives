@@ -109,7 +109,7 @@ export function CalendarEventPopover({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-misty-seafoam border">
+      <DialogContent className="max-w-md bg-primary border">
         <DialogHeader>
           <DialogTitle className="!text-[22px] !font-extrabold text-center">
             {event.title}

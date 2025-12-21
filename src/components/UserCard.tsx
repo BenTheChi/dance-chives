@@ -23,7 +23,7 @@ export function UserCard({
       href={`/profiles/${username}`}
       className="card flex flex-col items-center w-[250px] justify-between pb-2 bg-periwinkle-light"
     >
-      <div className="flex flex-col text-center py-3 w-full border-b border-black bg-misty-seafoam">
+      <div className="flex flex-col text-center py-3 w-full border-b border-black bg-primary">
         <h2>{displayName}</h2>
       </div>
 

@@ -229,17 +229,15 @@ export default async function EventPage({ params }: PageProps) {
               </div>
               {/* Event Details */}
               <div className="w-full sm:flex-1 lg:max-w-[700px]">
-                <section className="border-2 border-black py-8 px-4 bg-misty-seafoam rounded-sm w-full h-full flex flex-col justify-between">
+                <section className="border-4 border-primary-light py-8 px-4 bg-primary-dark rounded-sm w-full h-full flex flex-col justify-between">
                   <div className="flex flex-col">
                     {/* Title - centered */}
-                    <div>
-                      <h1 className="text-center">
+                    <div className="mt-0 sm:mt-4">
+                      <h1 className="!text-[30px] sm:!text-[40px] text-center">
                         {event.eventDetails.title}
                       </h1>
                       {event.eventDetails.status === "hidden" && (
-                        <p className="text-sm text-muted-foreground mt-1 text-center">
-                          (hidden)
-                        </p>
+                        <p className="text-sm mt-1 text-center">(hidden)</p>
                       )}
                     </div>
 
@@ -423,7 +421,7 @@ export default async function EventPage({ params }: PageProps) {
 
             {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
             <div className="grid grid-cols-6 gap-5 w-full">
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-misty-seafoam rounded-sm border-2 border-black">
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <h2 className="text-center mx-auto">Description</h2>
                 {event.eventDetails.description && (
                   <div className="text-sm whitespace-pre-wrap">
@@ -431,7 +429,7 @@ export default async function EventPage({ params }: PageProps) {
                   </div>
                 )}
               </div>
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-misty-seafoam rounded-sm border-2 border-black">
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <h2 className="text-center mx-auto">Schedule</h2>
                 {event.eventDetails.schedule && (
                   <div className="text-sm whitespace-pre-wrap">
@@ -439,7 +437,7 @@ export default async function EventPage({ params }: PageProps) {
                   </div>
                 )}
               </div>
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-misty-seafoam rounded-sm border-2 border-black">
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <div className="flex gap-2 justify-center items-center font-semibold text-2xl">
                   <h2>Roles</h2>
                   <TagSelfCircleButton
@@ -503,7 +501,7 @@ export default async function EventPage({ params }: PageProps) {
 
             {/* Photo Gallery - takes up full width */}
             {event.gallery.length > 0 && (
-              <section className="flex flex-col bg-misty-seafoam rounded-sm p-4 w-full border-2 border-black">
+              <section className="flex flex-col bg-primary rounded-sm p-4 w-full border-2 border-black">
                 <h2 className="text-2xl font-bold mb-2 text-center">
                   Photo Gallery
                 </h2>

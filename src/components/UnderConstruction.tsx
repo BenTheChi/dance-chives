@@ -23,7 +23,7 @@ export function UnderConstruction({
         <div className="absolute top-2 left-2 w-4 h-4 border-2 border-black bg-mint rotate-45"></div>
         <div className="absolute top-2 right-2 w-4 h-4 border-2 border-black bg-pulse-green rotate-45"></div>
         <div className="absolute bottom-2 left-2 w-4 h-4 border-2 border-black bg-periwinkle rotate-45"></div>
-        <div className="absolute bottom-2 right-2 w-4 h-4 border-2 border-black bg-misty-seafoam rotate-45"></div>
+        <div className="absolute bottom-2 right-2 w-4 h-4 border-2 border-black bg-primary rotate-45"></div>
 
         {/* Main content */}
         <div className="relative z-10">

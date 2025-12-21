@@ -51,7 +51,7 @@ export function EventCard({
     : "";
 
   return (
-    <div className="bg-misty-seafoam group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
+    <div className="bg-primary group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
@@ -65,7 +65,7 @@ export function EventCard({
       </Link>
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
-      <div className="w-full bg-misty-seafoam sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t border-black py-[5px] sm:py-[7px]">
+      <div className="w-full bg-primary sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t border-black py-[5px] sm:py-[7px]">
         <div className="pt-4 sm:pt-3 px-5 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}

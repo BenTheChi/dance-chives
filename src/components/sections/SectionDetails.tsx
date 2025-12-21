@@ -49,7 +49,7 @@ export function SectionDetails({
   }, [currentUserId, section, eventId]);
 
   return (
-    <section className="bg-misty-seafoam py-4 rounded-sm flex flex-col border-2 border-black">
+    <section className="bg-primary py-4 rounded-sm flex flex-col border-2 border-black">
       <h1 className="text-center">{section.title}</h1>
       <div className="flex flex-row gap-1 items-center justify-center mt-4">
         <Link

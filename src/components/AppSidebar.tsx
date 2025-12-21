@@ -16,52 +16,46 @@ import {
   SidebarMenuButton,
   Sidebar,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "./ui/sidebar";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
+import { Button } from "./ui/button";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 
 const menuItems = [
   {
     title: "Search",
     url: "/search",
     icon: SearchIcon,
-    color: "periwinkle",
-    hoverColor: "periwinkle-light",
     iconRotation: 0,
   },
   {
     title: "Events",
     url: "/events",
     icon: HouseIcon,
-    color: "pulse-green",
-    hoverColor: "mint",
     iconRotation: -3,
   },
   {
     title: "Calendar",
     url: "/calendar",
     icon: CalendarIcon,
-    color: "periwinkle",
-    hoverColor: "periwinkle-light",
     iconRotation: 2,
   },
   {
     title: "Styles",
     url: "/styles",
     icon: Sparkles,
-    color: "periwinkle",
-    hoverColor: "periwinkle-light",
     iconRotation: -2,
   },
   {
     title: "Community",
     url: "/profiles",
     icon: Users,
-    color: "pulse-green",
-    hoverColor: "mint",
     iconRotation: 3,
   },
 ];
@@ -70,6 +64,10 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const pathname = usePathname();
   const isCollapsed = state === "collapsed";
+  const { data: session } = useSession();
+  const user = session?.user;
+  const authLevel = user?.auth ?? 0;
+  const canCreateEvents = authLevel >= AUTH_LEVELS.CREATOR;
 
   return (
     <Sidebar collapsible="icon">
@@ -95,12 +93,8 @@ export function AppSidebar() {
                     key={item.title}
                     className={cn(
                       "group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:hover:border-t-2 group-data-[collapsible=icon]:hover:border-b-2 group-data-[collapsible=icon]:hover:border-charcoal group-data-[collapsible=icon]:hover:border-x-0 group-data-[collapsible=icon]:h-15 flex flex-col items-center",
-                      item.color === "periwinkle" &&
-                        !isActive &&
-                        "group-data-[collapsible=icon]:hover:bg-[#dfdfeb]",
-                      item.color === "pulse-green" &&
-                        !isActive &&
-                        "group-data-[collapsible=icon]:hover:bg-misty-seafoam"
+                      !isActive &&
+                        "group-data-[collapsible=icon]:hover:bg-[#dfdfeb]"
                     )}
                   >
                     <SidebarMenuButton
@@ -122,12 +116,8 @@ export function AppSidebar() {
                           "group-data-[collapsible=icon]:border-0 group-data-[collapsible=icon]:shadow-none group-data-[collapsible=icon]:bg-transparent",
                         isActive &&
                           "group-data-[collapsible=icon]:hover:!bg-transparent",
-                        item.color === "periwinkle" &&
-                          !isActive &&
-                          "hover:bg-[#dfdfeb] group-data-[collapsible=icon]:hover:bg-transparent",
-                        item.color === "pulse-green" &&
-                          !isActive &&
-                          "hover:bg-misty-seafoam group-data-[collapsible=icon]:hover:bg-transparent"
+                        !isActive &&
+                          "hover:bg-[#dfdfeb] group-data-[collapsible=icon]:hover:bg-transparent"
                       )}
                     >
                       <Link
@@ -152,20 +142,21 @@ export function AppSidebar() {
                             className={cn(
                               "w-8 h-8 transition-all duration-200",
                               "stroke-[2]",
-                              isActive && "text-pulse-green scale-110",
+                              "text-secondary-light",
+                              isActive && "scale-110 text-primary",
                               !isActive &&
-                                "text-charcoal group-hover/link:scale-110"
+                                "group-hover/link:scale-110 text-charcoal"
                             )}
                           />
                           {isActive && (
-                            <div className="absolute inset-0 -z-10 bg-pulse-green/20 rounded-full scale-125 blur-sm group-data-[collapsible=icon]:hidden" />
+                            <div className="absolute inset-0 -z-10 bg-periwinkle/20 rounded-full scale-125 blur-sm group-data-[collapsible=icon]:hidden" />
                           )}
                         </div>
                         <span
                           className={cn(
                             "text-base font-bold uppercase tracking-wide transition-colors",
                             "font-display",
-                            isActive && "text-pulse-green",
+                            isActive && "text-primary",
                             !isActive &&
                               "text-charcoal group-hover/link:text-periwinkle"
                           )}
@@ -182,6 +173,13 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      {canCreateEvents && (
+        <SidebarFooter className="p-2 sm:hidden">
+          <Button asChild className="w-full">
+            <Link href="/add-event">Add Event</Link>
+          </Button>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

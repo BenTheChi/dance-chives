@@ -395,7 +395,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       hasBrackets: false,
       videos: [],
       brackets: [],
-    bgColor: "#ffffff",
+      bgColor: "#ffffff",
       poster: null,
     };
     setValue("sections", normalizeSectionsForForm([...sections, newSection]));
@@ -897,8 +897,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                             onClick={handleSelectOverview}
                             className={`rounded-sm cursor-pointer transition-colors relative ${
                               isActiveSection
-                                ? "border-2 border-black bg-misty-seafoam shadow-[2px_2px_0_0_rgb(0,0,0)]"
-                                : "border-2 border-black bg-misty-seafoam"
+                                ? "border-2 border-black bg-primary shadow-[2px_2px_0_0_rgb(0,0,0)]"
+                                : "border-2 border-black bg-primary"
                             }`}
                           >
                             <div
@@ -1019,7 +1019,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
                             {isActiveSection && (
                               <div
-                                className="border-t px-3 py-2 space-y-1 text-sm bg-misty-seafoam rounded-b relative"
+                                className="border-t px-3 py-2 space-y-1 text-sm bg-primary rounded-b relative"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <button
@@ -1155,7 +1155,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   className={sections.length > 0 ? "flex-1 min-w-0" : "w-full"}
                 >
                   {sections.length === 0 || !sectionsSelection ? (
-                    <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-misty-seafoam">
+                    <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
                       <div className="text-sm mb-6">
                         No sections yet. Let&apos;s create one!
                       </div>

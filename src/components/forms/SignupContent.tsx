@@ -114,7 +114,7 @@ export function SignupContent() {
 
     return (
       <div className="flex flex-col items-center justify-center w-full">
-        <Card className="w-full max-w-md bg-misty-seafoam">
+        <Card className="w-full max-w-md bg-primary">
           <CardHeader>
             <CardTitle className="text-2xl text-center">
               Create your account

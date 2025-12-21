@@ -453,7 +453,7 @@ export function SectionForm({
   };
 
   return (
-    <Card className="bg-misty-seafoam">
+    <Card className="bg-primary">
       <CardContent className="space-y-4">
         {resolvedMode === "overview" && (
           <>
