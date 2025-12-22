@@ -682,6 +682,7 @@ export async function getUserProfile(userIdOrUsername: string) {
       roles: record.get("roles") || [],
       styles: record.get("styles") || [],
       taggedUsers: taggedUsersMap.get(record.get("videoId")) || [],
+      eventCreatedAt: record.get("eventCreatedAt"),
     }));
 
     // Get all tagged users for winning videos

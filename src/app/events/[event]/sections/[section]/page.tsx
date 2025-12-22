@@ -8,6 +8,13 @@ import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { SectionDetails } from "@/components/sections/SectionDetails";
 import { DescriptionWinnerColumns } from "@/components/sections/DescriptionWinnerColumns";
+import { Button } from "@/components/ui/button";
+import { Pencil, Settings } from "lucide-react";
+import Link from "next/link";
+import { UserAvatar } from "@/components/ui/user-avatar";
+import { getUser } from "@/db/queries/user";
+import { enrichUserWithCardData } from "@/db/queries/user-cards";
+import { canUpdateEvent } from "@/lib/utils/auth-utils";
 
 type PageProps = {
   params: Promise<{ event: string; section: string }>;
@@ -64,11 +71,39 @@ export default async function SectionPage({ params }: PageProps) {
     ? await isTeamMember(event.id, session.user.id)
     : false;
 
+  // Check if user can edit the event
+  const canEdit =
+    session?.user?.id && session?.user?.auth !== undefined
+      ? canUpdateEvent(
+          session.user.auth,
+          {
+            eventId: event.id,
+            eventCreatorId: event.eventDetails.creatorId,
+            isTeamMember: isEventTeamMember,
+          },
+          session.user.id
+        )
+      : false;
+
   // Check if user can tag directly
   const canTagDirectly =
     (session?.user?.auth ?? 0) >= AUTH_LEVELS.MODERATOR ||
     isEventTeamMember ||
     isCreator;
+
+  // Fetch creator for footer and enrich with Postgres data
+  const creatorRaw = event.eventDetails.creatorId
+    ? await getUser(event.eventDetails.creatorId)
+    : null;
+  const creator = creatorRaw
+    ? await enrichUserWithCardData({
+        id: creatorRaw.id,
+        username: creatorRaw.username,
+        displayName: creatorRaw.displayName,
+        avatar: creatorRaw.avatar,
+        image: creatorRaw.image,
+      })
+    : null;
 
   // Aggregate styles from section or videos
   const displayStyles =
@@ -90,7 +125,7 @@ export default async function SectionPage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col">
+      <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
         <h1 className="py-7 border-b-2 border-primary-light">
           {section.title}
         </h1>
@@ -135,6 +170,57 @@ export default async function SectionPage({ params }: PageProps) {
                 eventTitle={event.eventDetails.title}
                 eventId={event.id}
               />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-center w-full mt-auto">
+          <div className="w-full max-w-[920px]">
+            <hr className="border-primary-light my-4" />
+            <div className="flex flex-row gap-10 items-center justify-center mb-4">
+              {creator && (
+                <div className="flex flex-row gap-2 items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Page Owner:{" "}
+                  </span>
+                  <UserAvatar
+                    username={creator.username || ""}
+                    displayName={creator.displayName || creator.username || ""}
+                    avatar={(creator as { avatar?: string | null }).avatar}
+                    image={(creator as { image?: string | null }).image}
+                    isSmall={true}
+                    showHoverCard
+                    city={creator.city || ""}
+                    styles={creator.styles}
+                  />
+                </div>
+              )}
+              {/* Settings and Edit buttons - top right row */}
+              {(canEdit || isCreator) && (
+                <div className="flex gap-2">
+                  {isCreator && (
+                    <Button
+                      asChild
+                      size="icon"
+                      className="bg-periwinkle text-black border-black"
+                    >
+                      <Link href={`/events/${event.id}/settings`}>
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
+                  {(canEdit || isCreator) && (
+                    <Button
+                      asChild
+                      size="icon"
+                      className="bg-periwinkle text-black border-black"
+                    >
+                      <Link href={`/events/${event.id}/edit`}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

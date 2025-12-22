@@ -80,7 +80,7 @@ export function VideoCard({
           <div className="flex gap-1 items-end justify-between w-full">
             <Link
               href={eventLink}
-              className="text-sm text-gray-500 hover:text-blue-600 text-end"
+              className="text-sm text-black hover:text-primary-light text-end"
               onClick={(e) => e.stopPropagation()}
             >
               {eventTitle}

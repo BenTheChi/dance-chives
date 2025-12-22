@@ -5,14 +5,13 @@ import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 import { AppNavbar } from "@/components/AppNavbar";
 import { Button } from "@/components/ui/button";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Image from "next/image";
 import Link from "next/link";
-import { EventCard } from "@/components/EventCard";
-import { TaggedVideosGrid } from "@/components/profile/TaggedVideosGrid";
-import { SectionCard } from "@/components/ui/section-card";
-import { Event, Role, Section } from "@/types/event";
+import { Event, Role } from "@/types/event";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
+import { RolesTabsSection } from "@/components/profile/RolesTabsSection";
+import { TaggedVideosSection } from "@/components/profile/TaggedVideosSection";
+import { SectionsWonSection } from "@/components/profile/SectionsWonSection";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -63,17 +62,34 @@ export default async function ProfilePage({ params }: PageProps) {
   // Sort roles alphabetically for consistent tab order
   const sortedRoles = Array.from(eventsByRole.keys()).sort();
 
+  // Format city for display
+  const cityDisplay =
+    profile.city && typeof profile.city === "object"
+      ? `${profile.city.name}${
+          profile.city.region ? `, ${profile.city.region}` : ""
+        }`
+      : profile.city || "";
+
   return (
     <>
       <AppNavbar />
-      <div className="flex justify-center">
-        <div className="flex flex-col justify-center items-center gap-2 py-5 px-3 sm:px-10 lg:px-15 max-w-[1200px]">
-          {/* Profile Header */}
-          <section className="bg-primary p-4 rounded-sm flex flex-col gap-4 border border-black w-full">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 flex-1">
+      <div className="flex flex-col">
+        <div className="flex items-center justify-between py-7 border-b-2 border-primary-light">
+          <h1 className="flex-1">{profile.displayName || profile.username}</h1>
+        </div>
+        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
+          <div className="flex flex-col items-center gap-8 py-5 px-5 sm:px-10 lg:px-15 max-w-[800px] w-full">
+            {isOwnProfile && (
+              <Button asChild className="flex-shrink-0">
+                <Link href={`/profiles/${username}/edit`}>Edit Profile</Link>
+              </Button>
+            )}
+            {/* Row 1: Image + Details - using flex for exact sizing */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full items-center sm:items-start">
+              {/* Image */}
+              <div className="w-[250px]">
                 {profile.image ? (
-                  <div className="relative w-[250px] h-[350px] overflow-hidden rounded-sm border-2 border-black flex-shrink-0">
+                  <div className="relative w-[250px] h-[350px] rounded-sm border-4 border-primary-light overflow-hidden">
                     <Image
                       src={profile.image}
                       alt={profile.displayName || profile.username}
@@ -84,207 +100,95 @@ export default async function ProfilePage({ params }: PageProps) {
                     />
                   </div>
                 ) : (
-                  <div className="w-[250px] h-[350px] rounded-sm border-2 border-black bg-gray-200 flex items-center justify-center text-4xl flex-shrink-0">
-                    {profile.displayName || profile.username || "U"}
+                  <div className="w-[250px] h-[350px] bg-gray-200 rounded-sm flex items-center justify-center text-4xl border-2 border-black">
+                    {profile.displayName?.[0] || profile.username?.[0] || "U"}
                   </div>
                 )}
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div>
-                      <h1 className="text-3xl font-bold">
-                        {profile.displayName || profile.username}
-                      </h1>
-                      <p className="text-lg mt-1 text-muted-foreground">
-                        @{profile.username}
-                      </p>
-                    </div>
-                    {isOwnProfile && (
-                      <Button asChild className="flex-shrink-0">
-                        <Link href={`/profiles/${username}/edit`}>
-                          Edit Profile
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                  {profile.bio && (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      {profile.bio}
-                    </p>
-                  )}
-                  <div className="flex gap-4 mt-4">
-                    {profile.city && (
-                      <div className="text-sm text-muted-foreground">
-                        <span className="text-gray-600">
-                          📍{" "}
-                          {typeof profile.city === "object"
-                            ? `${profile.city.name}${
-                                profile.city.region
-                                  ? `, ${profile.city.region}`
-                                  : ""
-                              }`
-                            : profile.city}
-                        </span>
+              </div>
+              {/* Profile Details */}
+              <div className="w-full sm:flex-1 lg:max-w-[800px] flex flex-col items-center gap-4">
+                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
+                  <div className="flex flex-col items-center gap-4">
+                    {/* @username | city */}
+                    {cityDisplay && <h2>{cityDisplay}</h2>}
+
+                    {/* Style badges */}
+                    {profile.styles && profile.styles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {profile.styles.map((style: string) => (
+                          <StyleBadge key={style} style={style} />
+                        ))}
                       </div>
                     )}
-                  </div>
-                  <div className="flex gap-4 mt-2">
+
+                    {/* Instagram link */}
                     {profile.instagram && (
-                      <a
-                        href={`https://instagram.com/${profile.instagram.replace(
-                          /^@/,
-                          ""
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline"
-                      >
-                        Instagram: @{profile.instagram.replace(/^@/, "")}
-                      </a>
+                      <div className="flex items-center justify-center gap-2">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-instagram-icon lucide-instagram"
+                        >
+                          <rect
+                            width="20"
+                            height="20"
+                            x="2"
+                            y="2"
+                            rx="5"
+                            ry="5"
+                          />
+                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                          <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                        </svg>
+                        <Link
+                          href={`https://instagram.com/${profile.instagram.replace(
+                            /^@/,
+                            ""
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm hover:underline"
+                        >
+                          @{profile.instagram.replace(/^@/, "")}
+                        </Link>
+                      </div>
                     )}
-                    {profile.website && (
-                      <a
-                        href={profile.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:underline"
-                      >
-                        Website
-                      </a>
+
+                    {/* Description */}
+                    {profile.bio && (
+                      <p className="whitespace-pre-wrap pl-3">{profile.bio}</p>
                     )}
                   </div>
-                  {profile.styles && profile.styles.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {profile.styles.map((style: string) => (
-                        <StyleBadge key={style} style={style} />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                </section>
               </div>
             </div>
-          </section>
 
-          {/* Events with Roles - Tabs */}
-          {sortedRoles.length > 0 && (
-            <section className="w-full">
-              <h2 className="text-2xl font-bold mb-4">Events with Roles</h2>
-              <Tabs defaultValue={sortedRoles[0]} className="w-full">
-                <TabsList>
-                  {sortedRoles.map((role) => (
-                    <TabsTrigger key={role} value={role}>
-                      {role} ({eventsByRole.get(role)?.length || 0})
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {sortedRoles.map((role) => (
-                  <TabsContent key={role} value={role}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mt-4">
-                      {eventsByRole.get(role)?.map((event: Event) => {
-                        const eventRoute = `/events/${event.id}`;
-
-                        return (
-                          <EventCard
-                            key={event.id}
-                            id={event.id}
-                            title={event.eventDetails.title}
-                            imageUrl={event.eventDetails.poster?.url}
-                            date={
-                              event.eventDetails.dates &&
-                              event.eventDetails.dates.length > 0
-                                ? event.eventDetails.dates[0].date
-                                : ""
-                            }
-                            city={event.eventDetails.city.name || ""}
-                            cityId={event.eventDetails.city.id}
-                            styles={event.eventDetails.styles || []}
-                            eventType={event.eventDetails.eventType}
-                            href={eventRoute}
-                            isSaved={savedEventIds.has(event.id)}
-                          />
-                        );
-                      })}
-                    </div>
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </section>
-          )}
-
-          {/* Winning Videos */}
-          {profile.winningVideos && profile.winningVideos.length > 0 && (
-            <section className="w-full">
-              <h2 className="text-2xl font-bold mb-4">
-                Winning Videos ({profile.winningVideos.length})
-              </h2>
-              <TaggedVideosGrid
-                videos={profile.winningVideos}
-                isWinner={true}
+            {/* Events with Roles - Tabs */}
+            {sortedRoles.length > 0 && (
+              <RolesTabsSection
+                eventsByRole={eventsByRole}
+                sortedRoles={sortedRoles}
+                savedEventIds={savedEventIds}
               />
-            </section>
-          )}
-
-          {/* Tagged Videos */}
-          {profile.taggedVideos && profile.taggedVideos.length > 0 && (
-            <section className="w-full">
-              <h2 className="text-2xl font-bold mb-4">
-                Tagged Videos ({profile.taggedVideos.length})
-              </h2>
-              <TaggedVideosGrid videos={profile.taggedVideos} />
-            </section>
-          )}
-
-          {/* Sections Won */}
-          {profile.winningSections && profile.winningSections.length > 0 && (
-            <section className="w-full">
-              <h2 className="text-2xl font-bold mb-4">
-                Sections Won ({profile.winningSections.length})
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {profile.winningSections.map(
-                  (section: {
-                    sectionId: string;
-                    sectionTitle: string;
-                    sectionType?: string;
-                    eventId: string;
-                    eventTitle: string;
-                    imageUrl?: string;
-                  }) => (
-                    <SectionCard
-                      key={section.sectionId}
-                      section={{
-                        id: section.sectionId,
-                        title: section.sectionTitle,
-                        sectionType: section.sectionType as
-                          | Section["sectionType"]
-                          | undefined,
-                        poster: section.imageUrl
-                          ? { url: section.imageUrl }
-                          : null,
-                        videos: [],
-                        brackets: [],
-                      }}
-                      eventId={section.eventId}
-                      eventTitle={section.eventTitle}
-                    />
-                  )
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Empty State */}
-          {(!profile.eventsCreated || profile.eventsCreated.length === 0) &&
-            sortedRoles.length === 0 &&
-            (!profile.taggedVideos || profile.taggedVideos.length === 0) &&
-            (!profile.winningVideos || profile.winningVideos.length === 0) &&
-            (!profile.winningSections ||
-              profile.winningSections.length === 0) && (
-              <section className="w-full py-12 text-center">
-                <p className="text-muted-foreground">
-                  No events or videos to display.
-                </p>
-              </section>
             )}
+
+            {/* Tagged Videos */}
+            {profile.taggedVideos && profile.taggedVideos.length > 0 && (
+              <TaggedVideosSection videos={profile.taggedVideos} />
+            )}
+
+            {/* Sections Won */}
+            {profile.winningSections && profile.winningSections.length > 0 && (
+              <SectionsWonSection sections={profile.winningSections} />
+            )}
+          </div>
         </div>
       </div>
     </>
