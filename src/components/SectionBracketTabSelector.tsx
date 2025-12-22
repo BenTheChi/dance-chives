@@ -108,9 +108,9 @@ export default function SectionBracketTabSelector({
   };
 
   // Render section without brackets
-  if (!section?.hasBrackets) {
+  if (!section?.hasBrackets && section?.videos.length > 0) {
     return (
-      <div className="w-full p-2 sm:p-4 lg:px-6 border-2 rounded-sm bg-periwinkle-light">
+      <div className="w-full p-2 sm:p-4 lg:px-6 border-2 border-secondary-light rounded-sm bg-secondary-dark">
         <VideoGallery
           videos={section?.videos}
           eventLink={`/events/${eventId}`}
@@ -126,67 +126,69 @@ export default function SectionBracketTabSelector({
     );
   }
 
-  // Render section with brackets - scroll-spy navigation
-  return (
-    <div className="w-full" ref={containerRef}>
-      {/* Sticky Tab Bar - Mobile only */}
-      <div
-        ref={tabBarRef}
-        className={cn(
-          "bg-background/95 backdrop-blur-sm z-40 transition-shadow duration-200",
-          "sticky top-14", // Stick under navbar (h-14 = 56px = top-14)
-          "sm:hidden", // Only show on mobile
-          isSticky && "shadow-md border-b"
-        )}
-      >
-        <div className="flex flex-row gap-2 py-2 px-1 overflow-x-auto scrollbar-hide">
+  if (section?.brackets.length > 0) {
+    // Render section with brackets - scroll-spy navigation
+    return (
+      <div className="w-full" ref={containerRef}>
+        {/* Sticky Tab Bar - Mobile only */}
+        <div
+          ref={tabBarRef}
+          className={cn(
+            "bg-background/95 backdrop-blur-sm z-40 transition-shadow duration-200",
+            "sticky top-14", // Stick under navbar (h-14 = 56px = top-14)
+            "sm:hidden", // Only show on mobile
+            isSticky && "shadow-md border-b"
+          )}
+        >
+          <div className="flex flex-row gap-2 py-2 px-1 overflow-x-auto scrollbar-hide">
+            {section?.brackets.map((bracket) => (
+              <button
+                key={bracket.id}
+                onClick={() => scrollToBracket(bracket.id)}
+                className={cn(
+                  "px-4 py-2 rounded-sm text-sm font-medium whitespace-nowrap transition-all duration-200",
+                  "hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  activeBracket === bracket.id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {bracket.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* All Bracket Sections */}
+        <div className="flex flex-col gap-12 mt-6">
           {section?.brackets.map((bracket) => (
-            <button
+            <div
               key={bracket.id}
-              onClick={() => scrollToBracket(bracket.id)}
-              className={cn(
-                "px-4 py-2 rounded-sm text-sm font-medium whitespace-nowrap transition-all duration-200",
-                "hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                activeBracket === bracket.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
-              )}
+              ref={(el) => setBracketRef(bracket.id, el)}
+              className="scroll-mt-32" // Offset for sticky header
             >
-              {bracket.title}
-            </button>
+              {/* Video Gallery for this bracket */}
+              <div className="p-2 sm:p-4 lg:px-6 border-2 border-secondary-light rounded-sm bg-secondary-dark">
+                <h2 className="!font-extrabold mb-4 text-center">
+                  {bracket.title.toUpperCase()}
+                </h2>
+                <VideoGallery
+                  videos={bracket.videos}
+                  eventLink={`/events/${eventId}`}
+                  eventTitle={eventTitle}
+                  eventId={eventId}
+                  sectionTitle={section?.title}
+                  sectionSlug={section?.id}
+                  bracketTitle={bracket.title}
+                  sectionStyles={section?.styles}
+                  applyStylesToVideos={section?.applyStylesToVideos}
+                  currentUserId={currentUserId}
+                />
+              </div>
+            </div>
           ))}
         </div>
       </div>
-
-      {/* All Bracket Sections */}
-      <div className="flex flex-col gap-12 mt-6">
-        {section?.brackets.map((bracket) => (
-          <div
-            key={bracket.id}
-            ref={(el) => setBracketRef(bracket.id, el)}
-            className="scroll-mt-32" // Offset for sticky header
-          >
-            {/* Video Gallery for this bracket */}
-            <div className="p-2 sm:p-4 lg:px-6 border-2 rounded-sm bg-periwinkle-light">
-              <h2 className="!font-extrabold mb-4 text-center">
-                {bracket.title.toUpperCase()}
-              </h2>
-              <VideoGallery
-                videos={bracket.videos}
-                eventLink={`/events/${eventId}`}
-                eventTitle={eventTitle}
-                eventId={eventId}
-                sectionTitle={section?.title}
-                sectionSlug={section?.id}
-                bracketTitle={bracket.title}
-                sectionStyles={section?.styles}
-                applyStylesToVideos={section?.applyStylesToVideos}
-                currentUserId={currentUserId}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    );
+  }
 }

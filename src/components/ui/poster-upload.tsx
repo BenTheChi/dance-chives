@@ -48,7 +48,7 @@ export function PosterUpload({
   const onFileChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
-  const THUMBNAIL_SIZE = 500;
+  const THUMBNAIL_SIZE = 450;
 
   // Helper function to parse hex color to RGB
   const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
@@ -77,7 +77,7 @@ export function PosterUpload({
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // Set canvas size to exactly 500×500
+    // Set canvas size to exactly 450×450
     canvas.width = THUMBNAIL_SIZE;
     canvas.height = THUMBNAIL_SIZE;
 
@@ -122,11 +122,11 @@ export function PosterUpload({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Set canvas size to exactly 500×500
+      // Set canvas size to exactly 450×450
       canvas.width = THUMBNAIL_SIZE;
       canvas.height = THUMBNAIL_SIZE;
 
-      // Draw the existing thumbnail directly (it's already 500×500 with background)
+      // Draw the existing thumbnail directly (it's already 450×450 with background)
       ctx.drawImage(image, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
       previewImageRef.current = image;
     };
@@ -291,10 +291,10 @@ export function PosterUpload({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Preview Box - 500x500 Canvas */}
+      {/* Preview Box - 450x450 Canvas */}
       {hasPreview && (
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-[500px] h-[500px] rounded-sm border border-charcoal overflow-hidden">
+          <div className="relative w-[450px] h-[450px] rounded-sm border border-charcoal overflow-hidden">
             <canvas
               ref={previewCanvasRef}
               className="w-full h-full"
