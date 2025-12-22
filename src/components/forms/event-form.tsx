@@ -836,72 +836,60 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           {/* Section Tabs - Only show when Sections tab is active */}
           {activeMainTab === "Sections" && (
             <div className="flex flex-wrap justify-center items-center gap-2 mb-6">
-              {sections.length === 0 ? (
-                <>
-                  <span className="text-sm text-muted-foreground">
-                    No sections yet.
-                  </span>
-                  <CirclePlusButton size="lg" onClick={addSection} />
-                </>
-              ) : (
-                <>
-                  {sections.map((section, index) => {
-                    const isActive = activeSectionId === section.id;
-                    return (
-                      <div key={section.id} className="relative group">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveSectionId(section.id);
-                            setSectionsSelection({
-                              type: "sectionOverview",
-                              sectionId: section.id,
-                            });
-                          }}
-                          className={cn(
-                            "px-3 py-1.5 rounded-sm transition-all duration-200",
-                            "border-2 border-transparent",
-                            "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
-                            "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
-                            "text-sm font-bold uppercase tracking-wide",
-                            "font-display",
-                            isActive &&
-                              "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
-                            !isActive &&
-                              "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
-                          )}
-                          style={{ fontFamily: "var(--font-display)" }}
-                        >
-                          {section.title || `Section ${index + 1}`}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeSection(section.id);
-                          }}
-                          className={cn(
-                            "absolute -top-2 -right-2",
-                            "w-5 h-5 rounded-full",
-                            "bg-destructive text-destructive-foreground",
-                            "border-2 border-charcoal",
-                            "flex items-center justify-center",
-                            "opacity-0 group-hover:opacity-100",
-                            "transition-opacity duration-200",
-                            "hover:bg-destructive/90",
-                            "z-10",
-                            "shadow-[2px_2px_0_0_rgb(49,49,49)]"
-                          )}
-                          aria-label={`Delete ${section.title || "section"}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                  <CirclePlusButton size="lg" onClick={addSection} />
-                </>
-              )}
+              {sections.map((section, index) => {
+                const isActive = activeSectionId === section.id;
+                return (
+                  <div key={section.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSectionId(section.id);
+                        setSectionsSelection({
+                          type: "sectionOverview",
+                          sectionId: section.id,
+                        });
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 rounded-sm transition-all duration-200",
+                        "border-2 border-transparent",
+                        "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
+                        "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
+                        "text-sm font-bold uppercase tracking-wide",
+                        "font-display",
+                        isActive &&
+                          "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
+                        !isActive &&
+                          "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
+                      )}
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {section.title || `Section ${index + 1}`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeSection(section.id);
+                      }}
+                      className={cn(
+                        "absolute -top-2 -right-2",
+                        "w-5 h-5 rounded-full",
+                        "bg-destructive text-destructive-foreground",
+                        "border-2 border-charcoal",
+                        "flex items-center justify-center",
+                        "opacity-0 group-hover:opacity-100",
+                        "transition-opacity duration-200",
+                        "hover:bg-destructive/90",
+                        "z-10",
+                        "shadow-[2px_2px_0_0_rgb(49,49,49)]"
+                      )}
+                      aria-label={`Delete ${section.title || "section"}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -1047,7 +1035,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handlePreviousTab}
               disabled={activeTabIndex === 0}
             >
@@ -1055,7 +1043,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleNextTab}
               disabled={activeTabIndex === mainTabs.length - 1}
             >

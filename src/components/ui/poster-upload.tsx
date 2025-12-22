@@ -396,17 +396,17 @@ export function PosterUpload({
           <div className="flex items-center justify-center w-full">
             <label
               htmlFor="poster-file"
-              className="flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-sm border-gray-300 cursor-pointer bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+              className="bg-neutral-300 flex flex-col items-center justify-center w-full h-40 px-4 border-2 border-dashed rounded-sm border-charcoal cursor-pointer hover:bg-neutral-100"
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <UploadIcon className="w-10 h-10 text-gray-400" />
-                <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mb-2 text-sm text-black">
                   <span className="font-semibold">
                     {initialPoster ? "Click to replace" : "Click to upload"}
                   </span>{" "}
                   or drag and drop
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500">
                   SVG, PNG, JPG or GIF (MAX. 8MB)
                 </p>
               </div>
