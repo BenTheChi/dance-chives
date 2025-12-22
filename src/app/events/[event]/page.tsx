@@ -416,7 +416,7 @@ export default async function EventPage({ params }: PageProps) {
             </div>
 
             {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
-            <div className="grid grid-cols-6 gap-5 w-full">
+            <div className="grid grid-cols-6 gap-5 w-full items-start">
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <h2 className="text-center mx-auto">Description</h2>
                 {event.eventDetails.description && (
