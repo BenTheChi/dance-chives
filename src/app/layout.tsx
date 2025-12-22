@@ -23,6 +23,13 @@ const rubikMonoOne = Rubik_Mono_One({
 export const metadata: Metadata = {
   title: "Dance Chives",
   description: "Freestyle Dance Culture, Media, and Community",
+  icons: {
+    icon: [
+      { url: "/icon.svg", sizes: "any" },
+      { url: "/icon.svg", sizes: "512x512", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icon.svg", sizes: "180x180", type: "image/svg+xml" }],
+  },
 };
 
 export default async function RootLayout({
@@ -35,7 +42,6 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${archivo.variable} ${rubikMonoOne.variable}`}>
       <head>
-        <link rel="shortcut icon" href="logo.svg" />
         <meta
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"

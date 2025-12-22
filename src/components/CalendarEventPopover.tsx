@@ -132,7 +132,7 @@ export function CalendarEventPopover({
             <Link
               href={getLinkUrl()}
               onClick={() => onOpenChange(false)}
-              className="w-full aspect-square bg-gray-200 rounded-sm flex items-center justify-center text-gray-400"
+              className="w-full aspect-square bg-gray-200 rounded-sm flex items-center justify-center text-gray-400 p-1"
             >
               No poster
             </Link>

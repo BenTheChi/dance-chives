@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "./ui/button";
 import { UserMenu } from "./UserMenu";
 import { useSession } from "next-auth/react";
 import { SidebarTrigger } from "./ui/sidebar";
-import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
@@ -42,24 +42,24 @@ export function AppNavbar() {
     });
   }, []);
 
-  const user = session?.user;
-  const authLevel = user?.auth ?? 0;
-  const canCreateEvents = authLevel >= AUTH_LEVELS.CREATOR;
-
   return (
-    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary px-4 py-2">
-      <div className="flex h-14 items-center w-full justify-between">
+    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex">
+      <Link
+        href="/"
+        className="h-18 flex items-center border-b px-2 py-1 hover:scale-105 transition-transform"
+      >
+        <Image
+          src="/MainLogo_Color_onDark.svg"
+          alt="Dance Chives Logo"
+          width={2000}
+          height={2000}
+          className="h-full w-auto object-contain"
+          priority
+        />
+      </Link>
+      <div className="flex h-18 px-4 py-2 items-center w-full justify-between">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="border-1 border-grey cursor-pointer sm:hidden" />
-          {canCreateEvents && (
-            <Button
-              asChild
-              className="hidden sm:inline-flex"
-              variant="secondary"
-            >
-              <Link href="/add-event">Add Event</Link>
-            </Button>
-          )}
         </div>
 
         {/* Centered nav menu items - hidden below sm */}

@@ -1,24 +1,18 @@
 "use client";
 
 import { AppNavbar } from "@/components/AppNavbar";
-import { useSession } from "next-auth/react";
 
 export default function Home() {
-  const { data: session } = useSession();
-
   return (
-    <div>
+    <div className="min-h-screen flex flex-col">
       <AppNavbar />
-      {session ? (
-        <div>
-          <header>
-            <h1>Home Dev Test</h1>
-          </header>
-          <section>Content here</section>
-        </div>
-      ) : (
-        <div>Not logged in</div>
-      )}
+      <main className="flex-1 flex items-center justify-center p-8">
+        <img
+          src="/AltLogo_Color_onDark.svg"
+          alt="Dance Chives Logo"
+          className="w-full max-w-4xl h-auto object-contain"
+        />
+      </main>
     </div>
   );
 }

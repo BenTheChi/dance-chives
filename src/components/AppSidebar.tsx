@@ -76,7 +76,12 @@ export function AppSidebar() {
           href="/"
           className="flex items-center justify-center hover:scale-105 transition-transform p-1"
         >
-          <Image src="/logo.svg" alt="Dance Chives" width={220} height={220} />
+          <Image
+            src="/MainLogo_Color_onLight.svg"
+            alt="Dance Chives"
+            width={220}
+            height={220}
+          />
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-2 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:pt-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-start group-data-[collapsible=icon]:justify-start">
