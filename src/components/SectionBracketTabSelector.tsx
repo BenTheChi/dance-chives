@@ -3,6 +3,7 @@
 import { Section } from "@/types/event";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import VideoGallery from "./VideoGallery";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export default function SectionBracketTabSelector({
   eventId: string;
 }) {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const currentUserId = session?.user?.id;
   const [activeBracket, setActiveBracket] = useState(
     section?.brackets[0]?.id || ""
@@ -25,6 +27,7 @@ export default function SectionBracketTabSelector({
   const tabBarRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingToRef = useRef(false);
+  const hasScrolledToBracketRef = useRef(false);
 
   // Navbar height (h-14 = 56px)
   const NAVBAR_HEIGHT = 56;
@@ -107,6 +110,51 @@ export default function SectionBracketTabSelector({
     }
   };
 
+  // Find which bracket contains a video
+  const findBracketForVideo = (videoId: string): string | null => {
+    if (!section?.brackets) return null;
+
+    for (const bracket of section.brackets) {
+      if (bracket.videos?.some((v) => v.id === videoId)) {
+        return bracket.id;
+      }
+    }
+    return null;
+  };
+
+  // Scroll to bracket when video param is present and video is in a bracket
+  useEffect(() => {
+    const videoId = searchParams.get("video");
+    if (!videoId || hasScrolledToBracketRef.current) return;
+
+    const bracketId = findBracketForVideo(videoId);
+    if (bracketId) {
+      const bracketElement = bracketRefs.current.get(bracketId);
+      if (bracketElement) {
+        isScrollingToRef.current = true;
+        setActiveBracket(bracketId);
+
+        const elementTop =
+          bracketElement.getBoundingClientRect().top + window.scrollY;
+        const scrollTo = elementTop - SCROLL_OFFSET;
+
+        window.scrollTo({
+          top: scrollTo,
+          behavior: "smooth",
+        });
+
+        // Reset flags after animation
+        setTimeout(() => {
+          isScrollingToRef.current = false;
+          hasScrolledToBracketRef.current = true;
+        }, 600);
+      }
+    } else {
+      // Video not in bracket, reset scroll flag
+      hasScrolledToBracketRef.current = false;
+    }
+  }, [searchParams, SCROLL_OFFSET]);
+
   // Render section without brackets
   if (!section?.hasBrackets && section?.videos.length > 0) {
     return (
@@ -121,6 +169,7 @@ export default function SectionBracketTabSelector({
           sectionStyles={section?.styles}
           applyStylesToVideos={section?.applyStylesToVideos}
           currentUserId={currentUserId}
+          enableUrlRouting={true}
         />
       </div>
     );
@@ -183,6 +232,7 @@ export default function SectionBracketTabSelector({
                   sectionStyles={section?.styles}
                   applyStylesToVideos={section?.applyStylesToVideos}
                   currentUserId={currentUserId}
+                  enableUrlRouting={true}
                 />
               </div>
             </div>

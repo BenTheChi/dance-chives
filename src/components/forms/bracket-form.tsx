@@ -126,7 +126,7 @@ export function BracketForm({
         metadata.title?.slice(0, 60) || `Video ${bracket.videos.length + 1}`;
 
       const newVideo: Video = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         title: truncatedTitle,
         src: newVideoUrl.trim(),
         thumbnailUrl: metadata.thumbnail_url,

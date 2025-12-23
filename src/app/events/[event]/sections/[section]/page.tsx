@@ -15,9 +15,13 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUser } from "@/db/queries/user";
 import { enrichUserWithCardData } from "@/db/queries/user-cards";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
+import { extractYouTubeVideoId } from "@/lib/utils";
+import { Section, Video } from "@/types/event";
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ event: string; section: string }>;
+  searchParams: Promise<{ video?: string }>;
 };
 
 // Helper function to validate UUID format
@@ -38,8 +42,120 @@ function isValidEventId(id: string): boolean {
   return !invalidPatterns.some((pattern) => pattern.test(id));
 }
 
-export default async function SectionPage({ params }: PageProps) {
+// Helper function to find video in section (direct videos or bracket videos)
+function findVideoInSection(
+  section: Section,
+  videoId: string
+): { video: Video | null; isInBracket: boolean; bracketId?: string } {
+  // Check direct videos first
+  const directVideo = section.videos?.find((v) => v.id === videoId);
+  if (directVideo) {
+    return { video: directVideo, isInBracket: false };
+  }
+
+  // Check bracket videos
+  if (section.brackets) {
+    for (const bracket of section.brackets) {
+      const bracketVideo = bracket.videos?.find((v) => v.id === videoId);
+      if (bracketVideo) {
+        return {
+          video: bracketVideo,
+          isInBracket: true,
+          bracketId: bracket.id,
+        };
+      }
+    }
+  }
+
+  return { video: null, isInBracket: false };
+}
+
+// Generate metadata for the page
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const paramResult = await params;
+  const searchParamsResult = await searchParams;
+  const videoId = searchParamsResult.video;
+
+  // Get event and section data
+  const event = await getEvent(paramResult.event, undefined, 0);
+  if (!event) {
+    return {
+      title: "Section Not Found",
+      description: "The requested section could not be found.",
+    };
+  }
+
+  const section = event.sections.find((s) => s.id === paramResult.section);
+  if (!section) {
+    return {
+      title: "Section Not Found",
+      description: "The requested section could not be found.",
+    };
+  }
+
+  // If video param exists, generate video-specific metadata
+  if (videoId) {
+    const { video } = findVideoInSection(section, videoId);
+    if (video) {
+      const youtubeId = extractYouTubeVideoId(video.src);
+      const thumbnailUrl = youtubeId
+        ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+        : undefined;
+
+      // Build description with tagged users
+      const taggedDancers = video.taggedDancers || [];
+      const dancerNames = taggedDancers
+        .map((d) => d.displayName || d.username)
+        .slice(0, 3)
+        .join(", ");
+      const description = dancerNames
+        ? `Watch ${video.title} featuring ${dancerNames}${
+            taggedDancers.length > 3
+              ? ` and ${taggedDancers.length - 3} more`
+              : ""
+          } from ${event.eventDetails.title}`
+        : `Watch ${video.title} from ${event.eventDetails.title}`;
+
+      return {
+        title: `${video.title} - ${event.eventDetails.title}`,
+        description,
+        openGraph: {
+          title: `${video.title} - ${event.eventDetails.title}`,
+          description,
+          images: thumbnailUrl ? [thumbnailUrl] : undefined,
+          type: "video.other",
+          videos: [video.src],
+          url: `${
+            process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com"
+          }/events/${paramResult.event}/sections/${
+            paramResult.section
+          }?video=${videoId}`,
+        },
+        twitter: {
+          card: "player",
+          title: video.title,
+          description,
+          images: thumbnailUrl ? [thumbnailUrl] : undefined,
+        },
+      };
+    }
+  }
+
+  // Default section metadata
+  return {
+    title: `${section.title} - ${event.eventDetails.title}`,
+    description:
+      section.description ||
+      `View videos from ${section.title} at ${event.eventDetails.title}`,
+  };
+}
+
+export default async function SectionPage({ params, searchParams }: PageProps) {
+  const paramResult = await params;
+  const searchParamsResult = await searchParams;
 
   // Validate inputs
   if (!isValidUUID(paramResult.section) || !isValidEventId(paramResult.event)) {

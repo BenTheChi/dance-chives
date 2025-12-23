@@ -273,47 +273,74 @@ export default function SignUpForm({
   };
 
   return (
-    <section className="w-full max-w-lg border-2 border-black rounded-sm p-4 bg-primary">
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold">
-          {isEditMode ? "Edit Profile" : "Complete Your Profile"}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {!isEditMode && isAdminUser && (
-            <span className="block mt-2">
-              <Badge variant="default" className="text-xs">
-                🔑 Admin Account Detected - Super Admin privileges will be
-                automatically assigned
-              </Badge>
-            </span>
-          )}
-        </p>
-      </header>
-      <div>
-        <Form {...form}>
-          <form
-            className="space-y-7"
-            onSubmit={handleSubmit(onSubmit, onError)}
-          >
-            {/* Username field - only show in signup mode */}
-            {!isEditMode && (
+    <div className="w-full max-w-lg flex flex-col items-center">
+      <h1 className="text-xl font-semibold mb-6">
+        {isEditMode ? "Edit Profile" : "Registration"}
+      </h1>
+      <section className="w-full border-2 border-black rounded-sm p-4 bg-primary">
+        {!isEditMode && isAdminUser && (
+          <div className="mb-6">
+            <Badge variant="default" className="text-xs">
+              🔑 Admin Account Detected - Super Admin privileges will be
+              automatically assigned
+            </Badge>
+          </div>
+        )}
+        <div>
+          <Form {...form}>
+            <form
+              className="space-y-7"
+              onSubmit={handleSubmit(onSubmit, onError)}
+            >
+              {/* Username field - only show in signup mode */}
+              {!isEditMode && (
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Username</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Unique identifier. Cannot change."
+                          {...field}
+                          onChange={(e) => {
+                            // Normalize to lowercase and filter out invalid characters
+                            const value = e.target.value
+                              .toLowerCase()
+                              .replace(/[^a-z0-9]/g, "");
+                            field.onChange(value);
+                          }}
+                          maxLength={50}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Username display - only show in edit mode */}
+              {isEditMode && currentUser?.username && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">
+                    Username
+                  </label>
+                  <Input value={currentUser.username} disabled />
+                  <p className="text-xs">Username cannot be changed</p>
+                </div>
+              )}
+
               <FormField
                 control={form.control}
-                name="username"
+                name="displayName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel required>Username</FormLabel>
+                    <FormLabel required>Display Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Unique identifier. Cannot change."
+                        placeholder="Will be displayed publicly. Can be changed."
                         {...field}
-                        onChange={(e) => {
-                          // Normalize to lowercase and filter out invalid characters
-                          const value = e.target.value
-                            .toLowerCase()
-                            .replace(/[^a-z0-9]/g, "");
-                          field.onChange(value);
-                        }}
                         maxLength={50}
                       />
                     </FormControl>
@@ -321,174 +348,144 @@ export default function SignUpForm({
                   </FormItem>
                 )}
               />
-            )}
 
-            {/* Username display - only show in edit mode */}
-            {isEditMode && currentUser?.username && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-white">
-                  Username
-                </label>
-                <Input value={currentUser.username} disabled />
-                <p className="text-xs">Username cannot be changed</p>
-              </div>
-            )}
-
-            <FormField
-              control={form.control}
-              name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>Display Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Will be displayed publicly. Can be changed."
-                      {...field}
-                      maxLength={50}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              <CitySearchInput
+                control={form.control}
+                name="city"
+                label="City"
+                placeholder="Search for a city..."
+                required
+              />
+              <DatePicker
+                control={form.control}
+                name="date"
+                label="Date of Birth"
+                required={!isEditMode}
+              />
+              {/* Event Creator Switch - only show on first-time signup (not in edit mode) */}
+              {!isEditMode && (
+                <FormField
+                  control={form.control}
+                  name="isCreator"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Do you want to create events?</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-charcoal">No</span>
+                          <Switch
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                          />
+                          <span className="text-sm text-charcoal">Yes</span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
-
-            <CitySearchInput
-              control={form.control}
-              name="city"
-              label="City"
-              placeholder="Search for a city..."
-              required
-            />
-            <DatePicker
-              control={form.control}
-              name="date"
-              label="Date of Birth"
-              required={!isEditMode}
-            />
-            {/* Event Creator Switch - only show on first-time signup (not in edit mode) */}
-            {!isEditMode && (
+              <hr className="my-10 border-black" />
               <FormField
                 control={form.control}
-                name="isCreator"
+                name="styles"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Do you want to create events?</FormLabel>
+                    <FormLabel>Dance Styles</FormLabel>
                     <FormControl>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm text-charcoal">No</span>
-                        <Switch
-                          checked={field.value || false}
-                          onCheckedChange={field.onChange}
-                        />
-                        <span className="text-sm text-charcoal">Yes</span>
-                      </div>
+                      <StyleMultiSelect
+                        value={field.value || []}
+                        onChange={field.onChange}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
-            <hr className="my-10 border-black" />
-            <FormField
-              control={form.control}
-              name="styles"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Dance Styles</FormLabel>
-                  <FormControl>
-                    <StyleMultiSelect
-                      value={field.value || []}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            {/* Bio field */}
-            <FormField
-              control={form.control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Tell us about yourself..."
-                      className="resize-none min-h-[80px]"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Bio field */}
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Tell us about yourself..."
+                        className="resize-none min-h-[80px]"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Instagram field */}
-            <FormField
-              control={form.control}
-              name="instagram"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Instagram Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@username" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <hr className="my-10 border-black" />
-            {/* Profile Picture */}
-            <FormField
-              control={form.control}
-              name="profilePicture"
-              render={({ field: { onChange } }) => (
-                <FormItem>
-                  <FormLabel>Profile Picture</FormLabel>
-                  <FormControl>
-                    <UploadProfilePicture
-                      onImagesReady={(profileBlob, avatarBlob) => {
-                        // Convert blobs to Files
-                        const profileFile = new File(
-                          [profileBlob],
-                          "profile.webp",
-                          { type: "image/webp" }
-                        );
-                        const avatarFile = new File(
-                          [avatarBlob],
-                          "avatar.png",
-                          { type: "image/png" }
-                        );
-                        setProfilePictureFile(profileFile);
-                        setAvatarPictureFile(avatarFile);
-                        onChange(profileFile);
-                        form.setValue("avatarPicture", avatarFile);
+              {/* Instagram field */}
+              <FormField
+                control={form.control}
+                name="instagram"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Instagram Username</FormLabel>
+                    <FormControl>
+                      <Input placeholder="@username" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <hr className="my-10 border-black" />
+              {/* Profile Picture */}
+              <FormField
+                control={form.control}
+                name="profilePicture"
+                render={({ field: { onChange } }) => (
+                  <FormItem>
+                    <FormLabel>Profile Picture</FormLabel>
+                    <FormControl>
+                      <UploadProfilePicture
+                        onImagesReady={(profileBlob, avatarBlob) => {
+                          // Convert blobs to Files
+                          const profileFile = new File(
+                            [profileBlob],
+                            "profile.webp",
+                            { type: "image/webp" }
+                          );
+                          const avatarFile = new File(
+                            [avatarBlob],
+                            "avatar.png",
+                            { type: "image/png" }
+                          );
+                          setProfilePictureFile(profileFile);
+                          setAvatarPictureFile(avatarFile);
+                          onChange(profileFile);
+                          form.setValue("avatarPicture", avatarFile);
 
-                        // Update previews
-                        const profileUrl = URL.createObjectURL(profileBlob);
-                        const avatarUrl = URL.createObjectURL(avatarBlob);
-                        setProfilePicturePreview(profileUrl);
-                      }}
-                      currentProfileImage={currentUser?.image || null}
-                      currentAvatarImage={currentUser?.avatar || null}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Hidden field for avatar picture */}
-            <FormField
-              control={form.control}
-              name="avatarPicture"
-              render={() => <></>}
-            />
+                          // Update previews
+                          const profileUrl = URL.createObjectURL(profileBlob);
+                          const avatarUrl = URL.createObjectURL(avatarBlob);
+                          setProfilePicturePreview(profileUrl);
+                        }}
+                        currentProfileImage={currentUser?.image || null}
+                        currentAvatarImage={currentUser?.avatar || null}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* Hidden field for avatar picture */}
+              <FormField
+                control={form.control}
+                name="avatarPicture"
+                render={() => <></>}
+              />
 
-            {/* Website field */}
-            {/* <FormField
+              {/* Website field */}
+              {/* <FormField
               control={form.control}
               name="website"
               render={({ field }) => (
@@ -501,24 +498,25 @@ export default function SignUpForm({
                 </FormItem>
               )}
             /> */}
-            <hr className="my-10 border-black" />
+              <hr className="my-10 border-black" />
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting || isNavigating}
-            >
-              {isSubmitting || isNavigating
-                ? isEditMode
-                  ? "Updating..."
-                  : "Processing..."
-                : isEditMode
-                ? "Update Profile"
-                : "Complete Profile"}
-            </Button>
-          </form>
-        </Form>
-      </div>
-    </section>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting || isNavigating}
+              >
+                {isSubmitting || isNavigating
+                  ? isEditMode
+                    ? "Updating..."
+                    : "Processing..."
+                  : isEditMode
+                  ? "Update Profile"
+                  : "Complete Profile"}
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </section>
+    </div>
   );
 }

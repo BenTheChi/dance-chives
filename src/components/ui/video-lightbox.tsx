@@ -100,6 +100,7 @@ interface VideoLightboxProps {
   sectionStyles?: string[];
   applyStylesToVideos?: boolean;
   currentUserId?: string;
+  enableUrlRouting?: boolean;
 }
 
 export function VideoLightbox({
@@ -121,6 +122,7 @@ export function VideoLightbox({
   sectionStyles,
   applyStylesToVideos,
   currentUserId,
+  enableUrlRouting = false,
 }: VideoLightboxProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

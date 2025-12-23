@@ -212,6 +212,23 @@ export const getEvent = async (
 ): Promise<Event | null> => {
   const session = driver.session();
 
+  // Always check if event exists first
+  const existenceCheck = await session.run(
+    `
+    MATCH (e:Event {id: $id})
+    RETURN e IS NOT NULL as exists
+    `,
+    { id }
+  );
+
+  if (
+    existenceCheck.records.length === 0 ||
+    !existenceCheck.records[0].get("exists")
+  ) {
+    await session.close();
+    return null;
+  }
+
   // Check if event is hidden and user is not authorized
   if (userId !== undefined) {
     const isModOrAdmin =
@@ -225,8 +242,7 @@ export const getEvent = async (
            (e.status = 'visible' OR e.status IS NULL) as isVisible,
            (creator IS NOT NULL) as isCreator,
            (teamMember IS NOT NULL) as isTeamMember
-      RETURN e IS NOT NULL as exists,
-             isVisible,
+      RETURN isVisible,
              isCreator,
              isTeamMember,
              $isModOrAdmin as isModOrAdmin
@@ -236,16 +252,10 @@ export const getEvent = async (
 
     if (accessCheck.records.length > 0) {
       const record = accessCheck.records[0];
-      const exists = record.get("exists");
       const isVisible = record.get("isVisible");
       const isCreator = record.get("isCreator");
       const isTeamMember = record.get("isTeamMember");
       const isModOrAdmin = record.get("isModOrAdmin");
-
-      if (!exists) {
-        await session.close();
-        return null;
-      }
 
       // If event is hidden and user is not authorized, return null
       if (!isVisible && !isCreator && !isTeamMember && !isModOrAdmin) {
@@ -636,7 +646,7 @@ export const getEvent = async (
 
   const eventRecord = eventResult.records[0];
   if (!eventRecord) {
-    throw new Error(`Event with id ${id} not found`);
+    return null;
   }
 
   const eventData = eventRecord.get("event");
@@ -3542,13 +3552,15 @@ export const getCitySchedule = async (
   try {
     // Build date filter conditions
     let dateFilter = "";
-    const params: { cityId: string; startDate?: string; endDate?: string } = { cityId };
-    
+    const params: { cityId: string; startDate?: string; endDate?: string } = {
+      cityId,
+    };
+
     if (startDate) {
       params.startDate = startDate;
       dateFilter += " AND (e.startDate >= $startDate OR e.dates IS NOT NULL)";
     }
-    
+
     if (endDate) {
       params.endDate = endDate;
       dateFilter += " AND (e.startDate <= $endDate OR e.dates IS NOT NULL)";
@@ -3615,7 +3627,7 @@ export const getCitySchedule = async (
     // Build events array and filter by date range if provided
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
-    
+
     const events: CalendarEventData[] = eventsResult.records
       .map((record) => {
         const eventId = record.get("id");
@@ -3648,7 +3660,7 @@ export const getCitySchedule = async (
       .filter((event) => {
         // If no date range specified, include all events
         if (!start && !end) return true;
-        
+
         // Check if event has dates array
         if (event.dates && event.dates.length > 0) {
           // Include if any date in the array falls within the range
@@ -3659,7 +3671,7 @@ export const getCitySchedule = async (
             return true;
           });
         }
-        
+
         // Check startDate for events without dates array
         if (event.startDate) {
           const eventDate = new Date(event.startDate);
@@ -3667,7 +3679,7 @@ export const getCitySchedule = async (
           if (end && eventDate > end) return false;
           return true;
         }
-        
+
         // If no date information, exclude from filtered results
         return false;
       });
@@ -3761,7 +3773,7 @@ export const getCitySchedule = async (
       .filter((workshop) => {
         // If no date range specified, include all workshops
         if (!start && !end) return true;
-        
+
         // Filter by startDate
         if (workshop.startDate) {
           const workshopDate = new Date(workshop.startDate);
@@ -3769,7 +3781,7 @@ export const getCitySchedule = async (
           if (end && workshopDate > end) return false;
           return true;
         }
-        
+
         return false;
       });
 
@@ -3904,11 +3916,11 @@ export const getCitySchedule = async (
     // Filter sessions by date range if provided (sessions use dates array)
     let filteredSessionEvents = sessionEvents;
     let filteredSessions = sessions;
-    
+
     if (startDate || endDate) {
       const start = startDate ? new Date(startDate) : null;
       const end = endDate ? new Date(endDate) : null;
-      
+
       filteredSessionEvents = sessionEvents.filter((session) => {
         if (!session.dates || session.dates.length === 0) {
           return false;
@@ -3920,12 +3932,13 @@ export const getCitySchedule = async (
           return true;
         });
       });
-      
+
       filteredSessions = sessions.filter((session) => {
         let parsedDates: EventDate[] = [];
         try {
           const datesStr = session.dates || "[]";
-          parsedDates = typeof datesStr === "string" ? JSON.parse(datesStr) : datesStr;
+          parsedDates =
+            typeof datesStr === "string" ? JSON.parse(datesStr) : datesStr;
         } catch {
           return false;
         }

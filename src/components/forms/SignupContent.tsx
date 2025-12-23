@@ -85,7 +85,7 @@ export function SignupContent() {
     // If we just came from a magic link, wait for the session refresh
     if (fromMagicLink && (!hasRefreshedSession || status === "loading")) {
       return (
-        <>
+        <div className="flex flex-col items-center">
           <h1 className="mb-6">Finishing your signup...</h1>
           <section className="w-full max-w-md bg-primary border-2 border-black rounded-sm p-5 space-y-6">
             <header>
@@ -97,12 +97,12 @@ export function SignupContent() {
               This should only take a moment.
             </p>
           </section>
-        </>
+        </div>
       );
     }
 
     return (
-      <>
+      <div className="flex flex-col items-center">
         <h1 className="mb-6">Sign Up</h1>
         <section className="w-full max-w-md bg-primary border-2 border-black rounded-sm p-5 space-y-6">
           <header>
@@ -159,13 +159,13 @@ export function SignupContent() {
             </Button>
           </form>
         </section>
-      </>
+      </div>
     );
   }
 
   // If the user is logged in, but not registered show the signup form
   return (
-    <div className="w-full max-w-4xl">
+    <div className="w-full max-w-4xl flex justify-center">
       <SignUpForm />
     </div>
   );

@@ -505,7 +505,7 @@ export function SectionForm({
         `Video ${activeSection.videos.length + 1}`;
 
       const newVideo: Video = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         title: truncatedTitle,
         src: newVideoUrl.trim(),
         thumbnailUrl: metadata.thumbnail_url,
