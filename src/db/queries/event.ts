@@ -231,6 +231,7 @@ export const getEvent = async (
 
   // Check if event is hidden and user is not authorized
   if (userId !== undefined) {
+    // User is authenticated - check if they have access to hidden events
     const isModOrAdmin =
       authLevel !== undefined && authLevel >= AUTH_LEVELS.MODERATOR;
     const accessCheck = await session.run(
@@ -259,6 +260,24 @@ export const getEvent = async (
 
       // If event is hidden and user is not authorized, return null
       if (!isVisible && !isCreator && !isTeamMember && !isModOrAdmin) {
+        await session.close();
+        return null;
+      }
+    }
+  } else {
+    // No user ID - only return visible events (for static generation)
+    const visibilityCheck = await session.run(
+      `
+      MATCH (e:Event {id: $id})
+      RETURN (e.status = 'visible' OR e.status IS NULL) as isVisible
+      `,
+      { id }
+    );
+
+    if (visibilityCheck.records.length > 0) {
+      const isVisible = visibilityCheck.records[0].get("isVisible");
+      if (!isVisible) {
+        // Event is hidden and no user context - return null for static generation
         await session.close();
         return null;
       }
@@ -2950,7 +2969,8 @@ export const getStyleData = async (
        UNWIND allEvents as event
        WITH DISTINCT event
        WHERE (event.status = 'visible' OR event.status IS NULL)
-      OPTIONAL MATCH (event)-[:IN]->(c:City)
+         AND event.startDate IS NOT NULL
+      MATCH (event)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
       WITH event, c, poster,
            [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
@@ -3111,7 +3131,8 @@ export const getStyleData = async (
          UNWIND allEvents as event
          WITH DISTINCT event
          WHERE (event.status = 'visible' OR event.status IS NULL)
-         OPTIONAL MATCH (event)-[:IN]->(c:City)
+           AND event.startDate IS NOT NULL
+         MATCH (event)-[:IN]->(c:City)
          OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
          WITH event, c, poster,
               [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
@@ -3180,21 +3201,29 @@ export const getStyleData = async (
 
     await session.close();
 
-    // Build events array
-    const events: TEventCard[] = eventsResult.records.map((record) => {
-      const eventId = record.get("eventId");
-      return {
-        id: eventId,
-        title: record.get("title"),
-        series: undefined,
-        imageUrl: record.get("imageUrl"),
-        date: record.get("date"),
-        city: record.get("city"),
-        cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
-        styles: eventStylesMap.get(eventId) || [],
-        eventType: record.get("eventType") as EventType | undefined,
-      };
-    });
+    // Build events array - filter out events without required fields
+    const events: TEventCard[] = eventsResult.records
+      .filter((record) => {
+        const date = record.get("date");
+        const city = record.get("city");
+        return date != null && city != null;
+      })
+      .map((record) => {
+        const eventId = record.get("eventId");
+        const date = record.get("date");
+        const city = record.get("city");
+        return {
+          id: eventId,
+          title: record.get("title"),
+          series: undefined,
+          imageUrl: record.get("imageUrl"),
+          date: date as string,
+          city: city as string,
+          cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
+          styles: eventStylesMap.get(eventId) || [],
+          eventType: record.get("eventType") as EventType | undefined,
+        };
+      });
 
     // Build sections array
     const sections = sectionsResult.records.map((record) => ({
@@ -3252,24 +3281,30 @@ export const getStyleData = async (
         }
       );
 
-      cityFilteredEvents = cityFilteredEventsResult.records.map(
-        (record: Neo4jResultRecord) => {
+      cityFilteredEvents = cityFilteredEventsResult.records
+        .filter((record: Neo4jResultRecord) => {
+          const date = record.get("date");
+          const city = record.get("city");
+          return date != null && city != null;
+        })
+        .map((record: Neo4jResultRecord) => {
           const eventId = record.get("eventId");
+          const date = record.get("date");
+          const city = record.get("city");
           return {
             id: eventId,
             title: record.get("title"),
             series: undefined,
             imageUrl: record.get("imageUrl"),
-            date: record.get("date"),
-            city: record.get("city"),
+            date: date as string,
+            city: city as string,
             cityId: record.get("cityId")
               ? String(record.get("cityId"))
               : undefined,
             styles: cityFilteredEventStylesMap.get(eventId) || [],
             eventType: record.get("eventType") as EventType | undefined,
           };
-        }
-      );
+        });
     }
 
     // Build city-filtered users array (if cityId was provided)

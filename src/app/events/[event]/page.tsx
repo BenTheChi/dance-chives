@@ -1,31 +1,28 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Event } from "@/types/event";
-import { DollarSign, MapPin, Pencil, Settings, Trophy } from "lucide-react";
-import Link from "next/link";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import { auth } from "@/auth";
-import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
-import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PhotoGallery } from "@/components/PhotoGallery";
 import { PosterImage } from "@/components/PosterImage";
 import { SectionCard } from "@/components/ui/section-card";
-import { canUpdateEvent } from "@/lib/utils/auth-utils";
-import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { getUser } from "@/db/queries/user";
 import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 import { enrichUserWithCardData } from "@/db/queries/user-cards";
-import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
-import { isEventSavedByUser } from "@/db/queries/event";
+import {
+  EventShareSaveButtonsWrapper,
+  EventTagSelfButton,
+  EventEditButtons,
+} from "./event-client";
 
 type PageProps = {
   params: Promise<{ event: string }>;
 };
+
+// Enable static generation with revalidation (ISR)
+export const revalidate = 3600; // Revalidate every hour
 
 // Helper function to validate event ID format
 function isValidEventId(id: string): boolean {
@@ -45,55 +42,13 @@ export default async function EventPage({ params }: PageProps) {
     notFound();
   }
 
-  const session = await auth();
-  const userId = session?.user?.id;
-  const authLevel = session?.user?.auth ?? 0;
+  // Get event without auth (for static generation - hidden events will be filtered)
+  const event = await getEvent(paramResult.event);
 
-  // Get event with authorization check
-  const event = await getEvent(paramResult.event, userId, authLevel);
-
-  // If event is null, it means it's hidden and user is not authorized
+  // If event is null, it means it's hidden (or doesn't exist)
   if (!event) {
     notFound();
   }
-
-  // Check if current user is the creator
-  const isCreator = userId ? await isEventCreator(event.id, userId) : false;
-
-  // Check if user is a team member
-  const isEventTeamMember = session?.user?.id
-    ? await isTeamMember(event.id, session.user.id)
-    : false;
-
-  // Check if user can edit the event
-  const canEdit =
-    session?.user?.id && session?.user?.auth !== undefined
-      ? canUpdateEvent(
-          session.user.auth,
-          {
-            eventId: event.id,
-            eventCreatorId: event.eventDetails.creatorId,
-            isTeamMember: isEventTeamMember,
-          },
-          session.user.id
-        )
-      : false;
-
-  // Check if user can tag directly (for role tagging)
-  const canTagDirectly =
-    (session?.user?.auth ?? 0) >= AUTH_LEVELS.MODERATOR ||
-    isEventTeamMember ||
-    isCreator;
-
-  // Get current user's roles for this event (convert from Neo4j format to display format)
-  // Exclude TEAM_MEMBER - team members are shown separately
-  const currentUserRoles = event.roles
-    .filter(
-      (role) =>
-        role.user?.id === session?.user?.id && role.title !== "TEAM_MEMBER"
-    )
-    .map((role) => fromNeo4jRoleFormat(role.title))
-    .filter((role): role is string => role !== null);
 
   // Aggregate all unique styles from event, sections, and videos
   const allStyles = new Set<string>();
@@ -203,9 +158,6 @@ export default async function EventPage({ params }: PageProps) {
       : dateEntry.startTime;
     return `${dateEntry.date} (${timeStr})`;
   };
-
-  // Check if event is saved by user
-  const isSaved = userId ? await isEventSavedByUser(userId, event.id) : false;
 
   return (
     <>
@@ -405,13 +357,8 @@ export default async function EventPage({ params }: PageProps) {
                       );
                     })()}
                   </div>
-                  <div className="mt-10">
-                    {/* Share and Save buttons - centered at bottom */}
-                    <EventShareSaveButtons
-                      eventId={event.id}
-                      initialSaved={isSaved}
-                    />
-                  </div>
+                  {/* Share and Save buttons - handled by client component */}
+                  <EventShareSaveButtonsWrapper eventId={event.id} />
                 </section>
               </div>
             </div>
@@ -437,13 +384,7 @@ export default async function EventPage({ params }: PageProps) {
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <div className="flex gap-2 justify-center items-center font-semibold text-2xl">
                   <h2>Roles</h2>
-                  <TagSelfCircleButton
-                    eventId={event.id}
-                    currentUserRoles={currentUserRoles}
-                    isTeamMember={isEventTeamMember}
-                    canTagDirectly={canTagDirectly}
-                    size="sm"
-                  />
+                  <EventTagSelfButton eventId={event.id} />
                 </div>
                 {Array.from(rolesByTitle.entries()).map(
                   ([roleTitle, roles]) => (
@@ -528,33 +469,8 @@ export default async function EventPage({ params }: PageProps) {
                   />
                 </div>
               )}
-              {/* Settings and Edit buttons - top right row */}
-              {(canEdit || isCreator) && (
-                <div className="flex gap-2">
-                  {isCreator && (
-                    <Button
-                      asChild
-                      size="icon"
-                      className="bg-periwinkle text-black border-black"
-                    >
-                      <Link href={`/events/${event.id}/settings`}>
-                        <Settings className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                  {(canEdit || isCreator) && (
-                    <Button
-                      asChild
-                      size="icon"
-                      className="bg-periwinkle text-black border-black"
-                    >
-                      <Link href={`/events/${event.id}/edit`}>
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              )}
+              {/* Settings and Edit buttons - handled by client component */}
+              <EventEditButtons eventId={event.id} />
             </div>
           </div>
         </div>

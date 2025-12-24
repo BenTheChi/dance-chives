@@ -23,12 +23,14 @@ import { generateSlugId } from "@/lib/utils";
 import { prisma } from "@/lib/primsa";
 import driver from "@/db/driver";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import {
   setVideoRoles,
   setSectionWinners,
   setSectionJudges,
   isTeamMember,
   addTeamMember,
+  isEventCreator,
 } from "@/db/queries/team-member";
 import { getUserByUsername } from "@/db/queries/user";
 import { UserSearchItem } from "@/types/user";
@@ -2064,6 +2066,105 @@ export async function getSavedEventIds(): Promise<
     return {
       error: "Failed to fetch saved event IDs",
       status: 500,
+    };
+  }
+}
+
+/**
+ * Get auth-dependent data for an event page
+ * Used by client components to determine permissions and user state
+ */
+export async function getEventAuthData(eventId: string): Promise<{
+  status: number;
+  data?: {
+    isSaved: boolean;
+    isCreator: boolean;
+    isTeamMember: boolean;
+    canEdit: boolean;
+    canTagDirectly: boolean;
+    currentUserRoles: string[];
+  };
+  error?: string;
+}> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return {
+      status: 200,
+      data: {
+        isSaved: false,
+        isCreator: false,
+        isTeamMember: false,
+        canEdit: false,
+        canTagDirectly: false,
+        currentUserRoles: [],
+      },
+    };
+  }
+
+  try {
+    const userId = session.user.id;
+    const authLevel = session.user.auth ?? 0;
+
+    // Get event to check creator and get roles
+    const event = await getEventQuery(eventId, userId, authLevel);
+    if (!event) {
+      return {
+        status: 404,
+        error: "Event not found",
+      };
+    }
+
+    // Check if user is creator
+    const isCreator = await isEventCreator(eventId, userId);
+
+    // Check if user is team member
+    const isEventTeamMember = await isTeamMember(eventId, userId);
+
+    // Check if user can edit
+    const canEdit = canUpdateEvent(
+      authLevel,
+      {
+        eventId: event.id,
+        eventCreatorId: event.eventDetails.creatorId,
+        isTeamMember: isEventTeamMember,
+      },
+      userId
+    );
+
+    // Check if user can tag directly
+    const canTagDirectly =
+      authLevel >= AUTH_LEVELS.MODERATOR || isEventTeamMember || isCreator;
+
+    // Get current user's roles for this event
+    const currentUserRoles = event.roles
+      .filter(
+        (role) =>
+          role.user?.id === userId && role.title !== "TEAM_MEMBER"
+      )
+      .map((role) => fromNeo4jRoleFormat(role.title))
+      .filter((role): role is string => role !== null);
+
+    // Check if event is saved
+    const { isEventSavedByUser } = await import("@/db/queries/event");
+    const isSaved = await isEventSavedByUser(userId, eventId);
+
+    return {
+      status: 200,
+      data: {
+        isSaved,
+        isCreator,
+        isTeamMember: isEventTeamMember,
+        canEdit,
+        canTagDirectly,
+        currentUserRoles,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching event auth data:", error);
+    return {
+      status: 500,
+      error: "Failed to fetch event auth data",
     };
   }
 }

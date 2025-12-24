@@ -14,7 +14,7 @@ interface PageProps {
   params: Promise<{ username: string }>;
 }
 
-// Enable static generation with revalidation
+// Enable static generation with revalidation (ISR)
 export const revalidate = 3600; // Revalidate every hour
 
 export default async function ProfilePage({ params }: PageProps) {
