@@ -3,6 +3,9 @@ import { getAllCities } from "@/db/queries/event";
 import { CityCard } from "@/components/CityCard";
 import { UnderConstruction } from "@/components/UnderConstruction";
 
+// Enable static generation with revalidation
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function CitiesPage() {
   // Keep existing code for future use
   // const cities = await getAllCities();

@@ -2,6 +2,9 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { getAllStyles } from "@/db/queries/event";
 import { StyleCard } from "@/components/StyleCard";
 
+// Enable static generation with revalidation
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function StylesPage() {
   const styles = await getAllStyles();
 

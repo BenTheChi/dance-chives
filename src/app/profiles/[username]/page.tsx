@@ -1,27 +1,27 @@
 import { notFound } from "next/navigation";
-import { auth } from "@/auth";
 import { getUserProfile } from "@/lib/server_actions/auth_actions";
-import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 import { AppNavbar } from "@/components/AppNavbar";
-import { Button } from "@/components/ui/button";
 import { StyleBadge } from "@/components/ui/style-badge";
 import Image from "next/image";
 import Link from "next/link";
 import { Event, Role } from "@/types/event";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
-import { RolesTabsSection } from "@/components/profile/RolesTabsSection";
 import { TaggedVideosSection } from "@/components/profile/TaggedVideosSection";
 import { SectionsWonSection } from "@/components/profile/SectionsWonSection";
+import { ProfileClient, ProfileRolesSection } from "./profile-client";
 
 interface PageProps {
   params: Promise<{ username: string }>;
 }
 
+// Enable static generation with revalidation
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function ProfilePage({ params }: PageProps) {
   const paramResult = await params;
   const username = paramResult.username;
 
-  const session = await auth();
+  // Fetch profile without auth (static generation)
   const profileResult = await getUserProfile(username);
 
   if (!profileResult.success || !profileResult.profile) {
@@ -29,16 +29,6 @@ export default async function ProfilePage({ params }: PageProps) {
   }
 
   const profile = profileResult.profile;
-  const isOwnProfile = session?.user?.username === username;
-
-  const savedResult = session?.user?.id
-    ? await getSavedEventIds()
-    : { status: 200, eventIds: [] };
-  const savedEventIds = new Set(
-    savedResult.status === 200 && "eventIds" in savedResult
-      ? savedResult.eventIds
-      : []
-  );
 
   // Group events with roles by role type
   const eventsByRole = new Map<string, Event[]>();
@@ -79,11 +69,7 @@ export default async function ProfilePage({ params }: PageProps) {
         </div>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col items-center gap-8 py-5 px-5 sm:px-10 lg:px-15 max-w-[800px] w-full">
-            {isOwnProfile && (
-              <Button asChild className="flex-shrink-0">
-                <Link href={`/profiles/${username}/edit`}>Edit Profile</Link>
-              </Button>
-            )}
+            <ProfileClient username={username} />
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full items-center sm:items-start">
               {/* Image */}
@@ -177,10 +163,9 @@ export default async function ProfilePage({ params }: PageProps) {
 
             {/* Events with Roles - Tabs */}
             {sortedRoles.length > 0 && (
-              <RolesTabsSection
+              <ProfileRolesSection
                 eventsByRole={eventsByRole}
                 sortedRoles={sortedRoles}
-                savedEventIds={savedEventIds}
               />
             )}
 

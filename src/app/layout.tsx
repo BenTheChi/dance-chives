@@ -5,7 +5,6 @@ import "./globals.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SessionProvider } from "next-auth/react";
-import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
 
 const archivo = Archivo({
@@ -32,13 +31,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-
   return (
     <html lang="en" className={`${archivo.variable} ${rubikMonoOne.variable}`}>
       <head>
@@ -55,7 +52,7 @@ export default async function RootLayout({
         <meta property="og:type" content="website" />
       </head>
       <body className="antialiased">
-        <SessionProvider session={session}>
+        <SessionProvider>
           <SidebarProvider>
             <div className="flex w-full">
               <AppSidebar />
