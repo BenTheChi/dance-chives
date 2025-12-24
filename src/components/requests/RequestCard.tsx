@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   approveTaggingRequest,
   denyTaggingRequest,
@@ -148,87 +147,93 @@ export function IncomingRequestCard({
   };
 
   const breadcrumbs = generateRequestBreadcrumbs(request);
-  const senderName =
-    request.sender?.name || request.sender?.email || "Unknown";
+  const senderName = request.sender?.name || request.sender?.email || "Unknown";
   const resourceName = getResourceName(request);
   const resourceLink = getResourceLink(request);
 
   return (
-    <Card className="bg-gray-300/10 dark:bg-gray-300/5 border-primary/20">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Date - top left, muted, smaller text */}
-          <p className="text-xs text-muted-foreground">
-            {formatRelativeDate(new Date(request.createdAt))}
+    <article className="border-2 rounded-lg p-4">
+      <div className="space-y-3">
+        {/* Date - top left, muted, smaller text */}
+        <time
+          className="text-xs block"
+          dateTime={request.createdAt.toISOString()}
+        >
+          {formatRelativeDate(new Date(request.createdAt))}
+        </time>
+
+        {/* Message: Avatar + Display Name requested Role Name from Link */}
+        <div className="flex items-center gap-2 text-sm">
+          {request.sender && (
+            <div
+              className="h-6 w-6 rounded-full bg-secondary-dark flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0"
+              aria-label={`${senderName}'s avatar`}
+            >
+              {senderName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)}
+            </div>
+          )}
+          <p>
+            <strong>{senderName}</strong> requested{" "}
+            {request.role && <strong>{request.role}</strong>} from{" "}
+            <Link
+              href={resourceLink}
+              className="text-primary-light hover:text-primary-light hover:underline"
+            >
+              {resourceName}
+            </Link>
           </p>
-
-          {/* Message: Avatar + Display Name requested Role Name from Link */}
-          <div className="flex items-center gap-2 text-sm">
-            {request.sender && (
-              <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
-                {senderName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2)}
-              </div>
-            )}
-            <span>
-              <strong>{senderName}</strong> requested{" "}
-              {request.role && <strong>{request.role}</strong>} from{" "}
-              <Link
-                href={resourceLink}
-                className="text-primary hover:underline"
-              >
-                {resourceName}
-              </Link>
-            </span>
-          </div>
-
-          {/* Breadcrumb trail */}
-          {breadcrumbs.length > 0 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              {breadcrumbs.map((crumb, index) => (
-                <div key={crumb.href} className="flex items-center gap-1">
-                  <Link
-                    href={crumb.href}
-                    className="hover:text-primary hover:underline"
-                  >
-                    {crumb.label}
-                  </Link>
-                  {index < breadcrumbs.length - 1 && (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Approve/Deny buttons */}
-          {localStatus === "PENDING" && (
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={() => handleAction("approve")}
-                disabled={isProcessing}
-                variant="default"
-                size="sm"
-              >
-                Approve
-              </Button>
-              <Button
-                onClick={() => handleAction("deny")}
-                disabled={isProcessing}
-                variant="destructive"
-                size="sm"
-              >
-                Deny
-              </Button>
-            </div>
-          )}
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Breadcrumb trail */}
+        {breadcrumbs.length > 0 && (
+          <nav
+            className="flex items-center gap-1 text-xs"
+            aria-label="Breadcrumb"
+          >
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.href} className="flex items-center gap-1">
+                <Link
+                  href={crumb.href}
+                  className="hover:text-primary-light hover:underline"
+                >
+                  {crumb.label}
+                </Link>
+                {index < breadcrumbs.length - 1 && (
+                  <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                )}
+              </div>
+            ))}
+          </nav>
+        )}
+
+        {/* Approve/Deny buttons */}
+        {localStatus === "PENDING" && (
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={() => handleAction("approve")}
+              disabled={isProcessing}
+              variant="default"
+              size="sm"
+            >
+              Approve
+            </Button>
+            <Button
+              onClick={() => handleAction("deny")}
+              disabled={isProcessing}
+              variant="destructive"
+              size="sm"
+            >
+              Deny
+            </Button>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -274,66 +279,70 @@ export function OutgoingRequestCard({
   const resourceLink = getResourceLink(request);
 
   return (
-    <Card className="bg-gray-300/10 dark:bg-gray-300/5 border-primary/20">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Date - top left, muted, smaller text */}
-          <p className="text-xs text-muted-foreground">
-            {formatRelativeDate(new Date(request.createdAt))}
-          </p>
+    <article className="bg-secondary rounded-lg p-4 border-2">
+      <div className="space-y-3">
+        {/* Date - top left, muted, smaller text */}
+        <time
+          className="text-xs block"
+          dateTime={request.createdAt.toISOString()}
+        >
+          {formatRelativeDate(new Date(request.createdAt))}
+        </time>
 
-          {/* Message: You requested Role Name for Link */}
-          <div className="text-sm">
-            You requested {request.role && <strong>{request.role}</strong>} for{" "}
-            <Link
-              href={resourceLink}
-              className="text-primary hover:underline"
-            >
-              {resourceName}
-            </Link>
-          </div>
+        {/* Message: You requested Role Name for Link */}
+        <p className="text-sm">
+          You requested {request.role && <strong>{request.role}</strong>} for{" "}
+          <Link
+            href={resourceLink}
+            className="text-primary-light hover:text-primary-light hover:underline"
+          >
+            {resourceName}
+          </Link>
+        </p>
 
-          {/* Breadcrumb trail */}
-          {breadcrumbs.length > 0 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              {breadcrumbs.map((crumb, index) => (
-                <div key={crumb.href} className="flex items-center gap-1">
-                  <Link
-                    href={crumb.href}
-                    className="hover:text-primary hover:underline"
-                  >
-                    {crumb.label}
-                  </Link>
-                  {index < breadcrumbs.length - 1 && (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Breadcrumb trail */}
+        {breadcrumbs.length > 0 && (
+          <nav
+            className="flex items-center gap-1 text-xs"
+            aria-label="Breadcrumb"
+          >
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.href} className="flex items-center gap-1">
+                <Link
+                  href={crumb.href}
+                  className="hover:text-primary-light hover:underline"
+                >
+                  {crumb.label}
+                </Link>
+                {index < breadcrumbs.length - 1 && (
+                  <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                )}
+              </div>
+            ))}
+          </nav>
+        )}
 
-          {/* Status */}
-          <div className="text-sm">
-            <span className="font-medium">Status:</span>{" "}
-            <span className={getStatusColor(localStatus)}>{localStatus}</span>
-          </div>
-
-          {/* Cancel button (only for pending) */}
-          {localStatus === "PENDING" && (
-            <div className="pt-2">
-              <Button
-                onClick={handleCancel}
-                disabled={isProcessing}
-                variant="destructive"
-                size="sm"
-                className="hover:bg-destructive/70"
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
+        {/* Status */}
+        <div className="text-sm">
+          <span className="font-medium">Status:</span>{" "}
+          <span className={getStatusColor(localStatus)}>{localStatus}</span>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Cancel button (only for pending) */}
+        {localStatus === "PENDING" && (
+          <div className="pt-2">
+            <Button
+              onClick={handleCancel}
+              disabled={isProcessing}
+              variant="destructive"
+              size="sm"
+              className="hover:bg-destructive/70"
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }

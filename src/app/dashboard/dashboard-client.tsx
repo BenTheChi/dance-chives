@@ -29,6 +29,7 @@ import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
 import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import Image from "next/image";
 
 interface DashboardUser {
   name?: string | null;
@@ -285,9 +286,14 @@ export function DashboardClient({
     return (
       <AccountVerificationGuard requireVerification={true}>
         <AppNavbar />
-        <main className="container mx-auto p-6">
-          <div>Loading dashboard...</div>
-        </main>
+        <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
+          <h1 className="py-7 border-b-2 border-primary-light">Dashboard</h1>
+          <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
+            <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+              <div className="text-center py-12">Loading dashboard...</div>
+            </div>
+          </div>
+        </div>
       </AccountVerificationGuard>
     );
   }
@@ -295,225 +301,252 @@ export function DashboardClient({
   return (
     <AccountVerificationGuard requireVerification={true}>
       <AppNavbar />
-      <main className="container mx-auto p-6 space-y-6">
-        {/* Welcome Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-2xl font-semibold">
-                  Welcome back, {user?.name || user?.email || "User"}!
-                </CardTitle>
-                <CardDescription className="space-y-1">
-                  <div>
-                    Role Level: {getAuthLevelName(user?.auth ?? 0)} (
-                    {user?.auth ?? 0})
-                  </div>
-                </CardDescription>
-                <div className="flex gap-2 mt-4">
-                  {user?.username && (
-                    <>
-                      <Button variant="outline" asChild>
-                        <Link href={`/profiles/${user.username}`}>
-                          <UserIcon className="mr-2 h-4 w-4" />
-                          Go To Profile
-                        </Link>
-                      </Button>
-                      <Button variant="outline" asChild>
-                        <Link href={`/profiles/${user.username}/edit`}>
-                          <UserIcon className="mr-2 h-4 w-4" />
-                          Edit Profile
-                        </Link>
-                      </Button>
-                    </>
-                  )}
-                  {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsUpgradeDialogOpen(true)}
-                    >
-                      Request Access Upgrade
-                    </Button>
-                  )}
+      <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
+        <h1 className="py-7 border-b-2 border-primary-light">Dashboard</h1>
+        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
+          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+            {/* Welcome Section */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              {/* Mascot Image */}
+              <div className="w-full sm:w-[250px] flex-shrink-0">
+                <div className="relative w-full sm:w-[250px] h-[250px] sm:h-[350px] rounded-sm border-4 border-primary-light overflow-hidden bg-primary-dark">
+                  <Image
+                    src="/mascot/3:4_Mascot2_Mono_onLight.png"
+                    alt=""
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
                 </div>
               </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Saved Events Calendar */}
-        <SavedEventsCalendarSection events={calendarEvents} />
-
-        {/* Saved Events Gallery */}
-        {savedEvents.length > 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Saved Events</CardTitle>
-              <CardDescription>
-                Events you have saved ({savedEvents.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {savedEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    id={event.id}
-                    title={event.title}
-                    series={event.series}
-                    imageUrl={event.imageUrl}
-                    date={event.date}
-                    city={event.city}
-                    cityId={event.cityId}
-                    styles={event.styles}
-                    eventType={event.eventType}
-                    isSaved={true}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Saved Events</CardTitle>
-              <CardDescription>Events you have saved</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                No saved events yet. Click the heart icon on any event to save
-                it.
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
-        {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
-          <>
-            <AuthorizationChanger />
-            <Dialog
-              open={isUpgradeDialogOpen}
-              onOpenChange={setIsUpgradeDialogOpen}
-            >
-              <DialogContent>
-                <AuthorizationRequestForm
-                  currentUserAuthLevel={user.auth ?? 0}
-                  onRequestSubmitted={async () => {
-                    await loadDashboard();
-                    setIsUpgradeDialogOpen(false);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          </>
-        )}
-
-        {/* Requests Section */}
-        <RequestSection
-          incomingRequests={allIncoming}
-          outgoingRequests={allOutgoing}
-          onRequestUpdated={handleRequestUpdated}
-        />
-
-        {/* Events Created Section */}
-        {userEvents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Events</CardTitle>
-              <CardDescription>
-                Events you have created ({userEvents.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {userEvents.map((event: TEventCard) => (
-                  <EventCard
-                    key={event.id}
-                    id={event.id}
-                    title={event.title}
-                    series={event.series}
-                    imageUrl={event.imageUrl}
-                    date={event.date}
-                    city={event.city}
-                    cityId={event.cityId}
-                    styles={event.styles}
-                    eventType={event.eventType}
-                    isSaved={false}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Team Memberships Section */}
-        {teamMemberships.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Memberships</CardTitle>
-              <CardDescription>
-                Events where you are a team member ({teamMemberships.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {teamMemberships.map((membership: TeamMembership) => (
-                  <div
-                    key={membership.eventId}
-                    className="flex items-center justify-between rounded-sm border p-3"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        Event: {membership.eventTitle}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Added:{" "}
-                        {new Date(membership.createdAt).toLocaleDateString()}
+              {/* Welcome Content */}
+              <div className="w-full sm:flex-1 lg:max-w-[800px] flex flex-col gap-4">
+                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
+                  <div className="flex flex-col gap-4">
+                    <h2 className="text-2xl font-semibold text-center">
+                      Welcome back,{" "}
+                      {user?.displayName || user?.name || user?.email || "User"}
+                      !
+                    </h2>
+                    <div className="text-center">
+                      <p className="text-sm">
+                        Role Level: {getAuthLevelName(user?.auth ?? 0)} (
+                        {user?.auth ?? 0})
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={`/events/${membership.eventId}`}>View</a>
-                    </Button>
+                    <div className="flex flex-wrap gap-2 justify-center mt-4">
+                      {user?.username && (
+                        <>
+                          <Button
+                            variant="outline"
+                            asChild
+                            className="bg-periwinkle text-black border-black"
+                          >
+                            <Link href={`/profiles/${user.username}`}>
+                              <UserIcon className="mr-2 h-4 w-4" />
+                              Go To Profile
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            asChild
+                            className="bg-periwinkle text-black border-black"
+                          >
+                            <Link href={`/profiles/${user.username}/edit`}>
+                              <UserIcon className="mr-2 h-4 w-4" />
+                              Edit Profile
+                            </Link>
+                          </Button>
+                        </>
+                      )}
+                      {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsUpgradeDialogOpen(true)}
+                          className="bg-periwinkle text-black border-black"
+                        >
+                          Request Access Upgrade
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                ))}
+                </section>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
 
-        {/* Hidden Events Section - Only for moderators/admins */}
-        {initialData?.hiddenEvents && initialData.hiddenEvents.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Hidden Events</CardTitle>
-              <CardDescription>
-                All hidden events in the system (
-                {initialData.hiddenEvents.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                {initialData.hiddenEvents.map((event: TEventCard) => (
-                  <EventCard
-                    key={event.id}
-                    id={event.id}
-                    title={event.title}
-                    series={event.series}
-                    imageUrl={event.imageUrl}
-                    date={event.date}
-                    city={event.city}
-                    cityId={event.cityId}
-                    styles={event.styles}
-                    eventType={event.eventType}
-                    isSaved={false}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </main>
+            {/* Saved Events Calendar */}
+            <SavedEventsCalendarSection events={calendarEvents} />
+
+            {/* Saved Events Gallery */}
+            {savedEvents.length > 0 ? (
+              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+                <h2 className="text-2xl font-semibold mb-2 text-center">
+                  Saved Events
+                </h2>
+                <p className="text-sm text-center mb-6">
+                  Events you have saved ({savedEvents.length})
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {savedEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      id={event.id}
+                      title={event.title}
+                      series={event.series}
+                      imageUrl={event.imageUrl}
+                      date={event.date}
+                      city={event.city}
+                      cityId={event.cityId}
+                      styles={event.styles}
+                      eventType={event.eventType}
+                      isSaved={true}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+                <h2 className="text-2xl font-semibold mb-2 text-center">
+                  Saved Events
+                </h2>
+                <p className="text-sm text-center mb-6">
+                  Events you have saved
+                </p>
+                <div className="text-center py-12">
+                  No saved events yet. Click the heart icon on any event to save
+                  it.
+                </div>
+              </section>
+            )}
+
+            {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
+            {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
+              <>
+                <AuthorizationChanger />
+                <Dialog
+                  open={isUpgradeDialogOpen}
+                  onOpenChange={setIsUpgradeDialogOpen}
+                >
+                  <DialogContent>
+                    <AuthorizationRequestForm
+                      currentUserAuthLevel={user.auth ?? 0}
+                      onRequestSubmitted={async () => {
+                        await loadDashboard();
+                        setIsUpgradeDialogOpen(false);
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
+
+            {/* Requests Section */}
+            <RequestSection
+              incomingRequests={allIncoming}
+              outgoingRequests={allOutgoing}
+              onRequestUpdated={handleRequestUpdated}
+            />
+
+            {/* Events Created Section */}
+            {userEvents.length > 0 && (
+              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+                <h2 className="text-2xl font-semibold mb-2 text-center">
+                  Your Events
+                </h2>
+                <p className="text-sm text-center mb-6">
+                  Events you have created ({userEvents.length})
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {userEvents.map((event: TEventCard) => (
+                    <EventCard
+                      key={event.id}
+                      id={event.id}
+                      title={event.title}
+                      series={event.series}
+                      imageUrl={event.imageUrl}
+                      date={event.date}
+                      city={event.city}
+                      cityId={event.cityId}
+                      styles={event.styles}
+                      eventType={event.eventType}
+                      isSaved={false}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Team Memberships Section */}
+            {teamMemberships.length > 0 && (
+              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+                <h2 className="text-2xl font-semibold mb-2 text-center">
+                  Team Memberships
+                </h2>
+                <p className="text-sm text-center mb-6">
+                  Events where you are a team member ({teamMemberships.length})
+                </p>
+                <div className="space-y-2">
+                  {teamMemberships.map((membership: TeamMembership) => (
+                    <div
+                      key={membership.eventId}
+                      className="flex items-center justify-between rounded-sm border-2 border-primary-light p-3 bg-background"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          Event: {membership.eventTitle}
+                        </p>
+                        <p className="text-sm">
+                          Added:{" "}
+                          {new Date(membership.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="bg-periwinkle text-black border-black"
+                      >
+                        <Link href={`/events/${membership.eventId}`}>View</Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Hidden Events Section - Only for moderators/admins */}
+            {initialData?.hiddenEvents &&
+              initialData.hiddenEvents.length > 0 && (
+                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+                  <h2 className="text-2xl font-semibold mb-2 text-center">
+                    Hidden Events
+                  </h2>
+                  <p className="text-sm text-center mb-6 text-muted-foreground">
+                    All hidden events in the system (
+                    {initialData.hiddenEvents.length})
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    {initialData.hiddenEvents.map((event: TEventCard) => (
+                      <EventCard
+                        key={event.id}
+                        id={event.id}
+                        title={event.title}
+                        series={event.series}
+                        imageUrl={event.imageUrl}
+                        date={event.date}
+                        city={event.city}
+                        cityId={event.cityId}
+                        styles={event.styles}
+                        eventType={event.eventType}
+                        isSaved={false}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+          </div>
+        </div>
+      </div>
     </AccountVerificationGuard>
   );
 }

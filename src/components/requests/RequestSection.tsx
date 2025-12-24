@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { IncomingRequestCard, OutgoingRequestCard } from "./RequestCard";
@@ -67,56 +66,52 @@ export function RequestSection({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Requests</CardTitle>
-          {allOld.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Label htmlFor="request-old-toggle" className="text-sm">
-                Old
-              </Label>
-              <Switch
-                id="request-old-toggle"
-                checked={!showOld}
-                onCheckedChange={(checked) => setShowOld(!checked)}
-              />
-              <Label htmlFor="request-old-toggle" className="text-sm">
-                New
-              </Label>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {displayedRequests.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {showOld ? "No old requests" : "No new requests"}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {displayedRequests.map((request) => {
-              if (isIncoming(request)) {
-                return (
-                  <IncomingRequestCard
-                    key={`incoming-${request.id}`}
-                    request={request}
-                    onRequestUpdated={onRequestUpdated}
-                  />
-                );
-              } else {
-                return (
-                  <OutgoingRequestCard
-                    key={`outgoing-${request.id}`}
-                    request={request}
-                    onRequestUpdated={onRequestUpdated}
-                  />
-                );
-              }
-            })}
+    <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-semibold">Requests</h2>
+        {allOld.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Label htmlFor="request-old-toggle" className="text-sm">
+              Old
+            </Label>
+            <Switch
+              id="request-old-toggle"
+              checked={!showOld}
+              onCheckedChange={(checked) => setShowOld(!checked)}
+            />
+            <Label htmlFor="request-old-toggle" className="text-sm">
+              New
+            </Label>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      {displayedRequests.length === 0 ? (
+        <div className="text-center py-8">
+          {showOld ? "No old requests" : "No new requests"}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {displayedRequests.map((request) => {
+            if (isIncoming(request)) {
+              return (
+                <IncomingRequestCard
+                  key={`incoming-${request.id}`}
+                  request={request}
+                  onRequestUpdated={onRequestUpdated}
+                />
+              );
+            } else {
+              return (
+                <OutgoingRequestCard
+                  key={`outgoing-${request.id}`}
+                  request={request}
+                  onRequestUpdated={onRequestUpdated}
+                />
+              );
+            }
+          })}
+        </div>
+      )}
+    </section>
   );
 }
