@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   approveTaggingRequest,
   denyTaggingRequest,
@@ -14,8 +14,11 @@ import {
   cancelAuthLevelChangeRequest,
 } from "@/lib/server_actions/request_actions";
 import { toast } from "sonner";
-import { useState, ReactElement } from "react";
-import { VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
+import { useState } from "react";
+import { formatRelativeDate } from "@/lib/utils/relative-date";
+import { generateRequestBreadcrumbs } from "@/lib/utils/request-utils-client";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 interface RequestCardProps {
   request: {
@@ -61,33 +64,6 @@ const CANCEL_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
 };
 
 /**
- * Gets the display title for a request based on its type
- */
-function getRequestTitle(
-  type: string,
-  videoTitle?: string | null,
-  videoId?: string | null,
-  sectionTitle?: string | null,
-  sectionId?: string | null,
-  role?: string
-): string {
-  if (type === "TAGGING") {
-    if (videoTitle || videoId) {
-      // For video tags, always show the role (default to "Dancer" if missing)
-      const displayRole = role || VIDEO_ROLE_DANCER;
-      return `Video Tag - ${displayRole}`;
-    }
-    if (sectionTitle || sectionId) {
-      return role ? `Section Tag - ${role}` : "Section Tag";
-    }
-    if (role) return `Role Tag - ${role}`;
-  }
-  if (type === "TEAM_MEMBER") return "Team Member Request";
-  if (type === "AUTH_LEVEL_CHANGE") return "Authorization Level Change Request";
-  return "Request";
-}
-
-/**
  * Gets the color class for request status
  */
 function getStatusColor(status: string): string {
@@ -106,97 +82,29 @@ function getStatusColor(status: string): string {
 }
 
 /**
- * Renders request-specific details based on request type
+ * Gets the resource name for the request (Event/Section/Video)
  */
-function renderRequestDetails(
-  request: RequestCardProps["request"]
-): ReactElement<any>[] {
-  const details: ReactElement<any>[] = [];
+function getResourceName(request: RequestCardProps["request"]): string {
+  if (request.videoTitle) return request.videoTitle;
+  if (request.sectionTitle) return request.sectionTitle;
+  if (request.eventTitle) return request.eventTitle;
+  return "Unknown";
+}
 
-  // Common: sender information
-  if (request.sender) {
-    details.push(
-      <p key="sender">
-        <span className="font-medium">Requestor:</span>{" "}
-        {request.sender.name || request.sender.email}
-      </p>
-    );
+/**
+ * Gets the resource link for the request
+ */
+function getResourceLink(request: RequestCardProps["request"]): string {
+  if (request.videoId && request.sectionId && request.eventId) {
+    return `/events/${request.eventId}/sections/${request.sectionId}?video=${request.videoId}`;
   }
-
-  // Tagging request details
-  if (request.type === "TAGGING") {
-    if (request.eventTitle) {
-      details.push(
-        <p key="event">
-          <span className="font-medium">Event:</span>{" "}
-          {request.eventType ? `${request.eventType} - ` : ""}
-          {request.eventTitle}
-        </p>
-      );
-    }
-    if (request.videoTitle) {
-      details.push(
-        <p key="video">
-          <span className="font-medium">Video:</span> {request.videoTitle}
-        </p>
-      );
-    }
-    if (request.sectionTitle) {
-      details.push(
-        <p key="section">
-          <span className="font-medium">Section:</span> {request.sectionTitle}
-        </p>
-      );
-    }
-    if (request.role) {
-      details.push(
-        <p key="role">
-          <span className="font-medium">Role:</span> {request.role}
-        </p>
-      );
-    }
+  if (request.sectionId && request.eventId) {
+    return `/events/${request.eventId}/sections/${request.sectionId}`;
   }
-
-  // Team member request details
-  if (request.type === "TEAM_MEMBER" && request.eventTitle) {
-    details.push(
-      <p key="event">
-        <span className="font-medium">Event:</span> {request.eventTitle}
-      </p>
-    );
+  if (request.eventId) {
+    return `/events/${request.eventId}`;
   }
-
-  // Auth level change request details
-  if (request.type === "AUTH_LEVEL_CHANGE") {
-    if (request.currentLevel !== undefined) {
-      details.push(
-        <p key="current-level">
-          <span className="font-medium">Current Level:</span>{" "}
-          {request.currentLevel}
-        </p>
-      );
-    }
-    if (request.requestedLevel !== undefined) {
-      details.push(
-        <p key="requested-level">
-          <span className="font-medium">Requested Level:</span>{" "}
-          {request.requestedLevel}
-        </p>
-      );
-    }
-  }
-
-  // Message display (for auth level change)
-  if (request.message && request.type === "AUTH_LEVEL_CHANGE") {
-    details.push(
-      <div key="message" className="mt-2 p-3 bg-muted rounded-sm">
-        <p className="font-medium text-sm mb-1">Message:</p>
-        <p className="text-sm whitespace-pre-wrap">{request.message}</p>
-      </div>
-    );
-  }
-
-  return details;
+  return "#";
 }
 
 export function IncomingRequestCard({
@@ -239,61 +147,86 @@ export function IncomingRequestCard({
     }
   };
 
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })}`;
-  };
+  const breadcrumbs = generateRequestBreadcrumbs(request);
+  const senderName =
+    request.sender?.name || request.sender?.email || "Unknown";
+  const resourceName = getResourceName(request);
+  const resourceLink = getResourceLink(request);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-medium">
-          {getRequestTitle(
-            request.type,
-            request.videoTitle,
-            request.videoId,
-            request.sectionTitle,
-            request.sectionId,
-            request.role
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="text-sm space-y-1">
-          {renderRequestDetails(request)}
-          <p>
-            <span className="font-medium">Status:</span>{" "}
-            <span className={getStatusColor(localStatus)}>{localStatus}</span>
+    <Card className="bg-gray-300/10 dark:bg-gray-300/5 border-primary/20">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Date - top left, muted, smaller text */}
+          <p className="text-xs text-muted-foreground">
+            {formatRelativeDate(new Date(request.createdAt))}
           </p>
-          <p>
-            <span className="font-medium">Created:</span>{" "}
-            {formatDate(request.createdAt)}
-          </p>
-        </div>
-        {localStatus === "PENDING" && (
-          <div className="flex gap-2">
-            <Button
-              onClick={() => handleAction("approve")}
-              disabled={isProcessing}
-              variant="default"
-              size="sm"
-            >
-              Approve
-            </Button>
-            <Button
-              onClick={() => handleAction("deny")}
-              disabled={isProcessing}
-              variant="destructive"
-              size="sm"
-            >
-              Deny
-            </Button>
+
+          {/* Message: Avatar + Display Name requested Role Name from Link */}
+          <div className="flex items-center gap-2 text-sm">
+            {request.sender && (
+              <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0">
+                {senderName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)}
+              </div>
+            )}
+            <span>
+              <strong>{senderName}</strong> requested{" "}
+              {request.role && <strong>{request.role}</strong>} from{" "}
+              <Link
+                href={resourceLink}
+                className="text-primary hover:underline"
+              >
+                {resourceName}
+              </Link>
+            </span>
           </div>
-        )}
+
+          {/* Breadcrumb trail */}
+          {breadcrumbs.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {breadcrumbs.map((crumb, index) => (
+                <div key={crumb.href} className="flex items-center gap-1">
+                  <Link
+                    href={crumb.href}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {crumb.label}
+                  </Link>
+                  {index < breadcrumbs.length - 1 && (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Approve/Deny buttons */}
+          {localStatus === "PENDING" && (
+            <div className="flex gap-2 pt-2">
+              <Button
+                onClick={() => handleAction("approve")}
+                disabled={isProcessing}
+                variant="default"
+                size="sm"
+              >
+                Approve
+              </Button>
+              <Button
+                onClick={() => handleAction("deny")}
+                disabled={isProcessing}
+                variant="destructive"
+                size="sm"
+              >
+                Deny
+              </Button>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -336,67 +269,70 @@ export function OutgoingRequestCard({
     }
   };
 
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })}`;
-  };
+  const breadcrumbs = generateRequestBreadcrumbs(request);
+  const resourceName = getResourceName(request);
+  const resourceLink = getResourceLink(request);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-medium">
-          {getRequestTitle(
-            request.type,
-            request.videoTitle,
-            request.videoId,
-            request.sectionTitle,
-            request.sectionId,
-            request.role
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-sm space-y-1">
-          {request.type === "TAGGING" && renderRequestDetails(request)}
-          {request.type === "AUTH_LEVEL_CHANGE" &&
-            request.requestedLevel !== undefined && (
-              <p>
-                <span className="font-medium">Requested Level:</span>{" "}
-                {request.requestedLevel}
-              </p>
-            )}
-          {request.type === "TEAM_MEMBER" && request.eventTitle && (
-            <p>
-              <span className="font-medium">Event:</span>{" "}
-              {request.eventType ? `${request.eventType} - ` : ""}
-              {request.eventTitle}
-            </p>
-          )}
-          <p className={getStatusColor(localStatus)}>
-            <span className="font-medium">Status:</span> {localStatus}
+    <Card className="bg-gray-300/10 dark:bg-gray-300/5 border-primary/20">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Date - top left, muted, smaller text */}
+          <p className="text-xs text-muted-foreground">
+            {formatRelativeDate(new Date(request.createdAt))}
           </p>
-          <p>
-            <span className="font-medium">Created:</span>{" "}
-            {formatDate(request.createdAt)}
-          </p>
-        </div>
-        {localStatus === "PENDING" && (
-          <div className="flex gap-2 mt-2">
-            <Button
-              onClick={handleCancel}
-              disabled={isProcessing}
-              variant="destructive"
-              size="sm"
-              className="hover:bg-destructive/70"
+
+          {/* Message: You requested Role Name for Link */}
+          <div className="text-sm">
+            You requested {request.role && <strong>{request.role}</strong>} for{" "}
+            <Link
+              href={resourceLink}
+              className="text-primary hover:underline"
             >
-              Cancel
-            </Button>
+              {resourceName}
+            </Link>
           </div>
-        )}
+
+          {/* Breadcrumb trail */}
+          {breadcrumbs.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {breadcrumbs.map((crumb, index) => (
+                <div key={crumb.href} className="flex items-center gap-1">
+                  <Link
+                    href={crumb.href}
+                    className="hover:text-primary hover:underline"
+                  >
+                    {crumb.label}
+                  </Link>
+                  {index < breadcrumbs.length - 1 && (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Status */}
+          <div className="text-sm">
+            <span className="font-medium">Status:</span>{" "}
+            <span className={getStatusColor(localStatus)}>{localStatus}</span>
+          </div>
+
+          {/* Cancel button (only for pending) */}
+          {localStatus === "PENDING" && (
+            <div className="pt-2">
+              <Button
+                onClick={handleCancel}
+                disabled={isProcessing}
+                variant="destructive"
+                size="sm"
+                className="hover:bg-destructive/70"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

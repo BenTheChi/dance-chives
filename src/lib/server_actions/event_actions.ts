@@ -37,6 +37,8 @@ import {
   VIDEO_ROLE_DANCER,
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
+import { createTagNotification, createNotification } from "@/lib/utils/request-utils";
+import { getEventTitle, getVideoTitle } from "@/db/queries/team-member";
 import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import {
@@ -639,6 +641,207 @@ export async function addEvent(props: addEventProps): Promise<response> {
       sections: processedSections,
     });
 
+    // Create notifications for all newly tagged users
+    const eventTitle = await getEventTitle(event.id);
+    if (!eventTitle) {
+      console.warn(`⚠️ [addEvent] Could not fetch event title for ${event.id}`);
+    }
+
+    // Helper to get userId from UserSearchItem
+    const getUserIdFromUser = async (user: UserSearchItem): Promise<string> => {
+      if (user.id) return user.id;
+      if (!user.username) {
+        throw new Error("User must have id or username");
+      }
+      const userRecord = await getUserByUsername(user.username);
+      if (!userRecord?.id) {
+        throw new Error(`User not found: ${user.username}`);
+      }
+      return userRecord.id;
+    };
+
+    // Notify event-level roles
+    if (props.roles && props.roles.length > 0) {
+      for (const role of props.roles) {
+        if (role.user) {
+          try {
+            const userId = await getUserIdFromUser(role.user);
+            await createTagNotification(userId, {
+              eventId: event.id,
+              eventTitle: eventTitle || event.id,
+              role: role.title,
+            });
+          } catch (notifError) {
+            console.error(
+              `❌ [addEvent] Error creating notification for role ${role.title}:`,
+              notifError
+            );
+          }
+        }
+      }
+    }
+
+    // Notify video tags
+    for (const section of processedSections) {
+      // Section videos
+      for (const video of section.videos || []) {
+        const allTaggedUsers = [
+          ...(video.taggedDancers || []),
+          ...(video.taggedWinners || []),
+          ...(video.taggedChoreographers || []),
+          ...(video.taggedTeachers || []),
+        ];
+
+        const videoTitle = await getVideoTitle(video.id);
+
+        for (const user of allTaggedUsers) {
+          try {
+            const userId = await getUserIdFromUser(user);
+            const roles: string[] = [];
+            if (video.taggedDancers?.some((u) => u.username === user.username)) {
+              roles.push(VIDEO_ROLE_DANCER);
+            }
+            if (video.taggedWinners?.some((u) => u.username === user.username)) {
+              roles.push(VIDEO_ROLE_WINNER);
+            }
+            if (
+              video.taggedChoreographers?.some(
+                (u) => u.username === user.username
+              )
+            ) {
+              roles.push("CHOREOGRAPHER");
+            }
+            if (
+              video.taggedTeachers?.some((u) => u.username === user.username)
+            ) {
+              roles.push("TEACHER");
+            }
+
+            // Create notification for each role
+            for (const role of roles) {
+              await createTagNotification(userId, {
+                eventId: event.id,
+                eventTitle: eventTitle || event.id,
+                sectionId: section.id,
+                sectionTitle: section.title,
+                videoId: video.id,
+                videoTitle: videoTitle || video.id,
+                role: fromNeo4jRoleFormat(role) || role,
+              });
+            }
+          } catch (notifError) {
+            console.error(
+              `❌ [addEvent] Error creating notification for video tag:`,
+              notifError
+            );
+          }
+        }
+      }
+
+      // Bracket videos
+      for (const bracket of section.brackets || []) {
+        for (const video of bracket.videos || []) {
+          const allTaggedUsers = [
+            ...(video.taggedDancers || []),
+            ...(video.taggedWinners || []),
+            ...(video.taggedChoreographers || []),
+            ...(video.taggedTeachers || []),
+          ];
+
+          const videoTitle = await getVideoTitle(video.id);
+
+          for (const user of allTaggedUsers) {
+            try {
+              const userId = await getUserIdFromUser(user);
+              const roles: string[] = [];
+              if (
+                video.taggedDancers?.some((u) => u.username === user.username)
+              ) {
+                roles.push(VIDEO_ROLE_DANCER);
+              }
+              if (
+                video.taggedWinners?.some((u) => u.username === user.username)
+              ) {
+                roles.push(VIDEO_ROLE_WINNER);
+              }
+              if (
+                video.taggedChoreographers?.some(
+                  (u) => u.username === user.username
+                )
+              ) {
+                roles.push("CHOREOGRAPHER");
+              }
+              if (
+                video.taggedTeachers?.some((u) => u.username === user.username)
+              ) {
+                roles.push("TEACHER");
+              }
+
+              // Create notification for each role
+              for (const role of roles) {
+                await createTagNotification(userId, {
+                  eventId: event.id,
+                  eventTitle: eventTitle || event.id,
+                  sectionId: section.id,
+                  sectionTitle: section.title,
+                  videoId: video.id,
+                  videoTitle: videoTitle || video.id,
+                  role: fromNeo4jRoleFormat(role) || role,
+                });
+              }
+            } catch (notifError) {
+              console.error(
+                `❌ [addEvent] Error creating notification for bracket video tag:`,
+                notifError
+              );
+            }
+          }
+        }
+      }
+
+      // Section winners
+      if (section.winners && section.winners.length > 0) {
+        for (const winner of section.winners) {
+          try {
+            const userId = await getUserIdFromUser(winner);
+            await createTagNotification(userId, {
+              eventId: event.id,
+              eventTitle: eventTitle || event.id,
+              sectionId: section.id,
+              sectionTitle: section.title,
+              role: "Winner",
+            });
+          } catch (notifError) {
+            console.error(
+              `❌ [addEvent] Error creating notification for section winner:`,
+              notifError
+            );
+          }
+        }
+      }
+
+      // Section judges
+      if (section.judges && section.judges.length > 0) {
+        for (const judge of section.judges) {
+          try {
+            const userId = await getUserIdFromUser(judge);
+            await createTagNotification(userId, {
+              eventId: event.id,
+              eventTitle: eventTitle || event.id,
+              sectionId: section.id,
+              sectionTitle: section.title,
+              role: "Judge",
+            });
+          } catch (notifError) {
+            console.error(
+              `❌ [addEvent] Error creating notification for section judge:`,
+              notifError
+            );
+          }
+        }
+      }
+    }
+
     return {
       status: 200,
       event: result,
@@ -1159,7 +1362,14 @@ export async function editEvent(
             const oldVideo = oldSection?.videos.find(
               (v) => v.id === newVideo.id
             );
-            await processVideoTagDiffs(newVideo, oldVideo, eventId, getUserId);
+            await processVideoTagDiffs(
+              newVideo,
+              oldVideo,
+              eventId,
+              newSection.id,
+              newSection.title,
+              getUserId
+            );
           }
 
           // Process bracket videos
@@ -1176,6 +1386,8 @@ export async function editEvent(
                 newVideo,
                 oldVideo,
                 eventId,
+                newSection.id,
+                newSection.title,
                 getUserId
               );
             }
@@ -1211,6 +1423,29 @@ export async function editEvent(
                   `🟢 [editEvent] Setting ${winnerUserIds.length} winners for section ${newSection.id}`
                 );
                 await setSectionWinners(eventId, newSection.id, winnerUserIds);
+
+                // Create notifications for newly tagged winners
+                const eventTitle = await getEventTitle(eventId);
+                const newlyTaggedWinners = newWinners.filter(
+                  (w) => !oldWinnerUsernames.has(w.username)
+                );
+                for (const winner of newlyTaggedWinners) {
+                  try {
+                    const userId = await getUserId(winner);
+                    await createTagNotification(userId, {
+                      eventId,
+                      eventTitle: eventTitle || eventId,
+                      sectionId: newSection.id,
+                      sectionTitle: newSection.title,
+                      role: "Winner",
+                    });
+                  } catch (notifError) {
+                    console.error(
+                      `❌ [editEvent] Error creating notification for winner ${winner.username}:`,
+                      notifError
+                    );
+                  }
+                }
               } else {
                 console.log(
                   `🟢 [editEvent] Removing all winners from section ${newSection.id}`
@@ -1255,6 +1490,29 @@ export async function editEvent(
                   `🟢 [editEvent] Setting ${judgeUserIds.length} judges for section ${newSection.id}`
                 );
                 await setSectionJudges(eventId, newSection.id, judgeUserIds);
+
+                // Create notifications for newly tagged judges
+                const eventTitle = await getEventTitle(eventId);
+                const newlyTaggedJudges = newJudges.filter(
+                  (j) => !oldJudgeUsernames.has(j.username)
+                );
+                for (const judge of newlyTaggedJudges) {
+                  try {
+                    const userId = await getUserId(judge);
+                    await createTagNotification(userId, {
+                      eventId,
+                      eventTitle: eventTitle || eventId,
+                      sectionId: newSection.id,
+                      sectionTitle: newSection.title,
+                      role: "Judge",
+                    });
+                  } catch (notifError) {
+                    console.error(
+                      `❌ [editEvent] Error creating notification for judge ${judge.username}:`,
+                      notifError
+                    );
+                  }
+                }
               } else {
                 console.log(
                   `🟢 [editEvent] Removing all judges from section ${newSection.id}`
@@ -1278,6 +1536,48 @@ export async function editEvent(
         );
       }
       console.log("✅ [editEvent] Tag diff processing completed");
+
+      // Process event-level role changes and create notifications
+      const oldRoles = oldEvent.roles || [];
+      const newRoles = editedEvent.roles || [];
+      const oldRoleUserIds = new Set(
+        oldRoles
+          .map((r) => r.user?.id || r.user?.username)
+          .filter(Boolean)
+      );
+      const newRoleUserIds = new Set(
+        newRoles
+          .map((r) => r.user?.id || r.user?.username)
+          .filter(Boolean)
+      );
+
+      // Find newly added roles
+      const newlyTaggedRoles = newRoles.filter(
+        (role) =>
+          role.user &&
+          !oldRoleUserIds.has(role.user.id || role.user.username || "")
+      );
+
+      if (newlyTaggedRoles.length > 0) {
+        const eventTitle = await getEventTitle(eventId);
+        for (const role of newlyTaggedRoles) {
+          if (role.user) {
+            try {
+              const userId = await getUserId(role.user);
+              await createTagNotification(userId, {
+                eventId,
+                eventTitle: eventTitle || eventId,
+                role: role.title,
+              });
+            } catch (notifError) {
+              console.error(
+                `❌ [editEvent] Error creating notification for role ${role.title}:`,
+                notifError
+              );
+            }
+          }
+        }
+      }
 
       // Update corresponding PostgreSQL Event record
       const creatorId = oldEvent.eventDetails.creatorId || session.user.id;
@@ -1533,6 +1833,8 @@ async function processVideoTagDiffs(
   newVideo: Video,
   oldVideo: Video | undefined,
   eventId: string,
+  sectionId: string | undefined,
+  sectionTitle: string | undefined,
   getUserId: (user: UserSearchItem) => Promise<string>
 ): Promise<void> {
   const oldTaggedWinners = oldVideo?.taggedWinners || [];
@@ -1560,6 +1862,12 @@ async function processVideoTagDiffs(
       ...newTaggedTeachers.map((u: UserSearchItem) => u.username),
     ].filter(Boolean)
   );
+
+  // Get event and video titles for notifications
+  const [eventTitle, videoTitle] = await Promise.all([
+    getEventTitle(eventId),
+    getVideoTitle(newVideo.id),
+  ]);
 
   // Process all users in the new set
   for (const username of allNewUsers) {
@@ -1589,6 +1897,30 @@ async function processVideoTagDiffs(
 
     try {
       await setVideoRoles(eventId, newVideo.id, userId, roles);
+
+      // Create notification for newly tagged users
+      if (!allOldUsers.has(username)) {
+        // User is newly tagged - create notification for each role
+        for (const role of roles) {
+          try {
+            await createTagNotification(userId, {
+              eventId,
+              eventTitle: eventTitle || eventId,
+              sectionId: sectionId,
+              sectionTitle: sectionTitle || undefined,
+              videoId: newVideo.id,
+              videoTitle: videoTitle || newVideo.id,
+              role: fromNeo4jRoleFormat(role) || role,
+            });
+          } catch (notifError) {
+            console.error(
+              `❌ [editEvent] Error creating notification for user ${username}:`,
+              notifError
+            );
+            // Continue with other notifications even if one fails
+          }
+        }
+      }
     } catch (userTagError) {
       console.error(
         `❌ [editEvent] Error setting roles for user ${username} in video ${newVideo.id}:`,
@@ -1989,6 +2321,26 @@ export async function updateEventCreator(
       // Update event with new creator ID, preserving current team members
       // The team members will be updated separately by updateEventTeamMembers
       await editEventQuery(minimalEvent, processedTeamMembers);
+
+      // Create notification for new owner
+      try {
+        const eventTitle = await getEventTitle(eventId);
+        const eventDisplayName = eventTitle || eventId;
+        await createNotification(
+          newCreatorId,
+          "OWNERSHIP_TRANSFERRED",
+          "New Event Ownership",
+          `Ownership of ${eventDisplayName} has been transferred to you|eventId:${eventId}`,
+          undefined,
+          undefined
+        );
+      } catch (notifError) {
+        console.error(
+          "❌ [updateEventCreator] Error creating ownership notification:",
+          notifError
+        );
+        // Don't fail the ownership transfer if notification fails
+      }
     }
 
     // Update corresponding PostgreSQL Event record

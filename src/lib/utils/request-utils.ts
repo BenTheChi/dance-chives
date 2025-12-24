@@ -191,6 +191,7 @@ export async function createNotification(
       message,
       relatedRequestType,
       relatedRequestId,
+      isOld: false,
     },
   });
 }
@@ -208,4 +209,66 @@ export async function hasGlobalAccess(userId: string): Promise<boolean> {
 
   // Admins and super admins have global access
   return !!(user.auth && user.auth >= AUTH_LEVELS.ADMIN);
+}
+
+/**
+ * Context for tag notification creation
+ */
+export interface TagNotificationContext {
+  eventId: string;
+  eventTitle: string;
+  sectionId?: string;
+  sectionTitle?: string;
+  videoId?: string;
+  videoTitle?: string;
+  role: string;
+}
+
+/**
+ * Create a notification for a user being tagged
+ */
+export async function createTagNotification(
+  userId: string,
+  context: TagNotificationContext
+): Promise<void> {
+  const {
+    eventId,
+    eventTitle,
+    sectionId,
+    sectionTitle,
+    videoId,
+    videoTitle,
+    role,
+  } = context;
+
+  // Build message based on what level the tag is at
+  let resourceName = eventTitle;
+  if (videoTitle && sectionId) {
+    resourceName = videoTitle;
+  } else if (sectionTitle && sectionId) {
+    resourceName = sectionTitle;
+  }
+
+  // Store navigation info in message: "Tagged as "Role Name" for <Name>|eventId:...|sectionId:...|videoId:..."
+  // This allows us to parse the IDs for navigation
+  const navInfo = [
+    eventId ? `eventId:${eventId}` : "",
+    sectionId ? `sectionId:${sectionId}` : "",
+    videoId ? `videoId:${videoId}` : "",
+  ]
+    .filter(Boolean)
+    .join("|");
+
+  const message = navInfo
+    ? `Tagged as "${role}" for ${resourceName}|${navInfo}`
+    : `Tagged as "${role}" for ${resourceName}`;
+
+  await createNotification(
+    userId,
+    "TAGGED",
+    "New Tag",
+    message,
+    undefined,
+    undefined
+  );
 }

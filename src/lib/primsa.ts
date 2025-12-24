@@ -1,5 +1,5 @@
-// Note: server-only import removed to allow scripts to import this module
-// Scripts (seed files, etc.) need to import this, so we can't use server-only here
+// Note: This module is server-only and uses Node.js-specific APIs (Pool, PrismaPg adapter)
+// Scripts (seed files, etc.) can still import this as they run in Node.js environment
 // Client-side usage is prevented by Next.js build-time checks and the fact that
 // this module uses Node.js-specific APIs (Pool, PrismaPg adapter)
 

@@ -11,10 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   getNotifications,
-  getUnreadNotificationCount,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
+  getNewNotificationCount,
+  markNotificationAsOld,
+  markAllNotificationsAsOld,
+  getNotificationUrl,
 } from "@/lib/server_actions/request_actions";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface Notification {
@@ -25,13 +27,14 @@ interface Notification {
   message: string;
   relatedRequestType?: string | null;
   relatedRequestId?: string | null;
-  read: boolean;
+  isOld: boolean;
   createdAt: Date;
 }
 
 export function NotificationPopover() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [newCount, setNewCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,11 +42,13 @@ export function NotificationPopover() {
     try {
       setIsLoading(true);
       const [notifs, count] = await Promise.all([
-        getNotifications(10),
-        getUnreadNotificationCount(),
+        getNotifications(10, false), // Only get new notifications (isOld: false)
+        getNewNotificationCount(),
       ]);
-      setNotifications(notifs);
-      setUnreadCount(count);
+      // Filter out old notifications
+      const newNotifs = notifs.filter((n) => !n.isOld);
+      setNotifications(newNotifs);
+      setNewCount(count);
     } catch (error) {
       console.error("Failed to load notifications:", error);
     } finally {
@@ -67,33 +72,48 @@ export function NotificationPopover() {
     }
   }, [isOpen, loadNotifications]);
 
-  const handleNotificationClick = async (notificationId: string) => {
+  const handleNotificationClick = async (notification: Notification) => {
     try {
-      await markNotificationAsRead(notificationId);
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((notif) =>
-          notif.id === notificationId ? { ...notif, read: true } : notif
-        )
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      // Mark as old first
+      await markNotificationAsOld(notification.id);
+      
+      // Get navigation URL
+      const url = await getNotificationUrl(notification.id);
+      
+      // Update local state - remove from list
+      setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+      setNewCount((prev) => Math.max(0, prev - 1));
       setIsOpen(false);
+      
+      // Navigate if URL exists
+      if (url) {
+        router.push(url);
+      }
     } catch (error) {
-      console.error("Failed to mark notification as read:", error);
+      console.error("Failed to handle notification click:", error);
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllAsOld = async () => {
     try {
-      await markAllNotificationsAsRead();
-      // Update local state
-      setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, read: true }))
-      );
-      setUnreadCount(0);
+      await markAllNotificationsAsOld();
+      // Clear notifications from list
+      setNotifications([]);
+      setNewCount(0);
     } catch (error) {
-      console.error("Failed to mark all notifications as read:", error);
+      console.error("Failed to mark all notifications as old:", error);
     }
+  };
+
+  // Helper to display message without navigation info for TAGGED and OWNERSHIP_TRANSFERRED notifications
+  const getDisplayMessage = (notification: Notification): string => {
+    if (notification.type === "TAGGED" || notification.type === "OWNERSHIP_TRANSFERRED") {
+      // Remove navigation info part (everything after |)
+      const message = notification.message;
+      const mainMessage = message.split("|")[0];
+      return mainMessage;
+    }
+    return notification.message;
   };
 
   const formatTime = (date: Date | string) => {
@@ -121,12 +141,12 @@ export function NotificationPopover() {
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
+          {newCount > 0 && (
             <Badge
               variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
             >
-              {unreadCount > 99 ? "99+" : unreadCount}
+              {newCount > 99 ? "99+" : newCount}
             </Badge>
           )}
         </Button>
@@ -141,14 +161,14 @@ export function NotificationPopover() {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold text-sm">Notifications</h3>
-            {unreadCount > 0 && (
+            {newCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs"
-                onClick={handleMarkAllAsRead}
+                onClick={handleMarkAllAsOld}
               >
-                Mark all as read
+                Mark all as old
               </Button>
             )}
           </div>
@@ -168,27 +188,20 @@ export function NotificationPopover() {
                 {notifications.map((notification) => (
                   <button
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification.id)}
+                    onClick={() => handleNotificationClick(notification)}
                     className={cn(
                       "w-full text-left p-3 hover:bg-accent transition-colors",
-                      !notification.read && "bg-blue-50 dark:bg-blue-950/20"
+                      "bg-blue-50 dark:bg-blue-950/20"
                     )}
                   >
                     <div className="flex items-start gap-2">
-                      {!notification.read && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                      )}
+                      <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p
-                          className={cn(
-                            "text-sm font-medium truncate",
-                            !notification.read && "font-semibold"
-                          )}
-                        >
+                        <p className="text-sm font-semibold truncate">
                           {notification.title}
                         </p>
                         <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                          {notification.message}
+                          {getDisplayMessage(notification)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatTime(notification.createdAt)}

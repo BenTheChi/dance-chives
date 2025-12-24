@@ -309,13 +309,13 @@ model Notification {
   message            String
   relatedRequestType String? // Type of related request
   relatedRequestId   String? // ID of related request
-  read               Boolean  @default(false)
+  isOld              Boolean  @default(false)
   createdAt          DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([read])
+  @@index([isOld])
   @@index([createdAt])
 }
 

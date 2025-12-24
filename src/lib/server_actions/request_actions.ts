@@ -416,42 +416,34 @@ export async function createTaggingRequest(
       }
     }
 
+    let resourceName = eventDisplayName;
     if (videoId) {
       const videoTitle = await getVideoTitle(videoId);
-      const videoDisplayName = videoTitle || videoId;
-      if (role === VIDEO_ROLE_WINNER) {
-        // Check if there's a pending Dancer request
-        const dancerRequest = await prisma.taggingRequest.findFirst({
-          where: {
-            eventId,
-            senderId,
-            targetUserId,
-            videoId,
-            role: VIDEO_ROLE_DANCER,
-            status: "PENDING",
-          },
-        });
-        if (dancerRequest) {
-          notificationMessage = `${username} requesting tags for video ${videoDisplayName} as Winner and Dancer in event ${eventDisplayName}`;
-        } else {
-          notificationMessage = `${username} requesting tag for video ${videoDisplayName} with role ${role} in event ${eventDisplayName}`;
-        }
-      } else {
-        notificationMessage = `${username} requesting tag for video ${videoDisplayName} with role ${role} in event ${eventDisplayName}${additionalContext}`;
-      }
+      resourceName = videoTitle || videoId;
     } else if (sectionId) {
-      notificationMessage = `${username} requesting tag for section with role ${role} in event ${eventDisplayName}`;
-    } else {
-      // role is guaranteed to exist here due to validation above
-      notificationMessage = `${username} requesting tag for role ${role} in event ${eventDisplayName}`;
+      const session = driver.session();
+      try {
+        const result = await session.run(
+          `MATCH (s:Section {id: $sectionId}) RETURN s.title as title LIMIT 1`,
+          { sectionId }
+        );
+        if (result.records.length > 0) {
+          resourceName = result.records[0].get("title") || sectionId;
+        }
+      } finally {
+        await session.close();
+      }
     }
+
+    const roleName = role ? fromNeo4jRoleFormat(role) || role : "";
+    notificationMessage = `Request for "${roleName}" for ${resourceName}`;
 
     for (const approverId of approvers) {
       try {
         await createNotification(
           approverId,
           "INCOMING_REQUEST",
-          "New Tagging Request",
+          "New Request",
           notificationMessage,
           REQUEST_TYPES.TAGGING,
           request.id
@@ -608,20 +600,32 @@ export async function approveTaggingRequest(
   // Create notification for sender (all requests now use eventId)
   const eventTitle = await getEventTitle(request.eventId!);
   const eventDisplayName = eventTitle || request.eventId!;
-  let notificationMessage: string;
+  let resourceName = eventDisplayName;
   if (request.videoId) {
-    notificationMessage = `Your request to tag yourself in a video with role ${request.role} in event "${eventDisplayName}" has been approved`;
+    const videoTitle = await getVideoTitle(request.videoId);
+    resourceName = videoTitle || request.videoId;
   } else if (request.sectionId) {
-    notificationMessage = `Your request to tag yourself in a section with role ${request.role} in event "${eventDisplayName}" has been approved`;
-  } else {
-    notificationMessage = `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been approved`;
+    const session = driver.session();
+    try {
+      const result = await session.run(
+        `MATCH (s:Section {id: $sectionId}) RETURN s.title as title LIMIT 1`,
+        { sectionId: request.sectionId }
+      );
+      if (result.records.length > 0) {
+        resourceName = result.records[0].get("title") || request.sectionId;
+      }
+    } finally {
+      await session.close();
+    }
   }
+
+  const roleName = request.role ? fromNeo4jRoleFormat(request.role) || request.role : "";
 
   await createNotification(
     request.senderId,
     "REQUEST_APPROVED",
-    "Tagging Request Approved",
-    notificationMessage,
+    "Request Approved",
+    `Approved for "${roleName}" for ${resourceName}`,
     REQUEST_TYPES.TAGGING,
     requestId
   );
@@ -744,15 +748,32 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
 
   const eventTitle = await getEventTitle(request.eventId!);
   const eventDisplayName = eventTitle || request.eventId!;
-  const notificationMessage = request.videoId
-    ? `Your request to tag yourself in a video in event "${eventDisplayName}" has been denied`
-    : `Your request to tag yourself as ${request.role} in event "${eventDisplayName}" has been denied`;
+  let resourceName = eventDisplayName;
+  if (request.videoId) {
+    const videoTitle = await getVideoTitle(request.videoId);
+    resourceName = videoTitle || request.videoId;
+  } else if (request.sectionId) {
+    const session = driver.session();
+    try {
+      const result = await session.run(
+        `MATCH (s:Section {id: $sectionId}) RETURN s.title as title LIMIT 1`,
+        { sectionId: request.sectionId }
+      );
+      if (result.records.length > 0) {
+        resourceName = result.records[0].get("title") || request.sectionId;
+      }
+    } finally {
+      await session.close();
+    }
+  }
+
+  const roleName = request.role ? fromNeo4jRoleFormat(request.role) || request.role : "";
 
   await createNotification(
     request.senderId,
     "REQUEST_DENIED",
-    "Tagging Request Denied",
-    notificationMessage,
+    "Request Denied",
+    `Denied for "${roleName}" for ${resourceName}`,
     REQUEST_TYPES.TAGGING,
     requestId
   );
@@ -1484,14 +1505,25 @@ export async function getOutgoingRequests() {
 // Notifications
 // ============================================================================
 
-export async function getNotifications(limit: number = 50) {
+export async function getNotifications(
+  limit: number = 50,
+  isOld?: boolean
+) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error("Not authenticated");
   }
 
+  const where: { userId: string; isOld?: boolean } = {
+    userId: session.user.id,
+  };
+
+  if (isOld !== undefined) {
+    where.isOld = isOld;
+  }
+
   const notifications = await prisma.notification.findMany({
-    where: { userId: session.user.id },
+    where,
     orderBy: { createdAt: "desc" },
     take: limit,
   });
@@ -1499,7 +1531,7 @@ export async function getNotifications(limit: number = 50) {
   return notifications;
 }
 
-export async function markNotificationAsRead(notificationId: string) {
+export async function markNotificationAsOld(notificationId: string) {
   const userId = await requireAuth();
 
   await prisma.notification.update({
@@ -1507,27 +1539,27 @@ export async function markNotificationAsRead(notificationId: string) {
       id: notificationId,
       userId, // Ensure user owns the notification
     },
-    data: { read: true },
+    data: { isOld: true },
   });
 
   return { success: true };
 }
 
-export async function markAllNotificationsAsRead() {
+export async function markAllNotificationsAsOld() {
   const userId = await requireAuth();
 
   await prisma.notification.updateMany({
     where: {
       userId,
-      read: false,
+      isOld: false,
     },
-    data: { read: true },
+    data: { isOld: true },
   });
 
   return { success: true };
 }
 
-export async function getUnreadNotificationCount() {
+export async function getNewNotificationCount() {
   const session = await auth();
   if (!session?.user?.id) {
     return 0;
@@ -1536,11 +1568,134 @@ export async function getUnreadNotificationCount() {
   const count = await prisma.notification.count({
     where: {
       userId: session.user.id,
-      read: false,
+      isOld: false,
     },
   });
 
   return count;
+}
+
+/**
+ * Get navigation URL for a notification based on its type and related request
+ */
+export async function getNotificationUrl(notificationId: string): Promise<string | null> {
+  const userId = await requireAuth();
+  
+  const notification = await prisma.notification.findFirst({
+    where: {
+      id: notificationId,
+      userId,
+    },
+  });
+
+  if (!notification) {
+    return null;
+  }
+
+  // For incoming requests, go to dashboard with anchor
+  if (notification.type === "INCOMING_REQUEST" && notification.relatedRequestId) {
+    if (notification.relatedRequestType === "TAGGING") {
+      return "/dashboard#requests";
+    } else if (notification.relatedRequestType === "TEAM_MEMBER") {
+      return "/dashboard#requests";
+    } else if (notification.relatedRequestType === "AUTH_LEVEL_CHANGE") {
+      return "/dashboard#requests";
+    }
+  }
+
+  // For approved/denied requests, navigate to the event/section/video
+  if (
+    (notification.type === "REQUEST_APPROVED" || 
+     notification.type === "REQUEST_DENIED") &&
+    notification.relatedRequestId &&
+    notification.relatedRequestType === "TAGGING"
+  ) {
+    const request = await prisma.taggingRequest.findUnique({
+      where: { id: notification.relatedRequestId },
+      select: {
+        eventId: true,
+        videoId: true,
+        sectionId: true,
+      },
+    });
+
+    if (!request || !request.eventId) {
+      return null;
+    }
+
+    // Build URL based on what level the tag is at
+    if (request.videoId && request.sectionId) {
+      return `/events/${request.eventId}/sections/${request.sectionId}?video=${request.videoId}`;
+    } else if (request.sectionId) {
+      return `/events/${request.eventId}/sections/${request.sectionId}`;
+    } else {
+      return `/events/${request.eventId}`;
+    }
+  }
+
+  // For TAGGED notifications, parse navigation info from message
+  if (notification.type === "TAGGED") {
+    const message = notification.message;
+    const parts = message.split("|");
+    if (parts.length > 1) {
+      const navParts = parts.slice(1);
+      let eventId: string | null = null;
+      let sectionId: string | null = null;
+      let videoId: string | null = null;
+
+      for (const part of navParts) {
+        if (part.startsWith("eventId:")) {
+          eventId = part.replace("eventId:", "");
+        } else if (part.startsWith("sectionId:")) {
+          sectionId = part.replace("sectionId:", "");
+        } else if (part.startsWith("videoId:")) {
+          videoId = part.replace("videoId:", "");
+        }
+      }
+
+      if (eventId) {
+        if (videoId && sectionId) {
+          return `/events/${eventId}/sections/${sectionId}?video=${videoId}`;
+        } else if (sectionId) {
+          return `/events/${eventId}/sections/${sectionId}`;
+        } else {
+          return `/events/${eventId}`;
+        }
+      }
+    }
+  }
+
+  // For team member requests, go to event
+  if (
+    (notification.type === "REQUEST_APPROVED" || notification.type === "REQUEST_DENIED") &&
+    notification.relatedRequestId &&
+    notification.relatedRequestType === "TEAM_MEMBER"
+  ) {
+    const request = await prisma.teamMemberRequest.findUnique({
+      where: { id: notification.relatedRequestId },
+      select: { eventId: true },
+    });
+
+    if (request?.eventId) {
+      return `/events/${request.eventId}`;
+    }
+  }
+
+  // For OWNERSHIP_TRANSFERRED notifications, parse eventId from message
+  if (notification.type === "OWNERSHIP_TRANSFERRED") {
+    const message = notification.message;
+    const parts = message.split("|");
+    if (parts.length > 1) {
+      for (const part of parts.slice(1)) {
+        if (part.startsWith("eventId:")) {
+          const eventId = part.replace("eventId:", "");
+          return `/events/${eventId}`;
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 // ============================================================================
@@ -1553,7 +1708,6 @@ export async function getDashboardData() {
   const [
     incomingRequests,
     outgoingRequests,
-    notifications,
     userEvents,
     teamMemberships,
     user,
@@ -1561,7 +1715,6 @@ export async function getDashboardData() {
   ] = await Promise.all([
     getIncomingRequests(),
     getOutgoingRequests(),
-    getNotifications(10),
     (async () => {
       const { getUserCreatedEventCards } = await import("@/db/queries/event");
       return await getUserCreatedEventCards(userId);
@@ -1605,7 +1758,6 @@ export async function getDashboardData() {
     },
     incomingRequests,
     outgoingRequests,
-    notifications,
     userEvents,
     teamMemberships,
     hiddenEvents,

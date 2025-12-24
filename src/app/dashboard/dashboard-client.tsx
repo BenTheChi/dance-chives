@@ -20,10 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  IncomingRequestCard,
-  OutgoingRequestCard,
-} from "@/components/requests/RequestCard";
+import { RequestSection } from "@/components/requests/RequestSection";
 import { getAuthLevelName } from "@/lib/utils/auth-utils-shared";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { UserIcon } from "lucide-react";
@@ -62,18 +59,6 @@ interface DashboardRequest {
   message?: string;
 }
 
-interface DashboardNotification {
-  id: string;
-  userId: string;
-  type: string;
-  title: string;
-  message: string;
-  relatedRequestType?: string | null;
-  relatedRequestId?: string | null;
-  read: boolean;
-  createdAt: Date;
-}
-
 // UserEvent is now TEventCard - keeping for backwards compatibility but will be removed
 interface UserEvent {
   id: string;
@@ -98,7 +83,6 @@ export interface DashboardData {
   user: DashboardUser;
   incomingRequests: DashboardRequests;
   outgoingRequests: DashboardRequests;
-  notifications: DashboardNotification[];
   userEvents: TEventCard[];
   teamMemberships: TeamMembership[];
   hiddenEvents?: TEventCard[]; // Only for moderators/admins
@@ -246,25 +230,17 @@ export function DashboardClient({
   const userEvents = dashboardData?.userEvents || [];
   const teamMemberships = dashboardData?.teamMemberships || [];
 
-  const allIncoming = [
+  const allIncoming: DashboardRequest[] = [
     ...(incomingRequests.tagging || []),
     ...(incomingRequests.teamMember || []),
     ...(incomingRequests.authLevelChange || []),
   ];
 
-  const allOutgoing = [
+  const allOutgoing: DashboardRequest[] = [
     ...(outgoingRequests.tagging || []),
     ...(outgoingRequests.teamMember || []),
     ...(outgoingRequests.authLevelChange || []),
   ];
-
-  // Separate pending and non-pending outgoing requests
-  const pendingOutgoing = allOutgoing.filter(
-    (request: DashboardRequest) => request.status === "PENDING"
-  );
-  const requestHistory = allOutgoing.filter(
-    (request: DashboardRequest) => request.status !== "PENDING"
-  );
 
   // Convert saved TEventCard[] to CalendarEventData[] format
   const convertToCalendarEvents = (
@@ -433,74 +409,12 @@ export function DashboardClient({
           </>
         )}
 
-        {/* Incoming Requests Section */}
-        {allIncoming.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Incoming Requests</CardTitle>
-              <CardDescription>
-                Requests that require your approval ({allIncoming.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {allIncoming.map((request: DashboardRequest) => (
-                  <IncomingRequestCard
-                    key={`${request.type}-${request.id}`}
-                    request={request}
-                    onRequestUpdated={handleRequestUpdated}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Outgoing Requests Section - Pending Only */}
-        {pendingOutgoing.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Requests</CardTitle>
-              <CardDescription>
-                Pending requests you have submitted ({pendingOutgoing.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {pendingOutgoing.map((request: DashboardRequest) => (
-                  <OutgoingRequestCard
-                    key={`${request.type}-${request.id}`}
-                    request={request}
-                    onRequestUpdated={handleRequestUpdated}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Request History Section */}
-        {requestHistory.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Request History</CardTitle>
-              <CardDescription>
-                Completed and cancelled requests ({requestHistory.length})
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {requestHistory.map((request: DashboardRequest) => (
-                  <OutgoingRequestCard
-                    key={`${request.type}-${request.id}`}
-                    request={request}
-                    onRequestUpdated={handleRequestUpdated}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Requests Section */}
+        <RequestSection
+          incomingRequests={allIncoming}
+          outgoingRequests={allOutgoing}
+          onRequestUpdated={handleRequestUpdated}
+        />
 
         {/* Events Created Section */}
         {userEvents.length > 0 && (
@@ -599,23 +513,6 @@ export function DashboardClient({
             </CardContent>
           </Card>
         )}
-
-        {/* Empty State */}
-        {allIncoming.length === 0 &&
-          pendingOutgoing.length === 0 &&
-          requestHistory.length === 0 &&
-          userEvents.length === 0 &&
-          teamMemberships.length === 0 &&
-          (!initialData?.hiddenEvents ||
-            initialData.hiddenEvents.length === 0) && (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  No requests or activities to display.
-                </p>
-              </CardContent>
-            </Card>
-          )}
       </main>
     </AccountVerificationGuard>
   );
