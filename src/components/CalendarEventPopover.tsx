@@ -132,9 +132,23 @@ export function CalendarEventPopover({
             <Link
               href={getLinkUrl()}
               onClick={() => onOpenChange(false)}
-              className="w-full aspect-square bg-gray-200 rounded-sm flex items-center justify-center text-gray-400 p-1"
+              className="w-full aspect-square bg-neutral-400 rounded-sm flex flex-col"
             >
-              No poster
+              {/* Top half - mascot image */}
+              <div className="flex-[3] flex items-center justify-center">
+                <div className="relative w-full h-full">
+                  <Image
+                    src="/mascot/Dancechives_Mascot1_Mono_onLight_slim.png"
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+              {/* Bottom half - event title */}
+              <div className="flex-1 flex items-start justify-center">
+                <h2 className="text-center px-4 text-black">{event.title}</h2>
+              </div>
             </Link>
           )}
 

@@ -12,7 +12,7 @@ export default async function ProfilesPage() {
         <h1 className="!text-[60px] mt-5 mb-12">Profiles</h1>
 
         {users.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-10">
             {users.map((user) => (
               <UserCard
                 key={user.id}

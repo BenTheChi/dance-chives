@@ -475,4 +475,32 @@ p {
   .rbc-selected-cell {
     border-color: #000000 !important;
   }
+
+  /* Loading spinner animations */
+  @keyframes rotate-medium {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+
+  @keyframes pulse-medium {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  .animate-rotate-medium {
+    animation: rotate-medium 2.5s linear infinite;
+  }
+
+  .animate-pulse-medium {
+    animation: pulse-medium 2.5s ease-in-out infinite;
+  }
 }

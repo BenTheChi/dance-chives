@@ -11,6 +11,8 @@ interface PosterImageProps {
   className?: string;
   width?: number;
   height?: number;
+  eventTitle?: string;
+  type?: "event" | "section";
 }
 
 export function PosterImage({
@@ -19,15 +21,29 @@ export function PosterImage({
   className = "",
   width = 357,
   height = 357,
+  eventTitle,
+  type = "event",
 }: PosterImageProps) {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   if (!poster) {
+    const placeholderImage =
+      type === "section"
+        ? "/mascot/Mascot3_Mono_onLight.svg"
+        : "/mascot/Dancechives_Mascot1_Mono_onLight_slim.png";
+    
     return (
       <div
-        className={`card w-full h-[300px] md:h-[400px] bg-gray-300 text-center m-auto flex items-center justify-center ${className}`}
+        className={`card w-full h-[300px] md:h-[400px] bg-neutral-400 flex items-center justify-center ${className}`}
       >
-        No poster
+        <div className="relative w-full h-full">
+          <NextImage
+            src={placeholderImage}
+            alt=""
+            fill
+            className="object-contain"
+          />
+        </div>
       </div>
     );
   }

@@ -257,6 +257,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                     width={400}
                     height={400}
                     className="w-full h-full object-cover"
+                    type="section"
                   />
                 </div>
               </div>

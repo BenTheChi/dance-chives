@@ -29,7 +29,7 @@ export function UserCard({
 
       <div className="my-2 rounded-sm w-fit">
         {image ? (
-          <div className="relative w-[215px] h-[300px] rounded-sm">
+          <div className="relative w-[215px] h-[300px] rounded-sm border-3 border-charcoal">
             <Image
               src={image}
               alt={displayName}
@@ -38,8 +38,13 @@ export function UserCard({
             />
           </div>
         ) : (
-          <div className="w-[215px] h-[300px] bg-gray-200 px-2 flex items-center justify-center text-center text-lg rounded-sm">
-            {displayName}
+          <div className="relative w-[215px] h-[300px] bg-neutral-400 rounded-sm overflow-hidden border-3 border-charcoal">
+            <Image
+              src="/mascot/3:4_Mascot2_Mono_onLight.png"
+              alt=""
+              fill
+              className="object-contain"
+            />
           </div>
         )}
       </div>

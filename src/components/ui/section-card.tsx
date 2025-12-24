@@ -112,8 +112,15 @@ export function SectionCard({
                 fill
               />
             ) : (
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <span className="text-gray-400 text-sm">No poster</span>
+              <div className="w-full h-full bg-neutral-400 flex items-center justify-center">
+                <div className="relative w-full h-full">
+                  <NextImage
+                    src="/mascot/Mascot3_Mono_onLight.svg"
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               </div>
             )}
           </div>

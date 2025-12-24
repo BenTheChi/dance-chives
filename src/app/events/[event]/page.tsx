@@ -232,6 +232,7 @@ export default async function EventPage({ params }: PageProps) {
                     width={400}
                     height={400}
                     className="w-full h-full object-cover"
+                    eventTitle={event.eventDetails.title}
                   />
                 </div>
               </div>

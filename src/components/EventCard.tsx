@@ -55,12 +55,28 @@ export function EventCard({
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
-        className="block w-full h-[330px] sm:h-[357px] relative flex items-center justify-center bg-gray-200"
+        className="block w-full h-[330px] sm:h-[357px] relative bg-neutral-400"
       >
         {imageUrl ? (
           <Image src={imageUrl} alt={title} fill className="object-cover" />
         ) : (
-          <h3 className="font-bold text-sm text-center px-4">{title}</h3>
+          <div className="w-full h-full flex flex-col">
+            {/* Top half - mascot image */}
+            <div className="flex-3 flex items-center justify-center">
+              <div className="relative w-full h-full">
+                <Image
+                  src="/mascot/Dancechives_Mascot1_Mono_onLight_slim.png"
+                  alt=""
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            </div>
+            {/* Bottom half - event title */}
+            <div className="flex-1 flex items-start justify-center">
+              <h2 className="text-center px-4 text-black">{title}</h2>
+            </div>
+          </div>
         )}
       </Link>
 
