@@ -3,9 +3,18 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 
 export default function Loading() {
   const pathname = usePathname();
+  const [imageSize, setImageSize] = useState(300); // Default to mobile size
+
+  useEffect(() => {
+    // Only access screen on client side
+    if (typeof window !== "undefined") {
+      setImageSize(window.innerWidth > 768 ? 500 : 300);
+    }
+  }, []);
 
   return (
     <>
@@ -14,8 +23,8 @@ export default function Loading() {
         <Image
           src="/mascot/Mascot3_Color_onDark.svg"
           alt="Loading"
-          width={screen.width > 768 ? 500 : 300}
-          height={screen.width > 768 ? 500 : 300}
+          width={imageSize}
+          height={imageSize}
           className="animate-rotate-medium"
         />
       </div>

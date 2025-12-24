@@ -53,10 +53,10 @@ export function VideoCard({
     displayStyles && displayStyles.length > 3 ? displayStyles.length - 3 : 0;
 
   return (
-    <div className="group card rounded-sm overflow-hidden transition-all duration-300 w-full min-w-[300px] relative">
+    <div className="group card rounded-sm transition-all duration-300 w-full min-w-[300px] relative overflow-visible">
       {/* Thumbnail - clickable */}
       <div
-        className="w-full aspect-[4/3] rounded-sm relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"
+        className="w-full aspect-[4/3] rounded-sm relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer overflow-hidden"
         onClick={onClick}
       >
         {thumbnailUrl ? (
@@ -72,15 +72,15 @@ export function VideoCard({
       </div>
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
-      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden z-10 flex flex-col">
-        <div className="flex flex-col items-baseline bg-fog-white px-3 py-2 border-b border-black">
+      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto z-10 flex flex-col overflow-visible">
+        <div className="flex flex-col items-baseline bg-neutral-500 px-3 py-2 border-b border-black">
           <h3 className="!text-[14px]">{video.title}</h3>
 
           {/* Title */}
           <div className="flex gap-1 items-end justify-between w-full">
             <Link
               href={eventLink}
-              className="text-sm text-black hover:text-primary-light text-end"
+              className="text-sm text-white hover:text-primary-light text-end underline"
               onClick={(e) => e.stopPropagation()}
             >
               {eventTitle}

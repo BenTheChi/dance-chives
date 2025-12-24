@@ -55,7 +55,7 @@ export function SectionDetails({
         <div className="flex flex-row gap-1 items-center justify-center mb-4">
           <Link
             href={`/events/${eventId}`}
-            className="hover:text-blue-400 hover:underline transition-colors"
+            className="hover:text-primary-light hover:underline transition-colors"
           >
             <h2>{eventTitle}</h2>
           </Link>

@@ -4,10 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  IncomingRequestCard,
-  OutgoingRequestCard,
-} from "./RequestCard";
+import { IncomingRequestCard, OutgoingRequestCard } from "./RequestCard";
 
 interface DashboardRequest {
   id: string;
@@ -58,8 +55,7 @@ export function RequestSection({
 
   // Sort newer to older
   const sortedRequests = [...filteredRequests].sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
   // Limit to 20
@@ -82,8 +78,8 @@ export function RequestSection({
               </Label>
               <Switch
                 id="request-old-toggle"
-                checked={showOld}
-                onCheckedChange={setShowOld}
+                checked={!showOld}
+                onCheckedChange={(checked) => setShowOld(!checked)}
               />
               <Label htmlFor="request-old-toggle" className="text-sm">
                 New
@@ -95,7 +91,7 @@ export function RequestSection({
       <CardContent>
         {displayedRequests.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {showOld ? "No old requests" : "No requests"}
+            {showOld ? "No old requests" : "No new requests"}
           </div>
         ) : (
           <div className="space-y-3">
@@ -124,4 +120,3 @@ export function RequestSection({
     </Card>
   );
 }
-

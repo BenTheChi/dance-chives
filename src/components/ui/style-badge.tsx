@@ -16,7 +16,7 @@ interface StyleBadgeProps {
 
 export function StyleBadge({
   style,
-  asLink = true,
+  asLink = false,
   className,
   showRemoveButton = false,
   onRemove,

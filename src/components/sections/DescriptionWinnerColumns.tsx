@@ -145,7 +145,7 @@ export function DescriptionWinnerColumns({
                   <div className="flex items-center justify-center gap-2">
                     <Button
                       variant="link"
-                      className="text-xs text-gray-600 hover:text-blue-600 p-0 h-auto"
+                      className="text-xs text-gray-600 hover:text-primary-light p-0 h-auto"
                       onClick={() => setShowWinners(!showWinners)}
                     >
                       {showWinners ? "hide" : "show"}
