@@ -1,5 +1,6 @@
 "use server";
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 import sharp from "sharp";
 import {
   deleteFromR2,
@@ -844,6 +845,11 @@ export async function addEvent(props: addEventProps): Promise<response> {
       }
     }
 
+    // Revalidate events list page to show new event
+    revalidatePath("/events");
+    // Also revalidate the individual event page
+    revalidatePath(`/events/${result.id}`);
+
     return {
       status: 200,
       event: result,
@@ -1604,6 +1610,11 @@ export async function editEvent(
         sections: processedSections,
       });
 
+      // Revalidate events list page to show updated event
+      revalidatePath("/events");
+      // Also revalidate the individual event page
+      revalidatePath(`/events/${eventId}`);
+
       return {
         status: 200,
         event: null,
@@ -2255,7 +2266,11 @@ export async function updateEventTeamMembers(
       gallery: event.gallery || [],
     };
 
-    await editEventQuery(minimalEvent, processedTeamMembers);
+      await editEventQuery(minimalEvent, processedTeamMembers);
+
+    // Revalidate events list page and individual event page
+    revalidatePath("/events");
+    revalidatePath(`/events/${eventId}`);
 
     return {
       status: 200,
@@ -2458,6 +2473,10 @@ export async function updateEventCreator(
       },
     });
 
+    // Revalidate events list page and individual event page
+    revalidatePath("/events");
+    revalidatePath(`/events/${eventId}`);
+
     return {
       status: 200,
     };
@@ -2518,6 +2537,11 @@ export async function updateEventStatus(
       where: { eventId },
       data: { status } as any, // Type assertion until Prisma client is regenerated
     });
+
+    // Revalidate events list page (event visibility changed)
+    revalidatePath("/events");
+    // Also revalidate the individual event page
+    revalidatePath(`/events/${eventId}`);
 
     return {
       status: 200,

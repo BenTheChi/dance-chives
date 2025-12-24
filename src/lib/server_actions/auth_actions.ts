@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import {
   signupUser,
   getUser,
@@ -260,6 +261,12 @@ export async function signup(
 
     console.log("✅ User registration completed:", userResult);
     console.log("✅ Account marked as verified in PostgreSQL");
+
+    // Revalidate profiles list page to show new profile
+    revalidatePath("/profiles");
+    // Also revalidate the individual profile page
+    revalidatePath(`/profiles/${profileData.username}`);
+
     return { success: true };
   } catch (error) {
     console.error("❌ Signup failed:", error);
@@ -941,6 +948,11 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         styles: (styles || []).map((s) => s.toUpperCase().trim()),
       },
     });
+
+    // Revalidate profiles list page to show updated profile
+    revalidatePath("/profiles");
+    // Also revalidate the individual profile page
+    revalidatePath(`/profiles/${currentUser.username}`);
 
     return { success: true };
   } catch (error) {
