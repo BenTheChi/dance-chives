@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, ChevronLeft, ChevronRight, Maximize, Loader2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Image } from "@/types/image";
 import NextImage from "next/image";
 
@@ -36,14 +36,6 @@ export function PhotoLightbox({
   const [hasError, setHasError] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const handleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  };
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
@@ -57,10 +49,6 @@ export function PhotoLightbox({
           break;
         case "ArrowRight":
           if (hasNext) onNext();
-          break;
-        case "f":
-        case "F":
-          handleFullscreen();
           break;
       }
     };
@@ -108,9 +96,6 @@ export function PhotoLightbox({
           {/* Header */}
           <div className="flex items-center justify-between p-2 sm:p-4 bg-black text-white flex-shrink-0">
             <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
-              <h2 className="text-sm sm:text-lg font-semibold truncate">
-                {displayTitle}
-              </h2>
               <span className="text-xs sm:text-sm text-gray-300 whitespace-nowrap">
                 {currentIndex + 1} of {totalImages}
               </span>
@@ -140,16 +125,6 @@ export function PhotoLightbox({
                   <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
               )}
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleFullscreen}
-                className="text-white hover:bg-fog-white/20 h-8 w-8 sm:h-10 sm:w-10"
-                aria-label="Toggle fullscreen"
-              >
-                <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
 
               <Button
                 ref={closeButtonRef}

@@ -365,16 +365,16 @@ export default async function EventPage({ params }: PageProps) {
 
             {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
             <div className="grid grid-cols-6 gap-5 w-full items-start">
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-                <h2 className="text-center mx-auto">Description</h2>
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
+                <h2 className="text-center mx-auto underline">Description</h2>
                 {event.eventDetails.description && (
                   <div className="text-sm whitespace-pre-wrap">
                     {event.eventDetails.description}
                   </div>
                 )}
               </div>
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-2 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-                <h2 className="text-center mx-auto">Schedule</h2>
+              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
+                <h2 className="text-center mx-auto underline">Schedule</h2>
                 {event.eventDetails.schedule && (
                   <div className="text-sm whitespace-pre-wrap">
                     {event.eventDetails.schedule}
@@ -382,8 +382,8 @@ export default async function EventPage({ params }: PageProps) {
                 )}
               </div>
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-                <div className="flex gap-2 justify-center items-center font-semibold text-2xl">
-                  <h2>Roles</h2>
+                <div className="flex gap-2 justify-center items-center">
+                  <h2 className="text-center mx-auto underline">Roles</h2>
                   <EventTagSelfButton eventId={event.id} />
                 </div>
                 {Array.from(rolesByTitle.entries()).map(
