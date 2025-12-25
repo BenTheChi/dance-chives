@@ -12,7 +12,7 @@ export default async function StylesPage() {
     <>
       <AppNavbar />
       <div className="flex flex-col items-center justify-center px-4 py-8">
-        <h1 className="!text-[60px] mt-5 mb-12">Dance Styles</h1>
+        <h1 className="mt-5 mb-12">Dance Styles</h1>
 
         {styles.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 sm:gap-10">

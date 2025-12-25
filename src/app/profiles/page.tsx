@@ -9,7 +9,7 @@ export default async function ProfilesPage() {
     <>
       <AppNavbar />
       <div className="flex flex-col items-center justify-center px-4 py-8 max-w-[1200px] mx-auto">
-        <h1 className="!text-[60px] mt-5 mb-12">Profiles</h1>
+        <h1 className="mt-5 mb-12">Profiles</h1>
 
         {users.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-[180px]">

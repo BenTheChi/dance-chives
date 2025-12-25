@@ -49,7 +49,7 @@ export function ReportButton({
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent className="bg-primary-dark">
           <ReportDialog
             open={isOpen}
             onOpenChange={setIsOpen}

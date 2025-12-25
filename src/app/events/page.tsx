@@ -14,7 +14,7 @@ export default async function EventsPage() {
       <main>
         <AppNavbar />
         <div className="flex flex-col items-center px-4 py-8">
-          <h1 className="!text-[60px] mt-5 mb-12">All Events</h1>
+          <h1 className="mt-5 mb-12">All Events</h1>
           {/* Client component handles auth-dependent features */}
           <EventsClient events={events} />
         </div>

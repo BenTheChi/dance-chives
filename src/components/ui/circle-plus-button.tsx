@@ -32,7 +32,7 @@ export function CirclePlusButton({
         "bg-pulse-green text-black",
         "border border-charcoal",
         "transition-shadow duration-150",
-        "hover:shadow-md active:shadow-none",
+        "shadow-hover",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-pulse-green focus-visible:ring-offset-2",
         "cursor-pointer",
         sizeClasses[size],

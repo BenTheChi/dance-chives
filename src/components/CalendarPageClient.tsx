@@ -55,10 +55,8 @@ export function CalendarPageClient({
 
   // Update events when initial events prop changes (from server-side fetch)
   useEffect(() => {
-    if (initialCity) {
-      setCurrentEvents(events);
-    }
-  }, [initialCity, events]);
+    setCurrentEvents(events);
+  }, [events]);
 
   // Update URL when selections change
   useEffect(() => {
@@ -73,14 +71,16 @@ export function CalendarPageClient({
       params.set("style", normalizeStyleForUrl(selectedStyle));
     }
 
-    const newUrl = `/calendar?${params.toString()}`;
+    const newUrl = `/calendar${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
     const currentUrl = `/calendar${
       searchParams.toString() ? `?${searchParams.toString()}` : ""
     }`;
 
     // Only update if URL actually changed
     if (newUrl !== currentUrl) {
-      router.push(newUrl, { scroll: false });
+      router.replace(newUrl, { scroll: false });
     }
   }, [selectedCity, selectedStyle, router, searchParams]);
 

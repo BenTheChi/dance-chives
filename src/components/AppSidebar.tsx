@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CalendarIcon,
-  SearchIcon,
-  Sparkles,
-  HouseIcon,
-  Users,
-} from "lucide-react";
+import { CalendarIcon, SearchIcon, HouseIcon, Users } from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,
@@ -45,12 +39,6 @@ const menuItems = [
     url: "/calendar",
     icon: CalendarIcon,
     iconRotation: 2,
-  },
-  {
-    title: "Styles",
-    url: "/styles",
-    icon: Sparkles,
-    iconRotation: -2,
   },
   {
     title: "Community",

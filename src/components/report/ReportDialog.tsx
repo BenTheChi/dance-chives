@@ -43,7 +43,7 @@ const REPORT_TYPE_LABELS: Record<(typeof REPORT_TYPES)[number], string> = {
   support: "Support",
 };
 
-  // Zod schema for form validation - matches server action schema
+// Zod schema for form validation - matches server action schema
 const reportFormSchema = z.object({
   username: z.string().optional(),
   type: z.enum(REPORT_TYPES, {
@@ -73,7 +73,10 @@ export function ReportDialog({
 }: ReportDialogProps) {
   const { data: session } = useSession();
   const sessionUsername =
-    session?.user?.username || session?.user?.displayName || session?.user?.name || "";
+    session?.user?.username ||
+    session?.user?.displayName ||
+    session?.user?.name ||
+    "";
   const username = propUsername || sessionUsername;
   // Check if session.user?.name exists to determine if username should be disabled
   const hasSessionUsername = !!session?.user?.name;
@@ -153,7 +156,7 @@ export function ReportDialog({
       formData.append("type", data.type);
       formData.append("page", data.page);
       formData.append("feedback", data.feedback);
-      
+
       if (selectedFile) {
         formData.append("file", selectedFile);
       }
@@ -175,7 +178,9 @@ export function ReportDialog({
         setSelectedFileName("");
       } else {
         // Handle error from server action
-        toast.error(result.error || "Failed to submit report. Please try again.");
+        toast.error(
+          result.error || "Failed to submit report. Please try again."
+        );
       }
     } catch (error) {
       console.error("Error submitting report:", error);
@@ -206,7 +211,7 @@ export function ReportDialog({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Report Content</DialogTitle>
+        <DialogTitle>Send Report</DialogTitle>
         <DialogDescription>
           Submit a report about inappropriate content, spam, or other issues.
           Your report will be reviewed by administrators.
@@ -214,7 +219,10 @@ export function ReportDialog({
       </DialogHeader>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4 bg-primary-dark"
+        >
           {/* Username Field */}
           <FormField
             control={form.control}
@@ -223,10 +231,14 @@ export function ReportDialog({
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input 
-                    {...field} 
-                    disabled={hasSessionUsername} 
-                    placeholder={hasSessionUsername ? "Your username" : "Enter your username (optional)"} 
+                  <Input
+                    {...field}
+                    disabled={hasSessionUsername}
+                    placeholder={
+                      hasSessionUsername
+                        ? "Your username"
+                        : "Enter your username (optional)"
+                    }
                   />
                 </FormControl>
                 <FormMessage />
@@ -273,10 +285,7 @@ export function ReportDialog({
               <FormItem>
                 <FormLabel>Page</FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    placeholder="Page URL or description"
-                  />
+                  <Input {...field} placeholder="Page URL or description" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -300,7 +309,7 @@ export function ReportDialog({
                   />
                 </FormControl>
                 <FormMessage />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs">
                   Please provide at least 10 characters describing the issue.
                 </p>
               </FormItem>
@@ -327,7 +336,7 @@ export function ReportDialog({
                 )}
               </div>
             </FormControl>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs">
               Maximum file size: 10MB. File will be sent as an email attachment.
             </p>
           </FormItem>
@@ -335,7 +344,7 @@ export function ReportDialog({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="destructive"
               onClick={handleCancel}
               disabled={isSubmitting}
             >
