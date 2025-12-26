@@ -27,6 +27,12 @@ import { CitySearchInput } from "@/components/CitySearchInput";
 import { City } from "@/types/city";
 import { FieldErrors } from "react-hook-form";
 import { UploadProfilePicture } from "@/components/UploadProfilePicture";
+import {
+  SUPER_ADMIN_EMAIL,
+  SUPER_ADMIN_USERNAME,
+  isReservedUsername,
+  canUseReservedUsername,
+} from "@/lib/utils/admin-user-constants";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -52,6 +58,16 @@ const signupSchema = z.object({
     .regex(
       /^[a-z0-9]+$/,
       "Username can only contain lowercase letters and numbers"
+    )
+    .refine(
+      (username) => {
+        // Reserved username validation will be handled in the signup action
+        // This just ensures the format is correct
+        return true;
+      },
+      {
+        message: "Username format is invalid",
+      }
     ),
   date: z
     .string()
@@ -129,6 +145,10 @@ export default function SignUpForm({
 
   const schema = isEditMode ? editSchema : signupSchema;
 
+  // Check if this is the super admin user
+  const isAdminUser =
+    session?.user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+
   // Parse city from currentUser - handle both City object and string
   const parseCity = (city: City | string | null | undefined): City | null => {
     if (!city) return null;
@@ -159,7 +179,7 @@ export default function SignUpForm({
         }
       : {
           displayName: "",
-          username: "",
+          username: isAdminUser ? SUPER_ADMIN_USERNAME : "",
           date: "",
           city: undefined as City | undefined, // Required field, will be validated on submit
           styles: [],
@@ -170,9 +190,6 @@ export default function SignUpForm({
   });
 
   const { handleSubmit } = form;
-
-  // Check if this is an admin user
-  const isAdminUser = session?.user?.email === "benthechi@gmail.com";
 
   // Convert form data to FormData in the same format as before
   const convertToFormData = (data: z.infer<typeof schema>): FormData => {
@@ -281,8 +298,9 @@ export default function SignUpForm({
         {!isEditMode && isAdminUser && (
           <div className="mb-6">
             <Badge variant="default" className="text-xs">
-              🔑 Admin Account Detected - Super Admin privileges will be
-              automatically assigned
+              🔑 Super Admin Account Detected - The username "
+              {SUPER_ADMIN_USERNAME}" will be automatically assigned and Super
+              Admin privileges will be granted
             </Badge>
           </div>
         )}
@@ -297,26 +315,45 @@ export default function SignUpForm({
                 <FormField
                   control={form.control}
                   name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>Username</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Unique identifier. Cannot change."
-                          {...field}
-                          onChange={(e) => {
-                            // Normalize to lowercase and filter out invalid characters
-                            const value = e.target.value
-                              .toLowerCase()
-                              .replace(/[^a-z0-9]/g, "");
-                            field.onChange(value);
-                          }}
-                          maxLength={50}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    // For admin user, automatically set username to "admin"
+                    const isAdmin = isAdminUser;
+                    const currentValue = isAdmin
+                      ? SUPER_ADMIN_USERNAME
+                      : field.value;
+
+                    return (
+                      <FormItem>
+                        <FormLabel required>Username</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Unique identifier. Cannot change."
+                            {...field}
+                            value={currentValue ?? ""}
+                            disabled={isAdmin}
+                            onChange={(e) => {
+                              if (isAdmin) {
+                                // Admin user cannot change username
+                                return;
+                              }
+                              // Normalize to lowercase and filter out invalid characters
+                              const value = e.target.value
+                                .toLowerCase()
+                                .replace(/[^a-z0-9]/g, "");
+                              field.onChange(value);
+                            }}
+                            maxLength={50}
+                          />
+                        </FormControl>
+                        {isAdmin && (
+                          <p className="text-xs text-muted-foreground">
+                            Username is reserved for super admin account
+                          </p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               )}
 
@@ -326,7 +363,7 @@ export default function SignUpForm({
                   <label className="text-sm font-medium text-white">
                     Username
                   </label>
-                  <Input value={currentUser.username} disabled />
+                  <Input value={currentUser.username ?? ""} disabled />
                   <p className="text-xs">Username cannot be changed</p>
                 </div>
               )}
@@ -341,6 +378,7 @@ export default function SignUpForm({
                       <Input
                         placeholder="Will be displayed publicly. Can be changed."
                         {...field}
+                        value={field.value ?? ""}
                         maxLength={50}
                       />
                     </FormControl>
@@ -372,12 +410,12 @@ export default function SignUpForm({
                       <FormLabel>Do you want to create events?</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-3">
-                          <span className="text-sm text-charcoal">No</span>
+                          <span className="text-sm text-white">No</span>
                           <Switch
                             checked={field.value || false}
                             onCheckedChange={field.onChange}
                           />
-                          <span className="text-sm text-charcoal">Yes</span>
+                          <span className="text-sm text-white">Yes</span>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -416,6 +454,7 @@ export default function SignUpForm({
                         className="resize-none min-h-[80px]"
                         rows={3}
                         {...field}
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
@@ -431,7 +470,11 @@ export default function SignUpForm({
                   <FormItem>
                     <FormLabel>Instagram Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="@username" {...field} />
+                      <Input
+                        placeholder="@username"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

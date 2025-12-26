@@ -12,7 +12,7 @@ const buttonVariants = cva(
         default: "bg-accent-yellow text-black border-black shadow-hover",
         destructive:
           "bg-accent-orange text-white shadow-xs focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 shadow-hover",
-        outline: "border bg-fog-white shadow-xs shadow-hover",
+        outline: "border bg-fog-white text-black shadow-xs shadow-hover",
         secondary: "bg-accent-purple text-black shadow-xs shadow-hover",
         ghost: "border-none",
         link: "border-none w-fit !h-auto !p-0 text-primary underline-offset-4 hover:underline",

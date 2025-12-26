@@ -553,6 +553,7 @@ export function SectionForm({
                 <FormControl>
                   <Input
                     {...field}
+                    value={field.value ?? ""}
                     className="bg-neutral-300"
                     placeholder="Section title"
                   />
@@ -1032,7 +1033,7 @@ export function SectionForm({
                 >
                   <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
                     <Input
-                      value={video.title}
+                      value={video.title ?? ""}
                       onChange={(e) => {
                         const title = e.target.value;
                         const currentSections = getValues("sections") ?? [];

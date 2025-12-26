@@ -404,4 +404,27 @@ export const getUserEvents = async (id: string) => {
   }
 };
 
+/**
+ * Delete a user and all their relationships from Neo4j
+ * This function handles cleanup of all user relationships before deleting the user node
+ * Note: Events should be handled separately (either deleted or transferred)
+ * Uses DETACH DELETE to ensure all relationships are removed
+ */
+export const deleteUser = async (userId: string): Promise<void> => {
+  const session = driver.session();
+  try {
+    // Use DETACH DELETE to remove all relationships and the node in one operation
+    // This is safer and more comprehensive than manually deleting relationships
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      DETACH DELETE u
+      `,
+      { userId }
+    );
+  } finally {
+    session.close();
+  }
+};
+
 //OTHER QUERIES HERE

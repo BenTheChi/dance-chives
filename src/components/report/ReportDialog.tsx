@@ -233,6 +233,7 @@ export function ReportDialog({
                 <FormControl>
                   <Input
                     {...field}
+                    value={field.value ?? ""}
                     disabled={hasSessionUsername}
                     placeholder={
                       hasSessionUsername
@@ -285,7 +286,11 @@ export function ReportDialog({
               <FormItem>
                 <FormLabel>Page</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Page URL or description" />
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    placeholder="Page URL or description"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -304,6 +309,7 @@ export function ReportDialog({
                 <FormControl>
                   <Textarea
                     {...field}
+                    value={field.value ?? ""}
                     placeholder="Please provide details about what you're reporting..."
                     rows={4}
                   />

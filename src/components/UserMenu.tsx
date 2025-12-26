@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { HomeIcon, LogOutIcon, UserIcon, SettingsIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Popover,
@@ -54,7 +54,11 @@ export function UserMenu({ session }: UserMenuProps) {
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="flex flex-col gap-2">
-          <Button variant="ghost" className="justify-start" asChild>
+          <Button
+            variant="ghost"
+            className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
+            asChild
+          >
             <Link href="/dashboard">
               <HomeIcon className="mr-2 h-4 w-4" />
               Dashboard
@@ -62,10 +66,24 @@ export function UserMenu({ session }: UserMenuProps) {
           </Button>
           {session?.user?.username && (
             <>
-              <Button variant="ghost" className="justify-start" asChild>
+              <Button
+                variant="ghost"
+                className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
+                asChild
+              >
                 <Link href={`/profiles/${session.user.username}`}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
+                asChild
+              >
+                <Link href="/settings">
+                  <SettingsIcon className="mr-2 h-4 w-4" />
+                  Settings
                 </Link>
               </Button>
             </>
@@ -74,7 +92,7 @@ export function UserMenu({ session }: UserMenuProps) {
         <div className="flex flex-col gap-2">
           <Button
             variant="ghost"
-            className="justify-start"
+            className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
             onClick={handleSignOut}
           >
             <LogOutIcon className="mr-2 h-4 w-4" />

@@ -1755,6 +1755,7 @@ export async function getDashboardData() {
       ...userWithoutId,
       displayName: userProfile?.displayName || null, // Add displayName from Neo4j
       username: userProfile?.username || null, // Add username from Neo4j
+      image: userProfile?.image || null, // Add image from Neo4j
     },
     incomingRequests,
     outgoingRequests,

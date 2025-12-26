@@ -107,7 +107,7 @@ export default function RolesForm({
                             onValueChange={(value) => {
                               setValue(`roles.${index}.title`, value);
                             }}
-                            value={roles[index].title}
+                            value={roles[index].title ?? ""}
                           >
                             <SelectTrigger className="bg-neutral-300 w-full">
                               <SelectValue placeholder="Select Role" />

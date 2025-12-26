@@ -28,6 +28,7 @@ import {
   normalizeStyleName,
 } from "@/lib/utils/style-utils";
 import { getUserByUsername } from "./user";
+import { getOrCreateSuperAdminUser } from "@/lib/utils/admin-user";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
@@ -1534,6 +1535,9 @@ export const insertEvent = async (
     ? JSON.stringify(eventDetails.dates)
     : null;
 
+  // Get admin user ID as fallback for orphaned events
+  const fallbackCreatorId = await getOrCreateSuperAdminUser();
+
   try {
     const result = await session.run(
       `
@@ -1652,9 +1656,15 @@ export const insertEvent = async (
       )
 
       WITH e
-      // This MATCH will fail if the user doesn't exist, causing the query to return no results
-      MATCH (creator:User {id: $creatorId})
-      MERGE (creator)-[:CREATED]->(e)
+      // Try to match the creator, fallback to admin user if creator doesn't exist
+      OPTIONAL MATCH (creator:User {id: $creatorId})
+      WITH e, 
+        CASE 
+          WHEN creator IS NOT NULL THEN creator.id
+          ELSE $fallbackCreatorId
+        END as finalCreatorId
+      MATCH (finalCreator:User {id: finalCreatorId})
+      MERGE (finalCreator)-[:CREATED]->(e)
 
       WITH e
       CALL {
@@ -1683,6 +1693,7 @@ export const insertEvent = async (
       {
         eventId: event.id,
         creatorId: eventDetails.creatorId,
+        fallbackCreatorId: fallbackCreatorId,
         teamMembers: teamMembers || [],
         title: eventDetails.title,
         description: eventDetails.description,
@@ -2068,12 +2079,21 @@ export const editEvent = async (
     }
 
     // Ensure creator relationship is preserved
+    // Use admin user as fallback if creator doesn't exist
     if (eventDetails.creatorId) {
+      const fallbackCreatorId = await getOrCreateSuperAdminUser();
       await tx.run(
         `MATCH (e:Event {id: $id})
-         MATCH (creator:User {id: $creatorId})
-         MERGE (creator)-[:CREATED]->(e)`,
-        { id, creatorId: eventDetails.creatorId }
+         OPTIONAL MATCH (creator:User {id: $creatorId})
+         WITH e, creator, $fallbackCreatorId as fallbackCreatorId
+         WITH e,
+           CASE 
+             WHEN creator IS NOT NULL THEN creator.id
+             ELSE fallbackCreatorId
+           END as finalCreatorId
+         MATCH (finalCreator:User {id: finalCreatorId})
+         MERGE (finalCreator)-[:CREATED]->(e)`,
+        { id, creatorId: eventDetails.creatorId, fallbackCreatorId }
       );
     }
 

@@ -240,7 +240,7 @@ export function CitySearchInput<T extends FieldValues>({
             <FormControl>
               <div className="flex items-center border rounded-sm bg-neutral-300">
                 <div className="flex items-center w-full">
-                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <Search className="ml-2 h-4 w-4 shrink-0 text-black" />
                   <Input
                     placeholder={placeholder}
                     value={inputValue}
@@ -262,10 +262,10 @@ export function CitySearchInput<T extends FieldValues>({
                     disabled={disabled}
                   />
                   {isLoading || isLoadingGoogle ? (
-                    <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
+                    <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-black" />
                   ) : (
                     <ChevronsUpDown
-                      className="mr-2 h-4 w-4 shrink-0 opacity-50 cursor-pointer"
+                      className="mr-2 h-4 w-4 shrink-0 text-black cursor-pointer"
                       onClick={() => setOpen(!open)}
                     />
                   )}

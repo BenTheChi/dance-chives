@@ -37,6 +37,7 @@ interface DashboardUser {
   auth?: number | null;
   displayName?: string | null;
   username?: string | null;
+  image?: string | null;
 }
 
 interface DashboardRequest {
@@ -307,16 +308,26 @@ export function DashboardClient({
           <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Welcome Section */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
-              {/* Mascot Image */}
+              {/* Profile Picture */}
               <div className="w-full sm:w-[250px] flex-shrink-0">
                 <div className="relative w-full sm:w-[250px] h-[250px] sm:h-[350px] rounded-sm border-4 border-primary-light overflow-hidden bg-primary-dark">
-                  <Image
-                    src="/mascot/3:4_Mascot2_Mono_onLight.png"
-                    alt=""
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
+                  {user?.image ? (
+                    <Image
+                      src={user.image}
+                      alt={user?.displayName || user?.name || "Profile picture"}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <Image
+                      src="/mascot/3:4_Mascot2_Mono_onLight.png"
+                      alt=""
+                      fill
+                      className="object-contain"
+                      unoptimized
+                    />
+                  )}
                 </div>
               </div>
               {/* Welcome Content */}
@@ -330,35 +341,11 @@ export function DashboardClient({
                     </h2>
                     <div className="text-center">
                       <p className="text-sm">
-                        Role Level: {getAuthLevelName(user?.auth ?? 0)} (
+                        Auth Level: {getAuthLevelName(user?.auth ?? 0)} (
                         {user?.auth ?? 0})
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2 justify-center mt-4">
-                      {user?.username && (
-                        <>
-                          <Button
-                            variant="outline"
-                            asChild
-                            className="bg-periwinkle text-black border-black"
-                          >
-                            <Link href={`/profiles/${user.username}`}>
-                              <UserIcon className="mr-2 h-4 w-4" />
-                              Go To Profile
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            asChild
-                            className="bg-periwinkle text-black border-black"
-                          >
-                            <Link href={`/profiles/${user.username}/edit`}>
-                              <UserIcon className="mr-2 h-4 w-4" />
-                              Edit Profile
-                            </Link>
-                          </Button>
-                        </>
-                      )}
+                    {/* <div className="flex flex-wrap gap-2 justify-center mt-4">
                       {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
                         <Button
                           variant="outline"
@@ -368,7 +355,7 @@ export function DashboardClient({
                           Request Access Upgrade
                         </Button>
                       )}
-                    </div>
+                    </div> */}
                   </div>
                 </section>
               </div>

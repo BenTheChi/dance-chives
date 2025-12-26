@@ -1,0 +1,20 @@
+import { withPageAuth } from "@/lib/utils/page-auth";
+import { AppNavbar } from "@/components/AppNavbar";
+import { SettingsClient } from "./settings-client";
+
+export default async function SettingsPage() {
+  return withPageAuth({ requireVerification: true }, async () => {
+    return (
+      <>
+        <AppNavbar />
+        <div className="flex flex-col gap-4 p-6 md:px-4">
+          <div className="container mx-auto px-4 sm:px-4 py-6 max-w-full overflow-x-hidden">
+            <h1 className="text-3xl font-bold text-center mb-8">Settings</h1>
+            <SettingsClient />
+          </div>
+        </div>
+      </>
+    );
+  });
+}
+

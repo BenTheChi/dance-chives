@@ -29,6 +29,16 @@ import {
 } from "@/db/queries/event";
 import { UserSearchItem } from "@/types/user";
 import { Image } from "@/types/image";
+import {
+  SUPER_ADMIN_EMAIL,
+  SUPER_ADMIN_USERNAME,
+  isReservedUsername,
+  canUseReservedUsername,
+  getOrCreateSuperAdminUser,
+} from "@/lib/utils/admin-user";
+import { deleteUser } from "@/db/queries/user";
+import { getUserEvents } from "@/db/queries/user";
+import { deleteEvent, getEventImages } from "@/db/queries/event";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -66,23 +76,45 @@ export async function signup(
   }
 
   try {
-    // Check if this is a predefined admin user
-    const ADMIN_USERS = [
-      {
-        email: "benthechi@gmail.com",
-        authLevel: AUTH_LEVELS.SUPER_ADMIN, // SUPER_ADMIN
-        defaultData: {
-          displayName: "heartbreaker",
-          username: "heartbreakdancer",
-          city: "Seattle",
-          date: "07/03/1990",
-        },
-      },
-    ];
+    // Validate username - check if it's reserved
+    const requestedUsername = (formData.get("username") as string)
+      ?.toLowerCase()
+      .trim();
 
-    const adminUser = ADMIN_USERS.find(
-      (admin) => admin.email === session.user.email
-    );
+    if (!requestedUsername) {
+      return { success: false, error: "Username is required" };
+    }
+
+    // Check if username is reserved
+    if (isReservedUsername(requestedUsername)) {
+      // Only allow the reserved username for the super admin email
+      if (!canUseReservedUsername(requestedUsername, session.user.email)) {
+        return {
+          success: false,
+          error: `The username "${requestedUsername}" is reserved and cannot be used.`,
+        };
+      }
+    }
+
+    // Check if username is already taken (unless it's the admin user signing up)
+    const existingUser = await getUserByUsername(requestedUsername);
+    if (
+      existingUser &&
+      existingUser.id !== session.user.id &&
+      !(
+        isReservedUsername(requestedUsername) &&
+        session.user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()
+      )
+    ) {
+      return {
+        success: false,
+        error: "Username is already taken",
+      };
+    }
+
+    // Check if this is the super admin user
+    const isSuperAdminUser =
+      session.user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
 
     // Extract styles from formData
     const stylesJson = formData.get("Dance Styles") as string | null;
@@ -113,9 +145,7 @@ export async function signup(
       avatarPicture.size > 0
     ) {
       // Use username for R2 paths (public-facing identifier)
-      const username = adminUser
-        ? adminUser.defaultData.username
-        : (formData.get("username") as string);
+      const username = requestedUsername;
       if (!username) {
         console.error("Username is required for profile picture upload");
       } else {
@@ -131,9 +161,7 @@ export async function signup(
       }
     } else if (profilePicture && profilePicture.size > 0) {
       // Fallback to single upload if only profile picture is provided
-      const username = adminUser
-        ? adminUser.defaultData.username
-        : (formData.get("username") as string);
+      const username = requestedUsername;
       if (!username) {
         console.error("Username is required for profile picture upload");
       } else {
@@ -174,32 +202,24 @@ export async function signup(
       avatar?: string | null;
     };
 
-    // Use admin defaults if this is a predefined admin user, otherwise use form data
-    const profileData: ProfileData = adminUser
-      ? {
-          displayName: adminUser.defaultData.displayName,
-          username: adminUser.defaultData.username,
-          city: adminUser.defaultData.city as string, // Admin defaults use string for now
-          date: adminUser.defaultData.date,
-          styles: [],
-          bio: null,
-          instagram: null,
-          website: null,
-          image: null,
-          avatar: null,
-        }
-      : {
-          displayName: formData.get("displayName") as string,
-          username: formData.get("username") as string,
-          city: cityData,
-          date: formData.get("date") as string,
-          styles,
-          bio: bio || null,
-          instagram: instagram || null,
-          website: website || null,
-          image: imageUrl,
-          avatar: avatarUrl,
-        };
+    // For super admin user, ensure username is "admin"
+    const finalUsername = isSuperAdminUser
+      ? SUPER_ADMIN_USERNAME
+      : requestedUsername;
+
+    // Use form data for profile
+    const profileData: ProfileData = {
+      displayName: formData.get("displayName") as string,
+      username: finalUsername,
+      city: cityData,
+      date: formData.get("date") as string,
+      styles,
+      bio: bio || null,
+      instagram: instagram || null,
+      website: website || null,
+      image: imageUrl,
+      avatar: avatarUrl,
+    };
 
     // Update user in Neo4j with profile information
     const userResult = await signupUser(session.user.id, profileData);
@@ -234,8 +254,9 @@ export async function signup(
 
     // Determine auth level
     let authLevel: number;
-    if (adminUser) {
-      authLevel = adminUser.authLevel;
+    if (isSuperAdminUser) {
+      // Super admin user automatically gets SUPER_ADMIN privileges
+      authLevel = AUTH_LEVELS.SUPER_ADMIN;
     } else {
       // Check if user wants to be a creator (one-time decision during signup)
       const isCreator = formData.get("isCreator") === "true";
@@ -252,11 +273,13 @@ export async function signup(
       },
     });
 
-    if (adminUser) {
+    if (isSuperAdminUser) {
       console.log(
         `🔑 Auto-assigned SUPER_ADMIN (${authLevel}) to ${session.user.email}`
       );
-      console.log(`📝 Used predefined profile data for admin user`);
+      console.log(
+        `📝 Super admin user created with username: ${SUPER_ADMIN_USERNAME}`
+      );
     }
 
     console.log("✅ User registration completed:", userResult);
@@ -961,6 +984,203 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to update profile",
+    };
+  }
+}
+
+/**
+ * Get all event IDs created by a user
+ */
+async function getUserCreatedEventIds(userId: string): Promise<string[]> {
+  const events = await getUserEvents(userId);
+  return events.map((event) => event.eventId);
+}
+
+/**
+ * Transfer all events created by a user to the admin user
+ */
+async function transferUserEventsToAdmin(userId: string): Promise<void> {
+  const adminUserId = await getOrCreateSuperAdminUser();
+  const eventIds = await getUserCreatedEventIds(userId);
+
+  for (const eventId of eventIds) {
+    try {
+      // Transfer event ownership to admin
+      const adminUser: UserSearchItem = {
+        id: adminUserId,
+        username: SUPER_ADMIN_USERNAME,
+        displayName: "Admin",
+      };
+
+      // Use updateEventCreator to transfer ownership
+      // We need to bypass permission checks since this is an admin operation
+      const neo4jSession = driver.session();
+      try {
+        // Delete old CREATED relationship
+        await neo4jSession.run(
+          `
+          MATCH (oldCreator:User {id: $userId})-[r:CREATED]->(e:Event {id: $eventId})
+          DELETE r
+          `,
+          { eventId, userId }
+        );
+
+        // Create new CREATED relationship with admin
+        await neo4jSession.run(
+          `
+          MATCH (e:Event {id: $eventId})
+          MATCH (admin:User {id: $adminUserId})
+          MERGE (admin)-[:CREATED]->(e)
+          `,
+          { eventId, adminUserId }
+        );
+      } finally {
+        neo4jSession.close();
+      }
+
+      // Update PostgreSQL Event record
+      await prisma.event.updateMany({
+        where: { eventId },
+        data: { userId: adminUserId },
+      });
+    } catch (error) {
+      console.error(`Failed to transfer event ${eventId} to admin:`, error);
+      // Continue with other events even if one fails
+    }
+  }
+}
+
+/**
+ * Delete a user account
+ * Only the user themselves or Admin+ can delete users
+ * Super admin cannot delete themselves
+ */
+export async function deleteUserAccount(
+  targetUserId: string,
+  deleteEvents: boolean,
+  usernameConfirmation?: string
+): Promise<{ success: boolean; error?: string }> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    // Authorization check
+    const isOwnAccount = session.user.id === targetUserId;
+    const isAdmin = (session.user.auth ?? 0) >= AUTH_LEVELS.ADMIN;
+
+    if (!isOwnAccount && !isAdmin) {
+      return {
+        success: false,
+        error: "You do not have permission to delete this account",
+      };
+    }
+
+    // Get target user to check if they're super admin
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { auth: true, email: true },
+    });
+
+    if (!targetUser) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Prevent super admin from deleting themselves (even if admin)
+    if (targetUser.auth === AUTH_LEVELS.SUPER_ADMIN) {
+      return {
+        success: false,
+        error: "Super admin accounts cannot be deleted",
+      };
+    }
+
+    // For self-deletion, validate username confirmation
+    if (isOwnAccount && usernameConfirmation) {
+      const currentUser = await getUser(session.user.id);
+      if (!currentUser) {
+        return { success: false, error: "User not found" };
+      }
+
+      if (
+        currentUser.username?.toLowerCase() !==
+        usernameConfirmation.toLowerCase()
+      ) {
+        return {
+          success: false,
+          error: "Username confirmation does not match",
+        };
+      }
+    }
+
+    // Get all events created by the user
+    const eventIds = await getUserCreatedEventIds(targetUserId);
+
+    if (deleteEvents) {
+      // Delete all events created by the user
+      for (const eventId of eventIds) {
+        try {
+          // Delete event images from R2
+          const pictures = await getEventImages(eventId);
+          await Promise.all(
+            pictures.map(async (url) => {
+              return deleteFromR2(url);
+            })
+          );
+
+          // Delete event from Neo4j (cascades to sections, videos, images)
+          await deleteEvent(eventId);
+
+          // Delete PostgreSQL Event record
+          await prisma.event.deleteMany({
+            where: { eventId },
+          });
+        } catch (error) {
+          console.error(`Failed to delete event ${eventId}:`, error);
+          // Continue with other events even if one fails
+        }
+      }
+    } else {
+      // Transfer events to admin user
+      await transferUserEventsToAdmin(targetUserId);
+    }
+
+    // Get user info for R2 cleanup
+    const userForCleanup = await getUser(targetUserId);
+    if (userForCleanup) {
+      // Delete profile and avatar pictures from R2
+      if (userForCleanup.image) {
+        await deleteFromR2(userForCleanup.image);
+      }
+      if (userForCleanup.avatar) {
+        await deleteFromR2(userForCleanup.avatar);
+      }
+    }
+
+    // Delete UserCard projection
+    await prisma.userCard.deleteMany({
+      where: { userId: targetUserId },
+    });
+
+    // Delete user from Neo4j (removes all relationships)
+    await deleteUser(targetUserId);
+
+    // Delete user from PostgreSQL (cascade handles related records)
+    await prisma.user.delete({
+      where: { id: targetUserId },
+    });
+
+    // Note: If user deleted their own account, the client will handle sign out and redirect
+    // We return success and let the client component handle the redirect
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete user account:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to delete account",
     };
   }
 }

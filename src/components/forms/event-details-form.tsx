@@ -149,6 +149,7 @@ export function EventDetailsForm({
                 <FormControl>
                   <Input
                     {...field}
+                    value={field.value ?? ""}
                     className="bg-neutral-300 w-full"
                     placeholder="e.g., Summer Dance Battle 2024"
                   />
@@ -278,7 +279,7 @@ export function EventDetailsForm({
             >
               <div className="space-y-4">
                 {/* Date and All Day Row */}
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
                   <div className="flex-1 w-full sm:min-w-[200px] min-w-0">
                     <DatePicker
                       control={control as Control<FormValues>}
@@ -287,10 +288,11 @@ export function EventDetailsForm({
                       }
                       label="Date"
                       required={true}
+                      labelClassName="text-black"
                     />
                   </div>
 
-                  <div className="flex items-center gap-4 sm:pt-4 sm:items-start">
+                  <div className="flex items-center gap-4 sm:pb-2">
                     <FormField
                       control={control}
                       name={`eventDetails.dates.${index}.isAllDay`}
@@ -326,9 +328,9 @@ export function EventDetailsForm({
                     {fields.length > 1 && (
                       <Button
                         onClick={() => remove(index)}
-                        variant="outline"
+                        variant="destructive"
                         size="icon"
-                        className="rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                        className="rounded-full"
                         type="button"
                         aria-label="Remove date"
                       >

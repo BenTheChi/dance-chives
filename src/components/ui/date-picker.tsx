@@ -27,6 +27,7 @@ interface DatePickerProps<T extends FieldValues> {
   label?: string | React.ReactNode;
   disabled?: boolean;
   required?: boolean;
+  labelClassName?: string;
 }
 
 export function DatePicker<T extends FieldValues>({
@@ -35,6 +36,7 @@ export function DatePicker<T extends FieldValues>({
   label,
   disabled = false,
   required = false,
+  labelClassName,
 }: DatePickerProps<T>) {
   return (
     <FormField
@@ -75,7 +77,10 @@ export function DatePicker<T extends FieldValues>({
         return (
           <FormItem className="w-full">
             {label && (
-              <FormLabel required={required} className="text-black">
+              <FormLabel
+                required={required}
+                className={labelClassName || "text-white"}
+              >
                 {label}
               </FormLabel>
             )}

@@ -165,7 +165,7 @@ export function BracketForm({
       <div className="space-y-2">
         <label className="text-sm font-medium text-white">Bracket Title</label>
         <Input
-          value={bracket.title}
+          value={bracket.title ?? ""}
           placeholder="Untitled Bracket"
           onChange={(e) => {
             const title = e.target.value;
@@ -220,7 +220,7 @@ export function BracketForm({
             >
               <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
                 <Input
-                  value={video.title}
+                  value={video.title ?? ""}
                   onChange={(e) => {
                     const title = e.target.value;
                     const updatedSections = sections.map((section) =>
