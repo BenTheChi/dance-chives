@@ -8,8 +8,28 @@ import { IncomingRequestCard, OutgoingRequestCard } from "./RequestCard";
 interface DashboardRequest {
   id: string;
   type: string;
-  sender?: { id?: string; name?: string | null; email: string };
-  targetUser?: { id?: string; name?: string | null; email: string };
+  sender?: {
+    id?: string;
+    name?: string | null;
+    email: string;
+    displayName?: string | null;
+    username?: string | null;
+    avatar?: string | null;
+    image?: string | null;
+    city?: string | null;
+    styles?: string[];
+  };
+  targetUser?: {
+    id?: string;
+    name?: string | null;
+    email: string;
+    displayName?: string | null;
+    username?: string | null;
+    avatar?: string | null;
+    image?: string | null;
+    city?: string | null;
+    styles?: string[];
+  };
   eventId?: string | null;
   eventTitle?: string | null;
   eventType?: string | null;

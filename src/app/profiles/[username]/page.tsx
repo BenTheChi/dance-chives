@@ -9,6 +9,7 @@ import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { TaggedVideosSection } from "@/components/profile/TaggedVideosSection";
 import { SectionsWonSection } from "@/components/profile/SectionsWonSection";
 import { ProfileClient, ProfileRolesSection } from "./profile-client";
+import type { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -16,6 +17,129 @@ interface PageProps {
 
 // Enable static generation with revalidation (ISR)
 export const revalidate = 3600; // Revalidate every hour
+
+// Generate metadata for the profile page
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const paramResult = await params;
+  const username = paramResult.username;
+
+  // Fetch profile without auth (for static generation)
+  const profileResult = await getUserProfile(username);
+
+  if (!profileResult.success || !profileResult.profile) {
+    return {
+      title: "Profile Not Found",
+      description: "The requested profile could not be found.",
+    };
+  }
+
+  const profile = profileResult.profile;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
+
+  // Build display name
+  const displayName = profile.displayName || profile.username;
+  const title = `${displayName} (@${profile.username}) - Dance Chives`;
+
+  // Build description from available profile information
+  const descriptionParts: string[] = [];
+
+  // Add bio if available (truncate to 150 chars)
+  if (profile.bio) {
+    const bio = profile.bio.replace(/\n/g, " ").trim();
+    descriptionParts.push(
+      bio.length > 150 ? bio.substring(0, 147) + "..." : bio
+    );
+  }
+
+  // Add city if available
+  const cityDisplay =
+    profile.city && typeof profile.city === "object"
+      ? `${profile.city.name}${
+          profile.city.region ? `, ${profile.city.region}` : ""
+        }`
+      : profile.city || "";
+  if (cityDisplay) {
+    descriptionParts.push(`Based in ${cityDisplay}`);
+  }
+
+  // Add styles if available
+  if (profile.styles && profile.styles.length > 0) {
+    descriptionParts.push(`Dance styles: ${profile.styles.join(", ")}`);
+  }
+
+  // Add stats for additional context
+  const stats: string[] = [];
+  if (profile.taggedVideos && profile.taggedVideos.length > 0) {
+    stats.push(
+      `${profile.taggedVideos.length} video${
+        profile.taggedVideos.length !== 1 ? "s" : ""
+      }`
+    );
+  }
+  if (profile.winningSections && profile.winningSections.length > 0) {
+    stats.push(
+      `${profile.winningSections.length} section${
+        profile.winningSections.length !== 1 ? "s" : ""
+      } won`
+    );
+  }
+  if (profile.eventsCreated && profile.eventsCreated.length > 0) {
+    stats.push(
+      `${profile.eventsCreated.length} event${
+        profile.eventsCreated.length !== 1 ? "s" : ""
+      } created`
+    );
+  }
+  if (profile.eventsWithRoles && profile.eventsWithRoles.length > 0) {
+    stats.push(
+      `${profile.eventsWithRoles.length} event${
+        profile.eventsWithRoles.length !== 1 ? "s" : ""
+      } with roles`
+    );
+  }
+
+  if (stats.length > 0) {
+    descriptionParts.push(stats.join(" • "));
+  }
+
+  // Fallback description if nothing else is available
+  const description =
+    descriptionParts.length > 0
+      ? descriptionParts.join(" • ")
+      : `View ${displayName}'s profile on Dance Chives - Freestyle Dance Culture, Media, and Community`;
+
+  // Get profile image URL for Open Graph
+  const imageUrl = profile.image
+    ? profile.image.startsWith("http")
+      ? profile.image
+      : `${baseUrl}${profile.image}`
+    : undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : undefined,
+      type: "profile",
+      url: `${baseUrl}/profiles/${username}`,
+      siteName: "Dance Chives",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : undefined,
+    },
+    alternates: {
+      canonical: `${baseUrl}/profiles/${username}`,
+    },
+  };
+}
 
 export default async function ProfilePage({ params }: PageProps) {
   const paramResult = await params;

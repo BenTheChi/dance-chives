@@ -17,6 +17,7 @@ import {
   EventEditButtons,
 } from "./event-client";
 import { RolePendingBadge } from "./role-pending-badge";
+import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -33,6 +34,149 @@ function isValidEventId(id: string): boolean {
   ];
 
   return !invalidPatterns.some((pattern) => pattern.test(id));
+}
+
+// Generate metadata for the event page
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const paramResult = await params;
+
+  // Validate the event ID before trying to fetch it
+  if (!isValidEventId(paramResult.event)) {
+    return {
+      title: "Event Not Found",
+      description: "The requested event could not be found.",
+    };
+  }
+
+  // Get event without auth (for static generation - hidden events will be filtered)
+  const event = await getEvent(paramResult.event);
+
+  // If event is null, it means it's hidden (or doesn't exist)
+  if (!event) {
+    return {
+      title: "Event Not Found",
+      description: "The requested event could not be found.",
+    };
+  }
+
+  const { eventDetails } = event;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
+
+  // Build description from available event information
+  const descriptionParts: string[] = [];
+
+  if (eventDetails.description) {
+    // Use first 150 characters of description
+    const desc = eventDetails.description.replace(/\n/g, " ").trim();
+    descriptionParts.push(
+      desc.length > 150 ? desc.substring(0, 147) + "..." : desc
+    );
+  } else {
+    // Fallback description
+    descriptionParts.push(
+      `${eventDetails.eventType} in ${eventDetails.city.name}`
+    );
+  }
+
+  // Add styles if available
+  if (eventDetails.styles && eventDetails.styles.length > 0) {
+    descriptionParts.push(`Styles: ${eventDetails.styles.join(", ")}`);
+  }
+
+  // Add location if available
+  if (eventDetails.location) {
+    descriptionParts.push(`Location: ${eventDetails.location}`);
+  }
+
+  // Add dates information
+  if (eventDetails.dates && eventDetails.dates.length > 0) {
+    const upcomingDates = eventDetails.dates.filter((d) => {
+      const dateStr = d.date;
+      const date = dateStr.includes("-")
+        ? new Date(dateStr)
+        : (() => {
+            const [month, day, year] = dateStr.split("/").map(Number);
+            return new Date(year, month - 1, day);
+          })();
+      return date >= new Date(new Date().setHours(0, 0, 0, 0));
+    });
+
+    if (upcomingDates.length > 0) {
+      const nextDate = upcomingDates[0];
+      const dateStr = nextDate.endTime
+        ? `${nextDate.date} (${nextDate.startTime} - ${nextDate.endTime})`
+        : nextDate.startTime
+        ? `${nextDate.date} (${nextDate.startTime})`
+        : nextDate.date;
+      descriptionParts.push(`Next date: ${dateStr}`);
+    }
+  }
+
+  const description = descriptionParts.join(" • ");
+
+  // Build title
+  const title = `${eventDetails.title} - ${eventDetails.city.name}${
+    eventDetails.eventType ? ` • ${eventDetails.eventType}` : ""
+  }`;
+
+  // Get poster image URL for Open Graph
+  const posterUrl = eventDetails.poster?.url
+    ? eventDetails.poster.url.startsWith("http")
+      ? eventDetails.poster.url
+      : `${baseUrl}${eventDetails.poster.url}`
+    : undefined;
+
+  // Count sections and videos for additional context
+  const sectionCount = event.sections?.length || 0;
+  const videoCount =
+    event.sections?.reduce(
+      (acc, section) =>
+        acc +
+        (section.videos?.length || 0) +
+        (section.brackets?.reduce(
+          (bAcc, bracket) => bAcc + (bracket.videos?.length || 0),
+          0
+        ) || 0),
+      0
+    ) || 0;
+
+  // Build enhanced description with stats
+  let enhancedDescription = description;
+  if (sectionCount > 0 || videoCount > 0) {
+    const stats: string[] = [];
+    if (sectionCount > 0) {
+      stats.push(`${sectionCount} section${sectionCount !== 1 ? "s" : ""}`);
+    }
+    if (videoCount > 0) {
+      stats.push(`${videoCount} video${videoCount !== 1 ? "s" : ""}`);
+    }
+    enhancedDescription = `${description} • ${stats.join(", ")}`;
+  }
+
+  return {
+    title,
+    description: enhancedDescription,
+    openGraph: {
+      title,
+      description: enhancedDescription,
+      images: posterUrl ? [posterUrl] : undefined,
+      type: "website",
+      url: `${baseUrl}/events/${paramResult.event}`,
+      siteName: "Dance Chives",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description: enhancedDescription,
+      images: posterUrl ? [posterUrl] : undefined,
+    },
+    alternates: {
+      canonical: `${baseUrl}/events/${paramResult.event}`,
+    },
+  };
 }
 
 export default async function EventPage({ params }: PageProps) {

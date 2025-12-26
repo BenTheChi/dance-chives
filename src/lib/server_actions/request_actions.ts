@@ -37,7 +37,7 @@ import {
   isEventCreator,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
-import { getUser, getUserByUsername } from "@/db/queries/user";
+import { getUser, getUserByUsername, getUserWithStyles } from "@/db/queries/user";
 import {
   isValidRole,
   AVAILABLE_ROLES,
@@ -137,6 +137,55 @@ async function updateRequestStatus(
         data: updateData,
       });
       break;
+  }
+}
+
+/**
+ * Enriches Postgres user data (id, name, email) with Neo4j user profile data
+ * (displayName, username, avatar, image, city, styles)
+ */
+async function enrichUserData(user: {
+  id?: string;
+  name?: string | null;
+  email: string;
+}): Promise<{
+  id?: string;
+  name?: string | null;
+  email: string;
+  displayName?: string | null;
+  username?: string | null;
+  avatar?: string | null;
+  image?: string | null;
+  city?: string | null;
+  styles?: string[];
+}> {
+  if (!user.id) {
+    return user;
+  }
+
+  try {
+    const neo4jUser = await getUserWithStyles(user.id);
+    if (!neo4jUser) {
+      return user;
+    }
+
+    return {
+      ...user,
+      displayName: neo4jUser.displayName || null,
+      username: neo4jUser.username || null,
+      avatar: neo4jUser.avatar || null,
+      image: neo4jUser.image || null,
+      city:
+        neo4jUser.city && typeof neo4jUser.city === "object"
+          ? neo4jUser.city.name || null
+          : typeof neo4jUser.city === "string"
+          ? neo4jUser.city
+          : null,
+      styles: neo4jUser.styles || [],
+    };
+  } catch (error) {
+    console.error(`Failed to enrich user data for ${user.id}:`, error);
+    return user;
   }
 }
 
@@ -1339,9 +1388,17 @@ export async function getIncomingRequests() {
           }
         }
 
+        // Enrich sender and targetUser with Neo4j data
+        const [enrichedSender, enrichedTargetUser] = await Promise.all([
+          req.sender ? enrichUserData(req.sender) : null,
+          req.targetUser ? enrichUserData(req.targetUser) : null,
+        ]);
+
         return {
           request: {
             ...req,
+            sender: enrichedSender || req.sender,
+            targetUser: enrichedTargetUser || req.targetUser,
             eventTitle: eventTitle || req.eventId || null,
             eventType: eventType || null,
             videoTitle: videoTitle || null,
@@ -1364,9 +1421,14 @@ export async function getIncomingRequests() {
       );
 
       const eventTitle = await getEventTitle(req.eventId);
+      
+      // Enrich sender with Neo4j data
+      const enrichedSender = req.sender ? await enrichUserData(req.sender) : null;
+
       return {
         request: {
           ...req,
+          sender: enrichedSender || req.sender,
           eventTitle: eventTitle || req.eventId,
         },
         canApprove,
@@ -1375,13 +1437,25 @@ export async function getIncomingRequests() {
   );
 
   const canApproveAuthLevel = await Promise.all(
-    authLevelChangeRequests.map(async (req) => ({
-      request: req,
-      canApprove: await canUserApproveRequest(
-        userId,
-        REQUEST_TYPES.AUTH_LEVEL_CHANGE
-      ),
-    }))
+    authLevelChangeRequests.map(async (req) => {
+      // Enrich sender and targetUser with Neo4j data
+      const [enrichedSender, enrichedTargetUser] = await Promise.all([
+        req.sender ? enrichUserData(req.sender) : null,
+        req.targetUser ? enrichUserData(req.targetUser) : null,
+      ]);
+
+      return {
+        request: {
+          ...req,
+          sender: enrichedSender || req.sender,
+          targetUser: enrichedTargetUser || req.targetUser,
+        },
+        canApprove: await canUserApproveRequest(
+          userId,
+          REQUEST_TYPES.AUTH_LEVEL_CHANGE
+        ),
+      };
+    })
   );
 
   return {
@@ -1461,8 +1535,14 @@ export async function getOutgoingRequests() {
           }
         }
 
+        // Enrich targetUser with Neo4j data
+        const enrichedTargetUser = req.targetUser
+          ? await enrichUserData(req.targetUser)
+          : null;
+
         return {
           ...req,
+          targetUser: enrichedTargetUser || req.targetUser,
           type: "TAGGING",
           sectionTitle: sectionTitle || null,
           eventTitle: eventTitle || req.eventId || null,
@@ -1491,13 +1571,26 @@ export async function getOutgoingRequests() {
     })
   );
 
+  // Enrich auth level change requests with user data
+  const enrichedAuthLevelChangeRequests = await Promise.all(
+    authLevelChangeRequests.map(async (req) => {
+      // Enrich targetUser with Neo4j data
+      const enrichedTargetUser = req.targetUser
+        ? await enrichUserData(req.targetUser)
+        : null;
+
+      return {
+        ...req,
+        targetUser: enrichedTargetUser || req.targetUser,
+        type: "AUTH_LEVEL_CHANGE",
+      };
+    })
+  );
+
   return {
     tagging: enrichedTaggingRequests,
     teamMember: enrichedTeamMemberRequests,
-    authLevelChange: authLevelChangeRequests.map((req) => ({
-      ...req,
-      type: "AUTH_LEVEL_CHANGE",
-    })),
+    authLevelChange: enrichedAuthLevelChangeRequests,
   };
 }
 

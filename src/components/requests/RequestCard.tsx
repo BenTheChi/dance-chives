@@ -18,13 +18,34 @@ import { formatRelativeDate } from "@/lib/utils/relative-date";
 import { generateRequestBreadcrumbs } from "@/lib/utils/request-utils-client";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 interface RequestCardProps {
   request: {
     id: string;
     type: string;
-    sender?: { id?: string; name?: string | null; email: string };
-    targetUser?: { id?: string; name?: string | null; email: string };
+    sender?: {
+      id?: string;
+      name?: string | null;
+      email: string;
+      displayName?: string | null;
+      username?: string | null;
+      avatar?: string | null;
+      image?: string | null;
+      city?: string | null;
+      styles?: string[];
+    };
+    targetUser?: {
+      id?: string;
+      name?: string | null;
+      email: string;
+      displayName?: string | null;
+      username?: string | null;
+      avatar?: string | null;
+      image?: string | null;
+      city?: string | null;
+      styles?: string[];
+    };
     eventId?: string | null;
     eventTitle?: string | null;
     eventType?: string | null;
@@ -147,12 +168,17 @@ export function IncomingRequestCard({
   };
 
   const breadcrumbs = generateRequestBreadcrumbs(request);
-  const senderName = request.sender?.name || request.sender?.email || "Unknown";
+  const senderName =
+    request.sender?.displayName ||
+    request.sender?.name ||
+    request.sender?.email ||
+    "Unknown";
+  const senderUsername = request.sender?.username || "";
   const resourceName = getResourceName(request);
   const resourceLink = getResourceLink(request);
 
   return (
-    <article className="border-2 rounded-lg p-4">
+    <article className="border-2 rounded-lg p-4 bg-secondary-dark">
       <div className="space-y-3">
         {/* Date - top left, muted, smaller text */}
         <time
@@ -165,17 +191,16 @@ export function IncomingRequestCard({
         {/* Message: Avatar + Display Name requested Role Name from Link */}
         <div className="flex items-center gap-2 text-sm">
           {request.sender && (
-            <div
-              className="h-6 w-6 rounded-full bg-secondary-dark flex items-center justify-center text-xs font-semibold text-gray-600 shrink-0"
-              aria-label={`${senderName}'s avatar`}
-            >
-              {senderName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2)}
-            </div>
+            <UserAvatar
+              username={senderUsername || request.sender.email}
+              displayName={senderName}
+              avatar={request.sender.avatar}
+              image={request.sender.image}
+              city={request.sender.city || ""}
+              styles={request.sender.styles}
+              isSmall={true}
+              showHoverCard={true}
+            />
           )}
           <p>
             <strong>{senderName}</strong> requested{" "}
