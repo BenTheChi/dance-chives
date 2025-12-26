@@ -101,6 +101,7 @@ async function seedNeo4j() {
           instagram: "@baseuser",
           website: "",
           image: "",
+          styles: [],
         },
       },
       {
@@ -122,6 +123,7 @@ async function seedNeo4j() {
           instagram: "@creator",
           website: "https://creator.example.com",
           image: "",
+          styles: [],
         },
       },
       {
@@ -143,6 +145,7 @@ async function seedNeo4j() {
           instagram: "",
           website: "",
           image: "",
+          styles: [],
         },
       },
       {
@@ -164,6 +167,7 @@ async function seedNeo4j() {
           instagram: "@admin",
           website: "",
           image: "",
+          styles: [],
         },
       },
       {
@@ -185,6 +189,7 @@ async function seedNeo4j() {
           instagram: "@superadmin",
           website: "https://superadmin.example.com",
           image: "",
+          styles: [],
         },
       },
     ];
@@ -208,7 +213,9 @@ async function seedNeo4j() {
             imageUrl: user.profile.image ?? null,
             cityId: cityObj?.id ?? null,
             cityName: cityObj?.name ?? null,
-            styles: (user.profile.styles || []).map((s) => s.toUpperCase().trim()),
+            styles: ((user.profile.styles || []) as string[]).map((s) =>
+              s.toUpperCase().trim()
+            ),
           },
           create: {
             userId: user.id,
@@ -217,7 +224,9 @@ async function seedNeo4j() {
             imageUrl: user.profile.image ?? null,
             cityId: cityObj?.id ?? null,
             cityName: cityObj?.name ?? null,
-            styles: (user.profile.styles || []).map((s) => s.toUpperCase().trim()),
+            styles: ((user.profile.styles || []) as string[]).map((s) =>
+              s.toUpperCase().trim()
+            ),
           },
         });
         console.log(

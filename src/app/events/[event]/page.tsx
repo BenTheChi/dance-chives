@@ -416,7 +416,10 @@ export default async function EventPage({ params }: PageProps) {
                             isSmall={true}
                           />
                         ))}
-                        <RolePendingBadge eventId={event.id} roleTitle={roleTitle} />
+                        <RolePendingBadge
+                          eventId={event.id}
+                          roleTitle={roleTitle}
+                        />
                       </div>
                     </div>
                   )
@@ -442,7 +445,7 @@ export default async function EventPage({ params }: PageProps) {
             {/* Photo Gallery - takes up full width */}
             {event.gallery.length > 0 && (
               <section className="flex flex-col bg-primary rounded-sm p-4 w-full border-2 border-primary-light">
-                <h2 className="text-2xl font-bold mb-2 text-center">
+                <h2 className="text-2xl font-bold mb-4 text-center">
                   Photo Gallery
                 </h2>
                 <PhotoGallery images={event.gallery} />
