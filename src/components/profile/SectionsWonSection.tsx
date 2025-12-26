@@ -93,8 +93,8 @@ export function SectionsWonSection({ sections }: SectionsWonSectionProps) {
       <h2 className="text-2xl font-bold mb-4">
         Sections Won ({sections.length})
       </h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm p-4">
-        <div className="max-h-[600px] overflow-y-scroll">
+      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
+        <div className="max-h-[600px] overflow-y-auto py-3 px-3">
           <div className="flex flex-col gap-4 overflow-visible">
             {sortedSections.map((section: WinningSection) => (
               <div key={section.sectionId} className="overflow-visible">

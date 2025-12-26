@@ -118,9 +118,9 @@ export function RolesTabsSection({
   return (
     <section className="w-full">
       <h2 className="text-2xl font-bold mb-4">Events with Roles</h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm p-4">
+      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
         {/* Past/Future Toggle */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light">
           <Switch
             id="past-future-toggle"
             checked={showFuture}
@@ -146,8 +146,8 @@ export function RolesTabsSection({
             const filteredEvents = getFilteredAndSortedEvents(role);
             return (
               <TabsContent key={role} value={role}>
-                <div className="max-h-[600px] overflow-y-scroll">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mt-4 overflow-visible">
+                <div className="max-h-[600px] overflow-y-auto py-3 px-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 overflow-visible">
                     {filteredEvents.map((event: Event) => {
                       const eventRoute = `/events/${event.id}`;
 

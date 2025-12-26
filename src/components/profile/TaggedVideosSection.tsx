@@ -147,9 +147,9 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
       <h2 className="text-2xl font-bold mb-4">
         Tagged Videos ({videos.length})
       </h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm p-2">
+      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
         {/* Winner Filter Toggle */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light">
           <Switch
             id="wins-only-toggle"
             checked={showWinsOnly}
@@ -160,38 +160,37 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
           </Label>
         </div>
 
-        <div className="max-h-[400px] overflow-y-scroll">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 overflow-y-scroll">
+        <div className="max-h-[600px] overflow-y-auto py-3 px-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 overflow-visible">
             {filteredAndSortedVideos.map(
               (video: TaggedVideo, index: number) => (
-                <div key={video.videoId} className="overflow-visible">
-                  <VideoCard
-                    video={{
-                      id: video.videoId,
-                      title: video.videoTitle,
-                      src: video.videoSrc || "",
-                      styles: video.styles || [],
-                      type: video.type || "battle",
-                      taggedWinners: (video.taggedUsers || []).filter(
-                        (user) =>
-                          user?.role?.toUpperCase() === "WINNER" ||
-                          user?.role?.toUpperCase() === VIDEO_ROLE_WINNER
-                      ),
-                      taggedDancers: (video.taggedUsers || []).filter(
-                        (user) =>
-                          !user?.role ||
-                          user.role.toUpperCase() === "DANCER" ||
-                          user.role.toUpperCase() === VIDEO_ROLE_DANCER
-                      ),
-                    }}
-                    eventLink={`/events/${video.eventId}`}
-                    eventTitle={video.eventTitle}
-                    sectionTitle={video.sectionTitle}
-                    onClick={() => handleVideoSelect(index)}
-                    currentUserId={session?.user?.id}
-                    eventId={video.eventId}
-                  />
-                </div>
+                <VideoCard
+                  video={{
+                    id: video.videoId,
+                    title: video.videoTitle,
+                    src: video.videoSrc || "",
+                    styles: video.styles || [],
+                    type: video.type || "battle",
+                    taggedWinners: (video.taggedUsers || []).filter(
+                      (user) =>
+                        user?.role?.toUpperCase() === "WINNER" ||
+                        user?.role?.toUpperCase() === VIDEO_ROLE_WINNER
+                    ),
+                    taggedDancers: (video.taggedUsers || []).filter(
+                      (user) =>
+                        !user?.role ||
+                        user.role.toUpperCase() === "DANCER" ||
+                        user.role.toUpperCase() === VIDEO_ROLE_DANCER
+                    ),
+                  }}
+                  eventLink={`/events/${video.eventId}`}
+                  eventTitle={video.eventTitle}
+                  sectionTitle={video.sectionTitle}
+                  onClick={() => handleVideoSelect(index)}
+                  currentUserId={session?.user?.id}
+                  eventId={video.eventId}
+                  key={video.videoId}
+                />
               )
             )}
           </div>
