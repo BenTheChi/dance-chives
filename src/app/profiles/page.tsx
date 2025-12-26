@@ -12,16 +12,17 @@ export default async function ProfilesPage() {
         <h1 className="mt-5 mb-12">Profiles</h1>
 
         {users.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-[180px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-[180px] overflow-visible">
             {users.map((user) => (
-              <UserCard
-                key={user.id}
-                displayName={user.displayName}
-                username={user.username}
-                image={user.image ?? undefined}
-                styles={user.styles}
-                city={user.city}
-              />
+              <div key={user.id} className="overflow-visible">
+                <UserCard
+                  displayName={user.displayName}
+                  username={user.username}
+                  image={user.image ?? undefined}
+                  styles={user.styles}
+                  city={user.city}
+                />
+              </div>
             ))}
           </div>
         ) : (

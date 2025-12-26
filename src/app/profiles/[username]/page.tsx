@@ -63,12 +63,12 @@ export default async function ProfilePage({ params }: PageProps) {
   return (
     <>
       <AppNavbar />
-      <div className="flex flex-col">
+      <div className="flex flex-col items-center justify-center">
         <div className="flex items-center justify-between py-7 border-b-2 border-primary-light">
           <h1 className="flex-1">{profile.displayName || profile.username}</h1>
         </div>
-        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col items-center gap-8 py-5 px-5 sm:px-10 lg:px-15 max-w-[800px] w-full">
+        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto overflow-x-visible">
+          <div className="flex flex-col items-center gap-8 py-5 px-5 sm:px-10 lg:px-15 max-w-[800px] w-full overflow-visible">
             <ProfileClient username={username} />
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full items-center sm:items-start">
@@ -160,25 +160,26 @@ export default async function ProfilePage({ params }: PageProps) {
                 </section>
               </div>
             </div>
-
-            {/* Events with Roles - Tabs */}
-            {sortedRoles.length > 0 && (
-              <ProfileRolesSection
-                eventsByRole={eventsByRole}
-                sortedRoles={sortedRoles}
-              />
-            )}
-
-            {/* Tagged Videos */}
-            {profile.taggedVideos && profile.taggedVideos.length > 0 && (
-              <TaggedVideosSection videos={profile.taggedVideos} />
-            )}
-
-            {/* Sections Won */}
-            {profile.winningSections && profile.winningSections.length > 0 && (
-              <SectionsWonSection sections={profile.winningSections} />
-            )}
           </div>
+        </div>
+        <div className="flex flex-col items-center gap-8 py-5 px-5 sm:px-10 lg:px-15 max-w-[1500px] w-full overflow-visible">
+          {/* Events with Roles - Tabs */}
+          {sortedRoles.length > 0 && (
+            <ProfileRolesSection
+              eventsByRole={eventsByRole}
+              sortedRoles={sortedRoles}
+            />
+          )}
+
+          {/* Tagged Videos */}
+          {profile.taggedVideos && profile.taggedVideos.length > 0 && (
+            <TaggedVideosSection videos={profile.taggedVideos} />
+          )}
+
+          {/* Sections Won */}
+          {profile.winningSections && profile.winningSections.length > 0 && (
+            <SectionsWonSection sections={profile.winningSections} />
+          )}
         </div>
       </div>
     </>

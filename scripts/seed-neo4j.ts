@@ -100,8 +100,7 @@ async function seedNeo4j() {
           bio: "Dance enthusiast from Seattle",
           instagram: "@baseuser",
           website: "",
-          image:
-            "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-0/profile-pictures/48af12c9-d4a1-47b4-921d-5fdb9cc4e778-VSDF.jpg",
+          image: "",
         },
       },
       {
@@ -122,8 +121,7 @@ async function seedNeo4j() {
           bio: "Event creator and organizer",
           instagram: "@creator",
           website: "https://creator.example.com",
-          image:
-            "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-1/profile-pictures/6fe32a69-1bb3-4d5b-8b9a-90531b3b6921-cardio_man.png",
+          image: "",
         },
       },
       {
@@ -165,8 +163,7 @@ async function seedNeo4j() {
           bio: "Platform administrator",
           instagram: "@admin",
           website: "",
-          image:
-            "https://pub-8c9fedeaaf2f4800a7ad4f8ecee06cb7.r2.dev/users/test-user-3/profile-pictures/661d5b23-ca8d-4653-976f-0325f112d345-leviwand.jpg",
+          image: "",
         },
       },
       {
@@ -198,6 +195,33 @@ async function seedNeo4j() {
         await signupUser(user.id, user.profile);
         console.log(
           `✅ Created user: ${user.profile.displayName} (${user.profile.username})`
+        );
+
+        // Create UserCard entry in PostgreSQL for profiles page
+        const cityObj =
+          typeof user.profile.city === "object" ? user.profile.city : null;
+        await prisma.userCard.upsert({
+          where: { userId: user.id },
+          update: {
+            username: user.profile.username,
+            displayName: user.profile.displayName,
+            imageUrl: user.profile.image ?? null,
+            cityId: cityObj?.id ?? null,
+            cityName: cityObj?.name ?? null,
+            styles: (user.profile.styles || []).map((s) => s.toUpperCase().trim()),
+          },
+          create: {
+            userId: user.id,
+            username: user.profile.username,
+            displayName: user.profile.displayName,
+            imageUrl: user.profile.image ?? null,
+            cityId: cityObj?.id ?? null,
+            cityName: cityObj?.name ?? null,
+            styles: (user.profile.styles || []).map((s) => s.toUpperCase().trim()),
+          },
+        });
+        console.log(
+          `✅ Created UserCard for: ${user.profile.displayName} (${user.profile.username})`
         );
       } catch (error) {
         console.log(

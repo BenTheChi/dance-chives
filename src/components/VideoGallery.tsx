@@ -192,6 +192,7 @@ export default function VideoGallery({
               onClick={() => handleVideoSelect(index)}
               styles={displayStyles}
               currentUserId={currentUserId}
+              eventId={eventId}
             />
           </div>
         ))}

@@ -998,10 +998,34 @@ async function getUserCreatedEventIds(userId: string): Promise<string[]> {
 
 /**
  * Transfer all events created by a user to the admin user
+ * Note: If super admin doesn't exist, events will be orphaned (no CREATED relationship)
  */
 async function transferUserEventsToAdmin(userId: string): Promise<void> {
   const adminUserId = await getOrCreateSuperAdminUser();
   const eventIds = await getUserCreatedEventIds(userId);
+
+  // If super admin doesn't exist, we can't transfer events
+  if (!adminUserId) {
+    console.warn(
+      `⚠️  Super admin user (${SUPER_ADMIN_EMAIL}) does not exist. Cannot transfer events from user ${userId}. Events will be orphaned.`
+    );
+    // Still delete the CREATED relationships to clean up
+    const neo4jSession = driver.session();
+    try {
+      for (const eventId of eventIds) {
+        await neo4jSession.run(
+          `
+          MATCH (oldCreator:User {id: $userId})-[r:CREATED]->(e:Event {id: $eventId})
+          DELETE r
+          `,
+          { eventId, userId }
+        );
+      }
+    } finally {
+      neo4jSession.close();
+    }
+    return;
+  }
 
   for (const eventId of eventIds) {
     try {

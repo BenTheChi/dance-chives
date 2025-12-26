@@ -1535,7 +1535,7 @@ export const insertEvent = async (
     ? JSON.stringify(eventDetails.dates)
     : null;
 
-  // Get admin user ID as fallback for orphaned events
+  // Get admin user ID as fallback for orphaned events (only if super admin exists)
   const fallbackCreatorId = await getOrCreateSuperAdminUser();
 
   try {
@@ -1658,11 +1658,14 @@ export const insertEvent = async (
       WITH e
       // Try to match the creator, fallback to admin user if creator doesn't exist
       OPTIONAL MATCH (creator:User {id: $creatorId})
-      WITH e, 
+      WITH e, creator, $fallbackCreatorId as fallbackCreatorId
+      WITH e,
         CASE 
           WHEN creator IS NOT NULL THEN creator.id
-          ELSE $fallbackCreatorId
+          WHEN fallbackCreatorId IS NOT NULL THEN fallbackCreatorId
+          ELSE null
         END as finalCreatorId
+      WHERE finalCreatorId IS NOT NULL
       MATCH (finalCreator:User {id: finalCreatorId})
       MERGE (finalCreator)-[:CREATED]->(e)
 
@@ -2079,7 +2082,7 @@ export const editEvent = async (
     }
 
     // Ensure creator relationship is preserved
-    // Use admin user as fallback if creator doesn't exist
+    // Use admin user as fallback if creator doesn't exist (only if super admin exists)
     if (eventDetails.creatorId) {
       const fallbackCreatorId = await getOrCreateSuperAdminUser();
       await tx.run(
@@ -2089,8 +2092,10 @@ export const editEvent = async (
          WITH e,
            CASE 
              WHEN creator IS NOT NULL THEN creator.id
-             ELSE fallbackCreatorId
+             WHEN fallbackCreatorId IS NOT NULL THEN fallbackCreatorId
+             ELSE null
            END as finalCreatorId
+         WHERE finalCreatorId IS NOT NULL
          MATCH (finalCreator:User {id: finalCreatorId})
          MERGE (finalCreator)-[:CREATED]->(e)`,
         { id, creatorId: eventDetails.creatorId, fallbackCreatorId }

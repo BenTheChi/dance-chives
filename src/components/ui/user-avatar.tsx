@@ -81,7 +81,11 @@ export function UserAvatar({
   const content = showHoverCard ? (
     <HoverCard openDelay={200} closeDelay={100}>
       <HoverCardTrigger asChild>
-        <Link href={`/profiles/${username}`} className="inline-block">
+        <Link
+          href={`/profiles/${username}`}
+          className="inline-block"
+          onClick={(e) => e.stopPropagation()}
+        >
           {avatarElement}
         </Link>
       </HoverCardTrigger>
@@ -101,7 +105,11 @@ export function UserAvatar({
       </HoverCardContent>
     </HoverCard>
   ) : (
-    <Link href={`/profiles/${username}`} className="block">
+    <Link
+      href={`/profiles/${username}`}
+      className="block"
+      onClick={(e) => e.stopPropagation()}
+    >
       {avatarElement}
     </Link>
   );
@@ -112,10 +120,14 @@ export function UserAvatar({
         "relative inline-block group flex items-center justify-center",
         className
       )}
+      onClick={(e) => e.stopPropagation()}
     >
       {showRemoveButton && onRemove && (
         <button
-          onClick={onRemove}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
           disabled={isRemoving}
           className="absolute -top-2 -right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
           title="Remove tag"

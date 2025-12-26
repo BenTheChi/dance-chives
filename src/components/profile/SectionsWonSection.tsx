@@ -94,24 +94,25 @@ export function SectionsWonSection({ sections }: SectionsWonSectionProps) {
         Sections Won ({sections.length})
       </h2>
       <div className="bg-primary-dark border-secondary-light border-4 rounded-sm p-4">
-        <div className="max-h-[500px] overflow-y-auto">
-          <div className="flex flex-col gap-4">
+        <div className="max-h-[600px] overflow-y-scroll">
+          <div className="flex flex-col gap-4 overflow-visible">
             {sortedSections.map((section: WinningSection) => (
-              <SectionCard
-                key={section.sectionId}
-                section={{
-                  id: section.sectionId,
-                  title: section.sectionTitle,
-                  sectionType: section.sectionType as
-                    | Section["sectionType"]
-                    | undefined,
-                  poster: section.imageUrl ? { url: section.imageUrl } : null,
-                  videos: [],
-                  brackets: [],
-                }}
-                eventId={section.eventId}
-                eventTitle={section.eventTitle}
-              />
+              <div key={section.sectionId} className="overflow-visible">
+                <SectionCard
+                  section={{
+                    id: section.sectionId,
+                    title: section.sectionTitle,
+                    sectionType: section.sectionType as
+                      | Section["sectionType"]
+                      | undefined,
+                    poster: section.imageUrl ? { url: section.imageUrl } : null,
+                    videos: [],
+                    brackets: [],
+                  }}
+                  eventId={section.eventId}
+                  eventTitle={section.eventTitle}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -119,4 +120,3 @@ export function SectionsWonSection({ sections }: SectionsWonSectionProps) {
     </section>
   );
 }
-

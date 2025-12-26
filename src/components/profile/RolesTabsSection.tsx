@@ -146,30 +146,31 @@ export function RolesTabsSection({
             const filteredEvents = getFilteredAndSortedEvents(role);
             return (
               <TabsContent key={role} value={role}>
-                <div className="max-h-[500px] overflow-y-auto">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mt-4">
+                <div className="max-h-[600px] overflow-y-scroll">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mt-4 overflow-visible">
                     {filteredEvents.map((event: Event) => {
                       const eventRoute = `/events/${event.id}`;
 
                       return (
-                        <EventCard
-                          key={event.id}
-                          id={event.id}
-                          title={event.eventDetails.title}
-                          imageUrl={event.eventDetails.poster?.url}
-                          date={
-                            event.eventDetails.dates &&
-                            event.eventDetails.dates.length > 0
-                              ? event.eventDetails.dates[0].date
-                              : ""
-                          }
-                          city={event.eventDetails.city.name || ""}
-                          cityId={event.eventDetails.city.id}
-                          styles={event.eventDetails.styles || []}
-                          eventType={event.eventDetails.eventType}
-                          href={eventRoute}
-                          isSaved={savedEventIds.has(event.id)}
-                        />
+                        <div key={event.id} className="overflow-visible">
+                          <EventCard
+                            id={event.id}
+                            title={event.eventDetails.title}
+                            imageUrl={event.eventDetails.poster?.url}
+                            date={
+                              event.eventDetails.dates &&
+                              event.eventDetails.dates.length > 0
+                                ? event.eventDetails.dates[0].date
+                                : ""
+                            }
+                            city={event.eventDetails.city.name || ""}
+                            cityId={event.eventDetails.city.id}
+                            styles={event.eventDetails.styles || []}
+                            eventType={event.eventDetails.eventType}
+                            href={eventRoute}
+                            isSaved={savedEventIds.has(event.id)}
+                          />
+                        </div>
                       );
                     })}
                   </div>
@@ -182,4 +183,3 @@ export function RolesTabsSection({
     </section>
   );
 }
-

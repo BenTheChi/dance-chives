@@ -2255,13 +2255,77 @@ export async function removeTagFromSection(
     (await isTeamMember(eventId, currentUserId)) ||
     (await isEventCreator(eventId, currentUserId));
 
+  // Check if user is a winner
+  const isWinner = await isUserWinnerOfSection(eventId, sectionId, userId);
+  if (!isWinner) {
+    throw new Error("User is not a winner of this section");
+  }
+
   if (canRemoveDirectly) {
-    // User has permission - remove directly by setting winner to null
+    // User has permission - get current winners, remove the specified one, and update
     try {
-      await setSectionWinner(eventId, sectionId, null);
+      const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
+      const updatedWinnerIds = currentWinnerIds.filter((id) => id !== userId);
+      await setSectionWinners(eventId, sectionId, updatedWinnerIds);
       return { success: true, directRemove: true };
     } catch (error) {
       console.error("Error removing tag from section:", error);
+      throw error;
+    }
+  } else {
+    // User trying to remove someone else's tag without permission
+    throw new Error("You do not have permission to remove this tag");
+  }
+}
+
+/**
+ * Remove judge tag from section
+ * Users can remove their own tags directly
+ * Privileged users can remove any tags
+ */
+export async function removeJudgeFromSection(
+  eventId: string,
+  sectionId: string,
+  userId: string
+): Promise<{ success: true; directRemove: boolean }> {
+  const currentUserId = await requireAuth();
+  const session = await auth();
+
+  // Validate event exists
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+
+  // Validate section exists
+  const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+  if (!sectionExists) {
+    throw new Error("Section not found in this event");
+  }
+
+  // Check if user is a judge
+  const isJudge = await isUserJudgeOfSection(eventId, sectionId, userId);
+  if (!isJudge) {
+    throw new Error("User is not a judge of this section");
+  }
+
+  // Check permissions: users can remove their own tags, privileged users can remove any
+  const authLevel = session?.user?.auth || 0;
+  const canRemoveDirectly =
+    currentUserId === userId || // User removing their own tag
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isTeamMember(eventId, currentUserId)) ||
+    (await isEventCreator(eventId, currentUserId));
+
+  if (canRemoveDirectly) {
+    // User has permission - get current judges, remove the specified one, and update
+    try {
+      const currentJudgeIds = await getSectionJudgeIds(eventId, sectionId);
+      const updatedJudgeIds = currentJudgeIds.filter((id) => id !== userId);
+      await setSectionJudges(eventId, sectionId, updatedJudgeIds);
+      return { success: true, directRemove: true };
+    } catch (error) {
+      console.error("Error removing judge from section:", error);
       throw error;
     }
   } else {

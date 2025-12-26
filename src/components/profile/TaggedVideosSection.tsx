@@ -96,12 +96,8 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
       if (!isAFuture && isBFuture) return 1;
 
       // Within same category, sort by date
-      const dateA = a.eventCreatedAt
-        ? new Date(a.eventCreatedAt).getTime()
-        : 0;
-      const dateB = b.eventCreatedAt
-        ? new Date(b.eventCreatedAt).getTime()
-        : 0;
+      const dateA = a.eventCreatedAt ? new Date(a.eventCreatedAt).getTime() : 0;
+      const dateB = b.eventCreatedAt ? new Date(b.eventCreatedAt).getTime() : 0;
 
       if (isAFuture) {
         return dateA - dateB; // Ascending for future
@@ -151,7 +147,7 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
       <h2 className="text-2xl font-bold mb-4">
         Tagged Videos ({videos.length})
       </h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm p-4">
+      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm p-2">
         {/* Winner Filter Toggle */}
         <div className="flex items-center gap-3 mb-4">
           <Switch
@@ -164,43 +160,49 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
           </Label>
         </div>
 
-        <div className="max-h-[500px] overflow-y-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {filteredAndSortedVideos.map((video: TaggedVideo, index: number) => (
-              <VideoCard
-                key={video.videoId}
-                video={{
-                  id: video.videoId,
-                  title: video.videoTitle,
-                  src: video.videoSrc || "",
-                  styles: video.styles || [],
-                  type: video.type || "battle",
-                  taggedWinners: (video.taggedUsers || []).filter(
-                    (user) =>
-                      user?.role?.toUpperCase() === "WINNER" ||
-                      user?.role?.toUpperCase() === VIDEO_ROLE_WINNER
-                  ),
-                  taggedDancers: (video.taggedUsers || []).filter(
-                    (user) =>
-                      !user?.role ||
-                      user.role.toUpperCase() === "DANCER" ||
-                      user.role.toUpperCase() === VIDEO_ROLE_DANCER
-                  ),
-                }}
-                eventLink={`/events/${video.eventId}`}
-                eventTitle={video.eventTitle}
-                sectionTitle={video.sectionTitle}
-                onClick={() => handleVideoSelect(index)}
-                currentUserId={session?.user?.id}
-              />
-            ))}
+        <div className="max-h-[400px] overflow-y-scroll">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 overflow-y-scroll">
+            {filteredAndSortedVideos.map(
+              (video: TaggedVideo, index: number) => (
+                <div key={video.videoId} className="overflow-visible">
+                  <VideoCard
+                    video={{
+                      id: video.videoId,
+                      title: video.videoTitle,
+                      src: video.videoSrc || "",
+                      styles: video.styles || [],
+                      type: video.type || "battle",
+                      taggedWinners: (video.taggedUsers || []).filter(
+                        (user) =>
+                          user?.role?.toUpperCase() === "WINNER" ||
+                          user?.role?.toUpperCase() === VIDEO_ROLE_WINNER
+                      ),
+                      taggedDancers: (video.taggedUsers || []).filter(
+                        (user) =>
+                          !user?.role ||
+                          user.role.toUpperCase() === "DANCER" ||
+                          user.role.toUpperCase() === VIDEO_ROLE_DANCER
+                      ),
+                    }}
+                    eventLink={`/events/${video.eventId}`}
+                    eventTitle={video.eventTitle}
+                    sectionTitle={video.sectionTitle}
+                    onClick={() => handleVideoSelect(index)}
+                    currentUserId={session?.user?.id}
+                    eventId={video.eventId}
+                  />
+                </div>
+              )
+            )}
           </div>
         </div>
 
         {selectedVideoIndex !== null &&
           filteredAndSortedVideos[selectedVideoIndex] && (
             <VideoLightbox
-              video={convertToVideo(filteredAndSortedVideos[selectedVideoIndex])}
+              video={convertToVideo(
+                filteredAndSortedVideos[selectedVideoIndex]
+              )}
               isOpen={selectedVideoIndex !== null}
               onClose={() => setSelectedVideoIndex(null)}
               onNext={() =>
@@ -213,7 +215,9 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
               onPrev={() =>
                 selectedVideoIndex !== null
                   ? setSelectedVideoIndex(
-                      (selectedVideoIndex - 1 + filteredAndSortedVideos.length) %
+                      (selectedVideoIndex -
+                        1 +
+                        filteredAndSortedVideos.length) %
                         filteredAndSortedVideos.length
                     )
                   : null
@@ -223,12 +227,16 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
               currentIndex={selectedVideoIndex}
               totalVideos={filteredAndSortedVideos.length}
               eventLink={`/events/${filteredAndSortedVideos[selectedVideoIndex].eventId}`}
-              eventTitle={filteredAndSortedVideos[selectedVideoIndex].eventTitle}
+              eventTitle={
+                filteredAndSortedVideos[selectedVideoIndex].eventTitle
+              }
               eventId={filteredAndSortedVideos[selectedVideoIndex].eventId}
               sectionTitle={
                 filteredAndSortedVideos[selectedVideoIndex].sectionTitle
               }
-              sectionSlug={filteredAndSortedVideos[selectedVideoIndex].sectionId}
+              sectionSlug={
+                filteredAndSortedVideos[selectedVideoIndex].sectionId
+              }
               bracketTitle={undefined}
               sectionStyles={undefined}
               applyStylesToVideos={undefined}
@@ -239,4 +247,3 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
     </section>
   );
 }
-

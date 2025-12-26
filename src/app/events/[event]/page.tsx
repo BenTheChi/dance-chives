@@ -16,6 +16,7 @@ import {
   EventTagSelfButton,
   EventEditButtons,
 } from "./event-client";
+import { RolePendingBadge } from "./role-pending-badge";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -415,6 +416,7 @@ export default async function EventPage({ params }: PageProps) {
                             isSmall={true}
                           />
                         ))}
+                        <RolePendingBadge eventId={event.id} roleTitle={roleTitle} />
                       </div>
                     </div>
                   )

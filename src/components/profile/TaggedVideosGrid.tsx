@@ -94,6 +94,7 @@ export function TaggedVideosGrid({ videos }: TaggedVideosGridProps) {
             sectionTitle={video.sectionTitle}
             onClick={() => handleVideoSelect(index)}
             currentUserId={session?.user?.id}
+            eventId={video.eventId}
           />
         ))}
       </div>

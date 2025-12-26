@@ -37,6 +37,7 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
             eventTitle={item.eventTitle}
             sectionTitle={item.sectionTitle}
             onClick={() => handleVideoSelect(index)}
+            eventId={item.eventId}
           />
         ))}
       </div>

@@ -396,9 +396,6 @@ export function DashboardClient({
                 <h2 className="text-2xl font-semibold mb-2 text-center">
                   Saved Events
                 </h2>
-                <p className="text-sm text-center mb-6">
-                  Events you have saved
-                </p>
                 <div className="text-center py-12">
                   No saved events yet. Click the heart icon on any event to save
                   it.

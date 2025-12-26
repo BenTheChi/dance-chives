@@ -143,7 +143,7 @@ CREATE TABLE "Notification" (
     "message" TEXT NOT NULL,
     "relatedRequestType" TEXT,
     "relatedRequestId" TEXT,
-    "read" BOOLEAN NOT NULL DEFAULT false,
+    "isOld" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
@@ -207,7 +207,7 @@ CREATE INDEX "RequestApproval_approverId_idx" ON "RequestApproval"("approverId")
 CREATE INDEX "Notification_userId_idx" ON "Notification"("userId");
 
 -- CreateIndex
-CREATE INDEX "Notification_read_idx" ON "Notification"("read");
+CREATE INDEX "Notification_isOld_idx" ON "Notification"("isOld");
 
 -- CreateIndex
 CREATE INDEX "Notification_createdAt_idx" ON "Notification"("createdAt");

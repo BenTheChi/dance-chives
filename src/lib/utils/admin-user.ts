@@ -12,77 +12,57 @@ export {
 } from "./admin-user-constants";
 
 /**
- * Get or create the super admin user
- * This user is guaranteed to exist and is used for orphaned events
- * @returns The super admin user ID
+ * Get the super admin user if it exists
+ * This user is used for orphaned events, but is NOT created automatically.
+ * The user must sign up with benchi@dancechives.com to get super admin privileges.
+ * @returns The super admin user ID, or null if the user doesn't exist
  */
-export async function getOrCreateSuperAdminUser(): Promise<string> {
-  // First, try to find the user by email in PostgreSQL
-  let adminUser = await prisma.user.findUnique({
+export async function getSuperAdminUser(): Promise<string | null> {
+  // Try to find the user by email in PostgreSQL
+  const adminUser = await prisma.user.findUnique({
     where: { email: SUPER_ADMIN_EMAIL },
   });
 
-  if (adminUser) {
-    // Ensure the user has super admin privileges
-    if (adminUser.auth !== AUTH_LEVELS.SUPER_ADMIN) {
-      await prisma.user.update({
-        where: { id: adminUser.id },
-        data: { auth: AUTH_LEVELS.SUPER_ADMIN },
-      });
-    }
-
-    // Check if user exists in Neo4j with the correct username
-    const neo4jUser = await getUserByUsername(SUPER_ADMIN_USERNAME);
-    if (!neo4jUser || neo4jUser.id !== adminUser.id) {
-      // Create or update Neo4j user profile
-      await signupUser(adminUser.id, {
-        displayName: adminUser.name || "Admin",
-        username: SUPER_ADMIN_USERNAME,
-        date: "01/01/2000", // Default date
-        city: {
-          id: "",
-          name: "Unknown",
-          region: "",
-          countryCode: "",
-        },
-        styles: [],
-      });
-    }
-
-    return adminUser.id;
+  if (!adminUser) {
+    // User doesn't exist - they need to sign up first
+    return null;
   }
 
-  // User doesn't exist, create it
-  // First create in PostgreSQL
-  adminUser = await prisma.user.create({
-    data: {
-      email: SUPER_ADMIN_EMAIL,
-      name: "Admin",
-      auth: AUTH_LEVELS.SUPER_ADMIN,
-      accountVerified: new Date(),
-      emailVerified: new Date(),
-    },
-  });
+  // Ensure the user has super admin privileges
+  if (adminUser.auth !== AUTH_LEVELS.SUPER_ADMIN) {
+    await prisma.user.update({
+      where: { id: adminUser.id },
+      data: { auth: AUTH_LEVELS.SUPER_ADMIN },
+    });
+  }
 
-  // Then create in Neo4j
-  await signupUser(adminUser.id, {
-    displayName: "Admin",
-    username: SUPER_ADMIN_USERNAME,
-    date: "01/01/2000",
-    city: {
-      id: "",
-      name: "Unknown",
-      region: "",
-      countryCode: "",
-    },
-    styles: [],
-  });
-
-  console.log(
-    `✅ Created super admin user: ${SUPER_ADMIN_EMAIL} (username: ${SUPER_ADMIN_USERNAME})`
-  );
+  // Check if user exists in Neo4j with the correct username
+  const neo4jUser = await getUserByUsername(SUPER_ADMIN_USERNAME);
+  if (!neo4jUser || neo4jUser.id !== adminUser.id) {
+    // Create or update Neo4j user profile if PostgreSQL user exists but Neo4j doesn't
+    await signupUser(adminUser.id, {
+      displayName: adminUser.name || "Admin",
+      username: SUPER_ADMIN_USERNAME,
+      date: "01/01/2000", // Default date
+      city: {
+        id: "",
+        name: "Unknown",
+        region: "",
+        countryCode: "",
+      },
+      styles: [],
+    });
+  }
 
   return adminUser.id;
+}
+
+/**
+ * @deprecated Use getSuperAdminUser() instead. This function is kept for backward compatibility
+ * but will not create the user if it doesn't exist.
+ */
+export async function getOrCreateSuperAdminUser(): Promise<string | null> {
+  return getSuperAdminUser();
 }
 
 

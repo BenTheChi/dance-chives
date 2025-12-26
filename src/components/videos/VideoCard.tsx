@@ -10,6 +10,10 @@ import {
   extractYouTubeVideoId,
   normalizeYouTubeThumbnailUrl,
 } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
 
 interface VideoCardProps {
   video: Video;
@@ -21,6 +25,7 @@ interface VideoCardProps {
   styles?: string[];
   // Optional context for callers; not currently used by this component.
   currentUserId?: string;
+  eventId?: string;
 }
 
 export function VideoCard({
@@ -29,7 +34,11 @@ export function VideoCard({
   eventTitle,
   onClick,
   styles,
+  currentUserId,
+  eventId,
 }: VideoCardProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   // Parse youtube id from src and generate thumbnail URL
   const youtubeId = extractYouTubeVideoId(video.src);
   const thumbnailUrl = youtubeId
@@ -43,6 +52,26 @@ export function VideoCard({
 
   // Get tagged dancers
   const taggedDancers = video.taggedDancers || [];
+
+  // Handler to remove tag from video
+  const handleRemoveTag = (dancerId: string) => {
+    if (!eventId || !currentUserId) return;
+
+    startTransition(async () => {
+      try {
+        await removeTagFromVideo(eventId, video.id, dancerId);
+        toast.success("Tag removed successfully");
+        router.refresh();
+      } catch (error) {
+        console.error("Error removing tag:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to remove tag. Please try again."
+        );
+      }
+    });
+  };
 
   // Show 1 style on mobile, 3 on desktop, then "+x more styles"
   const firstStyle = displayStyles?.[0];
@@ -71,13 +100,17 @@ export function VideoCard({
         )}
         {/* Dancer tags - always visible overlay */}
         {taggedDancers.length > 0 && (
-          <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 items-center z-20 pointer-events-none">
-            <div className="flex flex-wrap gap-1 items-center">
-              {taggedDancers.map((dancer) => (
-                <div
-                  key={dancer.id || dancer.username}
-                  className="pointer-events-auto"
-                >
+          <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 items-center z-20 pointer-events-auto">
+            <div className="flex flex-wrap gap-1 items-center pointer-events-auto">
+              {taggedDancers.map((dancer) => {
+                const dancerId = dancer.id || dancer.username;
+                const canRemove =
+                  currentUserId &&
+                  eventId &&
+                  (currentUserId === dancerId ||
+                    currentUserId === dancer.id ||
+                    currentUserId === dancer.username);
+                return (
                   <UserAvatar
                     username={dancer.username}
                     displayName={dancer.displayName}
@@ -88,17 +121,22 @@ export function VideoCard({
                     styles={dancer.styles}
                     borderColor="white"
                     isSmall={true}
+                    showRemoveButton={canRemove || false}
+                    onRemove={() => handleRemoveTag(dancerId)}
+                    isRemoving={isPending}
+                    key={dancerId}
                   />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
       </div>
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
-      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-auto sm:pointer-events-none sm:group-hover:pointer-events-auto z-10 flex flex-col overflow-visible">
-        <div className="flex flex-col items-baseline bg-neutral-500 px-3 py-2 border-b border-black">
+      {/* Use pointer-events-none on overlay to allow avatars (z-20) to receive events */}
+      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-none z-10 flex flex-col overflow-visible">
+        <div className="flex flex-col items-baseline bg-neutral-500 px-3 py-2 border-b border-black pointer-events-auto">
           <h3 className="!text-[14px]">{video.title}</h3>
 
           {/* Title */}
@@ -116,7 +154,7 @@ export function VideoCard({
           </div>
         </div>
         {/* Style tags and dancer tags */}
-        <div className="flex flex-col gap-2 pt-2 px-2">
+        <div className="flex flex-col gap-2 pt-2 px-2 pointer-events-auto">
           {/* Style tags */}
           {displayStyles.length > 0 && (
             <div className="flex flex-wrap gap-1 items-center">

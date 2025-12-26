@@ -4,10 +4,14 @@ import { Section } from "@/types/event";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   checkUserWinnerOfSection,
   checkUserJudgeOfSection,
+  removeTagFromSection,
+  removeJudgeFromSection,
 } from "@/lib/server_actions/request_actions";
 import {
   sectionTypeSupportsWinners,
@@ -27,6 +31,8 @@ export function DescriptionWinnerColumns({
   canTagDirectly,
   currentUserId,
 }: DescriptionWinnerColumnsProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [isUserWinner, setIsUserWinner] = useState(false);
   const [isUserJudge, setIsUserJudge] = useState(false);
   const [showWinners, setShowWinners] = useState(false);
@@ -91,6 +97,46 @@ export function DescriptionWinnerColumns({
   const showWinnerJudgeSection =
     supportsBoth && (hasTaggedUsers || !!currentUserId);
 
+  // Handler to remove winner tag from section
+  const handleRemoveWinner = (userId: string) => {
+    if (!currentUserId) return;
+
+    startTransition(async () => {
+      try {
+        await removeTagFromSection(eventId, section.id, userId);
+        toast.success("Winner tag removed successfully");
+        router.refresh();
+      } catch (error) {
+        console.error("Error removing winner tag:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to remove tag. Please try again."
+        );
+      }
+    });
+  };
+
+  // Handler to remove judge tag from section
+  const handleRemoveJudge = (userId: string) => {
+    if (!currentUserId) return;
+
+    startTransition(async () => {
+      try {
+        await removeJudgeFromSection(eventId, section.id, userId);
+        toast.success("Judge tag removed successfully");
+        router.refresh();
+      } catch (error) {
+        console.error("Error removing judge tag:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to remove tag. Please try again."
+        );
+      }
+    });
+  };
+
   // Determine column spans based on what's visible
   const showBoth = hasDescription && showWinnerJudgeSection;
   const colSpan = showBoth ? "col-span-6 sm:col-span-3" : "col-span-6";
@@ -145,7 +191,7 @@ export function DescriptionWinnerColumns({
                   <div className="flex items-center justify-center gap-2">
                     <Button
                       variant="link"
-                      className="text-xs text-gray-600 hover:text-primary-light p-0 h-auto"
+                      className="text-xs text-secondary hover:text-primary-light p-0 h-auto"
                       onClick={() => setShowWinners(!showWinners)}
                     >
                       {showWinners ? "hide" : "show"}
@@ -159,8 +205,14 @@ export function DescriptionWinnerColumns({
                             .winners!.filter((w) => w && w.id)
                             .map((w) => [w.id, w])
                         ).values()
-                      ).map((winner) =>
-                        winner.username ? (
+                      ).map((winner) => {
+                        const winnerId = winner.id || winner.username;
+                        const canRemove =
+                          currentUserId &&
+                          (currentUserId === winnerId ||
+                            currentUserId === winner.id ||
+                            currentUserId === winner.username);
+                        return winner.username ? (
                           <UserAvatar
                             key={winner.id}
                             username={winner.username}
@@ -170,11 +222,14 @@ export function DescriptionWinnerColumns({
                             showHoverCard
                             city={(winner as any).city || ""}
                             styles={(winner as any).styles}
+                            showRemoveButton={canRemove || false}
+                            onRemove={() => handleRemoveWinner(winnerId)}
+                            isRemoving={isPending}
                           />
                         ) : (
                           <span key={winner.id}>{winner.displayName}</span>
-                        )
-                      )}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -211,8 +266,14 @@ export function DescriptionWinnerColumns({
                         .judges!.filter((j) => j && j.id)
                         .map((j) => [j.id, j])
                     ).values()
-                  ).map((judge) =>
-                    judge.username ? (
+                  ).map((judge) => {
+                    const judgeId = judge.id || judge.username;
+                    const canRemove =
+                      currentUserId &&
+                      (currentUserId === judgeId ||
+                        currentUserId === judge.id ||
+                        currentUserId === judge.username);
+                    return judge.username ? (
                       <UserAvatar
                         key={judge.id}
                         username={judge.username}
@@ -222,11 +283,14 @@ export function DescriptionWinnerColumns({
                         showHoverCard
                         city={(judge as any).city || ""}
                         styles={(judge as any).styles}
+                        showRemoveButton={canRemove || false}
+                        onRemove={() => handleRemoveJudge(judgeId)}
+                        isRemoving={isPending}
                       />
                     ) : (
                       <span key={judge.id}>{judge.displayName}</span>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               )}
             </div>
