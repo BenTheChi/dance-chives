@@ -399,7 +399,7 @@ export function TagSelfCircleButton({
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-primary">
           <DialogHeader>
             <DialogTitle>{dialogTitle || "Tag Yourself"}</DialogTitle>
             <DialogDescription>

@@ -24,7 +24,7 @@ export function UserCard({
       className="card flex flex-col items-center w-[250px] justify-between pb-2 bg-secondary-dark"
     >
       <div className="flex flex-col text-center py-3 w-full border-b-4 border-primary-light bg-primary-dark">
-        <h2>{displayName}</h2>
+        <h2 className="text-white">{displayName}</h2>
       </div>
 
       <div className="my-2 rounded-sm w-fit">

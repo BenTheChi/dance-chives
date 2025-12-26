@@ -7,3 +7,5 @@ DROP INDEX IF EXISTS "Notification_read_idx";
 -- Create the new index (it should already exist from db:push, but ensure it's there)
 CREATE INDEX IF NOT EXISTS "Notification_isOld_idx" ON "Notification"("isOld");
 
+
+

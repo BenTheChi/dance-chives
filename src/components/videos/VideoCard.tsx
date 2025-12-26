@@ -69,6 +69,31 @@ export function VideoCard({
         ) : (
           <h3 className="font-bold text-sm text-center px-4">{video.title}</h3>
         )}
+        {/* Dancer tags - always visible overlay */}
+        {taggedDancers.length > 0 && (
+          <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 items-center z-20 pointer-events-none">
+            <div className="flex flex-wrap gap-1 items-center">
+              {taggedDancers.map((dancer) => (
+                <div
+                  key={dancer.id || dancer.username}
+                  className="pointer-events-auto"
+                >
+                  <UserAvatar
+                    username={dancer.username}
+                    displayName={dancer.displayName}
+                    avatar={dancer.avatar}
+                    image={dancer.image}
+                    showHoverCard
+                    city={dancer.city || ""}
+                    styles={dancer.styles}
+                    borderColor="white"
+                    isSmall={true}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
@@ -125,24 +150,6 @@ export function VideoCard({
             <Play className="w-6 h-6 text-pulse-green fill-pulse-green ml-0.5 size-6" />
           </div>
         </div>
-        {/* Dancer tags */}
-        {taggedDancers.length > 0 && (
-          <div className="flex flex-wrap gap-1 items-center px-2 pb-2 mt-auto">
-            {taggedDancers.map((dancer) => (
-              <UserAvatar
-                key={dancer.id || dancer.username}
-                username={dancer.username}
-                displayName={dancer.displayName}
-                avatar={dancer.avatar}
-                image={dancer.image}
-                showHoverCard
-                city={dancer.city || ""}
-                styles={dancer.styles}
-                borderColor="white"
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
