@@ -29,7 +29,8 @@ export function CirclePlusButton({
       type="button"
       className={cn(
         "rounded-full flex items-center justify-center",
-        "bg-pulse-green text-black",
+        size === "sm" ? "bg-accent-blue" : "bg-accent-yellow",
+        "text-black",
         "border border-charcoal",
         "transition-shadow duration-150",
         "shadow-hover",
@@ -40,7 +41,7 @@ export function CirclePlusButton({
       )}
       {...props}
     >
-      <Plus className={cn(iconSizes[size], "stroke-[2.5]")} />
+      <Plus className={cn(iconSizes[size], "stroke-[3.5]")} />
     </button>
   );
 }

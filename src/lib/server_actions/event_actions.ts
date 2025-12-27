@@ -2094,6 +2094,7 @@ export async function getEventAuthData(eventId: string): Promise<{
     canEdit: boolean;
     canTagDirectly: boolean;
     currentUserRoles: string[];
+    isModeratorOrAdmin: boolean;
   };
   error?: string;
 }> {
@@ -2109,6 +2110,7 @@ export async function getEventAuthData(eventId: string): Promise<{
         canEdit: false,
         canTagDirectly: false,
         currentUserRoles: [],
+        isModeratorOrAdmin: false,
       },
     };
   }
@@ -2147,6 +2149,9 @@ export async function getEventAuthData(eventId: string): Promise<{
     const canTagDirectly =
       authLevel >= AUTH_LEVELS.MODERATOR || isEventTeamMember || isCreator;
 
+    // Check if user is moderator or admin
+    const isModeratorOrAdmin = authLevel >= AUTH_LEVELS.MODERATOR;
+
     // Get current user's roles for this event
     const currentUserRoles = event.roles
       .filter(
@@ -2169,6 +2174,7 @@ export async function getEventAuthData(eventId: string): Promise<{
         canEdit,
         canTagDirectly,
         currentUserRoles,
+        isModeratorOrAdmin,
       },
     };
   } catch (error) {

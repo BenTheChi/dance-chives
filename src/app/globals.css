@@ -29,6 +29,7 @@
   --color-accent-purple: var(--accent-color-purple);
   --color-accent-orange: var(--accent-color-orange);
   --color-accent-yellow: var(--accent-color-yellow);
+  --color-accent-blue: var(--accent-color-blue);
 }
 
 @theme inline {
@@ -87,6 +88,7 @@
   --accent-color-purple: #9d7eff;
   --accent-color-orange: #ff6700;
   --accent-color-yellow: #ffe12d;
+  --accent-color-blue: #00e1ff;
 
   --radius: 0.625rem;
   --background: var(--charcoal);

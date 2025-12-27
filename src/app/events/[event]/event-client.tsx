@@ -16,6 +16,7 @@ interface EventAuthData {
   canEdit: boolean;
   canTagDirectly: boolean;
   currentUserRoles: string[];
+  isModeratorOrAdmin: boolean;
 }
 
 interface EventClientProps {
@@ -44,6 +45,7 @@ function useEventAuthData(eventId: string) {
             canEdit: false,
             canTagDirectly: false,
             currentUserRoles: [],
+            isModeratorOrAdmin: false,
           });
         }
       } catch (error) {
@@ -55,6 +57,7 @@ function useEventAuthData(eventId: string) {
           canEdit: false,
           canTagDirectly: false,
           currentUserRoles: [],
+          isModeratorOrAdmin: false,
         });
       } finally {
         setLoading(false);
@@ -122,7 +125,7 @@ export function EventEditButtons({ eventId }: EventClientProps) {
 
   return (
     <div className="flex gap-2">
-      {authData.isCreator && (
+      {(authData.isCreator || authData.isModeratorOrAdmin) && (
         <Button
           asChild
           size="icon"

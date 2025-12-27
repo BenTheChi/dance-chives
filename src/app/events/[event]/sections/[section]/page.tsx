@@ -319,7 +319,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
               {/* Settings and Edit buttons - top right row */}
               {(canEdit || isCreator) && (
                 <div className="flex gap-2">
-                  {isCreator && (
+                  {(isCreator || authLevel >= AUTH_LEVELS.MODERATOR) && (
                     <Button
                       asChild
                       size="icon"

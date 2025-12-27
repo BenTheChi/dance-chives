@@ -4,11 +4,19 @@
   - You are about to drop the column `sessionId` on the `TaggingRequest` table. All the data in the column will be lost.
 
 */
--- DropIndex
-DROP INDEX "TaggingRequest_sessionId_idx";
+-- DropIndex (only if exists)
+DROP INDEX IF EXISTS "TaggingRequest_sessionId_idx";
 
--- AlterTable
-ALTER TABLE "TaggingRequest" DROP COLUMN "sessionId";
+-- AlterTable (only if column exists)
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'TaggingRequest' AND column_name = 'sessionId'
+    ) THEN
+        ALTER TABLE "TaggingRequest" DROP COLUMN "sessionId";
+    END IF;
+END $$;
 
 -- CreateTable
 CREATE TABLE "OwnershipRequest" (

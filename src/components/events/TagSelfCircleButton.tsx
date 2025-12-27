@@ -402,14 +402,6 @@ export function TagSelfCircleButton({
         <DialogContent className="bg-primary">
           <DialogHeader>
             <DialogTitle>{dialogTitle || "Tag Yourself"}</DialogTitle>
-            <DialogDescription>
-              {dialogDescription ||
-                (target === "section"
-                  ? "Select a role to tag yourself with for this section."
-                  : target === "video"
-                  ? "Select a role to tag yourself with for this video."
-                  : "Select a role to tag yourself with for this event.")}
-            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
             {selectableRoles.length > 1 ? (
@@ -433,7 +425,7 @@ export function TagSelfCircleButton({
                 </Select>
               </div>
             ) : selectableRoles.length === 1 ? (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm">
                 Role: <span className="font-medium">{selectableRoles[0]}</span>
               </div>
             ) : null}
