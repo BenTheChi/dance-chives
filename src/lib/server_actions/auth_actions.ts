@@ -48,7 +48,13 @@ export async function signInWithGoogle() {
     return;
   }
 
-  redirect("/dashboard");
+  // After successful sign in, check if user is registered
+  const session = await auth();
+  if (session?.user?.accountVerified) {
+    redirect("/dashboard");
+  } else {
+    redirect("/signup");
+  }
 }
 
 export async function signOutAccount() {

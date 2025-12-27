@@ -16,6 +16,7 @@ import {
   EventTagSelfButton,
   EventEditButtons,
 } from "./event-client";
+import { RequestOwnershipButton } from "@/components/events/RequestOwnershipButton";
 import { RolePendingBadge } from "./role-pending-badge";
 import type { Metadata } from "next";
 
@@ -615,6 +616,10 @@ export default async function EventPage({ params }: PageProps) {
                     showHoverCard
                     city={creator.city || ""}
                     styles={creator.styles}
+                  />
+                  <RequestOwnershipButton
+                    eventId={event.id}
+                    creatorId={creator.id}
                   />
                 </div>
               )}

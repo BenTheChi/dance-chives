@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeIcon, LogOutIcon, UserIcon, SettingsIcon } from "lucide-react";
+import { HomeIcon, LogOutIcon, UserIcon, SettingsIcon, UserPlusIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Popover,
@@ -11,6 +11,7 @@ import Image from "next/image";
 import { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import { isAccountVerified } from "@/lib/utils/auth-utils-client";
 
 interface UserMenuProps {
   session: Session | null;
@@ -54,16 +55,29 @@ export function UserMenu({ session }: UserMenuProps) {
       </PopoverTrigger>
       <PopoverContent className="w-56" align="end">
         <div className="flex flex-col gap-2">
-          <Button
-            variant="ghost"
-            className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
-            asChild
-          >
-            <Link href="/dashboard">
-              <HomeIcon className="mr-2 h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
+          {isAccountVerified(session) ? (
+            <Button
+              variant="ghost"
+              className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
+              asChild
+            >
+              <Link href="/dashboard">
+                <HomeIcon className="mr-2 h-4 w-4" />
+                Dashboard
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              className="justify-start hover:bg-accent hover:text-accent-foreground transition-colors"
+              asChild
+            >
+              <Link href="/signup">
+                <UserPlusIcon className="mr-2 h-4 w-4" />
+                Register
+              </Link>
+            </Button>
+          )}
           {session?.user?.username && (
             <>
               <Button

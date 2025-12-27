@@ -202,6 +202,101 @@ export function formatNotificationMessage(
     return <>{parts}</>;
   }
 
+  // Handle OWNERSHIP_REQUESTED notifications
+  if (type === "OWNERSHIP_REQUESTED") {
+    const parts: React.ReactNode[] = [];
+    // Parse sender name from message (format: "Name requested ownership of Event|eventId:...")
+    const messageParts = message.split(" requested ownership of ");
+    if (messageParts.length > 1) {
+      const senderName = messageParts[0];
+      const rest = messageParts[1];
+      parts.push(<strong key="sender">{senderName}</strong>);
+      parts.push(" requested ownership of ");
+
+      if (eventId && eventTitle) {
+        parts.push(
+          <Link
+            key="link"
+            href={`/events/${eventId}`}
+            className="text-primary hover:underline"
+          >
+            {eventTitle}
+          </Link>
+        );
+      } else {
+        // Extract event name from rest of message
+        const eventName = rest.split("|")[0];
+        parts.push(eventName);
+      }
+    } else {
+      parts.push(message);
+    }
+
+    return <>{parts}</>;
+  }
+
+  // Handle OWNERSHIP_REQUEST_APPROVED notifications
+  if (type === "OWNERSHIP_REQUEST_APPROVED") {
+    const parts: React.ReactNode[] = [];
+    parts.push("Your ownership request for ");
+
+    if (eventId && eventTitle) {
+      parts.push(
+        <Link
+          key="link"
+          href={`/events/${eventId}`}
+          className="text-primary hover:underline"
+        >
+          {eventTitle}
+        </Link>
+      );
+    } else {
+      // Parse event name from message
+      const messageParts = message.split(" for ");
+      if (messageParts.length > 1) {
+        const eventName = messageParts[1].split("|")[0];
+        parts.push(eventName);
+      } else {
+        parts.push(message);
+      }
+    }
+
+    parts.push(" has been approved");
+
+    return <>{parts}</>;
+  }
+
+  // Handle OWNERSHIP_REQUEST_DENIED notifications
+  if (type === "OWNERSHIP_REQUEST_DENIED") {
+    const parts: React.ReactNode[] = [];
+    parts.push("Your ownership request for ");
+
+    if (eventId && eventTitle) {
+      parts.push(
+        <Link
+          key="link"
+          href={`/events/${eventId}`}
+          className="text-primary hover:underline"
+        >
+          {eventTitle}
+        </Link>
+      );
+    } else {
+      // Parse event name from message
+      const messageParts = message.split(" for ");
+      if (messageParts.length > 1) {
+        const eventName = messageParts[1].split("|")[0];
+        parts.push(eventName);
+      } else {
+        parts.push(message);
+      }
+    }
+
+    parts.push(" has been denied");
+
+    return <>{parts}</>;
+  }
+
   // Default: return message as-is
   return <>{message}</>;
 }

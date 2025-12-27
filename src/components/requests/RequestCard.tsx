@@ -6,10 +6,13 @@ import {
   denyTaggingRequest,
   approveTeamMemberRequest,
   denyTeamMemberRequest,
+  approveOwnershipRequest,
+  denyOwnershipRequest,
   approveAuthLevelChangeRequest,
   denyAuthLevelChangeRequest,
   cancelTaggingRequest,
   cancelTeamMemberRequest,
+  cancelOwnershipRequest,
   cancelAuthLevelChangeRequest,
 } from "@/lib/server_actions/request_actions";
 import { toast } from "sonner";
@@ -19,6 +22,7 @@ import { generateRequestBreadcrumbs } from "@/lib/utils/request-utils-client";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { OwnershipApprovalDialog } from "./OwnershipApprovalDialog";
 
 interface RequestCardProps {
   request: {
@@ -65,21 +69,30 @@ interface RequestCardProps {
 }
 
 // Request type to action handler mapping
-const APPROVE_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
+const APPROVE_HANDLERS: Record<
+  string,
+  (id: string, ...args: any[]) => Promise<unknown>
+> = {
   TAGGING: approveTaggingRequest,
   TEAM_MEMBER: approveTeamMemberRequest,
+  OWNERSHIP: approveOwnershipRequest,
   AUTH_LEVEL_CHANGE: approveAuthLevelChangeRequest,
 };
 
-const DENY_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
+const DENY_HANDLERS: Record<
+  string,
+  (id: string, ...args: any[]) => Promise<unknown>
+> = {
   TAGGING: denyTaggingRequest,
   TEAM_MEMBER: denyTeamMemberRequest,
+  OWNERSHIP: denyOwnershipRequest,
   AUTH_LEVEL_CHANGE: denyAuthLevelChangeRequest,
 };
 
 const CANCEL_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
   TAGGING: cancelTaggingRequest,
   TEAM_MEMBER: cancelTeamMemberRequest,
+  OWNERSHIP: cancelOwnershipRequest,
   AUTH_LEVEL_CHANGE: cancelAuthLevelChangeRequest,
 };
 
@@ -133,11 +146,15 @@ export function IncomingRequestCard({
 }: RequestCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [localStatus, setLocalStatus] = useState(request.status);
+  const [showOwnershipDialog, setShowOwnershipDialog] = useState(false);
 
   /**
    * Generic handler for approve/deny actions
    */
-  const handleAction = async (action: "approve" | "deny") => {
+  const handleAction = async (
+    action: "approve" | "deny",
+    addOldCreatorAsTeamMember?: boolean
+  ) => {
     setIsProcessing(true);
     try {
       const handler =
@@ -149,7 +166,13 @@ export function IncomingRequestCard({
         throw new Error("Unknown request type");
       }
 
-      await handler(request.id);
+      // For ownership requests, pass the addOldCreatorAsTeamMember parameter
+      if (request.type === "OWNERSHIP" && action === "approve") {
+        await handler(request.id, addOldCreatorAsTeamMember ?? false);
+      } else {
+        await handler(request.id);
+      }
+
       const newStatus = action === "approve" ? "APPROVED" : "DENIED";
       setLocalStatus(newStatus);
       toast.success(`Request ${action === "approve" ? "approved" : "denied"}`);
@@ -164,6 +187,14 @@ export function IncomingRequestCard({
       );
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleApproveClick = () => {
+    if (request.type === "OWNERSHIP") {
+      setShowOwnershipDialog(true);
+    } else {
+      handleAction("approve");
     }
   };
 
@@ -204,7 +235,13 @@ export function IncomingRequestCard({
           )}
           <p>
             <strong>{senderName}</strong> requested{" "}
-            {request.role && <strong>{request.role}</strong>} from{" "}
+            {request.type === "OWNERSHIP" ? (
+              <>
+                <strong>ownership</strong> of{" "}
+              </>
+            ) : (
+              <>{request.role && <strong>{request.role}</strong>} from </>
+            )}
             <Link
               href={resourceLink}
               className="text-primary-light hover:text-primary-light hover:underline"
@@ -240,7 +277,7 @@ export function IncomingRequestCard({
         {localStatus === "PENDING" && (
           <div className="flex gap-2 pt-2">
             <Button
-              onClick={() => handleAction("approve")}
+              onClick={handleApproveClick}
               disabled={isProcessing}
               variant="default"
               size="sm"
@@ -258,6 +295,18 @@ export function IncomingRequestCard({
           </div>
         )}
       </div>
+
+      {/* Ownership approval dialog */}
+      {request.type === "OWNERSHIP" && (
+        <OwnershipApprovalDialog
+          open={showOwnershipDialog}
+          onOpenChange={setShowOwnershipDialog}
+          onApprove={(addOldCreatorAsTeamMember) => {
+            setShowOwnershipDialog(false);
+            handleAction("approve", addOldCreatorAsTeamMember);
+          }}
+        />
+      )}
     </article>
   );
 }
@@ -316,7 +365,14 @@ export function OutgoingRequestCard({
 
         {/* Message: You requested Role Name for Link */}
         <p className="text-sm">
-          You requested {request.role && <strong>{request.role}</strong>} for{" "}
+          You requested{" "}
+          {request.type === "OWNERSHIP" ? (
+            <>
+              <strong>ownership</strong> of{" "}
+            </>
+          ) : (
+            <>{request.role && <strong>{request.role}</strong>} for </>
+          )}
           <Link
             href={resourceLink}
             className="text-primary-light hover:text-primary-light hover:underline"

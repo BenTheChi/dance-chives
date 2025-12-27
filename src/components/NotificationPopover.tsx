@@ -105,9 +105,15 @@ export function NotificationPopover() {
     }
   };
 
-  // Helper to display message without navigation info for TAGGED and OWNERSHIP_TRANSFERRED notifications
+  // Helper to display message without navigation info for TAGGED, OWNERSHIP_TRANSFERRED, and ownership request notifications
   const getDisplayMessage = (notification: Notification): string => {
-    if (notification.type === "TAGGED" || notification.type === "OWNERSHIP_TRANSFERRED") {
+    if (
+      notification.type === "TAGGED" ||
+      notification.type === "OWNERSHIP_TRANSFERRED" ||
+      notification.type === "OWNERSHIP_REQUESTED" ||
+      notification.type === "OWNERSHIP_REQUEST_APPROVED" ||
+      notification.type === "OWNERSHIP_REQUEST_DENIED"
+    ) {
       // Remove navigation info part (everything after |)
       const message = notification.message;
       const mainMessage = message.split("|")[0];

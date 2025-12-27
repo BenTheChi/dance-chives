@@ -37,8 +37,47 @@ async function main() {
 
   // Clear all existing data
   console.log("🗑️  Clearing existing PostgreSQL data...");
+  
+  // Helper function to safely delete from tables that might not exist
+  const safeDelete = async (
+    model: any,
+    tableName: string
+  ) => {
+    try {
+      if (!model || typeof model.deleteMany !== "function") {
+        console.log(`⚠️  Model ${tableName} is not available, skipping...`);
+        return;
+      }
+      await model.deleteMany();
+    } catch (error: any) {
+      if (error.code === "P2021" || error.message?.includes("does not exist")) {
+        console.log(`⚠️  Table ${tableName} does not exist, skipping...`);
+      } else {
+        throw error;
+      }
+    }
+  };
+
+  // Delete in order to respect foreign key constraints
+  // EventCard has CASCADE deletes for EventDate and SectionCard, so delete those first
+  await safeDelete(prisma.eventDate, "EventDate");
+  await safeDelete(prisma.sectionCard, "SectionCard");
+  await safeDelete(prisma.eventCard, "EventCard");
+  await safeDelete(prisma.event, "Event");
+  await safeDelete(prisma.userCard, "UserCard");
+  
+  // Delete request-related tables
+  await safeDelete(prisma.requestApproval, "RequestApproval");
+  await safeDelete(prisma.notification, "Notification");
+  await safeDelete(prisma.authLevelChangeRequest, "AuthLevelChangeRequest");
+  await safeDelete(prisma.ownershipRequest, "OwnershipRequest");
+  await safeDelete(prisma.teamMemberRequest, "TeamMemberRequest");
+  await safeDelete(prisma.taggingRequest, "TaggingRequest");
+  
+  // Delete accounts and users (must be deleted after foreign key references)
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
+  
   console.log("✅ Cleared all existing data");
 
   // Create Users (matching Neo4j seed data)

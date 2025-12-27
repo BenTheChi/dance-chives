@@ -5,6 +5,7 @@ import { getEventTeamMembers, getEventCreator } from "@/db/queries/team-member";
 export const REQUEST_TYPES = {
   TAGGING: "TAGGING",
   TEAM_MEMBER: "TEAM_MEMBER",
+  OWNERSHIP: "OWNERSHIP",
   GLOBAL_ACCESS: "GLOBAL_ACCESS",
   AUTH_LEVEL_CHANGE: "AUTH_LEVEL_CHANGE",
 } as const;
@@ -62,6 +63,16 @@ export async function getTaggingRequestApprovers(
  * Returns: event creator, existing team members, moderators, admins
  */
 export async function getTeamMemberRequestApprovers(
+  eventId: string
+): Promise<string[]> {
+  return getTaggingRequestApprovers(eventId); // Same approvers
+}
+
+/**
+ * Get users who can approve ownership requests for an event
+ * Returns: event creator, existing team members, moderators, admins
+ */
+export async function getOwnershipRequestApprovers(
   eventId: string
 ): Promise<string[]> {
   return getTaggingRequestApprovers(eventId); // Same approvers
@@ -152,6 +163,7 @@ export async function canUserApproveRequest(
   switch (requestType) {
     case REQUEST_TYPES.TAGGING:
     case REQUEST_TYPES.TEAM_MEMBER:
+    case REQUEST_TYPES.OWNERSHIP:
       if (authLevel >= AUTH_LEVELS.ADMIN) return true;
       if (authLevel >= AUTH_LEVELS.MODERATOR) return true;
       // Check if user is event creator or team member (from Neo4j)

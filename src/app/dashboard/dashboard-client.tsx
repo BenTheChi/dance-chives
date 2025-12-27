@@ -98,6 +98,7 @@ interface TeamMembership {
 interface DashboardRequests {
   tagging: DashboardRequest[];
   teamMember: DashboardRequest[];
+  ownership?: DashboardRequest[];
   authLevelChange: DashboardRequest[];
 }
 
@@ -211,6 +212,9 @@ export function DashboardClient({
       teamMember: updateRequestInArray(
         dashboardData.incomingRequests?.teamMember || []
       ),
+      ownership: updateRequestInArray(
+        dashboardData.incomingRequests?.ownership || []
+      ),
       authLevelChange: updateRequestInArray(
         dashboardData.incomingRequests?.authLevelChange || []
       ),
@@ -223,6 +227,9 @@ export function DashboardClient({
       ),
       teamMember: updateRequestInArray(
         dashboardData.outgoingRequests?.teamMember || []
+      ),
+      ownership: updateRequestInArray(
+        dashboardData.outgoingRequests?.ownership || []
       ),
       authLevelChange: updateRequestInArray(
         dashboardData.outgoingRequests?.authLevelChange || []
@@ -241,12 +248,14 @@ export function DashboardClient({
     dashboardData?.incomingRequests || {
       tagging: [],
       teamMember: [],
+      ownership: [],
       authLevelChange: [],
     };
   const outgoingRequests: DashboardRequests =
     dashboardData?.outgoingRequests || {
       tagging: [],
       teamMember: [],
+      ownership: [],
       authLevelChange: [],
     };
   const userEvents = dashboardData?.userEvents || [];
@@ -255,12 +264,14 @@ export function DashboardClient({
   const allIncoming: DashboardRequest[] = [
     ...(incomingRequests.tagging || []),
     ...(incomingRequests.teamMember || []),
+    ...(incomingRequests.ownership || []),
     ...(incomingRequests.authLevelChange || []),
   ];
 
   const allOutgoing: DashboardRequest[] = [
     ...(outgoingRequests.tagging || []),
     ...(outgoingRequests.teamMember || []),
+    ...(outgoingRequests.ownership || []),
     ...(outgoingRequests.authLevelChange || []),
   ];
 

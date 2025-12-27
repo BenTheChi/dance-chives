@@ -27,6 +27,7 @@ model User {
   sentTaggingRequests           TaggingRequest[]         @relation("TaggingRequestSender")
   receivedTaggingRequests       TaggingRequest[]         @relation("TaggingRequestTarget")
   sentTeamMemberRequests        TeamMemberRequest[]      @relation("TeamMemberRequestSender")
+  sentOwnershipRequests         OwnershipRequest[]       @relation("OwnershipRequestSender")
   sentAuthLevelChangeRequests   AuthLevelChangeRequest[] @relation("AuthLevelChangeRequestSender")
   targetAuthLevelChangeRequests AuthLevelChangeRequest[] @relation("AuthLevelChangeRequestTarget")
 
@@ -267,6 +268,21 @@ model TeamMemberRequest {
   @@index([status])
 }
 
+model OwnershipRequest {
+  id        String        @id @default(cuid())
+  eventId   String // Event ID from Neo4j
+  senderId  String // User requesting ownership
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  sender User @relation("OwnershipRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([senderId])
+  @@index([status])
+}
+
 model AuthLevelChangeRequest {
   id             String        @id @default(cuid())
   senderId       String // User requesting the change
@@ -288,7 +304,7 @@ model AuthLevelChangeRequest {
 
 model RequestApproval {
   id          String   @id @default(cuid())
-  requestType String // "TAGGING" | "TEAM_MEMBER" | "GLOBAL_ACCESS" | "AUTH_LEVEL_CHANGE"
+  requestType String // "TAGGING" | "TEAM_MEMBER" | "OWNERSHIP" | "GLOBAL_ACCESS" | "AUTH_LEVEL_CHANGE"
   requestId   String // ID of the specific request (polymorphic reference)
   approverId  String // User who approved/denied
   approved    Boolean // true for approval, false for denial

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/primsa";
 import {
   getTaggingRequestApprovers,
   getTeamMemberRequestApprovers,
+  getOwnershipRequestApprovers,
   getAuthLevelChangeRequestApprovers,
   canUserApproveRequest,
   createNotification,
@@ -131,6 +132,12 @@ async function updateRequestStatus(
         data: updateData,
       });
       break;
+    case REQUEST_TYPES.OWNERSHIP:
+      await prisma.ownershipRequest.update({
+        where: { id: requestId },
+        data: updateData,
+      });
+      break;
     case REQUEST_TYPES.AUTH_LEVEL_CHANGE:
       await prisma.authLevelChangeRequest.update({
         where: { id: requestId },
@@ -210,6 +217,12 @@ async function cancelRequest(
       break;
     case REQUEST_TYPES.TEAM_MEMBER:
       request = await prisma.teamMemberRequest.findUnique({
+        where: { id: requestId },
+        select: { senderId: true, status: true },
+      });
+      break;
+    case REQUEST_TYPES.OWNERSHIP:
+      request = await prisma.ownershipRequest.findUnique({
         where: { id: requestId },
         select: { senderId: true, status: true },
       });
@@ -1033,6 +1046,256 @@ export async function denyTeamMemberRequest(
 }
 
 // ============================================================================
+// Ownership Requests
+// ============================================================================
+
+export async function createOwnershipRequest(eventId: string) {
+  const senderId = await requireAuth();
+
+  // Validate event exists in Neo4j
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+
+  // Check if user is already the creator (creators cannot request ownership)
+  const creatorId = await getEventCreator(eventId);
+  if (creatorId === senderId) {
+    throw new Error("You are already the event owner");
+  }
+
+  // Check if a pending request already exists
+  const existingRequest = await prisma.ownershipRequest.findFirst({
+    where: {
+      eventId,
+      senderId,
+      status: "PENDING",
+    },
+  });
+
+  if (existingRequest) {
+    throw new Error("A pending ownership request already exists");
+  }
+
+  const request = await prisma.ownershipRequest.create({
+    data: {
+      eventId,
+      senderId,
+      status: "PENDING",
+    },
+    include: {
+      sender: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
+  const approvers = await getOwnershipRequestApprovers(eventId);
+
+  const eventTitle = await getEventTitle(eventId);
+  const eventDisplayName = eventTitle || eventId;
+
+  for (const approverId of approvers) {
+    await createNotification(
+      approverId,
+      "OWNERSHIP_REQUESTED",
+      "New Ownership Request",
+      `${
+        request.sender.name || request.sender.email
+      } requested ownership of ${eventDisplayName}|eventId:${eventId}`,
+      REQUEST_TYPES.OWNERSHIP,
+      request.id
+    );
+  }
+
+  return { success: true, request };
+}
+
+export async function hasPendingOwnershipRequest(eventId: string) {
+  const senderId = await requireAuth();
+  
+  const existingRequest = await prisma.ownershipRequest.findFirst({
+    where: {
+      eventId,
+      senderId,
+      status: "PENDING",
+    },
+  });
+
+  return !!existingRequest;
+}
+
+export async function approveOwnershipRequest(
+  requestId: string,
+  addOldCreatorAsTeamMember: boolean = false
+) {
+  const approverId = await requireAuth();
+
+  const request = await prisma.ownershipRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      sender: true,
+    },
+  });
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Request is not pending");
+  }
+
+  // Validate event still exists in Neo4j before approving
+  const eventStillExists = await eventExists(request.eventId);
+  if (!eventStillExists) {
+    throw new Error("Event no longer exists");
+  }
+
+  const canApprove = await canUserApproveRequest(
+    approverId,
+    REQUEST_TYPES.OWNERSHIP,
+    {
+      eventId: request.eventId,
+    }
+  );
+
+  if (!canApprove) {
+    throw new Error("You do not have permission to approve this request");
+  }
+
+  if (
+    await hasUserResponded(REQUEST_TYPES.OWNERSHIP, requestId, approverId)
+  ) {
+    throw new Error("You have already responded to this request");
+  }
+
+  // Get current creator
+  const currentCreatorId = await getEventCreator(request.eventId);
+  if (!currentCreatorId) {
+    throw new Error("Event creator not found");
+  }
+
+  // Get sender user data for transfer
+  const senderUser = await getUser(request.senderId);
+  if (!senderUser) {
+    throw new Error("Request sender not found");
+  }
+
+  const newCreator: { id: string; username: string; displayName: string } = {
+    id: senderUser.id,
+    username: senderUser.username,
+    displayName: senderUser.displayName || senderUser.username,
+  };
+
+  // Transfer ownership using updateEventCreator
+  const { updateEventCreator } = await import("@/lib/server_actions/event_actions");
+  const transferResult = await updateEventCreator(
+    request.eventId,
+    newCreator,
+    addOldCreatorAsTeamMember
+  );
+
+  if (transferResult.error) {
+    throw new Error(transferResult.error);
+  }
+
+  await createApprovalRecord(
+    REQUEST_TYPES.OWNERSHIP,
+    requestId,
+    approverId,
+    true
+  );
+
+  await updateRequestStatus(REQUEST_TYPES.OWNERSHIP, requestId, "APPROVED");
+
+  const eventTitle = await getEventTitle(request.eventId);
+  const eventDisplayName = eventTitle || request.eventId;
+
+  await createNotification(
+    request.senderId,
+    "OWNERSHIP_REQUEST_APPROVED",
+    "Ownership Request Approved",
+    `Your ownership request for ${eventDisplayName} has been approved|eventId:${request.eventId}`,
+    REQUEST_TYPES.OWNERSHIP,
+    requestId
+  );
+
+  return { success: true };
+}
+
+export async function denyOwnershipRequest(
+  requestId: string,
+  message?: string
+) {
+  const approverId = await requireAuth();
+
+  const request = await prisma.ownershipRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      sender: true,
+    },
+  });
+
+  if (!request) {
+    throw new Error("Request not found");
+  }
+
+  if (request.status !== "PENDING") {
+    throw new Error("Request is not pending");
+  }
+
+  const canApprove = await canUserApproveRequest(
+    approverId,
+    REQUEST_TYPES.OWNERSHIP,
+    {
+      eventId: request.eventId,
+    }
+  );
+
+  if (!canApprove) {
+    throw new Error("You do not have permission to deny this request");
+  }
+
+  if (
+    await hasUserResponded(REQUEST_TYPES.OWNERSHIP, requestId, approverId)
+  ) {
+    throw new Error("You have already responded to this request");
+  }
+
+  await createApprovalRecord(
+    REQUEST_TYPES.OWNERSHIP,
+    requestId,
+    approverId,
+    false,
+    message
+  );
+
+  await updateRequestStatus(REQUEST_TYPES.OWNERSHIP, requestId, "DENIED");
+
+  const eventTitle = await getEventTitle(request.eventId);
+  const eventDisplayName = eventTitle || request.eventId;
+
+  await createNotification(
+    request.senderId,
+    "OWNERSHIP_REQUEST_DENIED",
+    "Ownership Request Denied",
+    `Your ownership request for ${eventDisplayName} has been denied|eventId:${request.eventId}`,
+    REQUEST_TYPES.OWNERSHIP,
+    requestId
+  );
+
+  return { success: true };
+}
+
+export async function cancelOwnershipRequest(requestId: string) {
+  const userId = await requireAuth();
+  await cancelRequest(REQUEST_TYPES.OWNERSHIP, requestId, userId);
+
+  return { success: true };
+}
+
+// ============================================================================
 // Authorization Level Change Requests
 // ============================================================================
 
@@ -1331,6 +1594,17 @@ export async function getIncomingRequests() {
     },
   });
 
+  const ownershipRequests = await prisma.ownershipRequest.findMany({
+    where: {
+      status: "PENDING",
+    },
+    include: {
+      sender: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
   const authLevelChangeRequests = await prisma.authLevelChangeRequest.findMany({
     where: {
       status: "PENDING",
@@ -1436,6 +1710,30 @@ export async function getIncomingRequests() {
     })
   );
 
+  const canApproveOwnership = await Promise.all(
+    ownershipRequests.map(async (req) => {
+      const canApprove = await canUserApproveRequest(
+        userId,
+        REQUEST_TYPES.OWNERSHIP,
+        { eventId: req.eventId }
+      );
+
+      const eventTitle = await getEventTitle(req.eventId);
+      
+      // Enrich sender with Neo4j data
+      const enrichedSender = req.sender ? await enrichUserData(req.sender) : null;
+
+      return {
+        request: {
+          ...req,
+          sender: enrichedSender || req.sender,
+          eventTitle: eventTitle || req.eventId,
+        },
+        canApprove,
+      };
+    })
+  );
+
   const canApproveAuthLevel = await Promise.all(
     authLevelChangeRequests.map(async (req) => {
       // Enrich sender and targetUser with Neo4j data
@@ -1465,6 +1763,9 @@ export async function getIncomingRequests() {
     teamMember: canApproveTeamMember
       .filter((item) => item.canApprove)
       .map((item) => ({ ...item.request, type: "TEAM_MEMBER" })),
+    ownership: canApproveOwnership
+      .filter((item) => item.canApprove)
+      .map((item) => ({ ...item.request, type: "OWNERSHIP" })),
     authLevelChange: canApproveAuthLevel
       .filter((item) => item.canApprove)
       .map((item) => ({ ...item.request, type: "AUTH_LEVEL_CHANGE" })),
@@ -1474,7 +1775,7 @@ export async function getIncomingRequests() {
 export async function getOutgoingRequests() {
   const userId = await requireAuth();
 
-  const [taggingRequests, teamMemberRequests, authLevelChangeRequests] =
+  const [taggingRequests, teamMemberRequests, ownershipRequests, authLevelChangeRequests] =
     await Promise.all([
       prisma.taggingRequest.findMany({
         where: { senderId: userId },
@@ -1486,6 +1787,10 @@ export async function getOutgoingRequests() {
         orderBy: { createdAt: "desc" },
       }),
       prisma.teamMemberRequest.findMany({
+        where: { senderId: userId },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.ownershipRequest.findMany({
         where: { senderId: userId },
         orderBy: { createdAt: "desc" },
       }),
@@ -1571,6 +1876,22 @@ export async function getOutgoingRequests() {
     })
   );
 
+  // Enrich ownership requests with event titles and types
+  const enrichedOwnershipRequests = await Promise.all(
+    ownershipRequests.map(async (req) => {
+      const [eventTitle, eventType] = await Promise.all([
+        getEventTitle(req.eventId),
+        getEventType(req.eventId),
+      ]);
+      return {
+        ...req,
+        type: "OWNERSHIP",
+        eventTitle: eventTitle || req.eventId,
+        eventType: eventType || null,
+      };
+    })
+  );
+
   // Enrich auth level change requests with user data
   const enrichedAuthLevelChangeRequests = await Promise.all(
     authLevelChangeRequests.map(async (req) => {
@@ -1590,6 +1911,7 @@ export async function getOutgoingRequests() {
   return {
     tagging: enrichedTaggingRequests,
     teamMember: enrichedTeamMemberRequests,
+    ownership: enrichedOwnershipRequests,
     authLevelChange: enrichedAuthLevelChangeRequests,
   };
 }
@@ -1691,6 +2013,8 @@ export async function getNotificationUrl(notificationId: string): Promise<string
       return "/dashboard#requests";
     } else if (notification.relatedRequestType === "TEAM_MEMBER") {
       return "/dashboard#requests";
+    } else if (notification.relatedRequestType === "OWNERSHIP") {
+      return "/dashboard#requests";
     } else if (notification.relatedRequestType === "AUTH_LEVEL_CHANGE") {
       return "/dashboard#requests";
     }
@@ -1776,6 +2100,36 @@ export async function getNotificationUrl(notificationId: string): Promise<string
 
   // For OWNERSHIP_TRANSFERRED notifications, parse eventId from message
   if (notification.type === "OWNERSHIP_TRANSFERRED") {
+    const message = notification.message;
+    const parts = message.split("|");
+    if (parts.length > 1) {
+      for (const part of parts.slice(1)) {
+        if (part.startsWith("eventId:")) {
+          const eventId = part.replace("eventId:", "");
+          return `/events/${eventId}`;
+        }
+      }
+    }
+  }
+
+  // For ownership request notifications, parse eventId from message
+  if (
+    (notification.type === "OWNERSHIP_REQUESTED" ||
+     notification.type === "OWNERSHIP_REQUEST_APPROVED" ||
+     notification.type === "OWNERSHIP_REQUEST_DENIED") &&
+    notification.relatedRequestId
+  ) {
+    // Try to get eventId from request
+    const request = await prisma.ownershipRequest.findUnique({
+      where: { id: notification.relatedRequestId },
+      select: { eventId: true },
+    });
+
+    if (request?.eventId) {
+      return `/events/${request.eventId}`;
+    }
+
+    // Fallback: parse from message
     const message = notification.message;
     const parts = message.split("|");
     if (parts.length > 1) {

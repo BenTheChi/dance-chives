@@ -106,8 +106,13 @@ export function TestLoginDropdown() {
         alert(`Sign in failed: ${result.error}`);
       } else {
         console.log("✅ Test login successful");
-        // Redirect to dashboard after successful sign in
-        router.push("/dashboard");
+        // Check if user is registered and redirect accordingly
+        // Use accountVerified from the API response
+        if (data.user?.accountVerified) {
+          router.push("/dashboard");
+        } else {
+          router.push("/signup");
+        }
       }
     } catch (error) {
       console.error("❌ Test login error:", error);

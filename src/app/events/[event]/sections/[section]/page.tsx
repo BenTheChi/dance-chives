@@ -14,6 +14,7 @@ import Link from "next/link";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUser } from "@/db/queries/user";
 import { enrichUserWithCardData } from "@/db/queries/user-cards";
+import { RequestOwnershipButton } from "@/components/events/RequestOwnershipButton";
 import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { extractYouTubeVideoId } from "@/lib/utils";
 import { Section, Video } from "@/types/event";
@@ -308,6 +309,10 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                     showHoverCard
                     city={creator.city || ""}
                     styles={creator.styles}
+                  />
+                  <RequestOwnershipButton
+                    eventId={event.id}
+                    creatorId={creator.id}
                   />
                 </div>
               )}
