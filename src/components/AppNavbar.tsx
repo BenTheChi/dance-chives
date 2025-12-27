@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { Search } from "lucide-react";
+import { Search, HelpCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +46,7 @@ export function AppNavbar() {
     <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex">
       <Link
         href="/"
-        className="h-18 flex items-center border-b px-2 py-1 hover:scale-105 transition-transform"
+        className="h-18 flex items-center px-2 py-1 hover:scale-105 transition-transform"
       >
         <Image
           src="/MainLogo_Color_onDark.svg"
@@ -96,50 +96,43 @@ export function AppNavbar() {
         <div className="flex items-center gap-x-2 whitespace-nowrap">
           {session ? (
             <>
+              <Button asChild size="icon" variant="ghost">
+                <Link href="/search">
+                  <Search className="h-5 w-5" />
+                </Link>
+              </Button>
+              <ReportButton className="cursor-pointer" />
+              <NotificationPopover />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button asChild size="icon" variant="ghost">
-                    <Link href="/search">
-                      <Search className="h-5 w-5" />
+                    <Link href="/faq">
+                      <HelpCircle className="h-5 w-5" />
                     </Link>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Search</p>
+                  <p>FAQ</p>
                 </TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ReportButton />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Report Issue</p>
-                </TooltipContent>
-              </Tooltip>
-              <NotificationPopover />
               <UserMenu session={session} />
             </>
           ) : (
             <>
+              <Button asChild size="icon" variant="ghost">
+                <Link href="/search">
+                  <Search className="h-5 w-5" />
+                </Link>
+              </Button>
+              <ReportButton className="cursor-pointer" />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button asChild size="icon" variant="ghost">
-                    <Link href="/search">
-                      <Search className="h-5 w-5" />
+                    <Link href="/faq">
+                      <HelpCircle className="h-5 w-5" />
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Search</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ReportButton />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Report Issue</p>
-                </TooltipContent>
               </Tooltip>
               <Link href="/login">
                 <Button size="sm">Login</Button>
