@@ -68,7 +68,7 @@ const EVENT_COLORS: Record<EventType, string> = {
   Party: "#ec4899", // Pink
   Festival: "#f97316", // Orange-red
   Performance: "#6366f1", // Indigo
-  Other: "#000000", // Black
+  Other: "#ffffff", // Black
 };
 
 // Event type labels for legend
