@@ -460,10 +460,12 @@ p {
 
   .rbc-off-range-bg {
     border-color: #000000 !important;
+    background-color: var(--secondary-color) !important;
   }
 
   .rbc-today {
     border-color: #000000 !important;
+    background-color: var(--secondary-color-dark) !important;
   }
 
   .rbc-row {
