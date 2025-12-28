@@ -43,13 +43,11 @@ function getBucketName(): string {
 
   // Check staging first, then production, default to staging (safer)
   let bucket: string;
-  if (env === "staging") {
-    bucket = "dance-chives-images-staging";
-  } else if (env === "production") {
+  if (env === "staging" || env === "production") {
     bucket = "dance-chives-images-production";
   } else {
     // Development or unknown - default to staging for safety
-    bucket = "dance-chives-images-staging";
+    bucket = "dance-chives-images-development";
   }
 
   // Log bucket selection for debugging (only log once per module load)
@@ -222,7 +220,7 @@ export async function uploadProfilePictureToR2(
 /**
  * Upload both profile and avatar images to R2 storage with a shared image-id.
  * Uses username for the R2 path (public-facing identifier).
- * 
+ *
  * @param profileFile - The profile image file (250×350 WebP)
  * @param avatarFile - The avatar image file (60×60 PNG)
  * @param username - The user's username (public identifier). If a user id is passed,
