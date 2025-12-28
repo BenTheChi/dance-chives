@@ -4154,3 +4154,231 @@ export const searchAccessibleEvents = async (
     await session.close();
   }
 };
+
+/**
+ * Get 6 latest events with 1 video from each event for the homepage
+ * Returns videos with event information needed for VideoCard
+ */
+export async function getLatestEventVideos(): Promise<
+  Array<{
+    video: Video;
+    eventId: string;
+    eventTitle: string;
+    sectionId?: string;
+    sectionTitle?: string;
+    bracketId?: string;
+    bracketTitle?: string;
+  }>
+> {
+  const session = driver.session();
+
+  try {
+    // Get 6 latest events that have videos, with one video per event
+    const eventsResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE (e.status = 'visible' OR e.status IS NULL)
+      OPTIONAL MATCH (e)<-[:IN]-(s:Section)<-[:IN]-(v:Video)
+      OPTIONAL MATCH (e)<-[:IN]-(s2:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v2:Video)
+      WITH e, 
+           collect(DISTINCT {
+             videoId: v.id, 
+             videoTitle: v.title, 
+             videoSrc: v.src,
+             videoLabels: labels(v),
+             sectionId: s.id,
+             sectionTitle: s.title,
+             bracketId: null,
+             bracketTitle: null
+           }) + 
+           collect(DISTINCT {
+             videoId: v2.id,
+             videoTitle: v2.title,
+             videoSrc: v2.src,
+             videoLabels: labels(v2),
+             sectionId: s2.id,
+             sectionTitle: s2.title,
+             bracketId: b.id,
+             bracketTitle: b.title
+           }) as allVideos
+      WHERE size([x IN allVideos WHERE x.videoId IS NOT NULL]) > 0
+      WITH e, allVideos
+      ORDER BY e.updatedAt DESC, e.createdAt DESC
+      LIMIT 6
+      RETURN e.id as eventId, e.title as eventTitle, allVideos
+      `
+    );
+
+    const result: Array<{
+      video: Video;
+      eventId: string;
+      eventTitle: string;
+      sectionId?: string;
+      sectionTitle?: string;
+      bracketId?: string;
+      bracketTitle?: string;
+    }> = [];
+
+    for (const record of eventsResult.records) {
+      const eventId = record.get("eventId");
+      const eventTitle = record.get("eventTitle");
+      const allVideos = record.get("allVideos") as Array<{
+        videoId: string;
+        videoTitle: string;
+        videoSrc: string;
+        videoLabels: string[];
+        sectionId: string | null;
+        sectionTitle: string | null;
+        bracketId: string | null;
+        bracketTitle: string | null;
+      }>;
+
+      // Filter out null videos and get the first one
+      const validVideos = allVideos.filter((v) => v.videoId !== null);
+      if (validVideos.length === 0) continue;
+
+      const firstVideoData = validVideos[0];
+
+      // Get video type from labels
+      const videoLabels = firstVideoData.videoLabels || [];
+      let videoType: Video["type"] = "battle";
+      if (videoLabels.includes("FreestyleVideo")) {
+        videoType = "freestyle";
+      } else if (videoLabels.includes("ChoreographyVideo")) {
+        videoType = "choreography";
+      } else if (videoLabels.includes("ClassVideo")) {
+        videoType = "class";
+      }
+
+      // Get styles for the video
+      const stylesResult = await session.run(
+        `
+        MATCH (v:Video {id: $videoId})-[:STYLE]->(style:Style)
+        RETURN collect(style.name) as styles
+        `,
+        { videoId: firstVideoData.videoId }
+      );
+
+      const styles =
+        stylesResult.records.length > 0
+          ? (stylesResult.records[0].get("styles") as string[])
+          : [];
+
+      // Get tagged users
+      const taggedUsersResult = await session.run(
+        `
+        MATCH (v:Video {id: $videoId})
+        OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+        OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+        OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
+        OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
+        WITH collect(DISTINCT {
+          id: dancer.id,
+          displayName: dancer.displayName,
+          username: dancer.username,
+          avatar: dancer.avatar,
+          image: dancer.image
+        }) as dancers,
+        collect(DISTINCT {
+          id: winner.id,
+          displayName: winner.displayName,
+          username: winner.username,
+          avatar: winner.avatar,
+          image: winner.image
+        }) as winners,
+        collect(DISTINCT {
+          id: choreographer.id,
+          displayName: choreographer.displayName,
+          username: choreographer.username,
+          avatar: choreographer.avatar,
+          image: choreographer.image
+        }) as choreographers,
+        collect(DISTINCT {
+          id: teacher.id,
+          displayName: teacher.displayName,
+          username: teacher.username,
+          avatar: teacher.avatar,
+          image: teacher.image
+        }) as teachers
+        RETURN [d IN dancers WHERE d.id IS NOT NULL] as taggedDancers,
+               [w IN winners WHERE w.id IS NOT NULL] as taggedWinners,
+               [c IN choreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
+               [t IN teachers WHERE t.id IS NOT NULL] as taggedTeachers
+        `,
+        { videoId: firstVideoData.videoId }
+      );
+
+      let taggedDancers: UserSearchItem[] = [];
+      let taggedWinners: UserSearchItem[] = [];
+      let taggedChoreographers: UserSearchItem[] = [];
+      let taggedTeachers: UserSearchItem[] = [];
+
+      if (taggedUsersResult.records.length > 0) {
+        const record = taggedUsersResult.records[0];
+        taggedDancers = (record.get("taggedDancers") || []) as UserSearchItem[];
+        taggedWinners = (record.get("taggedWinners") || []) as UserSearchItem[];
+        taggedChoreographers = (record.get("taggedChoreographers") ||
+          []) as UserSearchItem[];
+        taggedTeachers = (record.get("taggedTeachers") ||
+          []) as UserSearchItem[];
+      }
+
+      // Build video object based on type
+      let video: Video;
+      if (videoType === "battle") {
+        video = {
+          id: firstVideoData.videoId,
+          title: firstVideoData.videoTitle,
+          src: firstVideoData.videoSrc,
+          type: "battle",
+          styles,
+          taggedDancers,
+          taggedWinners,
+        } as BattleVideo;
+      } else if (videoType === "freestyle") {
+        video = {
+          id: firstVideoData.videoId,
+          title: firstVideoData.videoTitle,
+          src: firstVideoData.videoSrc,
+          type: "freestyle",
+          styles,
+          taggedDancers,
+        } as FreestyleVideo;
+      } else if (videoType === "choreography") {
+        video = {
+          id: firstVideoData.videoId,
+          title: firstVideoData.videoTitle,
+          src: firstVideoData.videoSrc,
+          type: "choreography",
+          styles,
+          taggedChoreographers,
+          taggedDancers,
+        } as ChoreographyVideo;
+      } else {
+        video = {
+          id: firstVideoData.videoId,
+          title: firstVideoData.videoTitle,
+          src: firstVideoData.videoSrc,
+          type: "class",
+          styles,
+          taggedTeachers,
+          taggedDancers,
+        } as ClassVideo;
+      }
+
+      result.push({
+        video,
+        eventId,
+        eventTitle,
+        sectionId: firstVideoData.sectionId || undefined,
+        sectionTitle: firstVideoData.sectionTitle || undefined,
+        bracketId: firstVideoData.bracketId || undefined,
+        bracketTitle: firstVideoData.bracketTitle || undefined,
+      });
+    }
+
+    return result;
+  } finally {
+    await session.close();
+  }
+}

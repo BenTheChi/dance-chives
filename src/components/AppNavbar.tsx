@@ -9,7 +9,6 @@ import { SidebarTrigger } from "./ui/sidebar";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Search, HelpCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -81,9 +80,9 @@ export function AppNavbar() {
                   "text-base font-bold uppercase tracking-wide",
                   "font-display",
                   isActive &&
-                    "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
+                    "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-primary-light text-primary",
                   !isActive &&
-                    "text-secondary-light hover:bg-[#dfdfeb] hover:text-periwinkle"
+                    "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark"
                 )}
                 style={{ fontFamily: "var(--font-display)" }}
               >
@@ -103,18 +102,11 @@ export function AppNavbar() {
               </Button>
               <ReportButton className="cursor-pointer" />
               <NotificationPopover />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild size="icon" variant="ghost">
-                    <Link href="/faq">
-                      <HelpCircle className="h-5 w-5" />
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>FAQ</p>
-                </TooltipContent>
-              </Tooltip>
+              <Button asChild size="icon" variant="ghost">
+                <Link href="/faq">
+                  <HelpCircle className="h-5 w-5" />
+                </Link>
+              </Button>
               <UserMenu session={session} />
             </>
           ) : (
@@ -125,22 +117,18 @@ export function AppNavbar() {
                 </Link>
               </Button>
               <ReportButton className="cursor-pointer" />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button asChild size="icon" variant="ghost">
-                    <Link href="/faq">
-                      <HelpCircle className="h-5 w-5" />
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-              </Tooltip>
+              <Button asChild size="icon" variant="ghost">
+                <Link href="/faq">
+                  <HelpCircle className="h-5 w-5" />
+                </Link>
+              </Button>
               <Link href="/login">
-                <Button size="sm">Login</Button>
+                <Button size="sm" variant="secondary">
+                  Login
+                </Button>
               </Link>
               <Link href="/signup">
-                <Button size="sm" variant="secondary">
-                  Sign Up
-                </Button>
+                <Button size="sm">Sign Up</Button>
               </Link>
             </>
           )}

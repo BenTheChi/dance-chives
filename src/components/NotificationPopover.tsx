@@ -143,7 +143,7 @@ export function NotificationPopover() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative cursor-pointer"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
