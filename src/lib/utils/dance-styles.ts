@@ -1,10 +1,24 @@
 export const DANCE_STYLES = [
+  "Animation",
   "Breaking",
-  "Popping",
-  "Waacking",
-  "Locking",
+  "Dancehall",
   "Hip Hop",
+  "House",
+  "Hustle",
+  "Salsa",
+  "Swing",
+  "Jookin",
+  "Krumping",
+  "Locking",
+  "Litefeet",
   "Open Styles",
+  "Popping",
+  "Shuffling",
+  "Turfing",
+  "Tutting",
+  "Voguing",
+  "Waacking",
+  "Waving",
 ] as const;
 
 export type DanceStyle = (typeof DANCE_STYLES)[number];
@@ -22,4 +36,3 @@ export function isValidDanceStyle(style: string): style is DanceStyle {
 export function validateDanceStyles(styles: string[]): DanceStyle[] {
   return styles.filter(isValidDanceStyle);
 }
-

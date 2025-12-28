@@ -5,6 +5,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { ParallaxBackground } from "@/components/ParallaxBackground";
 import { RecentlyAddedVideos } from "@/components/RecentlyAddedVideos";
 import { getLatestEventVideos } from "@/db/queries/event";
+import { ReportButton } from "@/components/report/ReportButton";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -25,12 +26,20 @@ export default async function Home() {
           {/* Hero Section */}
           <section className="flex flex-col items-center px-8 gap-10 py-20 sm:py-32">
             <div className="flex flex-col items-center gap-10 bg-charcoal p-6 border-4 border-primary-light rounded-sm">
-              <Image
-                src="/AltLogo_Color_onDark-cropped.svg"
-                alt="Dance Chives Logo"
-                width={500}
-                height={500}
-              />
+              <div className="flex flex-col items-center gap-4">
+                <Image
+                  src="/AltLogo_Color_onDark-cropped.svg"
+                  alt="Dance Chives Logo"
+                  width={500}
+                  height={500}
+                />
+                <Link
+                  href="#open-beta"
+                  className="text-center bg-white text-charcoal px-4 py-2 rounded-sm text-4xl font-rubik-mono-one w-full"
+                >
+                  Open Beta<sup className="text-2xl">*</sup>
+                </Link>
+              </div>
               <h2 className="sm:!text-[40px] max-w-2xl text-center tracking-wider">
                 The free community ar
                 <span className="text-primary-light">chive</span> for street
@@ -50,38 +59,32 @@ export default async function Home() {
           <div className="flex flex-col items-center gap-20 px-2">
             {/* Events CTA */}
             <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
-              <h2 className="sm:!text-3xl text-center mb-8">
+              <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Tired of bouncing between Youtube, Facebook, and Instagram?
               </h2>
-              <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-2 gap-8">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-primary-light shadow-[6px_6px_0_0_var(--primary-color-light)] flex items-center justify-center">
-                    <span className="text-primary-light text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
-                  <p className="text-center text-lg font-medium">
-                    Watch all videos for an event in a row.
+                  <Image
+                    src="/screenshots/videos.png"
+                    alt="Video Gallery Screenshot"
+                    width={500}
+                    height={500}
+                    className="border-4 border-primary-light rounded-sm"
+                  />
+                  <p className="text-center !text-xl">
+                    Watch all videos for an event in a row
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-primary-light shadow-[6px_6px_0_0_var(--primary-color-light)] flex items-center justify-center">
-                    <span className="text-primary-light text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
-                  <p className="text-center text-lg font-medium">
-                    Learn more about the event itself.
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-primary-light shadow-[6px_6px_0_0_var(--primary-color-light)] flex items-center justify-center">
-                    <span className="text-primary-light text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
-                  <p className="text-center text-lg font-medium">
-                    Discover dancers and follow their journey.
+                  <Image
+                    src="/screenshots/event-details.png"
+                    alt="Event Details Screenshot"
+                    width={500}
+                    height={500}
+                    className="border-4 border-primary-light rounded-sm"
+                  />
+                  <p className="text-center !text-xl">
+                    Learn more about the event itself
                   </p>
                 </div>
               </div>
@@ -96,8 +99,8 @@ export default async function Home() {
             </section>
 
             {/* Calendar CTA */}
-            <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
-              <h2 className="sm:!text-3xl text-center mb-8">
+            <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
+              <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Never miss an event again with the community calendar
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -126,8 +129,7 @@ export default async function Home() {
                 <Link href="/calendar">
                   <Button
                     size="xl"
-                    variant="secondary"
-                    className="font-rubik-mono-one !text-2xl text-charcoal"
+                    className="font-rubik-mono-one !text-2xl text-charcoal !bg-accent-blue"
                   >
                     View Calendar
                   </Button>
@@ -142,12 +144,14 @@ export default async function Home() {
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-accent-purple shadow-[6px_6px_0_0_var(--accent-color-purple)] flex items-center justify-center">
-                    <span className="text-accent-purple text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
-                  <p className="text-center text-lg font-medium">
+                  <Image
+                    src="/screenshots/profile-tag.png"
+                    alt="Profile Tag Screenshot"
+                    width={500}
+                    height={500}
+                    className="border-4 border-primary-light rounded-sm"
+                  />
+                  <p className="text-center !text-xl">
                     Tag yourself as a dancer, organizer, dj, and more to build
                     your dance community profile
                   </p>
@@ -207,7 +211,7 @@ export default async function Home() {
             {/* Contribute Section */}
             <section
               id="contribute"
-              className="max-w-6xl mx-auto bg-secondary-dark rounded-sm p-4 border-4 border-primary-light w-full"
+              className="max-w-6xl mx-auto bg-primary rounded-sm p-4 border-4 border-primary-light w-full"
             >
               <div className="py-6">
                 <h2 className="mb-12 !text-4xl sm:!text-5xl text-center">
@@ -267,6 +271,25 @@ export default async function Home() {
                   </div>
                 </div>
               </div>
+            </section>
+
+            <section
+              className="max-w-6xl mx-auto w-full bg-secondary rounded-sm p-4 border-4 border-primary-light"
+              id="open-beta"
+            >
+              <h2 className="!text-4xl sm:!text-5xl text-center mb-6">
+                Open Beta
+              </h2>
+              <p className="!text-lg px-10">
+                Dance Chives is currently in open beta. This means that the
+                platform is still under development with bug fixes and new
+                features being added regularly.
+                <br /> <br /> Please use the report button (
+                <ReportButton /> in the navbar, 'Report' in the footer) to
+                report any issues or provide feedback for the platform. <br />
+                <br /> We welcome all feedback and will use it to improve the
+                platform. Thank you for your support!
+              </p>
             </section>
           </div>
         </div>

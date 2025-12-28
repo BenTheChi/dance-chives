@@ -15,7 +15,7 @@ export function ParallaxBackground() {
           document.documentElement.scrollHeight - window.innerHeight;
 
         // Calculate extra height needed for parallax (background moves up by maxScroll * parallaxFactor)
-        const extraHeight = maxScroll * parallaxFactor - 100;
+        const extraHeight = maxScroll * parallaxFactor - 50;
 
         // Set height to cover full viewport plus parallax movement
         parallaxRef.current.style.height = `calc(100% + ${extraHeight}px)`;
@@ -45,7 +45,7 @@ export function ParallaxBackground() {
   return (
     <div
       ref={parallaxRef}
-      className="absolute inset-0 z-0 pointer-events-none opacity-15"
+      className="absolute bottom-10 inset-0 z-0 pointer-events-none opacity-15"
       style={{
         backgroundImage: "url(/Pattern_Mascot_onDark.svg)",
         backgroundRepeat: "repeat",

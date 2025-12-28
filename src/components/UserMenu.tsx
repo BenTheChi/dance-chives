@@ -37,7 +37,7 @@ export function UserMenu({ session }: UserMenuProps) {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-black p-0 cursor-pointer"
+          className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-white p-0 cursor-pointer active:!shadow-none"
         >
           {(session?.user?.avatar && session.user.avatar.trim() !== "") ||
           (session?.user?.image && session.user.image.trim() !== "") ? (
@@ -46,7 +46,7 @@ export function UserMenu({ session }: UserMenuProps) {
               alt={session.user.name || "User avatar"}
               width={40}
               height={40}
-              className="object-cover w-full h-full"
+              className="object-cover w-full h-full rounded-full bg-charcoal"
               unoptimized
             />
           ) : (

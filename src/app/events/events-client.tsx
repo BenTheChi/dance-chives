@@ -19,7 +19,32 @@ export function EventsClient({ events }: EventsClientProps) {
   const { data: session, status } = useSession();
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
   const [canCreateEvents, setCanCreateEvents] = useState(false);
-  const [showFutureEvents, setShowFutureEvents] = useState(true);
+  
+  // Check if there are any future events to determine default state
+  const hasFutureEvents = useMemo(() => {
+    if (!events || events.length === 0) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return events.some((event) => {
+      if (!event.date) return false;
+      try {
+        const eventDate = new Date(event.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      } catch {
+        return false;
+      }
+    });
+  }, [events]);
+  
+  const [showFutureEvents, setShowFutureEvents] = useState(hasFutureEvents);
+
+  // Update state when hasFutureEvents changes
+  useEffect(() => {
+    setShowFutureEvents(hasFutureEvents);
+  }, [hasFutureEvents]);
 
   useEffect(() => {
     if (status === "loading") return;
