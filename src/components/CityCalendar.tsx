@@ -68,7 +68,7 @@ const EVENT_COLORS: Record<EventType, string> = {
   Party: "#ec4899", // Pink
   Festival: "#f97316", // Orange-red
   Performance: "#6366f1", // Indigo
-  Other: "#000000", // Black
+  Other: "#ffffff", // White
 };
 
 // Event type labels for legend
@@ -223,14 +223,14 @@ function CustomToolbar({
           </SelectContent>
         </Select>
         {view !== "month" && (
-          <div className="rbc-toolbar-label text-xs sm:text-lg font-semibold truncate">
+          <div className="text-xs sm:text-lg font-semibold truncate">
             {label()}
           </div>
         )}
       </div>
       <div className="flex items-center gap-2">
         {/* Navigation buttons */}
-        <div className="rbc-btn-group flex gap-1">
+        <div className=" flex gap-1">
           <Button
             variant="outline"
             size="sm"
@@ -244,7 +244,7 @@ function CustomToolbar({
             variant="outline"
             size="sm"
             onClick={() => handleNavigate("TODAY")}
-            className="h-8 text-xs sm:text-sm"
+            className="h-8 px-3 text-xs sm:text-sm"
             title="Today"
           >
             Today
@@ -260,7 +260,7 @@ function CustomToolbar({
           </Button>
         </div>
         {/* View buttons */}
-        <div className="rbc-btn-group flex gap-1">
+        <div className=" flex gap-1">
           <Button
             variant={view === "month" ? "default" : "outline"}
             size="sm"
@@ -413,7 +413,10 @@ export function CityCalendar({
   }, [popoverOpen]);
 
   return (
-    <div ref={calendarRef} className="relative w-full">
+    <div
+      ref={calendarRef}
+      className="relative w-full bg-primary-dark p-4 rounded-sm border-4 border-primary-light"
+    >
       {/* Legend */}
       <div className="mb-4 grid grid-cols-3 sm:flex sm:flex-wrap gap-1 sm:gap-4 items-center">
         {(Object.keys(EVENT_TYPE_LABELS) as Array<EventType | "event">)
@@ -429,7 +432,7 @@ export function CityCalendar({
                   backgroundColor: EVENT_COLORS[type],
                 }}
               />
-              <span className="text-xs sm:text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm">
                 {EVENT_TYPE_LABELS[type]}
               </span>
             </div>

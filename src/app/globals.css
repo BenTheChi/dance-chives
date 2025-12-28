@@ -353,7 +353,7 @@ p {
     }
 
     .rbc-day-slot .rbc-time-slot {
-      border-top: 1px solid #000000;
+      border-top: 1px solid #b3f4c9;
     }
   }
 
@@ -427,55 +427,57 @@ p {
   .rbc-month-view,
   .rbc-time-view,
   .rbc-day-view {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   .rbc-header {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   .rbc-date-cell {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   .rbc-day-slot .rbc-time-slot {
-    border-top-color: #000000 !important;
+    border-top-color: #b3f4c9 !important;
   }
 
   .rbc-time-content {
-    border-top-color: #000000 !important;
+    border-top-color: #b3f4c9 !important;
   }
 
   .rbc-time-header-content {
-    border-left-color: #000000 !important;
+    border-left-color: #b3f4c9 !important;
   }
 
   .rbc-time-header {
-    border-bottom-color: #000000 !important;
+    border-bottom-color: #b3f4c9 !important;
   }
 
   .rbc-day-bg {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   .rbc-off-range-bg {
     border-color: #000000 !important;
+    background-color: var(--secondary-color) !important;
   }
 
   .rbc-today {
     border-color: #000000 !important;
+    background-color: var(--secondary-color-dark) !important;
   }
 
   .rbc-row {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   .rbc-row-segment {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   .rbc-selected-cell {
-    border-color: #000000 !important;
+    border-color: #b3f4c9 !important;
   }
 
   /* Loading spinner animations */
