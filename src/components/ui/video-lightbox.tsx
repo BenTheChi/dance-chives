@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTransition } from "react";
 import Link from "next/link";
+import { MaintenanceLink } from "@/components/MaintenanceLink";
 
 // Helper component for user avatar with remove button
 function UserAvatarWithRemove({
@@ -415,19 +416,19 @@ export function VideoLightbox({
                   {currentIndex + 1} of {totalVideos}
                 </span>
                 <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-300">
-                  <Link href={eventLink} className="whitespace-nowrap">
+                  <MaintenanceLink href={eventLink} className="whitespace-nowrap">
                     {eventTitle}
-                  </Link>
+                  </MaintenanceLink>
 
                   {sectionSlug && (
                     <>
                       <span>•</span>
-                      <Link
+                      <MaintenanceLink
                         href={`/events/${eventId}/sections/${sectionSlug}`}
                         className="whitespace-nowrap"
                       >
                         {sectionTitle}
-                      </Link>
+                      </MaintenanceLink>
                       {bracketTitle && (
                         <>
                           <span>•</span>

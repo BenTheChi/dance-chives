@@ -6,6 +6,7 @@ import { ParallaxBackground } from "@/components/ParallaxBackground";
 import { RecentlyAddedVideos } from "@/components/RecentlyAddedVideos";
 import { getLatestEventVideos } from "@/db/queries/event";
 import { ReportButton } from "@/components/report/ReportButton";
+import { MaintenanceLink } from "@/components/MaintenanceLink";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -46,14 +47,18 @@ export default async function Home() {
                 dance events
               </h2>
             </div>
-            <Link href="/signup">
-              <Button
-                size="xl"
-                className="font-rubik-mono-one !text-2xl text-charcoal"
-              >
-                Get Started
-              </Button>
-            </Link>
+            <script src="https://cdn.logwork.com/widget/countdown.js"></script>
+            <a
+              href="https://logwork.com/countdown-timer"
+              className="countdown-timer"
+              data-style="columns"
+              data-timezone="America/Los_Angeles"
+              data-date="2026-01-01 15:00"
+              data-background="#614c9e"
+              data-digitscolor="#ffffff"
+            >
+              Open Beta Launch
+            </a>
           </section>
 
           <div className="flex flex-col items-center gap-20 px-2">
@@ -88,14 +93,14 @@ export default async function Home() {
                   </p>
                 </div>
               </div>
-              <Link href="/events">
+              <MaintenanceLink href="/events">
                 <Button
                   size="xl"
                   className="font-rubik-mono-one !text-2xl text-charcoal mx-auto block mt-6 !bg-accent-blue"
                 >
                   Discover Events
                 </Button>
-              </Link>
+              </MaintenanceLink>
             </section>
 
             {/* Calendar CTA */}
@@ -126,14 +131,14 @@ export default async function Home() {
                 </div>
               </div>
               <div className="flex justify-center">
-                <Link href="/calendar">
+                <MaintenanceLink href="/calendar">
                   <Button
                     size="xl"
                     className="font-rubik-mono-one !text-2xl text-charcoal !bg-accent-blue"
                   >
                     View Calendar
                   </Button>
-                </Link>
+                </MaintenanceLink>
               </div>
             </section>
 
@@ -169,14 +174,14 @@ export default async function Home() {
                 </div>
               </div>
               <div className="flex justify-center">
-                <Link href="/profiles">
+                <MaintenanceLink href="/profiles">
                   <Button
                     size="xl"
                     className="font-rubik-mono-one !text-2xl text-charcoal !bg-accent-blue"
                   >
                     Explore Community
                   </Button>
-                </Link>
+                </MaintenanceLink>
               </div>
             </section>
 
@@ -198,14 +203,14 @@ export default async function Home() {
 
             {/* Final CTA */}
             <section className="w-full mx-auto text-center">
-              <Link href="/signup">
+              <MaintenanceLink href="/signup">
                 <Button
                   size="xl"
                   className="font-rubik-mono-one !text-2xl text-charcoal"
                 >
                   Sign Up Free
                 </Button>
-              </Link>
+              </MaintenanceLink>
             </section>
 
             {/* Contribute Section */}

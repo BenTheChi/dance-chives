@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ReportLink } from "./report/ReportLink";
+import { MaintenanceLink } from "./MaintenanceLink";
 
 export function Footer() {
   return (
@@ -10,36 +11,36 @@ export function Footer() {
           <div className="flex flex-col gap-4 items-center w-full pb-6 md:pt-6 flex-1">
             <h2>Quick Links</h2>
             <nav className="grid grid-cols-3 gap-6">
-              <Link
+              <MaintenanceLink
                 href="/events"
                 className="text-primary-light hover:text-white transition-colors text-xl"
               >
                 Events
-              </Link>
-              <Link
+              </MaintenanceLink>
+              <MaintenanceLink
                 href="/calendar"
                 className="text-primary-light hover:text-white transition-colors text-xl"
               >
                 Calendar
-              </Link>
-              <Link
+              </MaintenanceLink>
+              <MaintenanceLink
                 href="/profiles"
                 className="text-primary-light hover:text-white transition-colors text-xl"
               >
                 Community
-              </Link>
-              <Link
+              </MaintenanceLink>
+              <MaintenanceLink
                 href="/search"
                 className="text-primary-light hover:text-white transition-colors text-xl"
               >
                 Search
-              </Link>
-              <Link
+              </MaintenanceLink>
+              <MaintenanceLink
                 href="/faq"
                 className="text-primary-light hover:text-white transition-colors text-xl"
               >
                 FAQ
-              </Link>
+              </MaintenanceLink>
               <ReportLink className="text-primary-light hover:text-white transition-colors text-xl text-left cursor-pointer">
                 Report
               </ReportLink>

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
+import { MaintenanceLink } from "@/components/MaintenanceLink";
 
 interface VideoCardProps {
   video: Video;
@@ -141,13 +142,13 @@ export function VideoCard({
 
           {/* Title */}
           <div className="flex gap-1 items-end justify-between w-full">
-            <Link
+            <MaintenanceLink
               href={eventLink}
               className="text-sm text-white hover:text-primary-light text-end underline"
               onClick={(e) => e.stopPropagation()}
             >
               {eventTitle}
-            </Link>
+            </MaintenanceLink>
             <span className="text-xs text-gray-500 capitalize">
               {video.type}
             </span>

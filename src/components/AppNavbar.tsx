@@ -12,6 +12,7 @@ import { ReportButton } from "./report/ReportButton";
 import { Search, HelpCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { MaintenanceLink } from "./MaintenanceLink";
 
 const navMenuItems = [
   {
@@ -69,7 +70,7 @@ export function AppNavbar() {
               (item.url !== "/" && pathname.startsWith(item.url));
 
             return (
-              <Link
+              <MaintenanceLink
                 key={item.title}
                 href={item.url}
                 className={cn(
@@ -87,7 +88,7 @@ export function AppNavbar() {
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 {item.title}
-              </Link>
+              </MaintenanceLink>
             );
           })}
         </div>
@@ -96,40 +97,40 @@ export function AppNavbar() {
           {session ? (
             <>
               <Button asChild size="icon" variant="ghost">
-                <Link href="/search">
+                <MaintenanceLink href="/search">
                   <Search className="h-5 w-5" />
-                </Link>
+                </MaintenanceLink>
               </Button>
               <ReportButton className="cursor-pointer" />
               <NotificationPopover />
               <Button asChild size="icon" variant="ghost">
-                <Link href="/faq">
+                <MaintenanceLink href="/faq">
                   <HelpCircle className="h-5 w-5" />
-                </Link>
+                </MaintenanceLink>
               </Button>
               <UserMenu session={session} />
             </>
           ) : (
             <>
               <Button asChild size="icon" variant="ghost">
-                <Link href="/search">
+                <MaintenanceLink href="/search">
                   <Search className="h-5 w-5" />
-                </Link>
+                </MaintenanceLink>
               </Button>
               <ReportButton className="cursor-pointer" />
               <Button asChild size="icon" variant="ghost">
-                <Link href="/faq">
+                <MaintenanceLink href="/faq">
                   <HelpCircle className="h-5 w-5" />
-                </Link>
+                </MaintenanceLink>
               </Button>
-              <Link href="/login">
+              <MaintenanceLink href="/login">
                 <Button size="sm" variant="secondary">
                   Login
                 </Button>
-              </Link>
-              <Link href="/signup">
+              </MaintenanceLink>
+              <MaintenanceLink href="/signup">
                 <Button size="sm">Sign Up</Button>
-              </Link>
+              </MaintenanceLink>
             </>
           )}
         </div>
