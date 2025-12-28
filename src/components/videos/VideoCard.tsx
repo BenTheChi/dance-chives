@@ -145,7 +145,7 @@ export function VideoCard({
             <MaintenanceLink
               href={eventLink}
               className="text-sm text-white hover:text-primary-light text-end underline"
-              onClick={(e) => e.stopPropagation()}
+              onClick={() => {}}
             >
               {eventTitle}
             </MaintenanceLink>
