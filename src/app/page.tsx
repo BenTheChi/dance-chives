@@ -97,7 +97,7 @@ export default async function Home() {
 
             {/* Calendar CTA */}
             <section className="max-w-6xl mx-auto bg-primary rounded-sm p-4 border-4 border-primary-light w-full">
-              <h2 className="text-3xl sm:text-4xl text-center mb-8">
+              <h2 className="sm:!text-3xl text-center mb-8">
                 Never miss an event again with the community calendar
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -137,7 +137,7 @@ export default async function Home() {
 
             {/* Community CTA */}
             <section className="max-w-6xl mx-auto bg-primary rounded-sm p-4 border-4 border-primary-light w-full">
-              <h2 className="text-3xl sm:text-4xl text-center mb-8">
+              <h2 className="sm:!text-3xl text-center mb-8">
                 A structured public record of event and battle roles
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
