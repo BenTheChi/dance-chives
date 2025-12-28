@@ -96,7 +96,7 @@ export default async function Home() {
               <MaintenanceLink href="/events">
                 <Button
                   size="xl"
-                  className="font-rubik-mono-one !text-2xl text-charcoal mx-auto block mt-6 !bg-accent-blue"
+                  className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal mx-auto block mt-6 !bg-accent-blue px-4 sm:px-6 md:px-10"
                 >
                   Discover Events
                 </Button>
@@ -110,21 +110,13 @@ export default async function Home() {
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-secondary-light shadow-[6px_6px_0_0_var(--secondary-color-light)] flex items-center justify-center">
-                    <span className="text-secondary-light text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
+                  <div className="w-full aspect-video bg-transparent border-4 border-secondary-light rounded-sm"></div>
                   <p className="text-center text-lg font-medium">
                     See all events for any city. Perfect for traveling!
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-secondary-light shadow-[6px_6px_0_0_var(--secondary-color-light)] flex items-center justify-center">
-                    <span className="text-secondary-light text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
+                  <div className="w-full aspect-video bg-transparent border-4 border-secondary-light rounded-sm"></div>
                   <p className="text-center text-lg font-medium">
                     Save events so they show up on your personal calendar
                   </p>
@@ -134,7 +126,7 @@ export default async function Home() {
                 <MaintenanceLink href="/calendar">
                   <Button
                     size="xl"
-                    className="font-rubik-mono-one !text-2xl text-charcoal !bg-accent-blue"
+                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-4 sm:px-6 md:px-10"
                   >
                     View Calendar
                   </Button>
@@ -162,11 +154,7 @@ export default async function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-charcoal border-4 border-accent-purple shadow-[6px_6px_0_0_var(--accent-color-purple)] flex items-center justify-center">
-                    <span className="text-accent-purple text-lg font-bold">
-                      Screenshot Placeholder
-                    </span>
-                  </div>
+                  <div className="w-full aspect-video bg-transparent border-4 border-accent-purple rounded-sm"></div>
                   <p className="text-center text-lg font-medium">
                     Browse profiles from dancers in your community and around
                     the world
@@ -177,7 +165,7 @@ export default async function Home() {
                 <MaintenanceLink href="/profiles">
                   <Button
                     size="xl"
-                    className="font-rubik-mono-one !text-2xl text-charcoal !bg-accent-blue"
+                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-4 sm:px-6 md:px-10"
                   >
                     Explore Community
                   </Button>
@@ -206,7 +194,7 @@ export default async function Home() {
               <MaintenanceLink href="/signup">
                 <Button
                   size="xl"
-                  className="font-rubik-mono-one !text-2xl text-charcoal"
+                  className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal px-4 sm:px-6 md:px-10"
                 >
                   Sign Up Free
                 </Button>
@@ -256,11 +244,7 @@ export default async function Home() {
                   {/* Donate Section */}
                   <div className="space-y-6 max-w-md">
                     <h3 className="!text-2xl !font-bold">Donate</h3>
-                    <div className="bg-charcoal h-40 flex items-center justify-center">
-                      <p className="text-primary-light text-lg font-bold">
-                        Donate Button Placeholder
-                      </p>
-                    </div>
+                    <div className="w-full aspect-video bg-transparent border-4 border-primary-light rounded-sm"></div>
                     <div className="space-y-3">
                       <p>
                         A lot of time and effort has been put into Dance Chives.
