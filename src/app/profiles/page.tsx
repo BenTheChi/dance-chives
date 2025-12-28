@@ -12,7 +12,7 @@ export default async function ProfilesPage() {
         <h1 className="mt-5 mb-12">Profiles</h1>
 
         {users.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-[180px] overflow-visible">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-12 overflow-visible">
             {users.map((user) => (
               <div key={user.id} className="overflow-visible">
                 <UserCard

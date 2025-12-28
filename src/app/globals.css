@@ -353,7 +353,7 @@ p {
     }
 
     .rbc-day-slot .rbc-time-slot {
-      border-top: 1px solid #000000;
+      border-top: 1px solid (var(--primary-color-light));
     }
   }
 
@@ -427,35 +427,35 @@ p {
   .rbc-month-view,
   .rbc-time-view,
   .rbc-day-view {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   .rbc-header {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   .rbc-date-cell {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   .rbc-day-slot .rbc-time-slot {
-    border-top-color: #000000 !important;
+    border-top-color: var(--primary-color-light) !important;
   }
 
   .rbc-time-content {
-    border-top-color: #000000 !important;
+    border-top-color: var(--primary-color-light) !important;
   }
 
   .rbc-time-header-content {
-    border-left-color: #000000 !important;
+    border-left-color: var(--primary-color-light) !important;
   }
 
   .rbc-time-header {
-    border-bottom-color: #000000 !important;
+    border-bottom-color: var(--primary-color-light) !important;
   }
 
   .rbc-day-bg {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   .rbc-off-range-bg {
@@ -467,15 +467,15 @@ p {
   }
 
   .rbc-row {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   .rbc-row-segment {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   .rbc-selected-cell {
-    border-color: #000000 !important;
+    border-color: var(--primary-color-light) !important;
   }
 
   /* Loading spinner animations */

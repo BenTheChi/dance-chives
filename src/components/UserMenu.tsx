@@ -1,6 +1,12 @@
 "use client";
 
-import { HomeIcon, LogOutIcon, UserIcon, SettingsIcon, UserPlusIcon } from "lucide-react";
+import {
+  HomeIcon,
+  LogOutIcon,
+  UserIcon,
+  SettingsIcon,
+  UserPlusIcon,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Popover,
@@ -30,8 +36,8 @@ export function UserMenu({ session }: UserMenuProps) {
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="ghost"
-          className="relative h-10 w-10 rounded-full overflow-hidden border border-border hover:border-primary p-0"
+          variant="outline"
+          className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-black p-0 cursor-pointer"
         >
           {(session?.user?.avatar && session.user.avatar.trim() !== "") ||
           (session?.user?.image && session.user.image.trim() !== "") ? (
