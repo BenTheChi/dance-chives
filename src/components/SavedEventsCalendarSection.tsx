@@ -1,13 +1,6 @@
 "use client";
 
 import { CityCalendar } from "./CityCalendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { CalendarEventData } from "@/db/queries/event";
 
 interface SavedEventsCalendarSectionProps {
@@ -19,30 +12,26 @@ export function SavedEventsCalendarSection({
 }: SavedEventsCalendarSectionProps) {
   if (events.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Saved Events Calendar</CardTitle>
-          <CardDescription>Your saved events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            No saved events to display on the calendar.
-          </div>
-        </CardContent>
-      </Card>
+      <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+        <h2 className="text-2xl font-semibold mb-2 text-center">
+          Saved Events Calendar
+        </h2>
+        <div className="text-center py-8 text-muted-foreground">
+          No saved events to display on the calendar.
+        </div>
+      </section>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Saved Events Calendar</CardTitle>
-        <CardDescription>Your saved events</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <section className="w-full">
+      <h2 className="text-2xl font-semibold mb-4 text-center">
+        Saved Events Calendar
+      </h2>
+      <div className="w-full min-w-0">
         <CityCalendar events={events} />
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 

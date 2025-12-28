@@ -143,7 +143,9 @@ export function CalendarPageClient({
           <div className="flex flex-col justify-center items-center sm:flex-row gap-3 sm:gap-4 w-full">
             {/* City Dropdown */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-center">City</label>
+              <label className="block text-3xl font-medium mb-2 text-center">
+                City
+              </label>
               <Select
                 value={
                   selectedCity
@@ -171,7 +173,9 @@ export function CalendarPageClient({
 
             {/* Style Dropdown */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-center">Style</label>
+              <label className="block text-3xl font-medium mb-2 text-center">
+                Style
+              </label>
               <Select
                 value={
                   selectedStyle
