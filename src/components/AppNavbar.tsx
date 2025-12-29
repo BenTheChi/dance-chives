@@ -58,8 +58,9 @@ export function AppNavbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex">
-      <div className="flex items-center gap-2 flex-shrink-0">
+    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex relative">
+      {/* Left section: Logo */}
+      <div className="flex items-center gap-2 flex-shrink-0 z-10">
         <Link
           href="/"
           className="h-18 flex items-center px-2 py-1 hover:scale-105 transition-transform"
@@ -75,39 +76,40 @@ export function AppNavbar() {
         </Link>
       </div>
 
-      <div className="flex h-18 px-2 md:px-4 py-2 items-center w-full flex-between">
-        <SidebarTrigger className="md:hidden text-white hover:text-white" />
-        <div className="flex-1"></div>
-        {/* Centered nav menu items - hidden below sm */}
-        <div className="hidden md:flex items-center gap-2 flex-2 justify-center">
-          {navMenuItems.map((item) => {
-            const isActive =
-              pathname === item.url ||
-              (item.url !== "/" && pathname.startsWith(item.url));
+      {/* Center section: Nav menu - absolutely centered */}
+      <div className="hidden md:flex items-center gap-2 justify-center absolute left-1/2 -translate-x-1/2 h-18">
+        {navMenuItems.map((item) => {
+          const isActive =
+            pathname === item.url ||
+            (item.url !== "/" && pathname.startsWith(item.url));
 
-            return (
-              <MaintenanceLink
-                key={item.title}
-                href={item.url}
-                className={cn(
-                  "px-4 py-2 rounded-sm transition-all duration-200",
-                  "border-2 border-transparent",
-                  "hover:border-charcoal hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
-                  "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
-                  "text-base font-bold uppercase tracking-wide",
-                  "font-display",
-                  isActive &&
-                    "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-primary-light text-primary",
-                  !isActive &&
-                    "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark"
-                )}
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                {item.title}
-              </MaintenanceLink>
-            );
-          })}
-        </div>
+          return (
+            <MaintenanceLink
+              key={item.title}
+              href={item.url}
+              className={cn(
+                "px-4 py-2 rounded-sm transition-all duration-200",
+                "border-2 border-transparent",
+                "hover:border-charcoal hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
+                "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
+                "text-base font-bold uppercase tracking-wide",
+                "font-display",
+                isActive &&
+                  "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-primary-light text-primary",
+                !isActive &&
+                  "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark"
+              )}
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {item.title}
+            </MaintenanceLink>
+          );
+        })}
+      </div>
+
+      {/* Right section: Actions */}
+      <div className="flex h-18 px-2 md:px-4 py-2 items-center w-full justify-end z-10">
+        <SidebarTrigger className="md:hidden text-white hover:text-white" />
         <div className="flex items-center gap-x-2">
           <div className="flex gap-3 mr-0 md:mr-5">
             <Button asChild size="icon" variant="ghost">

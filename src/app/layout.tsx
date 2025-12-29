@@ -25,7 +25,8 @@ const baseUrl =
 
 export const metadata: Metadata = {
   title: "Dance Chives",
-  description: "Freestyle Dance Culture, Media, and Community",
+  description:
+    "The free community archive for street dance events and battle videos",
   icons: {
     icon: [
       { url: "/icon.svg", sizes: "any" },
@@ -35,7 +36,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Dance Chives",
-    description: "Freestyle Dance Culture, Media, and Community",
+    description:
+      "The free community archive for street dance events and battle videos",
     url: baseUrl,
     siteName: "Dance Chives",
     images: [
@@ -65,7 +67,7 @@ export default function RootLayout({
         <meta property="og:title" content="Dance Chives" />
         <meta
           property="og:description"
-          content="Freestyle Dance Culture, Media, and Community"
+          content="The free community archive for street dance events and battle videos"
         />
         <meta property="og:url" content="https://www.dancechives.com/" />
         <meta property="og:type" content="website" />
