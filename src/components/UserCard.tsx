@@ -40,7 +40,7 @@ export function UserCard({
         ) : (
           <div className="relative w-[215px] h-[300px] bg-neutral-400 rounded-sm overflow-hidden border-3 border-charcoal">
             <Image
-              src="/mascot/3:4_Mascot2_Mono_onLight.png"
+              src="/mascot/Default_Mascot2_Mono_onLight.png"
               alt=""
               fill
               className="object-contain"

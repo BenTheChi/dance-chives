@@ -352,7 +352,7 @@ export function DashboardClient({
                     />
                   ) : (
                     <Image
-                      src="/mascot/3:4_Mascot2_Mono_onLight.png"
+                      src="/mascot/Default_Mascot2_Mono_onLight.png"
                       alt=""
                       fill
                       className="object-contain"
