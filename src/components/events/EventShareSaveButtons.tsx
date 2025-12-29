@@ -44,11 +44,9 @@ export function EventShareSaveButtons({
     prevSavedStateRef.current = isSaved;
   }, [isSaved, onSaveStateChange]);
 
-  const handleShareClick = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleShareClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
     const titleHref = eventHref || `/events/${eventId}`;
     const eventUrl = `${window.location.origin}${titleHref}`;
@@ -63,11 +61,9 @@ export function EventShareSaveButtons({
     }
   };
 
-  const handleSaveClick = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+  const handleSaveClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     await toggle();
   };
 
@@ -75,18 +71,22 @@ export function EventShareSaveButtons({
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <button
-          onClick={handleShareClick}
-          className="border border-black w-6 h-6 rounded-full bg-accent-purple flex items-center justify-center transition-all shadow-hover hover:bg-accent-purple/80"
+          onClick={(e) => handleShareClick(e)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="border border-black w-6 h-6 rounded-full bg-accent-purple flex items-center justify-center transition-all shadow-hover hover:bg-accent-purple/80 focus-visible:outline-none focus-visible:ring-0 focus-visible:border-black"
           aria-label="Share event"
           title={shareCopied ? "Copied!" : "Copy event URL"}
         >
           <Share2 className="h-3 w-3 text-white mb-[1px] mr-[1px]" />
         </button>
         <button
-          onClick={handleSaveClick}
+          onClick={(e) => handleSaveClick(e)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
           disabled={isPending}
           className={cn(
-            "border border-black w-6 h-6 rounded-full flex items-center justify-center transition-all shadow-hover",
+            "border border-black w-6 h-6 rounded-full flex items-center justify-center transition-all shadow-hover focus-visible:outline-none focus-visible:ring-0 focus-visible:border-black",
             isSaved
               ? "bg-red-500 hover:bg-red-300"
               : "bg-accent-purple hover:bg-accent-purple/80",
@@ -109,9 +109,11 @@ export function EventShareSaveButtons({
   return (
     <div className={cn("flex justify-center gap-4", className)}>
       <Button
-        onClick={handleShareClick}
+        onClick={(e) => handleShareClick(e)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         variant="default"
-        className="bg-accent-purple text-black border-black"
+        className="bg-accent-purple text-black border-black focus-visible:outline-none focus-visible:ring-0 focus-visible:border-black"
         aria-label="Share event"
         title={shareCopied ? "Copied!" : "Copy event URL"}
       >
@@ -121,11 +123,13 @@ export function EventShareSaveButtons({
         </span>
       </Button>
       <Button
-        onClick={handleSaveClick}
+        onClick={(e) => handleSaveClick(e)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         disabled={isPending}
         variant="default"
         className={cn(
-          "border-black",
+          "border-black focus-visible:outline-none focus-visible:ring-0 focus-visible:border-black",
           isSaved
             ? "bg-red-500 text-white hover:bg-red-600"
             : "bg-accent-purple text-black"

@@ -433,57 +433,70 @@ p {
   .rbc-month-view,
   .rbc-time-view,
   .rbc-day-view {
-    border-color: var(--primary-color-light) !important;
+    border-color: var(--fog-white) !important;
   }
 
   .rbc-header {
-    border-color: var(--primary-color-light) !important;
+    border-color: var(--fog-white) !important;
   }
 
   .rbc-date-cell {
-    border-color: var(--primary-color-light) !important;
+    border-color: var(--fog-white) !important;
   }
 
   .rbc-day-slot .rbc-time-slot {
-    border-top-color: var(--primary-color-light) !important;
+    border-top-color: var(--fog-white) !important;
   }
 
   .rbc-time-content {
-    border-top-color: var(--primary-color-light) !important;
+    border-top-color: var(--fog-white) !important;
   }
 
   .rbc-time-header-content {
-    border-left-color: var(--primary-color-light) !important;
+    border-left-color: var(--fog-white) !important;
   }
 
   .rbc-time-header {
-    border-bottom-color: var(--primary-color-light) !important;
+    border-bottom-color: var(--fog-white) !important;
   }
 
   .rbc-day-bg {
-    border-color: var(--primary-color-light) !important;
+    border-color: var(--fog-white) !important;
   }
 
   .rbc-off-range-bg {
-    border-color: #000000 !important;
-    background-color: var(--secondary-color) !important;
+    border-color: var(--fog-white) !important;
+    background-color: var(--secondary-color-dark) !important;
   }
 
   .rbc-today {
     border-color: #000000 !important;
-    background-color: var(--secondary-color-dark) !important;
+    background-color: var(--accent-color-purple) !important;
   }
 
   .rbc-row {
-    border-color: var(--primary-color-light) !important;
+    border-color: var(--fog-white) !important;
   }
 
   .rbc-row-segment {
-    border-color: var(--primary-color-light) !important;
+    border-color: var(--fog-white) !important;
   }
 
   .rbc-selected-cell {
     border-color: var(--primary-color-light) !important;
+  }
+
+  /* Calendar grid background - charcoal (only the grid container, not individual cells) */
+  .rbc-month-view {
+    background-color: var(--charcoal) !important;
+  }
+
+  .rbc-time-view {
+    background-color: var(--charcoal) !important;
+  }
+
+  .rbc-day-view {
+    background-color: var(--charcoal) !important;
   }
 
   /* Loading spinner animations */
