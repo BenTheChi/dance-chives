@@ -158,9 +158,85 @@ export async function generateMetadata({
     enhancedDescription = `${description} • ${stats.join(", ")}`;
   }
 
+  // Get creator info for author metadata
+  const creator = eventDetails.creatorId
+    ? await getUser(eventDetails.creatorId)
+    : null;
+
+  // Format author name: "displayName - username" or fallback to available fields
+  let authorName: string | undefined;
+  if (creator) {
+    if (creator.displayName && creator.username) {
+      authorName = `${creator.displayName} - ${creator.username}`;
+    } else if (creator.displayName) {
+      authorName = creator.displayName;
+    } else if (creator.username) {
+      authorName = creator.username;
+    }
+  }
+
+  const authorUrl = creator?.username
+    ? `${baseUrl}/profiles/${creator.username}`
+    : undefined;
+
+  // Format publish date (createdAt)
+  const publishedTime = event.createdAt
+    ? new Date(event.createdAt).toISOString()
+    : undefined;
+
+  // Format modified date (updatedAt)
+  const modifiedTime = event.updatedAt
+    ? new Date(event.updatedAt).toISOString()
+    : undefined;
+
+  // Build keywords from event data
+  const keywords: string[] = [
+    "street dance",
+    "dance battles",
+    "dance events",
+    eventDetails.eventType || "dance event",
+    eventDetails.city.name,
+  ];
+  if (eventDetails.styles && eventDetails.styles.length > 0) {
+    keywords.push(...eventDetails.styles);
+  }
+  if (eventDetails.city.region) {
+    keywords.push(eventDetails.city.region);
+  }
+
+  // Build image metadata
+  const imageMetadata = posterUrl
+    ? {
+        url: posterUrl,
+        secureUrl: posterUrl.startsWith("https")
+          ? posterUrl
+          : posterUrl.replace("http://", "https://"),
+        type: posterUrl.endsWith(".png")
+          ? "image/png"
+          : posterUrl.endsWith(".jpg") || posterUrl.endsWith(".jpeg")
+          ? "image/jpeg"
+          : posterUrl.endsWith(".webp")
+          ? "image/webp"
+          : "image/png",
+      }
+    : undefined;
+
   return {
     title,
     description: enhancedDescription,
+    keywords: keywords.join(", "),
+    authors: authorName ? [{ name: authorName, url: authorUrl }] : undefined,
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
     openGraph: {
       title,
       description: enhancedDescription,
@@ -168,6 +244,28 @@ export async function generateMetadata({
       type: "website",
       url: `${baseUrl}/events/${paramResult.event}`,
       siteName: "Dance Chives",
+    },
+    other: {
+      ...(publishedTime && {
+        "article:published_time": publishedTime,
+      }),
+      ...(modifiedTime && {
+        "article:modified_time": modifiedTime,
+      }),
+      ...(authorName && {
+        "article:author": authorName,
+      }),
+      ...(eventDetails.eventType && {
+        "article:section": eventDetails.eventType,
+      }),
+      ...(eventDetails.styles &&
+        eventDetails.styles.length > 0 && {
+          "article:tag": eventDetails.styles.join(", "),
+        }),
+      ...(imageMetadata && {
+        "og:image:type": imageMetadata.type,
+        "og:image:secure_url": imageMetadata.secureUrl,
+      }),
     },
     twitter: {
       card: "summary_large_image",

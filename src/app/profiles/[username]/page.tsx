@@ -118,9 +118,64 @@ export async function generateMetadata({
       : `${baseUrl}${profile.image}`
     : undefined;
 
+  // Parse displayName into first and last name (if available)
+  const displayNameParts = profile.displayName?.split(" ") || [];
+  const firstName =
+    displayNameParts.length > 0 ? displayNameParts[0] : undefined;
+  const lastName =
+    displayNameParts.length > 1
+      ? displayNameParts.slice(1).join(" ")
+      : undefined;
+
+  // Build keywords from profile data
+  const keywords: string[] = [
+    "dancer",
+    "street dance",
+    displayName || username,
+  ];
+  if (profile.styles && profile.styles.length > 0) {
+    keywords.push(...profile.styles);
+  }
+  if (profile.city) {
+    const cityName =
+      typeof profile.city === "object" ? profile.city.name : profile.city;
+    if (cityName) {
+      keywords.push(cityName);
+    }
+  }
+
+  // Build image metadata
+  const imageMetadata = imageUrl
+    ? {
+        url: imageUrl,
+        secureUrl: imageUrl.startsWith("https")
+          ? imageUrl
+          : imageUrl.replace("http://", "https://"),
+        type: imageUrl.endsWith(".png")
+          ? "image/png"
+          : imageUrl.endsWith(".jpg") || imageUrl.endsWith(".jpeg")
+          ? "image/jpeg"
+          : imageUrl.endsWith(".webp")
+          ? "image/webp"
+          : "image/png",
+      }
+    : undefined;
+
   return {
     title,
     description,
+    keywords: keywords.join(", "),
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
+    },
     openGraph: {
       title,
       description,
@@ -128,6 +183,21 @@ export async function generateMetadata({
       type: "profile",
       url: `${baseUrl}/profiles/${username}`,
       siteName: "Dance Chives",
+    },
+    other: {
+      ...(firstName && {
+        "profile:first_name": firstName,
+      }),
+      ...(lastName && {
+        "profile:last_name": lastName,
+      }),
+      ...(username && {
+        "profile:username": username,
+      }),
+      ...(imageMetadata && {
+        "og:image:type": imageMetadata.type,
+        "og:image:secure_url": imageMetadata.secureUrl,
+      }),
     },
     twitter: {
       card: "summary_large_image",

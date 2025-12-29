@@ -23,10 +23,48 @@ const rubikMonoOne = Rubik_Mono_One({
 const baseUrl =
   process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
 
+const defaultImageUrl = `${baseUrl}/mascot/Dancechives_MainLogo_Color_onLight.png`;
+
 export const metadata: Metadata = {
   title: "Dance Chives",
   description:
     "The free community archive for street dance events and battle videos",
+  keywords: [
+    "street dance",
+    "dance battles",
+    "dance events",
+    "freestyle dance",
+    "dance community",
+    "battle videos",
+    "dance videos",
+    "dance archive",
+    "hip hop dance",
+    "breaking",
+    "breakdance",
+    "popping",
+    "locking",
+    "house",
+    "krumping",
+    "waacking",
+    "voguing",
+    "bboying",
+    "b-boying",
+    "waacking",
+    "voguing",
+    "dance competitions",
+  ].join(", "),
+  authors: [{ name: "Ben Chi - Heartbreaker" }],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/icon.svg", sizes: "any" },
@@ -42,13 +80,18 @@ export const metadata: Metadata = {
     siteName: "Dance Chives",
     images: [
       {
-        url: `${baseUrl}/mascot/Dancechives_MainLogo_Color_onLight.png`,
+        url: defaultImageUrl,
         width: 1200,
         height: 630,
         alt: "Dance Chives Logo",
       },
     ],
     type: "website",
+  },
+  other: {
+    "article:author": "Ben Chi - Heartbreaker",
+    "og:image:type": "image/png",
+    "og:image:secure_url": defaultImageUrl,
   },
 };
 
