@@ -5,13 +5,14 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { UserMenu } from "./UserMenu";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
 import { Search, HelpCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MaintenanceLink } from "./MaintenanceLink";
+import { SidebarTrigger } from "./ui/sidebar";
 
 const navMenuItems = [
   {
@@ -26,11 +27,16 @@ const navMenuItems = [
     title: "Community",
     url: "/profiles",
   },
+  {
+    title: "About",
+    url: "/about",
+  },
 ];
 
 export function AppNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
 
   // Log client-side environment (only once on mount)
   useEffect(() => {
@@ -39,26 +45,41 @@ export function AppNavbar() {
       NODE_ENV: process.env.NODE_ENV,
       showTestLogin,
     });
+
+    // Check window width on client side
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   return (
     <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex">
-      <Link
-        href="/"
-        className="h-18 flex items-center px-2 py-1 hover:scale-105 transition-transform"
-      >
-        <Image
-          src="/MainLogo_Color_onDark.svg"
-          alt="Dance Chives Logo"
-          width={2000}
-          height={2000}
-          className="h-full w-auto object-contain"
-          priority
-        />
-      </Link>
-      <div className="flex h-18 px-4 py-2 items-center w-full justify-between">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Link
+          href="/"
+          className="h-18 flex items-center px-2 py-1 hover:scale-105 transition-transform"
+        >
+          <Image
+            src="/MainLogo_Color_onDark.svg"
+            alt="Dance Chives Logo"
+            width={2000}
+            height={2000}
+            className="h-full w-auto object-contain"
+            priority
+          />
+        </Link>
+      </div>
+
+      <div className="flex h-18 px-2 md:px-4 py-2 items-center w-full flex-between">
+        <SidebarTrigger className="md:hidden text-white hover:text-white" />
+        <div className="flex-1"></div>
         {/* Centered nav menu items - hidden below sm */}
-        <div className="hidden sm:flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2">
+        <div className="hidden md:flex items-center gap-2 flex-2 justify-center">
           {navMenuItems.map((item) => {
             const isActive =
               pathname === item.url ||
@@ -87,48 +108,33 @@ export function AppNavbar() {
             );
           })}
         </div>
-
-        {/* <div className="flex items-center gap-x-2 whitespace-nowrap">
-          {session ? (
+        <div className="flex items-center gap-x-2">
+          <div className="flex gap-3 mr-0 md:mr-5">
+            <Button asChild size="icon" variant="ghost">
+              <MaintenanceLink href="/search">
+                <Search className="h-5 w-5" />
+              </MaintenanceLink>
+            </Button>
+            <ReportButton className="cursor-pointer" />
+            <Button asChild size="icon" variant="ghost">
+              <MaintenanceLink href="/faq">
+                <HelpCircle className="h-5 w-5" />
+              </MaintenanceLink>
+            </Button>
+          </div>
+          {!session && (
             <>
-              <Button asChild size="icon" variant="ghost">
-                <MaintenanceLink href="/search">
-                  <Search className="h-5 w-5" />
-                </MaintenanceLink>
-              </Button>
-              <ReportButton className="cursor-pointer" />
-              <NotificationPopover />
-              <Button asChild size="icon" variant="ghost">
-                <MaintenanceLink href="/faq">
-                  <HelpCircle className="h-5 w-5" />
-                </MaintenanceLink>
-              </Button>
-              <UserMenu session={session} />
-            </>
-          ) : (
-            <>
-              <Button asChild size="icon" variant="ghost">
-                <MaintenanceLink href="/search">
-                  <Search className="h-5 w-5" />
-                </MaintenanceLink>
-              </Button>
-              <ReportButton className="cursor-pointer" />
-              <Button asChild size="icon" variant="ghost">
-                <MaintenanceLink href="/faq">
-                  <HelpCircle className="h-5 w-5" />
-                </MaintenanceLink>
-              </Button>
               <MaintenanceLink href="/login">
-                <Button size="sm" variant="secondary">
+                <Button size={isMobile ? "sm" : "default"} variant="secondary">
                   Login
                 </Button>
               </MaintenanceLink>
               <MaintenanceLink href="/signup">
-                <Button size="sm">Sign Up</Button>
+                <Button size={isMobile ? "sm" : "default"}>Sign Up</Button>
               </MaintenanceLink>
             </>
           )}
-        </div> */}
+        </div>
       </div>
     </nav>
   );

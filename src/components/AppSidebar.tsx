@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, SearchIcon, HouseIcon, Users } from "lucide-react";
+import { CalendarIcon, HouseIcon, Users, Info } from "lucide-react";
 import {
   SidebarContent,
   SidebarGroup,
@@ -23,12 +23,6 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 
 const menuItems = [
   {
-    title: "Search",
-    url: "/search",
-    icon: SearchIcon,
-    iconRotation: 0,
-  },
-  {
     title: "Events",
     url: "/events",
     icon: HouseIcon,
@@ -46,6 +40,12 @@ const menuItems = [
     icon: Users,
     iconRotation: 3,
   },
+  {
+    title: "About",
+    url: "/about",
+    icon: Info,
+    iconRotation: 0,
+  },
 ];
 
 export function AppSidebar() {
@@ -62,7 +62,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex items-center justify-center group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:mb-0 group-data-[collapsible=icon]:pt-[1px] group-data-[collapsible=icon]:pb-[1px] group-data-[collapsible=icon]:h-14">
         <Link
           href="/"
-          className="flex items-center justify-center hover:scale-105 transition-transform p-1"
+          className="flex items-center justify-center hover:scale-105 transition-transform"
         >
           <Image
             src="/MainLogo_Color_onLight.svg"
@@ -135,10 +135,9 @@ export function AppSidebar() {
                             className={cn(
                               "w-8 h-8 transition-all duration-200",
                               "stroke-[2]",
-                              "text-secondary-light",
-                              isActive && "scale-110 text-primary",
+                              isActive && "scale-110 text-charcoal",
                               !isActive &&
-                                "group-hover/link:scale-110 text-charcoal"
+                                "text-primary-dark group-hover/link:scale-110"
                             )}
                           />
                           {isActive && (
@@ -149,9 +148,8 @@ export function AppSidebar() {
                           className={cn(
                             "text-base font-bold uppercase tracking-wide transition-colors",
                             "font-display",
-                            isActive && "text-primary",
-                            !isActive &&
-                              "text-secondary-light group-hover/link:text-periwinkle"
+                            isActive && "text-charcoal",
+                            !isActive && "text-primary-dark"
                           )}
                           style={{ fontFamily: "var(--font-display)" }}
                         >

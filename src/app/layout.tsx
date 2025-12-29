@@ -5,6 +5,8 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { Footer } from "@/components/Footer";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -87,10 +89,13 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <SessionProvider>
-          <div className="flex flex-col min-h-screen w-full">
-            <main className="flex flex-col flex-1">{children}</main>
-            <Footer />
-          </div>
+          <SidebarProvider>
+            <AppSidebar />
+            <div className="flex flex-col min-h-screen w-full">
+              <main className="flex flex-col flex-1">{children}</main>
+              <Footer />
+            </div>
+          </SidebarProvider>
         </SessionProvider>
         <Toaster />
       </body>
