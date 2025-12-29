@@ -132,6 +132,10 @@ interface addEventProps {
       | "Performance"
       | "Other";
     styles?: string[];
+    website?: string;
+    instagram?: string;
+    youtube?: string;
+    facebook?: string;
   };
   sections: {
     id: string;
