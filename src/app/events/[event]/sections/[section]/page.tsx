@@ -9,7 +9,14 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { SectionDetails } from "@/components/sections/SectionDetails";
 import { DescriptionWinnerColumns } from "@/components/sections/DescriptionWinnerColumns";
 import { Button } from "@/components/ui/button";
-import { Pencil, Settings } from "lucide-react";
+import {
+  Pencil,
+  Settings,
+  Globe,
+  Instagram,
+  Youtube,
+  Facebook,
+} from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUser } from "@/db/queries/user";
@@ -294,12 +301,10 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
         <div className="flex justify-center w-full mt-auto">
           <div className="w-full max-w-[920px]">
             <hr className="border-primary-light my-4" />
-            <div className="flex flex-row gap-10 items-center justify-center mb-4">
+            <div className="flex flex-row gap-10 items-center justify-center mb-4 flex-wrap">
               {creator && (
                 <div className="flex flex-row gap-2 items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Page Owner:{" "}
-                  </span>
+                  <span className="text-sm">Page Owner: </span>
                   <UserAvatar
                     username={creator.username || ""}
                     displayName={creator.displayName || creator.username || ""}
@@ -316,6 +321,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                   />
                 </div>
               )}
+
               {/* Settings and Edit buttons - top right row */}
               {(canEdit || isCreator) && (
                 <div className="flex gap-2">

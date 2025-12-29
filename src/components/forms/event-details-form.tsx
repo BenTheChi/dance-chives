@@ -34,7 +34,14 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Button } from "../ui/button";
-import { PlusIcon, MinusIcon } from "lucide-react";
+import {
+  PlusIcon,
+  MinusIcon,
+  Globe,
+  Instagram,
+  Youtube,
+  Facebook,
+} from "lucide-react";
 import { StyleMultiSelect } from "../ui/style-multi-select";
 import { Switch } from "../ui/switch";
 
@@ -221,6 +228,94 @@ export function EventDetailsForm({
             </FormItem>
           )}
         />
+
+        {/* Social Media Links - Website, Instagram, YouTube, Facebook */}
+        <div className="grid grid-cols-2 gap-5 w-full">
+          <FormField
+            control={control}
+            name="eventDetails.website"
+            render={({ field }) => (
+              <FormItem className="flex-1 min-w-0 w-full">
+                <FormLabel className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Website
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    className="bg-neutral-300 w-full"
+                    placeholder="https://example.com"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="eventDetails.instagram"
+            render={({ field }) => (
+              <FormItem className="flex-1 min-w-0 w-full">
+                <FormLabel className="flex items-center gap-2">
+                  <Instagram className="h-4 w-4" />
+                  Instagram
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    className="bg-neutral-300 w-full"
+                    placeholder="@username or link"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="eventDetails.youtube"
+            render={({ field }) => (
+              <FormItem className="flex-1 min-w-0 w-full">
+                <FormLabel className="flex items-center gap-2">
+                  <Youtube className="h-4 w-4" />
+                  YouTube
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    className="bg-neutral-300 w-full"
+                    placeholder="@username or link"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="eventDetails.facebook"
+            render={({ field }) => (
+              <FormItem className="flex-1 min-w-0 w-full">
+                <FormLabel className="flex items-center gap-2">
+                  <Facebook className="h-4 w-4" />
+                  Facebook
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    value={field.value ?? ""}
+                    className="bg-neutral-300 w-full"
+                    placeholder="@username or link"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       </div>
 
       {/* Location & Date Section */}

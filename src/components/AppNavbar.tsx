@@ -122,7 +122,9 @@ export function AppNavbar() {
               </MaintenanceLink>
             </Button>
           </div>
-          {!session && (
+          {session ? (
+            <UserMenu session={session} />
+          ) : (
             <>
               <MaintenanceLink href="/login">
                 <Button size={isMobile ? "sm" : "default"} variant="secondary">

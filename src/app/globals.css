@@ -209,6 +209,9 @@
     transform: translateY(-8px);
     box-shadow: 6px 6px 0 0 var(--primary-color-light);
   }
+  .card:active {
+    box-shadow: none;
+  }
 
   .section-card {
     border: 4px solid var(--secondary-color-light);
@@ -223,6 +226,9 @@
 
   .shadow-hover:hover {
     box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
+  }
+  .shadow-hover:active {
+    box-shadow: none;
   }
 
   /* Neobrutalism sidebar styling */

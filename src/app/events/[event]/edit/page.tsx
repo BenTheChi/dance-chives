@@ -93,6 +93,10 @@ export default async function EditEventPage({
     location: currEvent.eventDetails.location ?? "",
     cost: currEvent.eventDetails.cost ?? "",
     prize: currEvent.eventDetails.prize ?? "",
+    website: currEvent.eventDetails.website ?? "",
+    instagram: currEvent.eventDetails.instagram ?? "",
+    youtube: currEvent.eventDetails.youtube ?? "",
+    facebook: currEvent.eventDetails.facebook ?? "",
     poster: currEvent.eventDetails.poster
       ? {
           ...currEvent.eventDetails.poster,
@@ -114,7 +118,7 @@ export default async function EditEventPage({
   const formattedSections = (currEvent.sections || []).map((section) => ({
     ...section,
     description: section.description ?? "",
-  bgColor: section.bgColor || "#ffffff",
+    bgColor: section.bgColor || "#ffffff",
     poster: section.poster
       ? {
           ...section.poster,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { VideoCard } from "@/components/videos/VideoCard";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/video";
+import { useSession } from "next-auth/react";
 
 interface RecentlyAddedVideosProps {
   videos: Array<{
@@ -18,6 +19,7 @@ interface RecentlyAddedVideosProps {
 }
 
 export function RecentlyAddedVideos({ videos }: RecentlyAddedVideosProps) {
+  const { data: session } = useSession();
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
     null
   );
@@ -61,6 +63,7 @@ export function RecentlyAddedVideos({ videos }: RecentlyAddedVideosProps) {
               sectionTitle={item.sectionTitle}
               bracketTitle={item.bracketTitle}
               onClick={() => handleVideoClick(index)}
+              currentUserId={session?.user?.id}
               eventId={item.eventId}
             />
           );

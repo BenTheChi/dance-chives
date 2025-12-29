@@ -76,7 +76,7 @@ export function EventShareSaveButtons({
       <div className={cn("flex items-center gap-2", className)}>
         <button
           onClick={handleShareClick}
-          className="border border-black w-6 h-6 rounded-full bg-periwinkle flex items-center justify-center transition-all shadow-hover hover:bg-periwinkle-light"
+          className="border border-black w-6 h-6 rounded-full bg-accent-purple flex items-center justify-center transition-all shadow-hover hover:bg-accent-purple/80"
           aria-label="Share event"
           title={shareCopied ? "Copied!" : "Copy event URL"}
         >
@@ -89,7 +89,7 @@ export function EventShareSaveButtons({
             "border border-black w-6 h-6 rounded-full flex items-center justify-center transition-all shadow-hover",
             isSaved
               ? "bg-red-500 hover:bg-red-300"
-              : "bg-periwinkle hover:bg-periwinkle-light",
+              : "bg-accent-purple hover:bg-accent-purple/80",
             isPending && "opacity-50 cursor-not-allowed"
           )}
           aria-label={isSaved ? "Unsave event" : "Save event"}
@@ -105,18 +105,20 @@ export function EventShareSaveButtons({
     );
   }
 
-  // Large variant (default)
+  // Large variant (default) - shows icons only on small screens
   return (
     <div className={cn("flex justify-center gap-4", className)}>
       <Button
         onClick={handleShareClick}
         variant="default"
-        className="bg-periwinkle text-black border-black"
+        className="bg-accent-purple text-black border-black"
         aria-label="Share event"
         title={shareCopied ? "Copied!" : "Copy event URL"}
       >
-        <Share2 className="h-4 w-4 mr-2" />
-        {shareCopied ? "Copied!" : "Share"}
+        <Share2 className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">
+          {shareCopied ? "Copied!" : "Share"}
+        </span>
       </Button>
       <Button
         onClick={handleSaveClick}
@@ -126,17 +128,17 @@ export function EventShareSaveButtons({
           "border-black",
           isSaved
             ? "bg-red-500 text-white hover:bg-red-600"
-            : "bg-periwinkle text-black"
+            : "bg-accent-purple text-black"
         )}
         aria-label={isSaved ? "Unsave event" : "Save event"}
       >
         <Heart
           className={cn(
-            "h-4 w-4 mr-2",
+            "h-4 w-4 sm:mr-2",
             isSaved ? "fill-white text-white" : "text-black"
           )}
         />
-        {isSaved ? "Saved" : "Save"}
+        <span className="hidden sm:inline">{isSaved ? "Saved" : "Save"}</span>
       </Button>
     </div>
   );

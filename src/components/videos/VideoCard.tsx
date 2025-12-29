@@ -15,6 +15,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
+import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
 
 interface VideoCardProps {
   video: Video;
@@ -53,6 +54,54 @@ export function VideoCard({
 
   // Get tagged dancers
   const taggedDancers = video.taggedDancers || [];
+
+  // Determine current user's roles in this video
+  const currentVideoRoles: string[] = [];
+  if (currentUserId) {
+    // Check if user is tagged as Dancer
+    if (
+      taggedDancers.some(
+        (dancer) =>
+          dancer.id === currentUserId || dancer.username === currentUserId
+      )
+    ) {
+      currentVideoRoles.push("Dancer");
+    }
+    // Check if user is tagged as Winner
+    if (video.taggedWinners) {
+      if (
+        video.taggedWinners.some(
+          (winner) =>
+            winner.id === currentUserId || winner.username === currentUserId
+        )
+      ) {
+        currentVideoRoles.push("Winner");
+      }
+    }
+    // Check if user is tagged as Choreographer
+    if (video.taggedChoreographers) {
+      if (
+        video.taggedChoreographers.some(
+          (choreographer) =>
+            choreographer.id === currentUserId ||
+            choreographer.username === currentUserId
+        )
+      ) {
+        currentVideoRoles.push("Choreographer");
+      }
+    }
+    // Check if user is tagged as Teacher
+    if (video.taggedTeachers) {
+      if (
+        video.taggedTeachers.some(
+          (teacher) =>
+            teacher.id === currentUserId || teacher.username === currentUserId
+        )
+      ) {
+        currentVideoRoles.push("Teacher");
+      }
+    }
+  }
 
   // Handler to remove tag from video
   const handleRemoveTag = (dancerId: string) => {
@@ -102,7 +151,7 @@ export function VideoCard({
         {/* Dancer tags - always visible overlay */}
         {taggedDancers.length > 0 && (
           <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 items-center z-20 pointer-events-auto">
-            <div className="flex flex-wrap gap-1 items-center pointer-events-auto">
+            <div className="flex flex-wrap gap-2 items-center pointer-events-auto">
               {taggedDancers.map((dancer) => {
                 const dancerId = dancer.id || dancer.username;
                 const canRemove =
@@ -129,7 +178,33 @@ export function VideoCard({
                   />
                 );
               })}
+              {/* Tag self button - only show if user is logged in and eventId is provided */}
+              {currentUserId && eventId && (
+                <TagSelfCircleButton
+                  eventId={eventId}
+                  target="video"
+                  targetId={video.id}
+                  currentUserId={currentUserId}
+                  videoType={video.type as "battle" | "choreography" | "class"}
+                  currentVideoRoles={currentVideoRoles}
+                  size="sm"
+                />
+              )}
             </div>
+          </div>
+        )}
+        {/* Tag self button when no dancers are tagged - only show if user is logged in and eventId is provided */}
+        {taggedDancers.length === 0 && currentUserId && eventId && (
+          <div className="absolute bottom-2 left-2 flex flex-wrap gap-1 items-center z-20 pointer-events-auto">
+            <TagSelfCircleButton
+              eventId={eventId}
+              target="video"
+              targetId={video.id}
+              currentUserId={currentUserId}
+              videoType={video.type as "battle" | "choreography" | "class"}
+              currentVideoRoles={currentVideoRoles}
+              size="sm"
+            />
           </div>
         )}
       </div>

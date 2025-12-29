@@ -489,42 +489,64 @@ export async function addEvent(props: addEventProps): Promise<response> {
       }
     } else {
       // Fetch place details + timezone - 2 API CALLS (only for new cities)
-      try {
-        const placeDetails = await getPlaceDetails(props.eventDetails.city.id);
-        const timezoneResult = await getTimezone(
-          placeDetails.geometry.location.lat,
-          placeDetails.geometry.location.lng
-        );
-        normalizedTimezone = timezoneResult.timeZoneId;
+      // Only attempt if city.id looks like a valid Google place_id
+      // Google place_ids are typically long alphanumeric strings
+      const cityId = props.eventDetails.city.id;
+      const looksLikePlaceId = cityId && cityId.length > 10 && /^[A-Za-z0-9_-]+$/.test(cityId);
+      
+      if (!looksLikePlaceId && existingCity) {
+        // City exists in Neo4j but missing coordinates - use existing data
+        // This shouldn't happen normally, but handle gracefully
+        console.warn(`City ${cityId} exists in Neo4j but missing coordinates. Using form data.`);
+        normalizedTimezone = existingCity.timezone || "UTC";
+      } else if (looksLikePlaceId) {
+        try {
+          const placeDetails = await getPlaceDetails(cityId);
+          const timezoneResult = await getTimezone(
+            placeDetails.geometry.location.lat,
+            placeDetails.geometry.location.lng
+          );
+          normalizedTimezone = timezoneResult.timeZoneId;
 
-        // Extract city data from place details
-        const region =
-          placeDetails.address_components.find((ac) =>
-            ac.types.includes("administrative_area_level_1")
-          )?.short_name || "";
-        const countryCode =
-          placeDetails.address_components.find((ac) =>
-            ac.types.includes("country")
-          )?.short_name || "";
+          // Extract city data from place details
+          const region =
+            placeDetails.address_components.find((ac) =>
+              ac.types.includes("administrative_area_level_1")
+            )?.short_name || "";
+          const countryCode =
+            placeDetails.address_components.find((ac) =>
+              ac.types.includes("country")
+            )?.short_name || "";
 
-        // Store in Neo4j for future use
-        const cityData: City = {
-          id: placeDetails.place_id,
-          name: placeDetails.name || placeDetails.formatted_address,
-          region,
-          countryCode,
-          latitude: placeDetails.geometry.location.lat,
-          longitude: placeDetails.geometry.location.lng,
-          timezone: normalizedTimezone,
-        };
-        await storeCityData(cityData);
-      } catch (error) {
-        console.error("Failed to fetch city details", error);
-        return {
-          error: "Failed to fetch city details",
-          status: 500,
-          event: null,
-        };
+          // Store in Neo4j for future use
+          const cityData: City = {
+            id: placeDetails.place_id,
+            name: placeDetails.name || placeDetails.formatted_address,
+            region,
+            countryCode,
+            latitude: placeDetails.geometry.location.lat,
+            longitude: placeDetails.geometry.location.lng,
+            timezone: normalizedTimezone,
+          };
+          await storeCityData(cityData);
+        } catch (error) {
+          console.error("Failed to fetch city details", error);
+          // If we have existing city data, use it as fallback
+          if (existingCity) {
+            console.warn("Falling back to existing city data from Neo4j");
+            normalizedTimezone = existingCity.timezone || "UTC";
+          } else {
+            return {
+              error: `Failed to fetch city details: ${error instanceof Error ? error.message : "Unknown error"}`,
+              status: 500,
+              event: null,
+            };
+          }
+        }
+      } else {
+        // Invalid city ID format - use form data as fallback
+        console.warn(`Invalid city ID format: ${cityId}. Using form data.`);
+        normalizedTimezone = existingCity?.timezone || "UTC";
       }
     }
 
@@ -578,6 +600,10 @@ export async function addEvent(props: addEventProps): Promise<response> {
       eventType: props.eventDetails.eventType || "Other",
       styles: props.eventDetails.styles,
       status: "visible", // Default status to visible
+      website: props.eventDetails.website,
+      instagram: props.eventDetails.instagram,
+      youtube: props.eventDetails.youtube,
+      facebook: props.eventDetails.facebook,
       city: {
         ...props.eventDetails.city,
         timezone: normalizedTimezone,
@@ -1292,6 +1318,10 @@ export async function editEvent(
       eventType: editedEvent.eventDetails.eventType || "Other",
       styles: editedEvent.eventDetails.styles,
       status: oldEvent.eventDetails.status || "visible", // Preserve existing status
+      website: editedEvent.eventDetails.website,
+      instagram: editedEvent.eventDetails.instagram,
+      youtube: editedEvent.eventDetails.youtube,
+      facebook: editedEvent.eventDetails.facebook,
       city: {
         ...editedEvent.eventDetails.city,
         timezone: timezone,

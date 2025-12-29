@@ -310,6 +310,10 @@ export const getEvent = async (
       dates: e.dates,
       schedule: e.schedule,
       status: COALESCE(e.status, 'visible'),
+      website: e.website,
+      instagram: e.instagram,
+      youtube: e.youtube,
+      facebook: e.facebook,
       creatorId: creator.id
     } as event,
     CASE 
@@ -874,6 +878,10 @@ export const getEvent = async (
     styles: eventStyles,
     eventType: (eventType as EventType) || "Other", // Always set eventType, default to "Other"
     status: (eventData.status as "hidden" | "visible") || "visible",
+    website: eventData.website || undefined,
+    instagram: eventData.instagram || undefined,
+    youtube: eventData.youtube || undefined,
+    facebook: eventData.facebook || undefined,
   };
 
   // Enrich all users with city and styles from Postgres UserCard table
@@ -1552,6 +1560,10 @@ export const insertEvent = async (
         e.dates = $dates,
         e.schedule = $schedule,
         e.status = $status,
+        e.website = $website,
+        e.instagram = $instagram,
+        e.youtube = $youtube,
+        e.facebook = $facebook,
         e.createdAt = $createdAt,
         e.updatedAt = $updatedAt
       ON MATCH SET
@@ -1564,6 +1576,10 @@ export const insertEvent = async (
         e.dates = $dates,
         e.schedule = $schedule,
         e.status = $status,
+        e.website = $website,
+        e.instagram = $instagram,
+        e.youtube = $youtube,
+        e.facebook = $facebook,
         e.updatedAt = $updatedAt
 
       WITH e
@@ -1588,6 +1604,10 @@ export const insertEvent = async (
         dates: datesJson,
         schedule: eventDetails.schedule || null,
         status: eventDetails.status || "visible",
+        website: eventDetails.website || null,
+        instagram: eventDetails.instagram || null,
+        youtube: eventDetails.youtube || null,
+        facebook: eventDetails.facebook || null,
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
       }
@@ -1885,6 +1905,10 @@ export const editEvent = async (
            e.dates = $dates,
            e.schedule = $schedule,
            e.status = COALESCE($status, e.status, 'visible'),
+           e.website = $website,
+           e.instagram = $instagram,
+           e.youtube = $youtube,
+           e.facebook = $facebook,
            e.updatedAt = $updatedAt`,
       {
         id,
@@ -1901,6 +1925,10 @@ export const editEvent = async (
         dates: datesJson,
         schedule: eventDetails.schedule || null,
         status: eventDetails.status || null,
+        website: eventDetails.website || null,
+        instagram: eventDetails.instagram || null,
+        youtube: eventDetails.youtube || null,
+        facebook: eventDetails.facebook || null,
         updatedAt: event.updatedAt.toISOString(),
       }
     );

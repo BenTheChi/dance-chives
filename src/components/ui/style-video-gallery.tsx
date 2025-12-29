@@ -4,6 +4,7 @@ import { useState } from "react";
 import { VideoCard } from "@/components/videos/VideoCard";
 import { VideoLightbox } from "@/components/ui/video-lightbox";
 import { Video } from "@/types/event";
+import { useSession } from "next-auth/react";
 
 interface StyleVideoItem {
   video: Video;
@@ -18,6 +19,7 @@ interface StyleVideoGalleryProps {
 }
 
 export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
+  const { data: session } = useSession();
   const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
     null
   );
@@ -37,6 +39,7 @@ export function StyleVideoGallery({ videos }: StyleVideoGalleryProps) {
             eventTitle={item.eventTitle}
             sectionTitle={item.sectionTitle}
             onClick={() => handleVideoSelect(index)}
+            currentUserId={session?.user?.id}
             eventId={item.eventId}
           />
         ))}

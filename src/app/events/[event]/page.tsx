@@ -18,6 +18,7 @@ import {
 } from "./event-client";
 import { RequestOwnershipButton } from "@/components/events/RequestOwnershipButton";
 import { RolePendingBadge } from "./role-pending-badge";
+import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import type { Metadata } from "next";
 
 type PageProps = {
@@ -387,7 +388,7 @@ export default async function EventPage({ params }: PageProps) {
                                   <h3 className="text-center underline">
                                     Past Date
                                   </h3>
-                                  <div className="flex flex-col text-sm">
+                                  <div className="flex flex-col text-sm text-center">
                                     {pastDates.map((d, idx) => (
                                       <span key={`past-${d.date}-${idx}`}>
                                         {formatEventDateRow(d)}
@@ -503,8 +504,84 @@ export default async function EventPage({ params }: PageProps) {
                       );
                     })()}
                   </div>
-                  {/* Share and Save buttons - handled by client component */}
-                  <EventShareSaveButtonsWrapper eventId={event.id} />
+                  {/* Share/Save buttons and Social Media Links */}
+                  <div className="flex justify-around items-center flex-wrap gap-4 mt-10">
+                    {/* Social Media Links */}
+                    {(event.eventDetails.website ||
+                      event.eventDetails.instagram ||
+                      event.eventDetails.youtube ||
+                      event.eventDetails.facebook) && (
+                      <div className="flex flex-row gap-4 items-center">
+                        {event.eventDetails.website && (
+                          <a
+                            href={event.eventDetails.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center h-10 w-10 bg-accent-blue text-black border border-black shadow-hover transition-opacity rounded-sm"
+                            aria-label="Website"
+                          >
+                            <Globe className="h-5 w-5" />
+                          </a>
+                        )}
+                        {event.eventDetails.instagram && (
+                          <a
+                            href={
+                              event.eventDetails.instagram.startsWith("http")
+                                ? event.eventDetails.instagram
+                                : `https://instagram.com/${event.eventDetails.instagram.replace(
+                                    /^@/,
+                                    ""
+                                  )}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center h-10 w-10 bg-accent-blue text-black border border-black shadow-hover transition-opacity rounded-sm"
+                            aria-label="Instagram"
+                          >
+                            <Instagram className="h-5 w-5" />
+                          </a>
+                        )}
+                        {event.eventDetails.youtube && (
+                          <a
+                            href={
+                              event.eventDetails.youtube.startsWith("http")
+                                ? event.eventDetails.youtube
+                                : `https://youtube.com/@${event.eventDetails.youtube.replace(
+                                    /^@/,
+                                    ""
+                                  )}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center h-10 w-10 bg-accent-blue text-black border border-black shadow-hover transition-opacity rounded-sm"
+                            aria-label="YouTube"
+                          >
+                            <Youtube className="h-5 w-5" />
+                          </a>
+                        )}
+                        {event.eventDetails.facebook && (
+                          <a
+                            href={
+                              event.eventDetails.facebook.startsWith("http")
+                                ? event.eventDetails.facebook
+                                : `https://facebook.com/${event.eventDetails.facebook.replace(
+                                    /^@/,
+                                    ""
+                                  )}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center h-10 w-10 bg-accent-blue text-black border border-black shadow-hover transition-opacity rounded-sm"
+                            aria-label="Facebook"
+                          >
+                            <Facebook className="h-5 w-5" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {/* Share and Save buttons - handled by client component */}
+                    <EventShareSaveButtonsWrapper eventId={event.id} />
+                  </div>
                 </section>
               </div>
             </div>
@@ -529,7 +606,7 @@ export default async function EventPage({ params }: PageProps) {
               </div>
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <div className="flex gap-2 justify-center items-center">
-                  <h2 className="text-center mx-auto underline">Roles</h2>
+                  <h2 className="text-center underline">Roles</h2>
                   <EventTagSelfButton eventId={event.id} />
                 </div>
                 {Array.from(rolesByTitle.entries()).map(
@@ -601,12 +678,10 @@ export default async function EventPage({ params }: PageProps) {
         <div className="flex justify-center w-full">
           <div className="w-full max-w-[920px]">
             <hr className="border-primary-light my-4" />
-            <div className="flex flex-row gap-10 items-center justify-center mb-4">
+            <div className="flex flex-row gap-10 items-center justify-center mb-4 flex-wrap">
               {creator && (
                 <div className="flex flex-row gap-2 items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Page Owner:{" "}
-                  </span>
+                  <span className="text-sm">Page Owner: </span>
                   <UserAvatar
                     username={creator.username || ""}
                     displayName={creator.displayName || creator.username || ""}

@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sizeClasses = {
-  sm: "w-5 h-5",
+  sm: "w-6 h-6",
   md: "w-8 h-8",
   lg: "w-[50px] h-[50px]",
 } as const;
@@ -29,11 +29,13 @@ export function CirclePlusButton({
       type="button"
       className={cn(
         "rounded-full flex items-center justify-center",
-        size === "sm" ? "bg-accent-blue" : "bg-accent-yellow",
+        "bg-accent-yellow",
         "text-black",
         "border border-charcoal",
         "transition-shadow duration-150",
-        "shadow-hover",
+        "hover:glow",
+        "hover:scale-130",
+        "transition-transform duration-150",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-pulse-green focus-visible:ring-offset-2",
         "cursor-pointer",
         sizeClasses[size],

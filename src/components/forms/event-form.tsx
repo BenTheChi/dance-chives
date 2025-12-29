@@ -91,6 +91,63 @@ const imageSchema = z.object({
   ),
 });
 
+// Helper functions to normalize social media links/usernames to full URLs
+const normalizeInstagram = (
+  input: string | undefined | null
+): string | undefined => {
+  if (!input || input.trim() === "") return undefined;
+  const trimmed = input.trim();
+  // If it's already a URL, return as-is
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  // Remove @ if present and convert to URL
+  const username = trimmed
+    .replace(/^@/, "")
+    .replace(/^instagram\.com\//, "")
+    .trim();
+  if (!username || username === "") return undefined;
+  return `https://instagram.com/${username}`;
+};
+
+const normalizeYouTube = (
+  input: string | undefined | null
+): string | undefined => {
+  if (!input || input.trim() === "") return undefined;
+  const trimmed = input.trim();
+  // If it's already a URL, return as-is
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  // Remove @ if present and convert to URL
+  const username = trimmed
+    .replace(/^@/, "")
+    .replace(/^youtube\.com\//, "")
+    .replace(/^youtu\.be\//, "")
+    .trim();
+  if (!username || username === "") return undefined;
+  return `https://youtube.com/@${username}`;
+};
+
+const normalizeFacebook = (
+  input: string | undefined | null
+): string | undefined => {
+  if (!input || input.trim() === "") return undefined;
+  const trimmed = input.trim();
+  // If it's already a URL, return as-is
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  // Remove @ if present and convert to URL
+  const username = trimmed
+    .replace(/^@/, "")
+    .replace(/^facebook\.com\//, "")
+    .replace(/^fb\.com\//, "")
+    .trim();
+  if (!username || username === "") return undefined;
+  return `https://facebook.com/${username}`;
+};
+
 const sectionSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
@@ -212,6 +269,22 @@ const eventDetailsSchema = z.object({
     "Other",
   ]),
   styles: z.array(z.string()).optional(),
+  website: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.string().url().optional().or(z.literal(""))
+  ),
+  instagram: z.preprocess((val) => {
+    const normalized = normalizeInstagram(val as string | null | undefined);
+    return normalized;
+  }, z.string().url().optional().or(z.literal(""))),
+  youtube: z.preprocess((val) => {
+    const normalized = normalizeYouTube(val as string | null | undefined);
+    return normalized;
+  }, z.string().url().optional().or(z.literal(""))),
+  facebook: z.preprocess((val) => {
+    const normalized = normalizeFacebook(val as string | null | undefined);
+    return normalized;
+  }, z.string().url().optional().or(z.literal(""))),
 });
 
 const roleSchema = z.object({

@@ -382,8 +382,14 @@ export function TagSelfCircleButton({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <CirclePlusButton size={size} onClick={() => setIsDialogOpen(true)} />
+    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+      <CirclePlusButton
+        size={size}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsDialogOpen(true);
+        }}
+      />
       {pendingRoles.size > 0 && (
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (
@@ -402,8 +408,38 @@ export function TagSelfCircleButton({
         <DialogContent className="bg-primary">
           <DialogHeader>
             <DialogTitle>{dialogTitle || "Tag Yourself"}</DialogTitle>
+            {dialogDescription && (
+              <DialogDescription>{dialogDescription}</DialogDescription>
+            )}
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
+            {/* Show message about existing requests */}
+            {pendingRoles.size > 0 && (
+              <div className="flex flex-col gap-2 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-sm">
+                <p className="text-sm font-medium text-yellow-200">
+                  Existing Requests
+                </p>
+                <p className="text-sm text-yellow-100">
+                  You already have pending tag requests for the following
+                  role(s):
+                </p>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {Array.from(pendingRoles).map((role) => (
+                    <Badge
+                      key={role}
+                      variant="outline"
+                      className="bg-yellow-500/30 text-yellow-100 border-yellow-500/50"
+                    >
+                      {role}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-yellow-200 mt-1">
+                  These roles are not available for selection until the requests
+                  are processed.
+                </p>
+              </div>
+            )}
             {selectableRoles.length > 1 ? (
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium">Role</label>
@@ -427,6 +463,10 @@ export function TagSelfCircleButton({
             ) : selectableRoles.length === 1 ? (
               <div className="text-sm">
                 Role: <span className="font-medium">{selectableRoles[0]}</span>
+              </div>
+            ) : selectableRoles.length === 0 && pendingRoles.size > 0 ? (
+              <div className="text-sm text-center text-gray-400">
+                All available roles have pending requests.
               </div>
             ) : null}
           </div>

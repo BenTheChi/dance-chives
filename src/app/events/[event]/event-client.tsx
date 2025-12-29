@@ -75,20 +75,14 @@ export function EventShareSaveButtonsWrapper({ eventId }: EventClientProps) {
   const { authData, loading } = useEventAuthData(eventId);
 
   if (loading) {
-    return (
-      <div className="mt-10">
-        <EventShareSaveButtons eventId={eventId} initialSaved={false} />
-      </div>
-    );
+    return <EventShareSaveButtons eventId={eventId} initialSaved={false} />;
   }
 
   return (
-    <div className="mt-10">
-      <EventShareSaveButtons
-        eventId={eventId}
-        initialSaved={authData?.isSaved ?? false}
-      />
-    </div>
+    <EventShareSaveButtons
+      eventId={eventId}
+      initialSaved={authData?.isSaved ?? false}
+    />
   );
 }
 
@@ -150,4 +144,3 @@ export function EventEditButtons({ eventId }: EventClientProps) {
     </div>
   );
 }
-

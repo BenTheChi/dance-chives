@@ -41,6 +41,10 @@ export interface EventDetails {
   styles?: string[]; // danceStyleTags
   eventType: EventType;
   status?: "hidden" | "visible"; // Event visibility status
+  website?: string;
+  instagram?: string;
+  youtube?: string;
+  facebook?: string;
 }
 
 // Event interface - unified event structure for all event types

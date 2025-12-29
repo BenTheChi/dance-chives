@@ -471,7 +471,7 @@ export default function SignUpForm({
                     <FormLabel>Instagram Username</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="@username"
+                        placeholder="username"
                         {...field}
                         value={field.value ?? ""}
                       />
