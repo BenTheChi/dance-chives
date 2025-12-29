@@ -109,7 +109,7 @@ export function AppNavbar() {
 
       {/* Right section: Actions */}
       <div className="flex h-18 px-2 md:px-4 py-2 items-center w-full justify-end z-10">
-        <SidebarTrigger className="md:hidden text-white hover:text-white" />
+        {/* <SidebarTrigger className="md:hidden text-white hover:text-white" /> */}
         <div className="flex items-center gap-x-2">
           <div className="flex gap-3 mr-0 md:mr-5">
             <Button asChild size="icon" variant="ghost">
