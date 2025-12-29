@@ -5,7 +5,6 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import { UserMenu } from "./UserMenu";
 import { useSession } from "next-auth/react";
-import { SidebarTrigger } from "./ui/sidebar";
 import { useEffect } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
@@ -58,10 +57,6 @@ export function AppNavbar() {
         />
       </Link>
       <div className="flex h-18 px-4 py-2 items-center w-full justify-between">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="border-1 border-grey cursor-pointer sm:hidden" />
-        </div>
-
         {/* Centered nav menu items - hidden below sm */}
         <div className="hidden sm:flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2">
           {navMenuItems.map((item) => {
@@ -93,7 +88,7 @@ export function AppNavbar() {
           })}
         </div>
 
-        <div className="flex items-center gap-x-2 whitespace-nowrap">
+        {/* <div className="flex items-center gap-x-2 whitespace-nowrap">
           {session ? (
             <>
               <Button asChild size="icon" variant="ghost">
@@ -133,7 +128,7 @@ export function AppNavbar() {
               </MaintenanceLink>
             </>
           )}
-        </div>
+        </div> */}
       </div>
     </nav>
   );

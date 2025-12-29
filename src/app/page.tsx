@@ -7,6 +7,7 @@ import { RecentlyAddedVideos } from "@/components/RecentlyAddedVideos";
 import { getLatestEventVideos } from "@/db/queries/event";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
+import Script from "next/script";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -47,7 +48,7 @@ export default async function Home() {
                 dance events
               </h2>
             </div>
-            <script src="https://cdn.logwork.com/widget/countdown.js"></script>
+            <Script src="https://cdn.logwork.com/widget/countdown.js"></Script>
             <a
               href="https://logwork.com/countdown-timer"
               className="countdown-timer"

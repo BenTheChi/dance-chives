@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Archivo, Rubik_Mono_One } from "next/font/google";
 import "./globals.css";
 
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { SessionProvider } from "next-auth/react";
 import { Toaster } from "@/components/ui/sonner";
 import { Footer } from "@/components/Footer";
@@ -67,15 +65,10 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <SessionProvider>
-          <SidebarProvider>
-            <div className="flex flex-col min-h-screen w-full">
-              <div className="flex flex-1 w-full">
-                <AppSidebar />
-                <main className="flex flex-col flex-1">{children}</main>
-              </div>
-              <Footer />
-            </div>
-          </SidebarProvider>
+          <div className="flex flex-col min-h-screen w-full">
+            <main className="flex flex-col flex-1">{children}</main>
+            <Footer />
+          </div>
         </SessionProvider>
         <Toaster />
       </body>
