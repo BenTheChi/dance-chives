@@ -18,6 +18,9 @@ const rubikMonoOne = Rubik_Mono_One({
   weight: ["400"],
 });
 
+const baseUrl =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
+
 export const metadata: Metadata = {
   title: "Dance Chives",
   description: "Freestyle Dance Culture, Media, and Community",
@@ -27,6 +30,21 @@ export const metadata: Metadata = {
       { url: "/icon.svg", sizes: "512x512", type: "image/svg+xml" },
     ],
     apple: [{ url: "/icon.svg", sizes: "180x180", type: "image/svg+xml" }],
+  },
+  openGraph: {
+    title: "Dance Chives",
+    description: "Freestyle Dance Culture, Media, and Community",
+    url: baseUrl,
+    siteName: "Dance Chives",
+    images: [
+      {
+        url: `${baseUrl}/mascot/Dancechives_MainLogo_Color_onLight.png`,
+        width: 1200,
+        height: 630,
+        alt: "Dance Chives Logo",
+      },
+    ],
+    type: "website",
   },
 };
 
@@ -49,6 +67,10 @@ export default function RootLayout({
         />
         <meta property="og:url" content="https://www.dancechives.com/" />
         <meta property="og:type" content="website" />
+        <meta
+          property="og:image"
+          content={`${baseUrl}/mascot/Dancechives_MainLogo_Color_onLight.png`}
+        />
         {/* MailerLite Universal */}
         <script
           dangerouslySetInnerHTML={{
