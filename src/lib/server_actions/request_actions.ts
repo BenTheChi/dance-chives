@@ -2338,11 +2338,11 @@ export async function tagSelfInVideo(
   }
 
   // Dancer tags are supported for all videos
-  // Winner tags are only supported for battle videos
+  // Winner tags are supported for battle and other videos
   if (role === VIDEO_ROLE_WINNER) {
     const videoType = await getVideoType(videoId);
-    if (videoType !== "battle") {
-      throw new Error("Winner tags are only supported for battle videos");
+    if (videoType !== "battle" && videoType !== "other") {
+      throw new Error("Winner tags are only supported for battle and other videos");
     }
   }
 
@@ -2843,10 +2843,10 @@ export async function markUserAsVideoWinner(
     throw new Error("Video not found in this event");
   }
 
-  // Winner tags are only supported for battle videos
+  // Winner tags are supported for battle and other videos
   const videoType = await getVideoType(videoId);
-  if (videoType !== "battle") {
-    throw new Error("Winner tags are only supported for battle videos");
+  if (videoType !== "battle" && videoType !== "other") {
+    throw new Error("Winner tags are only supported for battle and other videos");
   }
 
   // Get userId - if username is provided, look up user by username

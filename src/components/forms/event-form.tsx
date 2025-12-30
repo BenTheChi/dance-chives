@@ -64,7 +64,7 @@ const videoSchema = z.object({
       }
     ),
   type: z
-    .enum(["battle", "freestyle", "choreography", "class"])
+    .enum(["battle", "freestyle", "choreography", "class", "other"])
     .default("battle"),
   taggedWinners: z.array(userSearchItemSchema).optional(),
   taggedDancers: z.array(userSearchItemSchema).optional(),

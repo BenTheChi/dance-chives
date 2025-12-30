@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "popping",
     "locking",
     "house",
-    "krumping",
+    "krump",
     "waacking",
     "voguing",
     "bboying",

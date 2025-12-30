@@ -14,6 +14,7 @@ import {
   FreestyleVideo,
   ChoreographyVideo,
   ClassVideo,
+  OtherVideo,
 } from "../../types/video";
 import { UserSearchItem } from "../../types/user";
 import { City } from "../../types/city";
@@ -114,28 +115,30 @@ export function getSectionTypeFromLabel(label: string): string | null {
 
 // Video type label translation
 export function getVideoTypeLabel(
-  videoType: "battle" | "freestyle" | "choreography" | "class"
+  videoType: "battle" | "freestyle" | "choreography" | "class" | "other"
 ): string {
   const labelMap: Record<string, string> = {
     battle: "BattleVideo",
     freestyle: "FreestyleVideo",
     choreography: "ChoreographyVideo",
     class: "ClassVideo",
+    other: "OtherVideo",
   };
   return labelMap[videoType] || "FreestyleVideo";
 }
 
 export function getVideoTypeFromLabel(
   label: string
-): "battle" | "freestyle" | "choreography" | "class" {
+): "battle" | "freestyle" | "choreography" | "class" | "other" {
   const reverseMap: Record<
     string,
-    "battle" | "freestyle" | "choreography" | "class"
+    "battle" | "freestyle" | "choreography" | "class" | "other"
   > = {
     BattleVideo: "battle",
     FreestyleVideo: "freestyle",
     ChoreographyVideo: "choreography",
     ClassVideo: "class",
+    OtherVideo: "other",
   };
   return reverseMap[label] || "freestyle";
 }
@@ -170,7 +173,7 @@ export function getAllEventTypeLabels(): string[] {
 
 // Get all possible video type labels for removal
 export function getAllVideoTypeLabels(): string[] {
-  return ["BattleVideo", "FreestyleVideo", "ChoreographyVideo", "ClassVideo"];
+  return ["BattleVideo", "FreestyleVideo", "ChoreographyVideo", "ClassVideo", "OtherVideo"];
 }
 
 interface BracketVideoRecord {
@@ -422,6 +425,7 @@ export const getEvent = async (
           WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
           WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
           WHEN 'ClassVideo' IN labels(v) THEN 'class'
+          WHEN 'OtherVideo' IN labels(v) THEN 'other'
           ELSE 'battle'
         END,
         taggedUsers: []
@@ -449,6 +453,7 @@ export const getEvent = async (
         WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
         WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
         WHEN 'ClassVideo' IN labels(v) THEN 'class'
+        WHEN 'OtherVideo' IN labels(v) THEN 'other'
         ELSE 'battle'
       END
     }) as videos
@@ -503,6 +508,7 @@ export const getEvent = async (
            WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
            WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
            WHEN 'ClassVideo' IN labels(v) THEN 'class'
+           WHEN 'OtherVideo' IN labels(v) THEN 'other'
            ELSE 'battle'
          END as videoType
     WHERE size(winners) > 0 OR size(dancers) > 0 OR size(choreographers) > 0 OR size(teachers) > 0
@@ -563,6 +569,7 @@ export const getEvent = async (
            WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
            WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
            WHEN 'ClassVideo' IN labels(v) THEN 'class'
+           WHEN 'OtherVideo' IN labels(v) THEN 'other'
            ELSE 'battle'
          END as videoType
     WHERE size(winners) > 0 OR size(dancers) > 0 OR size(choreographers) > 0 OR size(teachers) > 0
@@ -1140,6 +1147,59 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+    } else if (video.type === "other") {
+      const otherVideo = video as OtherVideo;
+      // Create DANCER relationships
+      if (otherVideo.taggedDancers && otherVideo.taggedDancers.length > 0) {
+        for (const dancer of otherVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create WINNER relationships
+      if (otherVideo.taggedWinners && otherVideo.taggedWinners.length > 0) {
+        for (const winner of otherVideo.taggedWinners) {
+          const userId = await getUserIdFromUserSearchItem(winner);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:WINNER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create CHOREOGRAPHER relationships
+      if (
+        otherVideo.taggedChoreographers &&
+        otherVideo.taggedChoreographers.length > 0
+      ) {
+        for (const choreographer of otherVideo.taggedChoreographers) {
+          const userId = await getUserIdFromUserSearchItem(choreographer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:CHOREOGRAPHER]->(v)`,
+            { videoId, userId }
+          );
+        }
+      }
+      // Create TEACHER relationships
+      if (otherVideo.taggedTeachers && otherVideo.taggedTeachers.length > 0) {
+        for (const teacher of otherVideo.taggedTeachers) {
+          const userId = await getUserIdFromUserSearchItem(teacher);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:TEACHER]->(v)`,
             { videoId, userId }
           );
         }
@@ -4276,6 +4336,8 @@ export async function getLatestEventVideos(): Promise<
         videoType = "choreography";
       } else if (videoLabels.includes("ClassVideo")) {
         videoType = "class";
+      } else if (videoLabels.includes("OtherVideo")) {
+        videoType = "other";
       }
 
       // Get styles for the video
@@ -4382,7 +4444,7 @@ export async function getLatestEventVideos(): Promise<
           taggedChoreographers,
           taggedDancers,
         } as ChoreographyVideo;
-      } else {
+      } else if (videoType === "class") {
         video = {
           id: firstVideoData.videoId,
           title: firstVideoData.videoTitle,
@@ -4392,6 +4454,18 @@ export async function getLatestEventVideos(): Promise<
           taggedTeachers,
           taggedDancers,
         } as ClassVideo;
+      } else {
+        video = {
+          id: firstVideoData.videoId,
+          title: firstVideoData.videoTitle,
+          src: firstVideoData.videoSrc,
+          type: "other",
+          styles,
+          taggedDancers,
+          taggedWinners,
+          taggedChoreographers,
+          taggedTeachers,
+        } as OtherVideo;
       }
 
       result.push({

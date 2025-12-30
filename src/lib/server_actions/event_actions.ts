@@ -159,7 +159,7 @@ interface addEventProps {
       id: string;
       title: string;
       src: string;
-      type: "battle" | "freestyle" | "choreography" | "class";
+      type: "battle" | "freestyle" | "choreography" | "class" | "other";
       styles?: string[];
       taggedWinners?: {
         id?: string;
@@ -189,7 +189,7 @@ interface addEventProps {
         id: string;
         title: string;
         src: string;
-        type: "battle" | "freestyle" | "choreography" | "class";
+        type: "battle" | "freestyle" | "choreography" | "class" | "other";
         styles?: string[];
         taggedWinners?: {
           id?: string;

@@ -5,6 +5,7 @@ import {
   FreestyleVideo,
   ChoreographyVideo,
   ClassVideo,
+  OtherVideo,
 } from "../../types/video";
 import { UserSearchItem } from "../../types/user";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
@@ -50,6 +51,8 @@ function getVideoLabelFromType(type: Video["type"]): string {
       return "Choreography";
     case "class":
       return "Class";
+    case "other":
+      return "Other";
     default:
       return "Battle"; // Default fallback
   }
@@ -215,6 +218,63 @@ export async function createVideo(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
+            { videoId: video.id, userId }
+          );
+        }
+      }
+    } else if (video.type === "other") {
+      const otherVideo = video as OtherVideo;
+
+      // Create DANCER relationships
+      if (otherVideo.taggedDancers && otherVideo.taggedDancers.length > 0) {
+        for (const dancer of otherVideo.taggedDancers) {
+          const userId = await getUserIdFromUserSearchItem(dancer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:DANCER]->(v)`,
+            { videoId: video.id, userId }
+          );
+        }
+      }
+
+      // Create WINNER relationships
+      if (otherVideo.taggedWinners && otherVideo.taggedWinners.length > 0) {
+        for (const winner of otherVideo.taggedWinners) {
+          const userId = await getUserIdFromUserSearchItem(winner);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:WINNER]->(v)`,
+            { videoId: video.id, userId }
+          );
+        }
+      }
+
+      // Create CHOREOGRAPHER relationships
+      if (
+        otherVideo.taggedChoreographers &&
+        otherVideo.taggedChoreographers.length > 0
+      ) {
+        for (const choreographer of otherVideo.taggedChoreographers) {
+          const userId = await getUserIdFromUserSearchItem(choreographer);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:CHOREOGRAPHER]->(v)`,
+            { videoId: video.id, userId }
+          );
+        }
+      }
+
+      // Create TEACHER relationships
+      if (otherVideo.taggedTeachers && otherVideo.taggedTeachers.length > 0) {
+        for (const teacher of otherVideo.taggedTeachers) {
+          const userId = await getUserIdFromUserSearchItem(teacher);
+          await session.run(
+            `MATCH (v:Video {id: $videoId})
+             MERGE (u:User {id: $userId})
+             MERGE (u)-[:TEACHER]->(v)`,
             { videoId: video.id, userId }
           );
         }

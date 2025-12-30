@@ -8,7 +8,7 @@ export const DANCE_STYLES = [
   "Salsa",
   "Swing",
   "Jookin",
-  "Krumping",
+  "Krump",
   "Locking",
   "Litefeet",
   "Open Styles",

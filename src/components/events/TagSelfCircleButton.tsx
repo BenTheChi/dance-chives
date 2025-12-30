@@ -55,7 +55,7 @@ interface TagSelfCircleButtonProps {
   dialogTitle?: string;
   dialogDescription?: string;
   // For video-level tagging
-  videoType?: "battle" | "choreography" | "class";
+  videoType?: "battle" | "choreography" | "class" | "other";
   currentVideoRoles?: string[]; // Roles user already has in this video
   // Callback to notify parent of pending roles (for display outside component)
   onPendingRolesChange?: (roles: string[]) => void;
@@ -119,24 +119,27 @@ export function TagSelfCircleButton({
         videoRoles.push(VIDEO_ROLE_DANCER);
       }
 
-      // Winner is only available for battle videos
+      // Winner is available for battle and other videos
       if (
-        videoType === "battle" &&
+        (videoType === "battle" || videoType === "other") &&
         !currentVideoRoles.includes(VIDEO_ROLE_WINNER)
       ) {
         videoRoles.push(VIDEO_ROLE_WINNER);
       }
 
-      // Choreographer is only available for choreography videos
+      // Choreographer is available for choreography and other videos
       if (
-        videoType === "choreography" &&
+        (videoType === "choreography" || videoType === "other") &&
         !currentVideoRoles.includes("Choreographer")
       ) {
         videoRoles.push("Choreographer");
       }
 
-      // Teacher is only available for class videos
-      if (videoType === "class" && !currentVideoRoles.includes("Teacher")) {
+      // Teacher is available for class and other videos
+      if (
+        (videoType === "class" || videoType === "other") &&
+        !currentVideoRoles.includes("Teacher")
+      ) {
         videoRoles.push("Teacher");
       }
 

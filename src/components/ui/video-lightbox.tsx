@@ -340,20 +340,20 @@ export function VideoLightbox({
 
   // Get tagged users based on video type
   const winners =
-    (videoType === "battle" && (video as BattleVideo)?.taggedWinners) || [];
+    ((videoType === "battle" || videoType === "other") && (video as BattleVideo)?.taggedWinners) || [];
   const dancers = (video as Video)?.taggedDancers || [];
   const choreographers =
-    (videoType === "choreography" &&
+    ((videoType === "choreography" || videoType === "other") &&
       (video as ChoreographyVideo)?.taggedChoreographers) ||
     [];
   const teachers =
-    (videoType === "class" && (video as ClassVideo)?.taggedTeachers) || [];
+    ((videoType === "class" || videoType === "other") && (video as ClassVideo)?.taggedTeachers) || [];
 
   // For user comparisons, we need to check by username if currentUserId is a username
   // or by id if currentUserId is an id. Since currentUserId comes from session, it's likely an id.
   // But we'll check both username and id for compatibility
   const isUserWinner =
-    currentUserId && videoType === "battle"
+    currentUserId && (videoType === "battle" || videoType === "other")
       ? winners.some(
           (user: UserSearchItem) =>
             user.id === currentUserId || user.username === currentUserId
@@ -366,14 +366,14 @@ export function VideoLightbox({
       )
     : false;
   const isUserChoreographer =
-    currentUserId && videoType === "choreography"
+    currentUserId && (videoType === "choreography" || videoType === "other")
       ? choreographers.some(
           (user: UserSearchItem) =>
             user.id === currentUserId || user.username === currentUserId
         )
       : false;
   const isUserTeacher =
-    currentUserId && videoType === "class"
+    currentUserId && (videoType === "class" || videoType === "other")
       ? teachers.some(
           (user: UserSearchItem) =>
             user.id === currentUserId || user.username === currentUserId
@@ -520,7 +520,7 @@ export function VideoLightbox({
                     target="video"
                     targetId={video.id}
                     currentUserId={currentUserId}
-                    videoType={videoType as "battle" | "choreography" | "class"}
+                    videoType={videoType as "battle" | "choreography" | "class" | "other"}
                     currentVideoRoles={[
                       ...(isUserDancer ? [VIDEO_ROLE_DANCER] : []),
                       ...(isUserWinner ? [VIDEO_ROLE_WINNER] : []),
@@ -555,8 +555,8 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {/* Winners - Only show for battle videos */}
-              {videoType === "battle" && winners.length > 0 && (
+              {/* Winners - Show for battle and other videos */}
+              {(videoType === "battle" || videoType === "other") && winners.length > 0 && (
                 <div className="flex-shrink-0">
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
@@ -590,8 +590,8 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {/* Choreographers - Only show for choreography videos */}
-              {videoType === "choreography" && choreographers.length > 0 && (
+              {/* Choreographers - Show for choreography and other videos */}
+              {(videoType === "choreography" || videoType === "other") && choreographers.length > 0 && (
                 <div className="flex-shrink-0">
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">
@@ -616,8 +616,8 @@ export function VideoLightbox({
                 </div>
               )}
 
-              {/* Teachers - Only show for class videos */}
-              {videoType === "class" && teachers.length > 0 && (
+              {/* Teachers - Show for class and other videos */}
+              {(videoType === "class" || videoType === "other") && teachers.length > 0 && (
                 <div className="flex-shrink-0">
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center gap-2">

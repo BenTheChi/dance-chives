@@ -7,7 +7,7 @@ export interface Video {
   src: string;
   styles?: string[];
   thumbnailUrl?: string;
-  type: "battle" | "freestyle" | "choreography" | "class";
+  type: "battle" | "freestyle" | "choreography" | "class" | "other";
   taggedDancers?: UserSearchItem[];
   taggedWinners?: UserSearchItem[];
   taggedChoreographers?: UserSearchItem[];
@@ -39,4 +39,13 @@ export interface ClassVideo extends Video {
   type: "class";
   taggedTeachers?: UserSearchItem[];
   taggedDancers?: UserSearchItem[];
+}
+
+// Other Video - allows all potential video tag types
+export interface OtherVideo extends Video {
+  type: "other";
+  taggedDancers?: UserSearchItem[];
+  taggedWinners?: UserSearchItem[];
+  taggedChoreographers?: UserSearchItem[];
+  taggedTeachers?: UserSearchItem[];
 }

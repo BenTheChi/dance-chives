@@ -496,6 +496,7 @@ export function VideoForm({
                   <SelectItem value="freestyle">Freestyle</SelectItem>
                   <SelectItem value="choreography">Choreo</SelectItem>
                   <SelectItem value="class">Class</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -591,6 +592,59 @@ export function VideoForm({
           name="taggedTeachers"
           label="Tagged Teachers"
         />
+      )}
+
+      {/* For "other" type, show all tagging options */}
+      {videoType === "other" && (
+        <>
+          <FormField
+            control={control}
+            name={getVideoFieldPath("taggedWinners")}
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <DebouncedSearchMultiSelect<UserSearchItem>
+                    onSearch={searchUsers}
+                    placeholder="Search winners..."
+                    getDisplayValue={(item) =>
+                      `${item.displayName} (${item.username})`
+                    }
+                    getItemId={(item) => item.username}
+                    onChange={(users) => {
+                      field.onChange(users);
+                      updateTaggedWinners(users);
+                    }}
+                    value={isUserSearchItemArray(field.value) ? field.value : []}
+                    name="taggedWinners"
+                    label="Tagged Winners"
+                    labelColor="text-black"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <DebouncedSearchMultiSelect<UserSearchItem>
+            onSearch={searchUsers}
+            placeholder="Search choreographers..."
+            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+            getItemId={(item) => item.username}
+            onChange={updateTaggedChoreographers}
+            value={video.taggedChoreographers ?? []}
+            name="taggedChoreographers"
+            label="Tagged Choreographers"
+          />
+          <DebouncedSearchMultiSelect<UserSearchItem>
+            onSearch={searchUsers}
+            placeholder="Search teachers..."
+            getDisplayValue={(item) => `${item.displayName} (${item.username})`}
+            getItemId={(item) => item.username}
+            onChange={updateTaggedTeachers}
+            value={video.taggedTeachers ?? []}
+            name="taggedTeachers"
+            label="Tagged Teachers"
+          />
+        </>
       )}
     </div>
   );

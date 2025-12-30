@@ -185,7 +185,9 @@ export function VideoCard({
                   target="video"
                   targetId={video.id}
                   currentUserId={currentUserId}
-                  videoType={video.type as "battle" | "choreography" | "class"}
+                  videoType={
+                    video.type as "battle" | "choreography" | "class" | "other"
+                  }
                   currentVideoRoles={currentVideoRoles}
                   size="sm"
                 />

@@ -1424,7 +1424,7 @@ export async function removeTag(
 
 /**
  * Get the type of a video from its Neo4j labels
- * Returns "battle", "freestyle", "choreography", or "class"
+ * Returns "battle", "freestyle", "choreography", "class", or "other"
  */
 export async function getVideoType(videoId: string): Promise<string | null> {
   const session = driver.session();
@@ -1451,6 +1451,8 @@ export async function getVideoType(videoId: string): Promise<string | null> {
       return "choreography";
     } else if (labels.includes("Class")) {
       return "class";
+    } else if (labels.includes("Other")) {
+      return "other";
     }
 
     // Default to battle for backwards compatibility
