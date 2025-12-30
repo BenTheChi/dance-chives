@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { EventCard } from "@/components/EventCard";
 import { Event } from "@/types/event";
 
@@ -55,37 +54,7 @@ export function RolesTabsSection({
   sortedRoles,
   savedEventIds,
 }: RolesTabsSectionProps) {
-  // Determine default: show future if any future events exist, otherwise show past
-  const hasFutureEvents = useMemo(() => {
-    for (const role of sortedRoles) {
-      const events = eventsByRole.get(role) || [];
-      if (events.some(isEventInFuture)) {
-        return true;
-      }
-    }
-    return false;
-  }, [eventsByRole, sortedRoles]);
-
-  const [showFuture, setShowFuture] = useState(hasFutureEvents);
-
-  // Update state when hasFutureEvents changes
-  useEffect(() => {
-    setShowFuture(hasFutureEvents);
-  }, [hasFutureEvents]);
-
-  // Calculate video counts per role
-  const videoCountsByRole = useMemo(() => {
-    const counts = new Map<string, number>();
-    sortedRoles.forEach((role) => {
-      const events = eventsByRole.get(role) || [];
-      let totalVideos = 0;
-      events.forEach((event) => {
-        totalVideos += countVideosInEvent(event);
-      });
-      counts.set(role, totalVideos);
-    });
-    return counts;
-  }, [eventsByRole, sortedRoles]);
+  const [showFuture, setShowFuture] = useState(false);
 
   // Filter and sort events based on past/future toggle
   const getFilteredAndSortedEvents = (role: string): Event[] => {
@@ -120,24 +89,28 @@ export function RolesTabsSection({
       <h2 className="text-2xl font-bold mb-4">Events with Roles</h2>
       <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
         {/* Past/Future Toggle */}
-        <div className="flex items-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light">
+        <div className="flex items-center justify-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light text-center">
+          <span className="text-sm font-semibold uppercase">Past</span>
           <Switch
             id="past-future-toggle"
             checked={showFuture}
             onCheckedChange={setShowFuture}
           />
-          <Label htmlFor="past-future-toggle" className="cursor-pointer">
-            {showFuture ? "Future" : "Past"}
-          </Label>
+          <span className="text-sm font-semibold uppercase">Future</span>
         </div>
 
-        <Tabs defaultValue={sortedRoles[0]} className="w-full">
-          <TabsList>
+        <Tabs defaultValue={sortedRoles[0]} className="items-center">
+          <TabsList className="flex flex-wrap justify-center items-center gap-2 p-0 bg-transparent text-secondary-light mt-2">
             {sortedRoles.map((role) => {
-              const videoCount = videoCountsByRole.get(role) || 0;
+              const filteredEventsCount =
+                getFilteredAndSortedEvents(role).length;
               return (
-                <TabsTrigger key={role} value={role}>
-                  {role} ({videoCount})
+                <TabsTrigger
+                  key={role}
+                  value={role}
+                  className="px-4 py-2 rounded-sm transition-all duration-200 border-2 border-transparent hover:border-charcoal hover:shadow-[4px_4px_0_0_rgb(49,49,49)] active:shadow-[2px_2px_0_0_rgb(49,49,49)] text-base font-bold uppercase tracking-wide font-display text-secondary-light hover:bg-periwinkle-light hover:text-periwinkle data-[state=active]:border-charcoal data-[state=active]:shadow-[4px_4px_0_0_rgb(49,49,49)] data-[state=active]:bg-mint data-[state=active]:text-primary"
+                >
+                  {role} ({filteredEventsCount})
                 </TabsTrigger>
               );
             })}

@@ -340,7 +340,7 @@ export function DashboardClient({
             {/* Welcome Section */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Profile Picture */}
-              <div className="w-full sm:w-[250px] flex-shrink-0">
+              <div className="w-full sm:w-[250px] shrink-0">
                 <div className="relative w-full sm:w-[250px] h-[250px] sm:h-[350px] rounded-sm border-4 border-primary-light overflow-hidden bg-primary-dark">
                   {user?.image ? (
                     <Image
@@ -404,22 +404,24 @@ export function DashboardClient({
                 <p className="text-sm text-center mb-6">
                   Events you have saved ({savedEvents.length})
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {savedEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      id={event.id}
-                      title={event.title}
-                      series={event.series}
-                      imageUrl={event.imageUrl}
-                      date={event.date}
-                      city={event.city}
-                      cityId={event.cityId}
-                      styles={event.styles}
-                      eventType={event.eventType}
-                      isSaved={true}
-                    />
-                  ))}
+                <div className="max-h-[600px] overflow-y-auto p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    {savedEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        id={event.id}
+                        title={event.title}
+                        series={event.series}
+                        imageUrl={event.imageUrl}
+                        date={event.date}
+                        city={event.city}
+                        cityId={event.cityId}
+                        styles={event.styles}
+                        eventType={event.eventType}
+                        isSaved={true}
+                      />
+                    ))}
+                  </div>
                 </div>
               </section>
             ) : (
@@ -471,22 +473,24 @@ export function DashboardClient({
                 <p className="text-sm text-center mb-6">
                   Events you have created ({userEvents.length})
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {userEvents.map((event: TEventCard) => (
-                    <EventCard
-                      key={event.id}
-                      id={event.id}
-                      title={event.title}
-                      series={event.series}
-                      imageUrl={event.imageUrl}
-                      date={event.date}
-                      city={event.city}
-                      cityId={event.cityId}
-                      styles={event.styles}
-                      eventType={event.eventType}
-                      isSaved={false}
-                    />
-                  ))}
+                <div className="max-h-[600px] overflow-y-auto p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2 sm:gap-3">
+                    {userEvents.map((event: TEventCard) => (
+                      <EventCard
+                        key={event.id}
+                        id={event.id}
+                        title={event.title}
+                        series={event.series}
+                        imageUrl={event.imageUrl}
+                        date={event.date}
+                        city={event.city}
+                        cityId={event.cityId}
+                        styles={event.styles}
+                        eventType={event.eventType}
+                        isSaved={false}
+                      />
+                    ))}
+                  </div>
                 </div>
               </section>
             )}
@@ -540,22 +544,24 @@ export function DashboardClient({
                     All hidden events in the system (
                     {initialData.hiddenEvents.length})
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                    {initialData.hiddenEvents.map((event: TEventCard) => (
-                      <EventCard
-                        key={event.id}
-                        id={event.id}
-                        title={event.title}
-                        series={event.series}
-                        imageUrl={event.imageUrl}
-                        date={event.date}
-                        city={event.city}
-                        cityId={event.cityId}
-                        styles={event.styles}
-                        eventType={event.eventType}
-                        isSaved={false}
-                      />
-                    ))}
+                  <div className="max-h-[600px] overflow-y-auto p-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                      {initialData.hiddenEvents.map((event: TEventCard) => (
+                        <EventCard
+                          key={event.id}
+                          id={event.id}
+                          title={event.title}
+                          series={event.series}
+                          imageUrl={event.imageUrl}
+                          date={event.date}
+                          city={event.city}
+                          cityId={event.cityId}
+                          styles={event.styles}
+                          eventType={event.eventType}
+                          isSaved={false}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </section>
               )}
