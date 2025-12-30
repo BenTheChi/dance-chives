@@ -105,7 +105,7 @@ export default async function Home() {
             </section>
 
             {/* Calendar CTA */}
-            <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
+            <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-2 sm:px-4 border-4 border-secondary-light w-full">
               <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Never miss an event again with the community calendar
               </h2>
