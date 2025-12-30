@@ -21,6 +21,8 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CitySearchInput } from "@/components/CitySearchInput";
@@ -83,6 +85,13 @@ const signupSchema = z.object({
   isCreator: z.boolean().optional(),
   profilePicture: z.instanceof(File).nullable().optional(),
   avatarPicture: z.instanceof(File).nullable().optional(),
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the terms of service and privacy policy",
+  }),
+  contentUsageAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the content usage and marketing policy",
+  }),
+  newsletterSubscribed: z.boolean().optional(),
 });
 
 const editSchema = z.object({
@@ -186,6 +195,9 @@ export default function SignUpForm({
           isCreator: false,
           profilePicture: null,
           avatarPicture: null,
+          termsAccepted: false,
+          contentUsageAccepted: false,
+          newsletterSubscribed: false,
         },
   });
 
@@ -226,6 +238,23 @@ export default function SignUpForm({
     // Add isCreator (only for signup)
     if (!isEditMode && "isCreator" in data) {
       formData.set("isCreator", (data.isCreator || false).toString());
+    }
+
+    // Add agreement checkboxes (only for signup)
+    if (!isEditMode && "termsAccepted" in data) {
+      formData.set("termsAccepted", (data.termsAccepted || false).toString());
+    }
+    if (!isEditMode && "contentUsageAccepted" in data) {
+      formData.set(
+        "contentUsageAccepted",
+        (data.contentUsageAccepted || false).toString()
+      );
+    }
+    if (!isEditMode && "newsletterSubscribed" in data) {
+      formData.set(
+        "newsletterSubscribed",
+        (data.newsletterSubscribed || false).toString()
+      );
     }
 
     // Add profile and avatar pictures if provided (use state files if available)
@@ -290,7 +319,7 @@ export default function SignUpForm({
   };
 
   return (
-    <div className="w-full max-w-lg flex flex-col items-center">
+    <div className="w-full max-w-xl flex flex-col items-center">
       <h1 className="text-xl font-semibold mb-6">
         {isEditMode ? "Edit Profile" : "Registration"}
       </h1>
@@ -310,6 +339,23 @@ export default function SignUpForm({
               className="space-y-7"
               onSubmit={handleSubmit(onSubmit, onError)}
             >
+              {/* Email field - only show in signup mode, read-only */}
+              {!isEditMode && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">
+                    Email
+                  </label>
+                  <Input
+                    value={session?.user?.email || ""}
+                    disabled
+                    className="bg-muted/50"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Email is set from your account and cannot be changed
+                  </p>
+                </div>
+              )}
+
               {/* Username field - only show in signup mode */}
               {!isEditMode && (
                 <FormField
@@ -418,6 +464,41 @@ export default function SignUpForm({
                           <span className="text-sm text-white">Yes</span>
                         </div>
                       </FormControl>
+                      {field.value && (
+                        <div className="mt-3 p-4 bg-secondary-dark/50 border-2 border-secondary-light rounded-sm">
+                          <p className="text-sm text-white leading-relaxed">
+                            <strong className="font-semibold">
+                              Important: Content Ownership
+                            </strong>
+                            <br />
+                            <br />
+                            By creating events, you represent and warrant that{" "}
+                            <strong>
+                              you own or have rights to all content
+                            </strong>{" "}
+                            you post, including event descriptions, images, and
+                            related materials. Your content must not infringe on
+                            third-party rights, and you must have obtained any
+                            necessary permissions (such as model releases).
+                            <br />
+                            <br />
+                            When you post your own content, you grant Dance
+                            Chives a non-exclusive license to use it on the
+                            platform and in marketing materials. You retain full
+                            ownership and can opt out of marketing use in your
+                            account settings. For complete details, see our{" "}
+                            <Link
+                              href="/content-usage"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary-light hover:text-white underline"
+                            >
+                              Content Usage and Marketing Policy
+                            </Link>
+                            .
+                          </p>
+                        </div>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -542,6 +623,107 @@ export default function SignUpForm({
               )}
             /> */}
               <hr className="my-10 border-black" />
+
+              {/* Terms and Privacy Policy Checkbox - only show in signup mode */}
+              {!isEditMode && (
+                <FormField
+                  control={form.control}
+                  name="termsAccepted"
+                  render={({ field }) => (
+                    <FormItem className="mb-2">
+                      <div className="flex items-start gap-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="mt-1"
+                          />
+                        </FormControl>
+                        <FormLabel className="!font-normal text-sm leading-relaxed flex-1 pointer-events-none !text-white data-[error=true]:!text-white">
+                          By checking this box, you agree to the{" "}
+                          <Link
+                            href="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-light hover:text-white underline pointer-events-auto"
+                          >
+                            Terms of Service
+                          </Link>{" "}
+                          and{" "}
+                          <Link
+                            href="/privacy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-light hover:text-white underline pointer-events-auto"
+                          >
+                            Privacy Policy
+                          </Link>
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Content Usage and Marketing Checkbox - only show in signup mode */}
+              {!isEditMode && (
+                <FormField
+                  control={form.control}
+                  name="contentUsageAccepted"
+                  render={({ field }) => (
+                    <FormItem className="mb-2">
+                      <div className="flex items-center gap-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="mt-0.5"
+                          />
+                        </FormControl>
+                        <FormLabel className="!font-normal leading-relaxed text-sm pointer-events-none !text-white data-[error=true]:!text-white">
+                          <span className="block mb-1">
+                            By checking this box, you agree to the:
+                          </span>
+                          <Link
+                            href="/content-usage"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-light hover:text-white underline font-medium pointer-events-auto"
+                          >
+                            Content Usage and Marketing Policy
+                          </Link>
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Newsletter Subscription Checkbox - only show in signup mode */}
+              {!isEditMode && (
+                <FormField
+                  control={form.control}
+                  name="newsletterSubscribed"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-start gap-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                            className="mt-1"
+                          />
+                        </FormControl>
+                        <FormLabel className="!font-normal text-sm leading-relaxed flex-1 pointer-events-none !text-white data-[error=true]:!text-white">
+                          Subscribe to our newsletter for updates on events, new
+                          features, and community highlights
+                        </FormLabel>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <Button
                 type="submit"

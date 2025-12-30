@@ -39,6 +39,7 @@ import {
 import { deleteUser } from "@/db/queries/user";
 import { getUserEvents } from "@/db/queries/user";
 import { deleteEvent, getEventImages } from "@/db/queries/event";
+import { addMailerLiteSubscriber } from "@/lib/mailerlite";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -79,6 +80,24 @@ export async function signup(
   ) {
     console.error("Missing required fields");
     return { success: false, error: "Missing required fields" };
+  }
+
+  // Validate agreement checkboxes
+  const termsAccepted = formData.get("termsAccepted") === "true";
+  const contentUsageAccepted = formData.get("contentUsageAccepted") === "true";
+
+  if (!termsAccepted) {
+    return {
+      success: false,
+      error: "You must agree to the terms of service and privacy policy",
+    };
+  }
+
+  if (!contentUsageAccepted) {
+    return {
+      success: false,
+      error: "You must agree to the content usage and marketing policy",
+    };
   }
 
   try {
@@ -270,10 +289,14 @@ export async function signup(
     }
 
     // Mark account as verified in PostgreSQL (user completed registration)
+    // Store agreement dates when account is verified
+    const verificationDate = new Date();
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
-        accountVerified: new Date(),
+        accountVerified: verificationDate,
+        termsAcceptedAt: verificationDate,
+        contentUsageAcceptedAt: verificationDate,
         name: profileData.displayName || session.user.name,
         auth: authLevel,
       },
@@ -290,6 +313,30 @@ export async function signup(
 
     console.log("✅ User registration completed:", userResult);
     console.log("✅ Account marked as verified in PostgreSQL");
+
+    // Handle newsletter subscription if user opted in
+    const newsletterSubscribed = formData.get("newsletterSubscribed") === "true";
+    if (newsletterSubscribed && session.user.email) {
+      try {
+        const mailerLiteResult = await addMailerLiteSubscriber(
+          session.user.email,
+          profileData.displayName,
+          "subscribers"
+        );
+        if (mailerLiteResult.success) {
+          console.log("✅ User subscribed to MailerLite newsletter");
+        } else {
+          console.warn(
+            "⚠️  Failed to subscribe user to newsletter:",
+            mailerLiteResult.error
+          );
+          // Don't fail the signup if newsletter subscription fails
+        }
+      } catch (error) {
+        console.error("Error subscribing to newsletter:", error);
+        // Don't fail the signup if newsletter subscription fails
+      }
+    }
 
     // Revalidate profiles list page to show new profile
     revalidatePath("/profiles");

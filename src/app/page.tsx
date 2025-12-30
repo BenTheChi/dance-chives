@@ -232,7 +232,9 @@ export default async function Home() {
                 <div className="flex flex-col md:flex-row justify-center gap-12 md:gap-20">
                   {/* Discord Section */}
                   <div className="space-y-6 max-w-md">
-                    <h3 className="!text-2xl !font-bold">Join the Discord</h3>
+                    <h3 className="!text-2xl !font-bold text-center">
+                      Join the Discord
+                    </h3>
                     <a
                       href="https://discord.gg/HfYg868Ay4"
                       target="_blank"
@@ -262,8 +264,33 @@ export default async function Home() {
 
                   {/* Donate Section */}
                   <div className="space-y-6 max-w-md">
-                    <h3 className="!text-2xl !font-bold">Donate</h3>
-                    <div className="w-full aspect-video bg-transparent border-4 border-primary-light rounded-sm"></div>
+                    <h3 className="!text-2xl !font-bold text-center">Donate</h3>
+                    <div className="flex justify-center gap-6">
+                      <Link
+                        href="https://buy.stripe.com/9B63cw9Bg62s0BB5ZN4Ja00"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-24 h-24 rounded-full flex items-center justify-center bg-accent-purple text-charcoal font-bold text-xl transition-colors cursor-pointer hover:scale-110 border-4 border-primary-light"
+                      >
+                        $5
+                      </Link>
+                      <Link
+                        href="https://buy.stripe.com/bJe14o7t81Mc843ewj4Ja01"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-24 h-24 rounded-full flex items-center justify-center bg-accent-yellow text-charcoal font-bold text-xl transition-colors cursor-pointer hover:scale-110 border-4 border-primary-light"
+                      >
+                        $15
+                      </Link>
+                      <Link
+                        href="https://buy.stripe.com/28EbJ2dRwaiI3NN1Jx4Ja02"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-24 rounded-full flex items-center justify-center bg-accent-blue text-charcoal font-bold text-xl transition-colors cursor-pointer hover:scale-110 border-4 border-primary-light"
+                      >
+                        $30
+                      </Link>
+                    </div>
                     <div className="space-y-3">
                       <p>
                         A lot of time and effort has been put into Dance Chives.

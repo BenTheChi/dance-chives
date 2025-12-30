@@ -12,6 +12,8 @@ model User {
   email            String          @unique
   emailVerified    DateTime? // Keep for NextAuth compatibility
   accountVerified  DateTime? // User completed registration after OAuth
+  termsAcceptedAt  DateTime? // Date when user accepted terms of service and privacy policy
+  contentUsageAcceptedAt DateTime? // Date when user accepted content usage and marketing policy
   image            String?
   accounts         Account[]
   sessions         Session[]

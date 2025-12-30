@@ -45,6 +45,27 @@ export function Footer() {
                 Report
               </ReportLink>
             </nav>
+            {/* Policy Links */}
+            <div className="flex flex-wrap justify-center gap-4 pt-4">
+              <MaintenanceLink
+                href="/terms"
+                className="text-primary-light/80 hover:text-white transition-colors text-xs"
+              >
+                Terms of Service
+              </MaintenanceLink>
+              <MaintenanceLink
+                href="/privacy"
+                className="text-primary-light/80 hover:text-white transition-colors text-xs"
+              >
+                Privacy Policy
+              </MaintenanceLink>
+              <MaintenanceLink
+                href="/content-usage"
+                className="text-primary-light/80 hover:text-white transition-colors text-xs"
+              >
+                Content Usage Policy
+              </MaintenanceLink>
+            </div>
           </div>
 
           {/* Newsletter Signup - Right Side */}
