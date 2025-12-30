@@ -74,10 +74,11 @@ export function AppNavbar() {
             priority
           />
         </Link>
+        <SidebarTrigger className="md:hidden text-white hover:text-white" />
       </div>
 
       {/* Center section: Nav menu - absolutely centered */}
-      <div className="hidden md:flex items-center gap-2 justify-center absolute left-1/2 -translate-x-1/2 h-18">
+      <div className="hidden md:flex items-center gap-2 justify-center absolute left-1/2 -translate-x-1/2 h-18 z-20 pointer-events-auto">
         {navMenuItems.map((item) => {
           const isActive =
             pathname === item.url ||
@@ -108,8 +109,7 @@ export function AppNavbar() {
       </div>
 
       {/* Right section: Actions */}
-      <div className="flex h-18 px-2 md:px-4 py-2 items-center w-full justify-end z-10">
-        {/* <SidebarTrigger className="md:hidden text-white hover:text-white" /> */}
+      <div className="flex h-18 px-2 md:px-4 py-2 items-center flex-1 justify-end z-10">
         <div className="flex items-center gap-x-2">
           <div className="flex gap-3 mr-0 md:mr-5">
             <Button asChild size="icon" variant="ghost">

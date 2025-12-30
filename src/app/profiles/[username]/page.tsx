@@ -282,7 +282,7 @@ export default async function ProfilePage({ params }: PageProps) {
                 ) : (
                   <div className="relative w-[250px] h-[350px] bg-neutral-400 rounded-sm overflow-hidden border-4 border-primary-light">
                     <Image
-                      src="/mascot/3:4_Mascot2_Mono_onLight.png"
+                      src="/mascot/Default_Mascot2_Mono_onLight.png"
                       alt=""
                       fill
                       className="object-contain"

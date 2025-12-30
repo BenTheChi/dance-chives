@@ -177,12 +177,18 @@ export function CalendarEventPopover({
             )}
 
             {/* Share and Save buttons - centered at bottom */}
-            <EventShareSaveButtons
-              eventId={originalData.id}
-              initialSaved={false}
-              variant="large"
-              eventHref={getLinkUrl()}
-            />
+            <div
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <EventShareSaveButtons
+                eventId={originalData.id}
+                initialSaved={false}
+                variant="large"
+                eventHref={getLinkUrl()}
+              />
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -111,14 +111,26 @@ export default async function Home() {
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-transparent border-4 border-secondary-light rounded-sm"></div>
-                  <p className="text-center text-lg font-medium">
+                  <Image
+                    src="/screenshots/calendar-event.png"
+                    alt="Calendar Event Screenshot"
+                    width={500}
+                    height={500}
+                    className="border-4 border-secondary-light rounded-sm"
+                  />
+                  <p className="text-center !text-xl">
                     See all events for any city. Perfect for traveling!
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-transparent border-4 border-secondary-light rounded-sm"></div>
-                  <p className="text-center text-lg font-medium">
+                  <Image
+                    src="/screenshots/saved-event.png"
+                    alt="Saved Event Screenshot"
+                    width={500}
+                    height={500}
+                    className="border-4 border-secondary-light rounded-sm"
+                  />
+                  <p className="text-center !text-xl">
                     Save events so they show up on your personal calendar
                   </p>
                 </div>
@@ -137,7 +149,7 @@ export default async function Home() {
 
             {/* Community CTA */}
             <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
-              <h2 className="sm:!text-3xl text-center mb-8">
+              <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 A structured public record of event and battle roles
               </h2>
               <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -155,8 +167,14 @@ export default async function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-full aspect-video bg-transparent border-4 border-accent-purple rounded-sm"></div>
-                  <p className="text-center text-lg font-medium">
+                  <Image
+                    src="/screenshots/profile.png"
+                    alt="Profile Screenshot"
+                    width={500}
+                    height={500}
+                    className="border-4 border-primary-light rounded-sm"
+                  />
+                  <p className="text-center !text-xl">
                     Browse profiles from dancers in your community and around
                     the world
                   </p>
