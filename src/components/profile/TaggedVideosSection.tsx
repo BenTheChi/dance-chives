@@ -149,7 +149,7 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
       </h2>
       <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
         {/* Winner Filter Toggle */}
-        <div className="flex items-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light">
+        <div className="flex items-center justify-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light text-center">
           <Switch
             id="wins-only-toggle"
             checked={showWinsOnly}
