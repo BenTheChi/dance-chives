@@ -36,9 +36,14 @@ import {
   getVideoTitle,
   getEventCreator,
   isEventCreator,
+  removeTag,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
-import { getUser, getUserByUsername, getUserWithStyles } from "@/db/queries/user";
+import {
+  getUser,
+  getUserByUsername,
+  getUserWithStyles,
+} from "@/db/queries/user";
 import {
   isValidRole,
   AVAILABLE_ROLES,
@@ -681,7 +686,9 @@ export async function approveTaggingRequest(
     }
   }
 
-  const roleName = request.role ? fromNeo4jRoleFormat(request.role) || request.role : "";
+  const roleName = request.role
+    ? fromNeo4jRoleFormat(request.role) || request.role
+    : "";
 
   await createNotification(
     request.senderId,
@@ -829,7 +836,9 @@ export async function denyTaggingRequest(requestId: string, message?: string) {
     }
   }
 
-  const roleName = request.role ? fromNeo4jRoleFormat(request.role) || request.role : "";
+  const roleName = request.role
+    ? fromNeo4jRoleFormat(request.role) || request.role
+    : "";
 
   await createNotification(
     request.senderId,
@@ -1113,7 +1122,7 @@ export async function createOwnershipRequest(eventId: string) {
 
 export async function hasPendingOwnershipRequest(eventId: string) {
   const senderId = await requireAuth();
-  
+
   const existingRequest = await prisma.ownershipRequest.findFirst({
     where: {
       eventId,
@@ -1164,9 +1173,7 @@ export async function approveOwnershipRequest(
     throw new Error("You do not have permission to approve this request");
   }
 
-  if (
-    await hasUserResponded(REQUEST_TYPES.OWNERSHIP, requestId, approverId)
-  ) {
+  if (await hasUserResponded(REQUEST_TYPES.OWNERSHIP, requestId, approverId)) {
     throw new Error("You have already responded to this request");
   }
 
@@ -1189,7 +1196,9 @@ export async function approveOwnershipRequest(
   };
 
   // Transfer ownership using updateEventCreator
-  const { updateEventCreator } = await import("@/lib/server_actions/event_actions");
+  const { updateEventCreator } = await import(
+    "@/lib/server_actions/event_actions"
+  );
   const transferResult = await updateEventCreator(
     request.eventId,
     newCreator,
@@ -1257,9 +1266,7 @@ export async function denyOwnershipRequest(
     throw new Error("You do not have permission to deny this request");
   }
 
-  if (
-    await hasUserResponded(REQUEST_TYPES.OWNERSHIP, requestId, approverId)
-  ) {
+  if (await hasUserResponded(REQUEST_TYPES.OWNERSHIP, requestId, approverId)) {
     throw new Error("You have already responded to this request");
   }
 
@@ -1695,9 +1702,11 @@ export async function getIncomingRequests() {
       );
 
       const eventTitle = await getEventTitle(req.eventId);
-      
+
       // Enrich sender with Neo4j data
-      const enrichedSender = req.sender ? await enrichUserData(req.sender) : null;
+      const enrichedSender = req.sender
+        ? await enrichUserData(req.sender)
+        : null;
 
       return {
         request: {
@@ -1719,9 +1728,11 @@ export async function getIncomingRequests() {
       );
 
       const eventTitle = await getEventTitle(req.eventId);
-      
+
       // Enrich sender with Neo4j data
-      const enrichedSender = req.sender ? await enrichUserData(req.sender) : null;
+      const enrichedSender = req.sender
+        ? await enrichUserData(req.sender)
+        : null;
 
       return {
         request: {
@@ -1775,35 +1786,39 @@ export async function getIncomingRequests() {
 export async function getOutgoingRequests() {
   const userId = await requireAuth();
 
-  const [taggingRequests, teamMemberRequests, ownershipRequests, authLevelChangeRequests] =
-    await Promise.all([
-      prisma.taggingRequest.findMany({
-        where: { senderId: userId },
-        include: {
-          targetUser: {
-            select: { id: true, name: true, email: true },
-          },
+  const [
+    taggingRequests,
+    teamMemberRequests,
+    ownershipRequests,
+    authLevelChangeRequests,
+  ] = await Promise.all([
+    prisma.taggingRequest.findMany({
+      where: { senderId: userId },
+      include: {
+        targetUser: {
+          select: { id: true, name: true, email: true },
         },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.teamMemberRequest.findMany({
-        where: { senderId: userId },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.ownershipRequest.findMany({
-        where: { senderId: userId },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.authLevelChangeRequest.findMany({
-        where: { senderId: userId },
-        include: {
-          targetUser: {
-            select: { id: true, name: true, email: true },
-          },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.teamMemberRequest.findMany({
+      where: { senderId: userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.ownershipRequest.findMany({
+      where: { senderId: userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.authLevelChangeRequest.findMany({
+      where: { senderId: userId },
+      include: {
+        targetUser: {
+          select: { id: true, name: true, email: true },
         },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   // Enrich tagging requests with event and video titles (all requests now use eventId)
   const enrichedTaggingRequests = await Promise.all(
@@ -1920,10 +1935,7 @@ export async function getOutgoingRequests() {
 // Notifications
 // ============================================================================
 
-export async function getNotifications(
-  limit: number = 50,
-  isOld?: boolean
-) {
+export async function getNotifications(limit: number = 50, isOld?: boolean) {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error("Not authenticated");
@@ -1993,9 +2005,11 @@ export async function getNewNotificationCount() {
 /**
  * Get navigation URL for a notification based on its type and related request
  */
-export async function getNotificationUrl(notificationId: string): Promise<string | null> {
+export async function getNotificationUrl(
+  notificationId: string
+): Promise<string | null> {
   const userId = await requireAuth();
-  
+
   const notification = await prisma.notification.findFirst({
     where: {
       id: notificationId,
@@ -2008,7 +2022,10 @@ export async function getNotificationUrl(notificationId: string): Promise<string
   }
 
   // For incoming requests, go to dashboard with anchor
-  if (notification.type === "INCOMING_REQUEST" && notification.relatedRequestId) {
+  if (
+    notification.type === "INCOMING_REQUEST" &&
+    notification.relatedRequestId
+  ) {
     if (notification.relatedRequestType === "TAGGING") {
       return "/dashboard#requests";
     } else if (notification.relatedRequestType === "TEAM_MEMBER") {
@@ -2022,8 +2039,8 @@ export async function getNotificationUrl(notificationId: string): Promise<string
 
   // For approved/denied requests, navigate to the event/section/video
   if (
-    (notification.type === "REQUEST_APPROVED" || 
-     notification.type === "REQUEST_DENIED") &&
+    (notification.type === "REQUEST_APPROVED" ||
+      notification.type === "REQUEST_DENIED") &&
     notification.relatedRequestId &&
     notification.relatedRequestType === "TAGGING"
   ) {
@@ -2084,7 +2101,8 @@ export async function getNotificationUrl(notificationId: string): Promise<string
 
   // For team member requests, go to event
   if (
-    (notification.type === "REQUEST_APPROVED" || notification.type === "REQUEST_DENIED") &&
+    (notification.type === "REQUEST_APPROVED" ||
+      notification.type === "REQUEST_DENIED") &&
     notification.relatedRequestId &&
     notification.relatedRequestType === "TEAM_MEMBER"
   ) {
@@ -2115,8 +2133,8 @@ export async function getNotificationUrl(notificationId: string): Promise<string
   // For ownership request notifications, parse eventId from message
   if (
     (notification.type === "OWNERSHIP_REQUESTED" ||
-     notification.type === "OWNERSHIP_REQUEST_APPROVED" ||
-     notification.type === "OWNERSHIP_REQUEST_DENIED") &&
+      notification.type === "OWNERSHIP_REQUEST_APPROVED" ||
+      notification.type === "OWNERSHIP_REQUEST_DENIED") &&
     notification.relatedRequestId
   ) {
     // Try to get eventId from request
@@ -2342,7 +2360,9 @@ export async function tagSelfInVideo(
   if (role === VIDEO_ROLE_WINNER) {
     const videoType = await getVideoType(videoId);
     if (videoType !== "battle" && videoType !== "other") {
-      throw new Error("Winner tags are only supported for battle and other videos");
+      throw new Error(
+        "Winner tags are only supported for battle and other videos"
+      );
     }
   }
 
@@ -2806,6 +2826,53 @@ export async function checkUserJudgeOfSection(
 }
 
 /**
+ * Remove role from event
+ * Users can remove their own roles directly
+ * Privileged users can remove any roles
+ */
+export async function removeRoleFromEvent(
+  eventId: string,
+  userId: string,
+  role: string
+): Promise<{ success: true; directRemove: boolean }> {
+  const currentUserId = await requireAuth();
+  const session = await auth();
+
+  // Validate event exists
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+
+  // Validate role
+  if (!isValidRole(role)) {
+    throw new Error(`Invalid role: ${role}`);
+  }
+
+  // Check permissions: users can remove their own roles, privileged users can remove any
+  const authLevel = session?.user?.auth || 0;
+  const canRemoveDirectly =
+    currentUserId === userId || // User removing their own role
+    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
+    (await isTeamMember(eventId, currentUserId)) ||
+    (await isEventCreator(eventId, currentUserId));
+
+  if (canRemoveDirectly) {
+    // User has permission - remove role directly
+    try {
+      await removeTag(eventId, null, null, userId, role);
+      return { success: true, directRemove: true };
+    } catch (error) {
+      console.error("Error removing role from event:", error);
+      throw error;
+    }
+  } else {
+    // User trying to remove someone else's role without permission
+    throw new Error("You do not have permission to remove this role");
+  }
+}
+
+/**
  * Mark a user as winner of a video (for event editors)
  * Requires event editor permissions
  * Accepts either userId or username - if userId is not provided, looks up by username
@@ -2846,7 +2913,9 @@ export async function markUserAsVideoWinner(
   // Winner tags are supported for battle and other videos
   const videoType = await getVideoType(videoId);
   if (videoType !== "battle" && videoType !== "other") {
-    throw new Error("Winner tags are only supported for battle and other videos");
+    throw new Error(
+      "Winner tags are only supported for battle and other videos"
+    );
   }
 
   // Get userId - if username is provided, look up user by username

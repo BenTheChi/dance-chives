@@ -13,13 +13,13 @@ import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 import { enrichUserWithCardData } from "@/db/queries/user-cards";
 import {
   EventShareSaveButtonsWrapper,
-  EventTagSelfButton,
   EventEditButtons,
 } from "./event-client";
 import { RequestOwnershipButton } from "@/components/events/RequestOwnershipButton";
-import { RolePendingBadge } from "./role-pending-badge";
+import { EventRoles } from "./event-roles";
 import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import type { Metadata } from "next";
+import { auth } from "@/auth";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -286,6 +286,10 @@ export default async function EventPage({ params }: PageProps) {
   if (!isValidEventId(paramResult.event)) {
     notFound();
   }
+
+  // Get current user session for role removal functionality
+  const session = await auth();
+  const currentUserId = session?.user?.id;
 
   // Get event without auth (for static generation - hidden events will be filtered)
   const event = await getEvent(paramResult.event);
@@ -702,49 +706,11 @@ export default async function EventPage({ params }: PageProps) {
                   </div>
                 )}
               </div>
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-                <div className="flex gap-2 justify-center items-center">
-                  <h2 className="text-center underline">Roles</h2>
-                  <EventTagSelfButton eventId={event.id} />
-                </div>
-                {Array.from(rolesByTitle.entries()).map(
-                  ([roleTitle, roles]) => (
-                    <div
-                      key={roleTitle}
-                      className="flex flex-row  flex-wrap gap-2 items-center"
-                    >
-                      <h3>{fromNeo4jRoleFormat(roleTitle) || roleTitle}</h3>
-                      <div className="flex flex-row gap-2 items-center flex-wrap">
-                        {roles.map((role, index) => (
-                          <UserAvatar
-                            key={`${role.id}-${index}`}
-                            username={role.user?.username ?? ""}
-                            displayName={
-                              role.user?.displayName ??
-                              role.user?.username ??
-                              ""
-                            }
-                            avatar={
-                              (role.user as { avatar?: string | null }).avatar
-                            }
-                            image={
-                              (role.user as { image?: string | null }).image
-                            }
-                            showHoverCard
-                            city={(role.user as { city?: string }).city || ""}
-                            styles={(role.user as { styles?: string[] }).styles}
-                            isSmall={true}
-                          />
-                        ))}
-                        <RolePendingBadge
-                          eventId={event.id}
-                          roleTitle={roleTitle}
-                        />
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
+              <EventRoles
+                eventId={event.id}
+                rolesByTitle={rolesByTitle}
+                currentUserId={currentUserId}
+              />
             </div>
 
             {/* Sections - each takes up full width */}
