@@ -48,18 +48,6 @@ export default async function Home() {
                 dance events
               </h2>
             </div>
-            <Script src="https://cdn.logwork.com/widget/countdown.js"></Script>
-            <a
-              href="https://logwork.com/countdown-timer"
-              className="countdown-timer"
-              data-style="columns"
-              data-timezone="America/Los_Angeles"
-              data-date="2026-01-01 15:00"
-              data-background="#614c9e"
-              data-digitscolor="#ffffff"
-            >
-              Open Beta Launch
-            </a>
           </section>
 
           <div className="flex flex-col items-center gap-20 px-2">
