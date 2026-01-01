@@ -225,13 +225,13 @@ export default function RoleTaggingPage() {
                 Your role tagging request is <strong>denied</strong>
               </li>
             </ul>
-            <p className="text-base leading-relaxed ml-16 mt-4 text-white">
-              All notifications can be viewed on your{" "}
-              <Link href="/dashboard" className="text-primary-light">
-                dashboard
-              </Link>
-              .
-            </p>
+            <Image
+              src="/screenshots/notifications.png"
+              alt="Role Tagging Notification"
+              width={1000}
+              height={1000}
+              className="border-4 border-secondary-light rounded-sm"
+            />
           </div>
         </section>
       </div>
