@@ -111,10 +111,12 @@ export function RequestOwnershipButton({
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Request Ownership</DialogTitle>
+            <DialogTitle>Request Page Owner</DialogTitle>
             <DialogDescription>
-              Are you sure you want to request ownership of this event? The
-              current owner and team members will be notified.
+              Page ownership allows you to manage event details and attribution
+              on Dance Chives. It does not imply copyright ownership of any
+              media. If you are not the event organizer or an authorized
+              representative, please do not claim this page.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

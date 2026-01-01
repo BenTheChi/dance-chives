@@ -119,10 +119,11 @@ export function AppNavbar() {
             </Button>
             <ReportButton className="cursor-pointer" />
             <Button asChild size="icon" variant="ghost">
-              <MaintenanceLink href="/faq">
+              <MaintenanceLink href="/help">
                 <HelpCircle className="h-5 w-5" />
               </MaintenanceLink>
             </Button>
+            {session && <NotificationPopover />}
           </div>
           {session ? (
             <UserMenu session={session} />

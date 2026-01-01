@@ -36,7 +36,7 @@ export function Footer() {
                 Search
               </MaintenanceLink>
               <MaintenanceLink
-                href="/faq"
+                href="/help"
                 className="text-primary-light hover:text-white transition-colors text-xl"
               >
                 FAQ

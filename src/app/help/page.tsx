@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import Link from "next/link";
 
 export default function FAQPage() {
   return (
@@ -523,285 +524,22 @@ export default function FAQPage() {
         {/* Adding Events Section */}
         <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
           <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Adding Events
+            Adding/Editing Events
           </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="adding-events-video"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Video Walkthrough: How to Add Events
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Video embed placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="how-add-event"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add an event?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    To add an event, click "Add Event" in the navigation or go
-                    to the add event page. Fill out the event details form with
-                    information about your event. You'll need to provide at
-                    minimum the event title, city, type, and date.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Add event form
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="required-details"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What event details are required?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    The only mandatory fields are Title, City, Type, and Date.
-                    All other fields like description, location, cost, prize,
-                    and schedule are optional but help provide more information
-                    to attendees.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Required fields highlighted in event form
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="add-roles"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add roles (DJ, MC, Organizer, etc)?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    In the event form, navigate to the "Roles" tab. Click "Add
-                    Role" and select a role type (Organizer, DJ, MC,
-                    Photographer, Videographer, or Designer). Then search for
-                    and select the user you want to assign to that role. You can
-                    add multiple people to the same role type if needed.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Adding roles interface
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="tag-people-videos"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I tag people in videos?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    When adding or editing a video, you can tag people in
-                    different roles based on the video type:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
-                    <li>
-                      <strong>Battle videos:</strong> Tag dancers and winners
-                    </li>
-                    <li>
-                      <strong>Freestyle videos:</strong> Tag dancers
-                    </li>
-                    <li>
-                      <strong>Choreography videos:</strong> Tag dancers and
-                      choreographers
-                    </li>
-                    <li>
-                      <strong>Class videos:</strong> Tag dancers and teachers
-                    </li>
-                  </ul>
-                  <p className="mb-4">
-                    Use the tagging interface in the video form to search for
-                    and add tags. People you tag will be notified and can see
-                    the video on their profile.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Video tagging interface
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="add-section"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add a section?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    In the event form, go to the "Sections" tab and click "Add
-                    Section". Enter a title and select the section type (Battle,
-                    Tournament, Competition, Performance, Showcase, Class,
-                    Session, Mixed, or Other). You can add a description, choose
-                    whether to use brackets, and add styles that apply to the
-                    section.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Adding a section
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="add-bracket"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add a bracket?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    For sections that use brackets, navigate to the section in
-                    the event form and click "Add Bracket". Enter a bracket
-                    title (e.g., "Top 8", "Finals", "Prelims") and then add
-                    videos to that bracket. You can create multiple brackets
-                    within a section to organize different rounds or groups.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Adding a bracket within a section
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="add-video"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add a video?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Within a section (or bracket), click "Add Video". Enter the
-                    video title and URL (YouTube, Vimeo, etc.). Select the video
-                    type (battle, freestyle, choreography, or class) and add any
-                    relevant dance styles. Then tag the people involved in the
-                    video based on their roles.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Adding a video form
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="add-photos"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add photos to my event?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    In the event form, navigate to the "Photo Gallery" tab.
-                    Click "Add Photo" and upload images from your device. You
-                    can add multiple photos to create a gallery showcasing your
-                    event. Photos can be reordered by dragging them, and you can
-                    remove photos by clicking the delete button.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Photo gallery upload interface
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="space-y-3 text-base leading-relaxed text-white">
+            <p>
+              For detailed information on how to add and manage events,
+              including adding roles, sections, brackets, videos, and photos,
+              please see our{" "}
+              <Link
+                href="/help/add-edit-events"
+                className="text-primary-light underline hover:text-secondary-light"
+              >
+                Add/Edit Events
+              </Link>{" "}
+              guide.
+            </p>
+          </div>
         </section>
 
         {/* Event Admin Section */}
@@ -809,128 +547,30 @@ export default function FAQPage() {
           <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
             Event Admin
           </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="change-ownership"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I change event ownership?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Event ownership can be transferred to another user through
-                    the event settings page. Navigate to your event's settings
-                    and use the "Transfer Ownership" option. You'll need to
-                    search for and select the new owner. Once transferred, the
-                    new owner will have full control of the event.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Event settings with ownership transfer option
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="add-team-members"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I add team members?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Team members can help manage your event. In the event
-                    settings, go to the "Team Members" section and click "Add
-                    Team Member". Search for the user you want to add. Team
-                    members can help approve tagging requests, edit event
-                    details, and manage content, but cannot transfer ownership
-                    or delete the event.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Adding team members interface
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="hide-event"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I hide an event?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    If you want to temporarily hide an event from public view,
-                    go to the event settings and toggle the "Hide Event" option.
-                    Hidden events are only visible to you and your team members.
-                    You can unhide the event at any time.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Event visibility settings
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="delete-event"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I delete an event?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Deleting an event is permanent and cannot be undone. In the
-                    event settings, scroll to the bottom and click "Delete
-                    Event". You'll be asked to confirm this action. Only the
-                    event owner can delete an event. Make sure you want to
-                    permanently remove all event data, videos, photos, and
-                    associated content before proceeding.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Delete event confirmation dialog
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="space-y-3 text-base leading-relaxed text-white">
+            <p>
+              For information on managing team members, hiding events, and
+              deleting events, please see our{" "}
+              <Link
+                href="/help/event-management"
+                className="text-primary-light underline hover:text-secondary-light"
+              >
+                Event Management
+              </Link>{" "}
+              guide.
+            </p>
+            <p>
+              For information on transferring event ownership and requesting
+              ownership of events, please see our{" "}
+              <Link
+                href="/help/page-ownership"
+                className="text-primary-light underline hover:text-secondary-light"
+              >
+                Page Ownership
+              </Link>{" "}
+              guide.
+            </p>
+          </div>
         </section>
 
         {/* Tagging and Roles Section */}
@@ -938,199 +578,21 @@ export default function FAQPage() {
           <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
             Tagging and Roles
           </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="why-tagging-important"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Why is tagging important?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Tagging helps connect people to events. Your contributions
-                    and participation in events deserve to be recognized and
-                    remembered. When you're tagged in an event, section, or
-                    video, it appears on your profile, creating a comprehensive
-                    record of your dance journey. Tagging also helps others
-                    discover your work and connect with you.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="who-can-tag"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Who can I tag?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    If you are not a team member or owner of an event you can
-                    request a tag for yourself wherever you see a green button
-                    on an event. It will be approved by the event team.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Green "Tag Yourself" button on event page
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="can-others-tag"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Can other people tag me?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    The event team and admins can tag you in events. You'll
-                    automatically be added and notified. You are always able to
-                    remove any of your tags.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Notification of being tagged
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="event-roles"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What are the roles for events?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Event roles recognize people who contribute to organizing
-                    and running events:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mt-2 mb-4 ml-4">
-                    <li>
-                      <strong>Organizer:</strong> People who organize and plan
-                      the event
-                    </li>
-                    <li>
-                      <strong>DJ:</strong> DJs who provide music for the event
-                    </li>
-                    <li>
-                      <strong>MC:</strong> Masters of Ceremony who host and
-                      announce
-                    </li>
-                    <li>
-                      <strong>Photographer:</strong> People who take photos at
-                      the event
-                    </li>
-                    <li>
-                      <strong>Videographer:</strong> People who film the event
-                    </li>
-                    <li>
-                      <strong>Designer:</strong> People who create graphics,
-                      posters, and visual content
-                    </li>
-                  </ul>
-                  <p>
-                    Event owners can also add team members who help manage the
-                    event but don't have a specific role.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="section-roles"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What are the roles for sections?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Section roles recognize achievements and contributions
-                    within specific parts of an event:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mt-2 mb-4 ml-4">
-                    <li>
-                      <strong>Winner:</strong> People who won a section (battle,
-                      competition, etc.)
-                    </li>
-                    <li>
-                      <strong>Judge:</strong> People who judged a section
-                    </li>
-                  </ul>
-                  <p>
-                    Section winners and judges are displayed on the section page
-                    and appear on their profiles.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="video-roles"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What are the roles for videos?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Video roles depend on the type of video and recognize
-                    different types of participation:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mt-2 mb-4 ml-4">
-                    <li>
-                      <strong>Dancer:</strong> Available for all video types -
-                      people who danced in the video
-                    </li>
-                    <li>
-                      <strong>Winner:</strong> Only for battle videos - people
-                      who won the battle
-                    </li>
-                    <li>
-                      <strong>Choreographer:</strong> Only for choreography
-                      videos - people who created the choreography
-                    </li>
-                    <li>
-                      <strong>Teacher:</strong> Only for class videos - people
-                      who taught the class
-                    </li>
-                  </ul>
-                  <p>
-                    Video roles help viewers understand who was involved and in
-                    what capacity, making it easy to discover content by
-                    specific dancers, choreographers, or teachers.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <div className="space-y-3 text-base leading-relaxed text-white">
+            <p>
+              For detailed information on how to tag yourself with roles at the
+              event, section, and video levels, including how to request roles,
+              who can approve requests, and what roles are available, please see
+              our{" "}
+              <Link
+                href="/help/role-tagging"
+                className="text-primary-light underline hover:text-secondary-light"
+              >
+                Role Tagging
+              </Link>{" "}
+              guide.
+            </p>
+          </div>
         </section>
 
         {/* Calendar Section */}
