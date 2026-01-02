@@ -13,13 +13,6 @@ import { SavedEventsCalendarSection } from "@/components/SavedEventsCalendarSect
 import { EventCard } from "@/components/EventCard";
 import { TEventCard, EventType } from "@/types/event";
 import { CalendarEventData } from "@/db/queries/event";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { RequestSection } from "@/components/requests/RequestSection";
 import { getAuthLevelName } from "@/lib/utils/auth-utils-shared";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
@@ -321,7 +314,7 @@ export function DashboardClient({
         <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
           <h1 className="py-7 border-b-2 border-primary-light">Dashboard</h1>
           <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-            <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+            <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[800px] w-full">
               <div className="text-center py-12">Loading dashboard...</div>
             </div>
           </div>
@@ -336,9 +329,9 @@ export function DashboardClient({
       <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
         <h1 className="py-7 border-b-2 border-primary-light">Dashboard</h1>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+          <div className="flex flex-col gap-4 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1500px] w-full">
             {/* Welcome Section */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full">
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
               {/* Profile Picture */}
               <div className="w-full sm:w-[250px] shrink-0">
                 <div className="relative w-full sm:w-[250px] h-[250px] sm:h-[350px] rounded-sm border-4 border-primary-light overflow-hidden bg-primary-dark">
@@ -405,7 +398,7 @@ export function DashboardClient({
                   Events you have saved ({savedEvents.length})
                 </p>
                 <div className="max-h-[600px] overflow-y-auto p-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-10 justify-items-center">
                     {savedEvents.map((event) => (
                       <EventCard
                         key={event.id}

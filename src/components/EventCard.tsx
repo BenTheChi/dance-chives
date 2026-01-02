@@ -51,7 +51,7 @@ export function EventCard({
     : "";
 
   return (
-    <div className="relative bg-primary-dark group card overflow-hidden transition-all duration-300 w-full flex flex-col">
+    <div className="bg-primary-dark group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
       {/* Poster square - clickable */}
       <Link
         href={titleHref}

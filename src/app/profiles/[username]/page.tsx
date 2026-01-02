@@ -356,7 +356,7 @@ export default async function ProfilePage({ params }: PageProps) {
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-center gap-8 py-5 px-5 sm:px-10 lg:px-15 max-w-[1500px] w-full overflow-visible">
+        <div className="flex flex-col items-center gap-8 py-5 px-1 sm:px-10 lg:px-15 max-w-[1500px] w-full overflow-visible">
           {/* Events with Roles - Tabs */}
           {sortedRoles.length > 0 && (
             <ProfileRolesSection

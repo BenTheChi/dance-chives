@@ -87,7 +87,7 @@ export function RolesTabsSection({
   return (
     <section className="w-full">
       <h2 className="text-2xl font-bold mb-4">Events with Roles</h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
+      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-hidden">
         {/* Past/Future Toggle */}
         <div className="flex items-center justify-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light text-center">
           <span className="text-sm font-semibold uppercase">Past</span>
@@ -99,8 +99,8 @@ export function RolesTabsSection({
           <span className="text-sm font-semibold uppercase">Future</span>
         </div>
 
-        <Tabs defaultValue={sortedRoles[0]} className="items-center">
-          <TabsList className="flex flex-wrap justify-center items-center gap-2 p-0 bg-transparent text-secondary-light mt-2">
+        <Tabs defaultValue={sortedRoles[0]} className="w-full">
+          <TabsList className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-stretch sm:items-center gap-2 p-3 bg-transparent text-secondary-light w-full mt-8 mb-2 sm:mt-0">
             {sortedRoles.map((role) => {
               const filteredEventsCount =
                 getFilteredAndSortedEvents(role).length;
@@ -108,7 +108,7 @@ export function RolesTabsSection({
                 <TabsTrigger
                   key={role}
                   value={role}
-                  className="px-4 py-2 rounded-sm transition-all duration-200 border-2 border-transparent hover:border-charcoal hover:shadow-[4px_4px_0_0_rgb(49,49,49)] active:shadow-[2px_2px_0_0_rgb(49,49,49)] text-base font-bold uppercase tracking-wide font-display text-secondary-light hover:bg-periwinkle-light hover:text-periwinkle data-[state=active]:border-charcoal data-[state=active]:shadow-[4px_4px_0_0_rgb(49,49,49)] data-[state=active]:bg-mint data-[state=active]:text-primary"
+                  className="px-4 py-4 rounded-sm transition-all duration-200 border-2 border-transparent hover:border-charcoal hover:shadow-[4px_4px_0_0_rgb(49,49,49)] active:shadow-[2px_2px_0_0_rgb(49,49,49)] text-base font-bold uppercase tracking-wide font-display text-secondary-light hover:bg-periwinkle-light hover:text-periwinkle data-[state=active]:border-charcoal data-[state=active]:shadow-[4px_4px_0_0_rgb(49,49,49)] data-[state=active]:bg-mint data-[state=active]:text-primary w-full sm:w-auto"
                 >
                   {role} ({filteredEventsCount})
                 </TabsTrigger>
@@ -119,13 +119,16 @@ export function RolesTabsSection({
             const filteredEvents = getFilteredAndSortedEvents(role);
             return (
               <TabsContent key={role} value={role}>
-                <div className="max-h-[600px] overflow-y-auto py-3 px-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 overflow-visible">
+                <div className="max-h-[600px] overflow-y-auto overflow-x-hidden py-3 px-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 justify-items-center sm:justify-items-start">
                     {filteredEvents.map((event: Event) => {
                       const eventRoute = `/events/${event.id}`;
 
                       return (
-                        <div key={event.id} className="overflow-visible">
+                        <div
+                          key={event.id}
+                          className="flex justify-center sm:justify-start"
+                        >
                           <EventCard
                             id={event.id}
                             title={event.eventDetails.title}
