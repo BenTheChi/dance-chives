@@ -1,5 +1,4 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { ParallaxBackground } from "@/components/ParallaxBackground";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -7,22 +6,21 @@ export default function AboutPage() {
   return (
     <div className="flex flex-col">
       <AppNavbar />
-      <main className="flex-1 flex flex-col relative bg-charcoal/15 mb-10">
-        {/* Pattern background that repeats for entire page */}
-        <ParallaxBackground />
-
+      <h1 className="py-7 border-b-2 border-primary-light">
+        About Dance Chives
+      </h1>
+      <main className="flex-1 flex flex-col relative mb-10">
         {/* Content */}
         <div className="relative z-10">
           <div className="flex flex-col items-center gap-20 px-2 py-20">
             {/* Mission Statement Section */}
             <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-4 sm:px-8 border-4 border-primary-light w-full">
-              <h1 className="sm:!text-4xl !text-3xl !font-extrabold text-center mb-8">
-                About Dance Chives
-              </h1>
-              <div className="space-y-6 text-lg">
+              <div className="space-y-8 text-base leading-relaxed">
                 <div>
-                  <h2 className="text-2xl font-bold mb-4">Our Mission</h2>
-                  <p>
+                  <h2 className="text-2xl font-bold mb-4 text-white">
+                    Our Mission
+                  </h2>
+                  <p className="text-white/95">
                     Dance Chives is a free community archive designed to
                     collect, display, and track street dance event data. Our
                     mission is to unify all metadata, media, and social
@@ -35,74 +33,85 @@ export default function AboutPage() {
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-bold mb-4">
+                  <h2 className="text-2xl font-bold mb-4 text-white">
                     Comparing Platforms
                   </h2>
-                  <p>
-                    Bboy.org was great for connecting the global community but
-                    more focused on threads of conversations.
-                    <br />
-                    <br />
-                    Youtube has always been and will continue to be the best
-                    place to watch entire battles, but it does not connect the
-                    community nor is it good for event organization.
-                    <br />
-                    <br />
-                    Instagram is great for tagging, building followers, and
-                    sharing short form videos. It also lacks event organization
-                    and cannot support long form videos.
-                    <br />
-                    <br />
-                    Facebook is great for organizing events but it is not a
-                    great place to search for battles or find events anymore.
-                    <br />
-                    <br />
-                    Dance Chives leverages the features of each to create a
-                    unified platform that specifically caters to the needs of
-                    the street dance community.
-                  </p>
+                  <div className="space-y-4 text-white/95">
+                    <p>
+                      <strong className="text-white">Bboy.org</strong> was great
+                      for connecting the global community but more focused on
+                      threads of conversations.
+                    </p>
+                    <p>
+                      <strong className="text-white">Youtube</strong> has always
+                      been and will continue to be the best place to watch
+                      entire battles, but it does not connect the community nor
+                      is it good for event organization.
+                    </p>
+                    <p>
+                      <strong className="text-white">Instagram</strong> is great
+                      for tagging, building followers, and sharing short form
+                      videos. It also lacks event organization and cannot
+                      support long form videos.
+                    </p>
+                    <p>
+                      <strong className="text-white">Facebook</strong> is great
+                      for organizing events but it is not a great place to
+                      search for battles or find events anymore.
+                    </p>
+                    <p className="pt-2">
+                      <strong className="text-white">Dance Chives</strong>{" "}
+                      leverages the features of each to create a unified
+                      platform that specifically caters to the needs of the
+                      street dance community.
+                    </p>
+                  </div>
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-bold mb-4">A Community Index</h2>
-                  <p>
-                    Dance Chives serves as a comprehensive community index for
-                    the street dance world. Through the collective grassroots
-                    efforts of dancers and organizers, thousands of battles and
-                    events take place across the globe each year, generating
-                    extensive footage and documentation. While most events are
-                    promoted and shared on social media platforms like Facebook,
-                    Instagram, and YouTube, these platforms lack the structure
-                    to systematically organize dance events and their metadata
-                    in an accessible way.
-                  </p>
-                  <p className="mt-4">
-                    That&apos;s where Dance Chives comes in. We provide a
-                    structured public record of event and battle roles, allowing
-                    dancers to tag themselves as organizers, DJs, MCs,
-                    participants, winners, and more. This creates a
-                    comprehensive archive that connects the community and
-                    ensures proper recognition for everyone involved in the
-                    dance scene.
-                  </p>
+                  <h2 className="text-2xl font-bold mb-4 text-white">
+                    A Community Index
+                  </h2>
+                  <div className="space-y-4 text-white/95">
+                    <p>
+                      Dance Chives serves as a comprehensive community index for
+                      the street dance world. Through the collective grassroots
+                      efforts of dancers and organizers, thousands of battles
+                      and events take place across the globe each year,
+                      generating extensive footage and documentation. While most
+                      events are promoted and shared on social media platforms
+                      like Facebook, Instagram, and YouTube, these platforms
+                      lack the structure to systematically organize dance events
+                      and their metadata in an accessible way.
+                    </p>
+                    <p>
+                      That&apos;s where Dance Chives comes in. We provide a
+                      structured public record of event and battle roles,
+                      allowing dancers to tag themselves as organizers, DJs,
+                      MCs, participants, winners, and more. This creates a
+                      comprehensive archive that connects the community and
+                      ensures proper recognition for everyone involved in the
+                      dance scene.
+                    </p>
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* Open Source Section */}
             <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-4 sm:px-8 border-4 border-secondary-light w-full">
-              <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8">
+              <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8 text-white">
                 Open Source
               </h2>
-              <div className="space-y-6 text-lg">
-                <p>
+              <div className="space-y-6 text-base leading-relaxed">
+                <p className="text-white/95">
                   Dance Chives is an open source project, licensed under the
                   Apache License 2.0. We believe in transparency, community
                   collaboration, and the power of open development. The source
                   code is available for anyone to view, contribute to, and learn
                   from.
                 </p>
-                <p>
+                <p className="text-white/95">
                   We welcome contributions from the community! Whether
                   you&apos;re a developer, designer, or dance enthusiast, there
                   are many ways to get involved. Join our Discord to connect
@@ -151,7 +160,7 @@ export default function AboutPage() {
             </section>
 
             {/* Community Guidelines Section */}
-            <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-4 sm:px-8 border-4 border-primary-light w-full">
+            {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-4 sm:px-8 border-4 border-primary-light w-full">
               <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8">
                 Community Guidelines
               </h2>
@@ -177,10 +186,10 @@ export default function AboutPage() {
                   </Link>
                 </div>
               </div>
-            </section>
+            </section> */}
 
             {/* Creator Section */}
-            <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-4 sm:px-8 border-4 border-secondary-light w-full">
+            {/* <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-4 sm:px-8 border-4 border-secondary-light w-full">
               <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8">
                 About the Creator
               </h2>
@@ -216,7 +225,7 @@ export default function AboutPage() {
                   </p>
                 </div>
               </div>
-            </section>
+            </section> */}
           </div>
         </div>
       </main>
