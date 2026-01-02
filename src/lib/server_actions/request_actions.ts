@@ -907,6 +907,9 @@ export async function createTeamMemberRequest(eventId: string) {
 
   const approvers = await getTeamMemberRequestApprovers(eventId);
 
+  const eventTitle = await getEventTitle(eventId);
+  const eventDisplayName = eventTitle || eventId;
+
   for (const approverId of approvers) {
     await createNotification(
       approverId,
@@ -914,7 +917,7 @@ export async function createTeamMemberRequest(eventId: string) {
       "New Team Member Request",
       `${
         request.sender.name || request.sender.email
-      } wants to join as a team member`,
+      } wants to join as a team member for ${eventDisplayName}|eventId:${eventId}`,
       REQUEST_TYPES.TEAM_MEMBER,
       request.id
     );
@@ -981,11 +984,14 @@ export async function approveTeamMemberRequest(
   // Add user as team member in Neo4j (grants edit access)
   await addTeamMember(request.eventId, request.senderId);
 
+  const eventTitle = await getEventTitle(request.eventId);
+  const eventDisplayName = eventTitle || request.eventId;
+
   await createNotification(
     request.senderId,
     "TEAM_MEMBER_ADDED",
     "Team Member Request Approved",
-    `You have been added as a team member`,
+    `You have been added as a team member for ${eventDisplayName}|eventId:${request.eventId}`,
     REQUEST_TYPES.TEAM_MEMBER,
     requestId
   );
@@ -1042,11 +1048,14 @@ export async function denyTeamMemberRequest(
 
   await updateRequestStatus(REQUEST_TYPES.TEAM_MEMBER, requestId, "DENIED");
 
+  const eventTitle = await getEventTitle(request.eventId);
+  const eventDisplayName = eventTitle || request.eventId;
+
   await createNotification(
     request.senderId,
     "REQUEST_DENIED",
     "Team Member Request Denied",
-    `Your team member request has been denied`,
+    `Your team member request for ${eventDisplayName} has been denied|eventId:${request.eventId}`,
     REQUEST_TYPES.TEAM_MEMBER,
     requestId
   );
@@ -1124,6 +1133,20 @@ export async function hasPendingOwnershipRequest(eventId: string) {
   const senderId = await requireAuth();
 
   const existingRequest = await prisma.ownershipRequest.findFirst({
+    where: {
+      eventId,
+      senderId,
+      status: "PENDING",
+    },
+  });
+
+  return !!existingRequest;
+}
+
+export async function hasPendingTeamMemberRequest(eventId: string) {
+  const senderId = await requireAuth();
+
+  const existingRequest = await prisma.teamMemberRequest.findFirst({
     where: {
       eventId,
       senderId,

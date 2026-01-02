@@ -239,6 +239,10 @@ export function IncomingRequestCard({
               <>
                 <strong>ownership</strong> of{" "}
               </>
+            ) : request.type === "TEAM_MEMBER" ? (
+              <>
+                <strong>team membership</strong> for{" "}
+              </>
             ) : (
               <>{request.role && <strong>{request.role}</strong>} from </>
             )}
@@ -369,6 +373,10 @@ export function OutgoingRequestCard({
           {request.type === "OWNERSHIP" ? (
             <>
               <strong>ownership</strong> of{" "}
+            </>
+          ) : request.type === "TEAM_MEMBER" ? (
+            <>
+              <strong>team membership</strong> for{" "}
             </>
           ) : (
             <>{request.role && <strong>{request.role}</strong>} for </>

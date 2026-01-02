@@ -2,7 +2,6 @@ import React from "react";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PhotoGallery } from "@/components/PhotoGallery";
@@ -11,15 +10,15 @@ import { SectionCard } from "@/components/ui/section-card";
 import { getUser } from "@/db/queries/user";
 import { EventDatesDialog } from "@/components/events/EventDatesDialog";
 import { enrichUserWithCardData } from "@/db/queries/user-cards";
-import {
-  EventShareSaveButtonsWrapper,
-  EventEditButtons,
-} from "./event-client";
+import { EventShareSaveButtonsWrapper, EventEditButtons } from "./event-client";
 import { RequestOwnershipButton } from "@/components/events/RequestOwnershipButton";
+import { TeamMembersDisplay } from "@/components/events/TeamMembersDisplay";
+import { getEventTeamMembers, isTeamMember } from "@/db/queries/team-member";
 import { EventRoles } from "./event-roles";
 import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
+import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberButton";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -355,6 +354,36 @@ export default async function EventPage({ params }: PageProps) {
         image: creatorRaw.image,
       })
     : null;
+
+  // Fetch team members and enrich with user data
+  const teamMemberIds = await getEventTeamMembers(event.id);
+  const teamMembersRaw = await Promise.all(
+    teamMemberIds.map(async (id) => {
+      const user = await getUser(id);
+      if (!user) return null;
+      return user;
+    })
+  );
+  const teamMembersValid = teamMembersRaw.filter(
+    (member): member is NonNullable<typeof member> => member !== null
+  );
+  const teamMembers = await Promise.all(
+    teamMembersValid.map(async (member) => {
+      const enriched = await enrichUserWithCardData({
+        id: member.id,
+        username: member.username,
+        displayName: member.displayName,
+        avatar: member.avatar,
+        image: member.image,
+      });
+      return enriched;
+    })
+  );
+
+  // Check if current user is a team member
+  const isCurrentUserTeamMember = currentUserId
+    ? await isTeamMember(event.id, currentUserId)
+    : false;
 
   // Get timezone for date display
   const eventTimezone = event.eventDetails.city.timezone || "UTC";
@@ -742,7 +771,7 @@ export default async function EventPage({ params }: PageProps) {
         <div className="flex justify-center w-full">
           <div className="w-full max-w-[920px]">
             <hr className="border-primary-light my-4" />
-            <div className="flex flex-row gap-10 items-center justify-center mb-4 flex-wrap">
+            <div className="flex flex-row gap-4 sm:gap-10 items-center justify-center mb-4 flex-wrap">
               {creator && (
                 <div className="flex flex-row gap-2 items-center">
                   <span className="text-sm">Page Owner: </span>
@@ -762,6 +791,29 @@ export default async function EventPage({ params }: PageProps) {
                   />
                 </div>
               )}
+              <div className="flex flex-row gap-2 items-center">
+                <span className="text-sm min-w-[100px]">Team Members: </span>
+
+                {teamMembers.length > 0 && (
+                  <TeamMembersDisplay
+                    teamMembers={teamMembers.filter(
+                      (member): member is typeof member & { id: string } =>
+                        !!member.id
+                    )}
+                    eventId={event.id}
+                    creatorId={creator?.id}
+                    currentUserId={currentUserId}
+                    isCurrentUserTeamMember={isCurrentUserTeamMember}
+                  />
+                )}
+                {!isCurrentUserTeamMember && (
+                  <RequestTeamMemberButton
+                    eventId={event.id}
+                    creatorId={creator?.id}
+                    isTeamMember={isCurrentUserTeamMember}
+                  />
+                )}
+              </div>
               {/* Settings and Edit buttons - handled by client component */}
               <EventEditButtons eventId={event.id} />
             </div>
