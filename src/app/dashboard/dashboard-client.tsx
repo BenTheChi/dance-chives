@@ -5,10 +5,6 @@ import { AccountVerificationGuard } from "@/components/AccountVerificationGuard"
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  getDashboardData,
-  getSavedEventsForUser,
-} from "@/lib/server_actions/request_actions";
 import { SavedEventsCalendarSection } from "@/components/SavedEventsCalendarSection";
 import { EventCard } from "@/components/EventCard";
 import { TEventCard, EventType } from "@/types/event";
@@ -132,12 +128,33 @@ export function DashboardClient({
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, saved] = await Promise.all([
-        getDashboardData(),
-        getSavedEventsForUser(),
+      const [dashboardResponse, savedResponse] = await Promise.all([
+        fetch("/api/dashboard"),
+        fetch("/api/events/saved/list"),
       ]);
-      setDashboardData(data);
-      setSavedEvents(saved);
+
+      if (dashboardResponse.ok) {
+        const dashboardPayload = await dashboardResponse.json();
+        setDashboardData(dashboardPayload);
+      } else {
+        const errorData = await dashboardResponse.json().catch(() => null);
+        console.error(
+          "Failed to load dashboard:",
+          errorData?.error || dashboardResponse.statusText
+        );
+      }
+
+      if (savedResponse.ok) {
+        const savedPayload = await savedResponse.json();
+        setSavedEvents(Array.isArray(savedPayload) ? savedPayload : []);
+      } else {
+        const errorData = await savedResponse.json().catch(() => null);
+        console.error(
+          "Failed to load saved events:",
+          errorData?.error || savedResponse.statusText
+        );
+        setSavedEvents([]);
+      }
     } catch (error) {
       console.error("Failed to load dashboard:", error);
     } finally {

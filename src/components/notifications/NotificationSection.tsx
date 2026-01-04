@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { NotificationCard } from "./NotificationCard";
-import {
-  getNotifications,
-  markAllNotificationsAsOld,
-} from "@/lib/server_actions/request_actions";
+import { markAllNotificationsAsOld } from "@/lib/server_actions/request_actions";
 import { toast } from "sonner";
 
 interface Notification {
@@ -40,8 +37,20 @@ export function NotificationSection({
   const loadNotifications = async () => {
     setIsLoading(true);
     try {
-      const allNotifications = await getNotifications(20);
-      setNotifications(allNotifications);
+      const response = await fetch("/api/notifications?limit=20");
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(Array.isArray(data) ? data : []);
+      } else if (response.status === 401) {
+        setNotifications([]);
+      } else {
+        const errorData = await response.json().catch(() => null);
+        console.error(
+          "Failed to load notifications:",
+          errorData?.error || response.statusText
+        );
+        toast.error("Failed to load notifications");
+      }
     } catch (error) {
       console.error("Failed to load notifications:", error);
       toast.error("Failed to load notifications");

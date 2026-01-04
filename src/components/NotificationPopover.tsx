@@ -10,11 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  getNotifications,
-  getNewNotificationCount,
   markNotificationAsOld,
   markAllNotificationsAsOld,
-  getNotificationUrl,
 } from "@/lib/server_actions/request_actions";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -41,14 +38,40 @@ export function NotificationPopover() {
   const loadNotifications = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [notifs, count] = await Promise.all([
-        getNotifications(10, false), // Only get new notifications (isOld: false)
-        getNewNotificationCount(),
+
+      const [notifsResponse, countResponse] = await Promise.all([
+        fetch("/api/notifications?limit=10&isOld=false"),
+        fetch("/api/notifications/count"),
       ]);
-      // Filter out old notifications
-      const newNotifs = notifs.filter((n) => !n.isOld);
-      setNotifications(newNotifs);
-      setNewCount(count);
+
+      if (notifsResponse.ok) {
+        const notificationData = await notifsResponse.json();
+        const newNotifs = Array.isArray(notificationData)
+          ? notificationData.filter((n) => !n.isOld)
+          : [];
+        setNotifications(newNotifs);
+      } else if (notifsResponse.status === 401) {
+        setNotifications([]);
+      } else {
+        const errorData = await notifsResponse.json().catch(() => null);
+        console.error(
+          "Failed to load notifications:",
+          errorData?.error || notifsResponse.statusText
+        );
+      }
+
+      if (countResponse.ok) {
+        const countData = await countResponse.json();
+        setNewCount(countData?.count ?? 0);
+      } else if (countResponse.status === 401) {
+        setNewCount(0);
+      } else {
+        const errorData = await countResponse.json().catch(() => null);
+        console.error(
+          "Failed to load notification count:",
+          errorData?.error || countResponse.statusText
+        );
+      }
     } catch (error) {
       console.error("Failed to load notifications:", error);
     } finally {
@@ -74,21 +97,29 @@ export function NotificationPopover() {
 
   const handleNotificationClick = async (notification: Notification) => {
     try {
-      // Mark as old first
       await markNotificationAsOld(notification.id);
-      
-      // Get navigation URL
-      const url = await getNotificationUrl(notification.id);
-      
-      // Update local state - remove from list
+
+      const urlResponse = await fetch(
+        `/api/notifications/${notification.id}/url`
+      );
+
+      if (urlResponse.ok) {
+        const urlData = await urlResponse.json();
+        const url = urlData?.url;
+        if (url) {
+          router.push(url);
+        }
+      } else if (urlResponse.status !== 401) {
+        const errorData = await urlResponse.json().catch(() => null);
+        console.error(
+          "Failed to fetch notification URL:",
+          errorData?.error || urlResponse.statusText
+        );
+      }
+
       setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
       setNewCount((prev) => Math.max(0, prev - 1));
       setIsOpen(false);
-      
-      // Navigate if URL exists
-      if (url) {
-        router.push(url);
-      }
     } catch (error) {
       console.error("Failed to handle notification click:", error);
     }

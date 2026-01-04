@@ -4,7 +4,6 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { getSavedEventIds } from "@/lib/server_actions/event_actions";
 import { RolesTabsSection } from "@/components/profile/RolesTabsSection";
 import { Event } from "@/types/event";
 
@@ -46,12 +45,22 @@ export function ProfileRolesSection({
 
     const fetchSavedEvents = async () => {
       try {
-        const savedResult = await getSavedEventIds();
-        if (savedResult.status === 200 && "eventIds" in savedResult) {
-          setSavedEventIds(new Set(savedResult.eventIds));
+        const response = await fetch("/api/events/saved");
+        if (response.ok) {
+          const data = await response.json();
+          setSavedEventIds(new Set(data?.eventIds ?? []));
+        } else if (response.status === 401) {
+          setSavedEventIds(new Set());
+        } else {
+          const errorData = await response.json().catch(() => null);
+          console.error(
+            "Failed to fetch saved events:",
+            errorData?.error || response.statusText
+          );
         }
       } catch (error) {
         console.error("Failed to fetch saved events:", error);
+        setSavedEventIds(new Set());
       }
     };
 

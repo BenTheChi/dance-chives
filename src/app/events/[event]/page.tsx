@@ -19,6 +19,7 @@ import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberButton";
+import { MessageTemplateDialog } from "@/components/events/MessageTemplateDialog";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -814,6 +815,11 @@ export default async function EventPage({ params }: PageProps) {
                   />
                 )}
               </div>
+              {/* Message template button - super admin only */}
+              <MessageTemplateDialog
+                eventId={event.id}
+                eventTitle={event.eventDetails.title}
+              />
               {/* Settings and Edit buttons - handled by client component */}
               <EventEditButtons eventId={event.id} />
             </div>
