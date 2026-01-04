@@ -196,7 +196,7 @@ export default async function Home() {
             </section> */}
 
             {/* Recently Added Videos */}
-            <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm p-4 border-4 border-primary-light">
+            <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm py-8 px-4 border-4 border-primary-light">
               <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
                 Recently Added Videos
               </h2>
@@ -212,7 +212,7 @@ export default async function Home() {
             </section>
 
             {/* Recently Added Battles */}
-            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm p-4 border-4 border-secondary-light">
+            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
               <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
                 Recently Added Battles
               </h2>
