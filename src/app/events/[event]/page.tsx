@@ -291,10 +291,15 @@ export default async function EventPage({ params }: PageProps) {
   const session = await auth();
   const currentUserId = session?.user?.id;
 
-  // Get event without auth (for static generation - hidden events will be filtered)
-  const event = await getEvent(paramResult.event);
+  // Get event with auth context to allow access to hidden events for authorized users
+  // Hidden events are accessible to: admins, moderators, team members, and page owners (creators)
+  const event = await getEvent(
+    paramResult.event,
+    currentUserId,
+    session?.user?.auth
+  );
 
-  // If event is null, it means it's hidden (or doesn't exist)
+  // If event is null, it means it's hidden (or doesn't exist) and user is not authorized
   if (!event) {
     notFound();
   }
