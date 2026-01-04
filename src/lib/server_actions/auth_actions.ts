@@ -1218,6 +1218,8 @@ export async function deleteUserAccount(
           // Continue with other events even if one fails
         }
       }
+      // Revalidate events list page after deleting all events
+      revalidatePath("/events");
     } else {
       // Transfer events to admin user
       await transferUserEventsToAdmin(targetUserId);

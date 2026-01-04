@@ -6,6 +6,7 @@ import { canDeleteEvent } from "@/lib/utils/auth-utils";
 import { isTeamMember } from "@/db/queries/team-member";
 import { prisma } from "@/lib/primsa";
 import { searchEvents, searchAccessibleEvents } from "@/db/queries/event";
+import { revalidatePath } from "next/cache";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -81,6 +82,11 @@ export async function DELETE(request: NextRequest) {
     await prisma.event.deleteMany({
       where: { eventId: id },
     });
+
+    // Revalidate events list page to reflect deleted event
+    revalidatePath("/events");
+    // Also revalidate the individual event page (in case it was cached)
+    revalidatePath(`/events/${id}`);
 
     return NextResponse.json({ message: "Event deleted" }, { status: 200 });
   } catch (error) {
