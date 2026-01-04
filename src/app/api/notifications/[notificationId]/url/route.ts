@@ -10,16 +10,18 @@ type NotificationRecord = NonNullable<
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { notificationId: string } }
+  context: { params: Promise<{ notificationId: string }> }
 ) {
   return withApiAuth(
     request,
     { requireAuth: true },
     async (_request, session) => {
       try {
+        const { notificationId } = await context.params;
+
         const notification = await prisma.notification.findFirst({
           where: {
-            id: params.notificationId,
+            id: notificationId,
             userId: session.user.id,
           },
         });
