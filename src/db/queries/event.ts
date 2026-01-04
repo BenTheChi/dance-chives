@@ -245,6 +245,13 @@ export const getEvent = async (
     // User is authenticated - check if they have access to hidden events
     const isModOrAdmin =
       authLevel !== undefined && authLevel >= AUTH_LEVELS.MODERATOR;
+
+    console.log(`🔍 [getEvent] Auth check for event ${id}:`, {
+      userId,
+      authLevel,
+      isModOrAdmin,
+    });
+
     const accessCheck = await session.run(
       `
       MATCH (e:Event {id: $id})
@@ -254,7 +261,8 @@ export const getEvent = async (
            (e.status = 'visible' OR e.status IS NULL) as isVisible,
            (creator IS NOT NULL) as isCreator,
            (teamMember IS NOT NULL) as isTeamMember
-      RETURN isVisible,
+      RETURN e.status as eventStatus,
+             isVisible,
              isCreator,
              isTeamMember,
              $isModOrAdmin as isModOrAdmin
@@ -264,31 +272,55 @@ export const getEvent = async (
 
     if (accessCheck.records.length > 0) {
       const record = accessCheck.records[0];
+      const eventStatus = record.get("eventStatus");
       const isVisible = record.get("isVisible");
       const isCreator = record.get("isCreator");
       const isTeamMember = record.get("isTeamMember");
       const isModOrAdmin = record.get("isModOrAdmin");
 
+      console.log(`🔍 [getEvent] Access check results:`, {
+        eventStatus,
+        isVisible,
+        isCreator,
+        isTeamMember,
+        isModOrAdmin,
+      });
+
       // If event is hidden and user is not authorized, return null
       if (!isVisible && !isCreator && !isTeamMember && !isModOrAdmin) {
+        console.log(
+          `❌ [getEvent] Access denied - event is hidden and user is not authorized`
+        );
         await session.close();
         return null;
       }
+
+      console.log(`✅ [getEvent] Access granted`);
     }
   } else {
     // No user ID - only return visible events (for static generation)
+    console.log(`🔍 [getEvent] No user context - checking visibility only`);
+
     const visibilityCheck = await session.run(
       `
       MATCH (e:Event {id: $id})
-      RETURN (e.status = 'visible' OR e.status IS NULL) as isVisible
+      RETURN e.status as eventStatus, (e.status = 'visible' OR e.status IS NULL) as isVisible
       `,
       { id }
     );
 
     if (visibilityCheck.records.length > 0) {
+      const eventStatus = visibilityCheck.records[0].get("eventStatus");
       const isVisible = visibilityCheck.records[0].get("isVisible");
+
+      console.log(`🔍 [getEvent] Visibility check:`, {
+        eventStatus,
+        isVisible,
+      });
+
       if (!isVisible) {
         // Event is hidden and no user context - return null for static generation
+        console.log(`❌ [getEvent] Event is hidden and no user context`);
         await session.close();
         return null;
       }

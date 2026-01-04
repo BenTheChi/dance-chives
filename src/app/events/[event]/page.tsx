@@ -1,3 +1,5 @@
+//THIS PAGE IS NOT USING ISR.  IF WE WANT TO USE ISR AGAIN IT WILL EFFECT THE HIDE/VISIBLE FUNCTIONALITY.
+
 import React from "react";
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
@@ -24,9 +26,6 @@ import { MessageTemplateDialog } from "@/components/events/MessageTemplateDialog
 type PageProps = {
   params: Promise<{ event: string }>;
 };
-
-// Enable static generation with revalidation (ISR)
-export const revalidate = 3600; // Revalidate every hour
 
 // Helper function to validate event ID format
 function isValidEventId(id: string): boolean {
