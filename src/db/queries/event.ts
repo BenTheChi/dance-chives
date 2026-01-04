@@ -35,6 +35,7 @@ import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
 import { type Record as Neo4jRecord } from "neo4j-driver";
 import { generateCitySlug } from "@/lib/utils/city-slug";
+import { prisma } from "@/lib/primsa";
 
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
@@ -173,7 +174,13 @@ export function getAllEventTypeLabels(): string[] {
 
 // Get all possible video type labels for removal
 export function getAllVideoTypeLabels(): string[] {
-  return ["BattleVideo", "FreestyleVideo", "ChoreographyVideo", "ClassVideo", "OtherVideo"];
+  return [
+    "BattleVideo",
+    "FreestyleVideo",
+    "ChoreographyVideo",
+    "ClassVideo",
+    "OtherVideo",
+  ];
 }
 
 interface BracketVideoRecord {
@@ -994,11 +1001,13 @@ export const getEvent = async (
 
 /**
  * Delete an event and all its associated nodes (images, sections, brackets, videos)
+ * Also deletes the event card from PostgreSQL (which cascades to event dates and section cards)
  */
 export const deleteEvent = async (eventId: string): Promise<boolean> => {
   const session = driver.session();
 
   try {
+    // Delete from Neo4j
     await session.run(
       `
       MATCH (e:Event {id: $id})
@@ -1006,6 +1015,12 @@ export const deleteEvent = async (eventId: string): Promise<boolean> => {
     `,
       { id: eventId }
     );
+
+    // Delete from PostgreSQL (cascades to EventDate and SectionCard)
+    // Use deleteMany to avoid error if record doesn't exist
+    await prisma.eventCard.deleteMany({
+      where: { eventId },
+    });
 
     await session.close();
     return true;
@@ -3332,7 +3347,9 @@ export const getStyleData = async (
           imageUrl: record.get("imageUrl"),
           date: date as string,
           city: city as string,
-          cityId: record.get("cityId") ? String(record.get("cityId")) : undefined,
+          cityId: record.get("cityId")
+            ? String(record.get("cityId"))
+            : undefined,
           styles: eventStylesMap.get(eventId) || [],
           eventType: record.get("eventType") as EventType | undefined,
         };
