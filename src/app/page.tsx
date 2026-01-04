@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 import { AppNavbar } from "@/components/AppNavbar";
 import { ParallaxBackground } from "@/components/ParallaxBackground";
 import { SectionCard } from "@/components/ui/section-card";
-import { getLatestBattleSections } from "@/db/queries/event";
+import {
+  getLatestBattleSections,
+  getLatestEventVideos,
+} from "@/db/queries/event";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
 import Script from "next/script";
+import { RecentVideosSection } from "@/components/RecentVideosSection";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -15,6 +19,9 @@ export const revalidate = 60;
 export default async function Home() {
   // Fetch latest battle sections from 6 events
   const latestBattleSections = await getLatestBattleSections();
+
+  // Fetch latest videos from 6 events
+  const latestVideos = await getLatestEventVideos();
 
   return (
     <div className="flex flex-col">
@@ -51,8 +58,18 @@ export default async function Home() {
           </section>
 
           <div className="flex flex-col items-center gap-20 px-2">
-            {/* Events CTA */}
-            <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
+            {/* Final CTA */}
+            <section className="w-full mx-auto text-center">
+              <MaintenanceLink href="/signup">
+                <Button
+                  size="xl"
+                  className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal px-4 sm:px-6 md:px-10"
+                >
+                  Sign Up Free
+                </Button>
+              </MaintenanceLink>
+            </section>
+            {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
               <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Tired of bouncing between Youtube, Facebook, and Instagram?
               </h2>
@@ -92,7 +109,6 @@ export default async function Home() {
               </MaintenanceLink>
             </section>
 
-            {/* Calendar CTA */}
             <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-2 sm:px-4 border-4 border-secondary-light w-full">
               <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Never miss an event again with the community calendar
@@ -135,7 +151,6 @@ export default async function Home() {
               </div>
             </section>
 
-            {/* Community CTA */}
             <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
               <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 A structured public record of event and battle roles
@@ -178,6 +193,22 @@ export default async function Home() {
                   </Button>
                 </MaintenanceLink>
               </div>
+            </section> */}
+
+            {/* Recently Added Videos */}
+            <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm p-4 border-4 border-primary-light">
+              <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
+                Recently Added Videos
+              </h2>
+              {latestVideos.length > 0 ? (
+                <RecentVideosSection videos={latestVideos} />
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    No videos available yet.
+                  </p>
+                </div>
+              )}
             </section>
 
             {/* Recently Added Battles */}
@@ -187,15 +218,17 @@ export default async function Home() {
               </h2>
               {latestBattleSections.length > 0 ? (
                 <div className="sections-grid">
-                  {latestBattleSections.map(({ section, eventId, eventTitle }) => (
-                    <SectionCard
-                      key={section.id}
-                      section={section}
-                      eventId={eventId}
-                      eventTitle={eventTitle}
-                      showEventTitle={true}
-                    />
-                  ))}
+                  {latestBattleSections.map(
+                    ({ section, eventId, eventTitle }) => (
+                      <SectionCard
+                        key={section.id}
+                        section={section}
+                        eventId={eventId}
+                        eventTitle={eventTitle}
+                        showEventTitle={true}
+                      />
+                    )
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">
