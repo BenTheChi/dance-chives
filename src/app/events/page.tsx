@@ -1,39 +1,17 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { getEventCards } from "@/db/queries/event-cards";
-import { City } from "@/types/city";
+import { getAllCities, getAllStyles } from "@/db/queries/event";
 import { EventsClient } from "./events-client";
 
 // Enable static generation with revalidation
 export const revalidate = 3600; // Revalidate every hour
 
-const SITE_BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
-
 export default async function EventsPage() {
-  // Fetch events without auth (static generation)
-  const events = await getEventCards();
-
-  const [cities, styles] = await Promise.all([
-    fetch(`${SITE_BASE_URL}/api/cities`, { next: { revalidate } })
-      .then(async (res) => {
-        if (!res.ok) return [];
-        const data = (await res.json()) as { cities?: unknown };
-        return Array.isArray(data?.cities) ? (data.cities as City[]) : [];
-      })
-      .catch((error) => {
-        console.error("Failed to load cities for filters:", error);
-        return [] as City[];
-      }),
-    fetch(`${SITE_BASE_URL}/api/styles`, { next: { revalidate } })
-      .then(async (res) => {
-        if (!res.ok) return [];
-        const data = (await res.json()) as { styles?: unknown };
-        return Array.isArray(data?.styles) ? (data.styles as string[]) : [];
-      })
-      .catch((error) => {
-        console.error("Failed to load styles for filters:", error);
-        return [] as string[];
-      }),
+  // Fetch events and filter data without auth (static generation)
+  const [events, cities, styles] = await Promise.all([
+    getEventCards(),
+    getAllCities(),
+    getAllStyles(),
   ]);
 
   return (
