@@ -128,20 +128,14 @@ export function SectionCard({
 
           {/* Event title - shown only when showEventTitle is true - more prominent */}
           {showEventTitle && eventTitle && (
-            <h2
-              className="text-xl font-rubik-mono-one text-center mb-2"
-              style={{ wordSpacing: "-4px" }}
-            >
-              {eventTitle}
-            </h2>
+            <h2 className="text-center mb-2">{eventTitle}</h2>
           )}
 
           {/* Section title - smaller when event title is shown */}
           <h3
-            className={`font-rubik-mono-one text-center line-clamp-2 flex-1 flex items-center justify-center ${
+            className={`line-clamp-2 flex-1 flex items-center justify-center ${
               showEventTitle ? "text-base mb-2" : "text-lg mb-3"
             }`}
-            style={{ wordSpacing: "-4px" }}
           >
             {sectionTitle}
           </h3>
