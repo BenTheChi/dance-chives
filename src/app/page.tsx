@@ -65,7 +65,7 @@ export default async function Home() {
                   size="xl"
                   className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal px-4 sm:px-6 md:px-10"
                 >
-                  Sign Up Free
+                  Create a Profile
                 </Button>
               </MaintenanceLink>
             </section>
