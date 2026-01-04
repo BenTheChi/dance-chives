@@ -431,13 +431,19 @@ ${existingSectionsInfo}
 YOUR TASK:
 Parse this playlist and organize videos into sections, brackets, and individual video entries. Return ONLY valid JSON matching the exact schema below.
 
-⚠️⚠️⚠️ CRITICAL FIRST STEP: Before creating any sections, READ THROUGH ALL THE VIDEO TITLES ABOVE carefully. Identify what keywords, formats, and patterns are ACTUALLY PRESENT in the titles. Make a mental list of what you see (e.g., "I see Top 8, Top 4, Finals", "I see Judge Showcase", "I see Performance"). ⚠️⚠️⚠️
+⚠️⚠️⚠️ CRITICAL FIRST STEP: Before creating any sections, READ THROUGH ALL THE VIDEO TITLES ABOVE carefully. Identify what keywords, formats, and patterns are ACTUALLY PRESENT in the titles. Make a mental list of what you see (e.g., "I see Top 8, Top 4, Finals", "I see Judge Showcase", "I see Performance"). Note: There are ${
+    videos.length
+  } videos total that must ALL be placed somewhere. ⚠️⚠️⚠️
 
 ⚠️⚠️⚠️ CRITICAL SECOND STEP: ONLY create sections based on patterns that ACTUALLY EXIST in the video titles above. DO NOT create sections for patterns you don't see in the actual titles. Examples:
 - If you don't see "7-to-smoke" or "7 to smoke" in ANY video title → DO NOT create a "7 to Smoke" section
 - If you don't see "2v2" in ANY video title → DO NOT create a "2v2" section  
 - If you don't see "Prelims" in ANY video title → DO NOT create a "Prelims" bracket
 - Only use what is explicitly written in the video titles above ⚠️⚠️⚠️
+
+⚠️⚠️⚠️ CRITICAL THIRD STEP: EVERY SINGLE VIDEO MUST BE PLACED SOMEWHERE. You must account for all ${
+    videos.length
+  } videos. After organizing, verify that every video URL from the input appears exactly once in your output. Do not skip, omit, or lose any videos. ⚠️⚠️⚠️
 
 SECTION NAMING RULES:
 1. BATTLES: Name sections based on format and style (e.g., "2v2 Breaking", "1v1 Popping", "Crew vs Crew Waacking")
@@ -471,11 +477,20 @@ SECTION NAMING RULES:
 
 6. EXTRAS: Name as "Extras"
    - Everything else (music videos, contests, panel discussions, etc.)
+   - ⚠️ If a video doesn't clearly fit into any other section, it MUST go into "Extras" - DO NOT leave it out
 
 7. RECAPS: Name as "Recaps" or "Recaps by [Group Name]"
    - Look for words like "recap", "recap of", or "recap of the event". "hypest", "best of", "dopest", "coolest", "moments" or similar words that have a lot of energy and excitement.
 
+⚠️ CRITICAL: If you're unsure where a video belongs, place it in the most appropriate section or create an "Extras" section. NEVER skip a video - all ${
+    videos.length
+  } videos must be included.
+
 ⚠️ CRITICAL RULE: Only add sections and name them once you know what videos to put in them. There should be no empty sections or brackets. Do NOT create sections based on examples or patterns you think might exist - ONLY create sections for videos that actually exist in the provided list above.
+
+⚠️ CRITICAL RULE: EVERY SINGLE VIDEO must be placed in a section. The total number of videos in your output must equal ${
+    videos.length
+  } (the number of input videos). Count carefully and ensure no videos are left out.
 
 BRACKET DETECTION (for Battle sections only):
 - CRITICAL: Battle sections MUST ALWAYS have brackets (hasBrackets: true)
@@ -656,6 +671,11 @@ CRITICAL CATEGORIZATION PATTERNS - STUDY THESE CAREFULLY:
 
 
 CRITICAL REQUIREMENTS:
+- ⚠️⚠️⚠️ MOST CRITICAL: ALL ${
+    videos.length
+  } videos MUST be placed somewhere in the output. Every video URL from the input must appear exactly once in the output. Count the videos in your response to verify you have all ${
+    videos.length
+  } videos.
 - Return ONLY valid JSON, no markdown, no code blocks, no explanations
 - Do NOT include IDs for sections, videos, or brackets - they will be generated automatically
 - All video URLs must be full YouTube URLs (https://www.youtube.com/watch?v=VIDEO_ID)
@@ -685,6 +705,10 @@ CRITICAL REQUIREMENTS:
     ", "
   )}. Any style not in this list will be automatically filtered out and rejected. If you cannot identify a style that matches the allowed list, simply omit the "styles" field entirely (do not include an empty array)
 - ⚠️⚠️⚠️ FINAL REMINDER: ONLY create sections and brackets for content that ACTUALLY EXISTS in the video titles above. DO NOT create sections or brackets based on examples, patterns, or assumptions. If you don't see "7 to smoke" in any title, don't create it. If you don't see "2v2" in any title, don't create it. If you don't see "Finals" in any title, don't create a Finals bracket. Examine the ACTUAL video titles FIRST, then create sections and brackets ONLY for what you find. ⚠️⚠️⚠️
+
+- ⚠️⚠️⚠️ FINAL VALIDATION STEP: Before returning your JSON, count the total videos across all sections and brackets. You MUST have exactly ${
+    videos.length
+  } videos. If you have fewer, find the missing videos and add them. If you have more, you have duplicates - remove them. Every input video must appear exactly once in the output. ⚠️⚠️⚠️
 
 Now parse the playlist and return the JSON:`;
 }
@@ -791,6 +815,81 @@ export async function parsePlaylistWithGroq(
     if (!parsed.sections || !Array.isArray(parsed.sections)) {
       throw new Error("Invalid response structure: missing sections array");
     }
+
+    // Validate that all videos are accounted for
+    const inputVideoUrls = new Set(videos.map((v) => v.url));
+    const outputVideoUrls = new Set<string>();
+
+    parsed.sections.forEach((section) => {
+      // Check videos directly in section
+      if (section.videos) {
+        section.videos.forEach((video) => {
+          outputVideoUrls.add(video.src);
+        });
+      }
+      // Check videos in brackets
+      if (section.brackets) {
+        section.brackets.forEach((bracket) => {
+          if (bracket.videos) {
+            bracket.videos.forEach((video) => {
+              outputVideoUrls.add(video.src);
+            });
+          }
+        });
+      }
+    });
+
+    // Check for missing videos
+    const missingVideos = Array.from(inputVideoUrls).filter(
+      (url) => !outputVideoUrls.has(url)
+    );
+
+    // Check for duplicate videos
+    const outputVideosList: string[] = [];
+    parsed.sections.forEach((section) => {
+      if (section.videos) {
+        section.videos.forEach((video) => outputVideosList.push(video.src));
+      }
+      if (section.brackets) {
+        section.brackets.forEach((bracket) => {
+          if (bracket.videos) {
+            bracket.videos.forEach((video) => outputVideosList.push(video.src));
+          }
+        });
+      }
+    });
+    const duplicateVideos = outputVideosList.filter(
+      (url, index) => outputVideosList.indexOf(url) !== index
+    );
+
+    if (missingVideos.length > 0) {
+      console.error(
+        `⚠️ WARNING: ${missingVideos.length} video(s) missing from LLM output:`
+      );
+      missingVideos.forEach((url) => {
+        const video = videos.find((v) => v.url === url);
+        console.error(`  - "${video?.title}" (${url})`);
+      });
+      throw new Error(
+        `LLM failed to include all videos. Missing ${missingVideos.length} video(s). Expected ${videos.length} videos, got ${outputVideoUrls.size}.`
+      );
+    }
+
+    if (duplicateVideos.length > 0) {
+      console.error(
+        `⚠️ WARNING: ${duplicateVideos.length} duplicate video(s) in LLM output:`
+      );
+      duplicateVideos.forEach((url) => {
+        console.error(`  - ${url}`);
+      });
+      throw new Error(
+        `LLM included duplicate videos. Found ${outputVideosList.length} videos, but only ${outputVideoUrls.size} unique.`
+      );
+    }
+
+    console.log(
+      `✅ Validation passed: All ${videos.length} videos accounted for in output.`
+    );
 
     // Log output JSON for training/correction
     console.log("=== LLM OUTPUT (Parsed Response) ===");
