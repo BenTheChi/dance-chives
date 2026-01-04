@@ -19,6 +19,8 @@ import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { isTimeEmpty } from "@/lib/utils/event-utils";
 import {
   SectionType,
@@ -35,6 +37,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { PlaylistParser } from "./playlist-parser";
+import { FormContext } from "@/lib/groq-llm";
+import { mergeSections } from "@/lib/playlist-parser-utils";
 
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
@@ -347,6 +352,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
   const router = useRouter();
+  const { data: session } = useSession();
+
+  // Check if user is Super Admin
+  const isSuperAdmin =
+    session?.user?.auth !== undefined &&
+    session.user.auth >= AUTH_LEVELS.SUPER_ADMIN;
 
   const [activeMainTab, setActiveMainTab] = useState("Details");
   const [activeSectionId, setActiveSectionId] = useState("0");
@@ -513,130 +524,24 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   };
 
-  const updateSectionHasBrackets = (sectionId: string, checked: boolean) => {
-    const currentSections = getValues("sections") ?? [];
-    const updatedSections = currentSections.map((section) =>
-      section.id === sectionId
-        ? {
-            ...section,
-            hasBrackets: checked,
-          }
-        : section
-    );
+  const handlePlaylistParseSuccess = (parsedSections: Section[]) => {
+    // Merge parsed sections with existing sections using the merge utility
+    const currentSections = sections;
+    const mergedSections = mergeSections(currentSections, parsedSections);
 
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
+    // Update form state
+    setValue("sections", normalizeSectionsForForm(mergedSections), {
       shouldValidate: true,
       shouldDirty: true,
     });
 
-    if (
-      !checked &&
-      sectionsSelection &&
-      sectionsSelection.sectionId === sectionId &&
-      (sectionsSelection.type === "sectionBrackets" ||
-        sectionsSelection.type === "bracket")
-    ) {
+    // If no sections were active, activate the first new section
+    if (currentSections.length === 0 && mergedSections.length > 0) {
+      setActiveSectionId(mergedSections[0].id);
       setSectionsSelection({
-        type: "sectionVideos",
-        sectionId,
+        type: "sectionOverview",
+        sectionId: mergedSections[0].id,
       });
-    } else if (
-      checked &&
-      sectionsSelection &&
-      sectionsSelection.sectionId === sectionId &&
-      sectionsSelection.type === "sectionVideos"
-    ) {
-      setSectionsSelection({
-        type: "sectionBrackets",
-        sectionId,
-      });
-    }
-  };
-
-  const addBracketFromSidebar = (sectionId: string) => {
-    const currentSections = getValues("sections") ?? [];
-    const sectionIndex = currentSections.findIndex(
-      (section) => section.id === sectionId
-    );
-    if (sectionIndex === -1) return;
-
-    const targetSection = currentSections[sectionIndex];
-
-    // Only allow adding brackets when hasBrackets is true
-    if (!targetSection.hasBrackets) return;
-
-    const newBracket: Bracket = {
-      id: Date.now().toString(),
-      title: `New Bracket ${targetSection.brackets.length + 1}`,
-      videos: [],
-    };
-
-    const updatedSections = currentSections.map((section) =>
-      section.id === sectionId
-        ? {
-            ...section,
-            brackets: [...section.brackets, newBracket],
-          }
-        : section
-    );
-
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
-      shouldValidate: true,
-    });
-
-    // Select the new bracket in the sidebar/navigation
-    setActiveSectionId(sectionId);
-    setSectionsSelection({
-      type: "bracket",
-      sectionId,
-      bracketId: newBracket.id,
-    });
-  };
-
-  const removeBracketFromSidebar = (sectionId: string, bracketId: string) => {
-    const currentSections = getValues("sections") ?? [];
-    const sectionIndex = currentSections.findIndex(
-      (section) => section.id === sectionId
-    );
-    if (sectionIndex === -1) return;
-
-    const targetSection = currentSections[sectionIndex];
-    const updatedBrackets = targetSection.brackets.filter(
-      (bracket) => bracket.id !== bracketId
-    );
-
-    const updatedSections = currentSections.map((section) =>
-      section.id === sectionId
-        ? {
-            ...section,
-            brackets: updatedBrackets,
-          }
-        : section
-    );
-
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
-      shouldValidate: true,
-    });
-
-    // Adjust selection if it was pointing at the removed bracket
-    if (
-      sectionsSelection &&
-      sectionsSelection.type === "bracket" &&
-      sectionsSelection.sectionId === sectionId &&
-      sectionsSelection.bracketId === bracketId
-    ) {
-      if (updatedBrackets.length > 0) {
-        setSectionsSelection({
-          type: "bracket",
-          sectionId,
-          bracketId: updatedBrackets[0].id,
-        });
-      } else {
-        setSectionsSelection({
-          type: "sectionBrackets",
-          sectionId,
-        });
-      }
     }
   };
 
@@ -908,76 +813,94 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
           {/* Section Tabs - Only show when Sections tab is active */}
           {activeMainTab === "Sections" && (
-            <div className="flex flex-wrap justify-center items-center gap-2 mb-6">
-              {sections.length === 0 ? (
-                <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
-                  <div className="text-sm mb-6">
-                    No sections yet. Let&apos;s create one!
-                  </div>
-                  <div className="flex justify-center">
-                    <CirclePlusButton size="lg" onClick={addSection} />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {sections.map((section, index) => {
-                    const isActive = activeSectionId === section.id;
-                    return (
-                      <div key={section.id} className="relative group">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveSectionId(section.id);
-                            setSectionsSelection({
-                              type: "sectionOverview",
-                              sectionId: section.id,
-                            });
-                          }}
-                          className={cn(
-                            "px-3 py-1.5 rounded-sm transition-all duration-200",
-                            "border-2 border-transparent",
-                            "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
-                            "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
-                            "text-sm font-bold uppercase tracking-wide",
-                            "font-display",
-                            isActive &&
-                              "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
-                            !isActive &&
-                              "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
-                          )}
-                          style={{ fontFamily: "var(--font-display)" }}
-                        >
-                          {section.title || `Section ${index + 1}`}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeSection(section.id);
-                          }}
-                          className={cn(
-                            "absolute -top-2 -right-2",
-                            "w-5 h-5 rounded-full",
-                            "bg-destructive text-destructive-foreground",
-                            "border-2 border-charcoal",
-                            "flex items-center justify-center",
-                            "opacity-0 group-hover:opacity-100",
-                            "transition-opacity duration-200",
-                            "hover:bg-destructive/90",
-                            "z-10",
-                            "shadow-[2px_2px_0_0_rgb(49,49,49)]"
-                          )}
-                          aria-label={`Delete ${section.title || "section"}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                  <CirclePlusButton size="lg" onClick={addSection} />
-                </>
+            <>
+              {/* Playlist Parser - Super Admin Only */}
+              {isSuperAdmin && (
+                <PlaylistParser
+                  formContext={{
+                    title: eventDetails.title,
+                    eventType: eventDetails.eventType,
+                    socialLinks: {
+                      instagram: eventDetails.instagram ?? undefined,
+                      youtube: eventDetails.youtube ?? undefined,
+                      facebook: eventDetails.facebook ?? undefined,
+                    },
+                    existingSections: sections,
+                  }}
+                  onParseSuccess={handlePlaylistParseSuccess}
+                />
               )}
-            </div>
+              <div className="flex flex-wrap justify-center items-center gap-2 mb-6">
+                {sections.length === 0 ? (
+                  <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
+                    <div className="text-sm mb-6">
+                      No sections yet. Let&apos;s create one!
+                    </div>
+                    <div className="flex justify-center">
+                      <CirclePlusButton size="lg" onClick={addSection} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {sections.map((section, index) => {
+                      const isActive = activeSectionId === section.id;
+                      return (
+                        <div key={section.id} className="relative group">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveSectionId(section.id);
+                              setSectionsSelection({
+                                type: "sectionOverview",
+                                sectionId: section.id,
+                              });
+                            }}
+                            className={cn(
+                              "px-3 py-1.5 rounded-sm transition-all duration-200",
+                              "border-2 border-transparent",
+                              "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
+                              "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
+                              "text-sm font-bold uppercase tracking-wide",
+                              "font-display",
+                              isActive &&
+                                "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
+                              !isActive &&
+                                "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
+                            )}
+                            style={{ fontFamily: "var(--font-display)" }}
+                          >
+                            {section.title || `Section ${index + 1}`}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSection(section.id);
+                            }}
+                            className={cn(
+                              "absolute -top-2 -right-2",
+                              "w-5 h-5 rounded-full",
+                              "bg-destructive text-destructive-foreground",
+                              "border-2 border-charcoal",
+                              "flex items-center justify-center",
+                              "opacity-0 group-hover:opacity-100",
+                              "transition-opacity duration-200",
+                              "hover:bg-destructive/90",
+                              "z-10",
+                              "shadow-[2px_2px_0_0_rgb(49,49,49)]"
+                            )}
+                            aria-label={`Delete ${section.title || "section"}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <CirclePlusButton size="lg" onClick={addSection} />
+                  </>
+                )}
+              </div>
+            </>
           )}
 
           {/* Tab Content */}

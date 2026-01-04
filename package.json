@@ -26,7 +26,7 @@
     "db:studio:staging": "dotenv -e .env.staging -- prisma studio",
     "db:studio:production": "dotenv -e .env.production -- prisma studio",
     "db:push": "dotenv -e .env.development -- prisma db push --accept-data-loss",
-    "db:reset": "npm run neo4j:clear && dotenv -e .env.development -- prisma migrate reset --force",
+    "db:reset": "npm run neo4j:clear && dotenv -e .env.development -- prisma migrate reset --force && npm run db:seed",
     "db:seed": "dotenv -e .env.development -- prisma db seed && npm run neo4j:seed",
     "neo4j:clear": "dotenv -e .env.development -- tsx scripts/clear-neo4j.ts",
     "neo4j:seed": "dotenv -e .env.development -- tsx scripts/seed-neo4j.ts",

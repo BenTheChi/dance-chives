@@ -37,12 +37,9 @@ async function main() {
 
   // Clear all existing data
   console.log("🗑️  Clearing existing PostgreSQL data...");
-  
+
   // Helper function to safely delete from tables that might not exist
-  const safeDelete = async (
-    model: any,
-    tableName: string
-  ) => {
+  const safeDelete = async (model: any, tableName: string) => {
     try {
       if (!model || typeof model.deleteMany !== "function") {
         console.log(`⚠️  Model ${tableName} is not available, skipping...`);
@@ -65,7 +62,7 @@ async function main() {
   await safeDelete(prisma.eventCard, "EventCard");
   await safeDelete(prisma.event, "Event");
   await safeDelete(prisma.userCard, "UserCard");
-  
+
   // Delete request-related tables
   await safeDelete(prisma.requestApproval, "RequestApproval");
   await safeDelete(prisma.notification, "Notification");
@@ -73,11 +70,11 @@ async function main() {
   await safeDelete(prisma.ownershipRequest, "OwnershipRequest");
   await safeDelete(prisma.teamMemberRequest, "TeamMemberRequest");
   await safeDelete(prisma.taggingRequest, "TaggingRequest");
-  
+
   // Delete accounts and users (must be deleted after foreign key references)
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
-  
+
   console.log("✅ Cleared all existing data");
 
   // Create Users (matching Neo4j seed data)
@@ -134,7 +131,7 @@ async function main() {
       emailVerified: new Date(),
       accountVerified: new Date(),
       image: "",
-      auth: 3, // ADMIN (Super Admin uses same level)
+      auth: 4, // ADMIN (Super Admin uses same level)
       createdAt: new Date(),
       updatedAt: new Date(),
     },

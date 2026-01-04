@@ -44,6 +44,8 @@ The platform has evolved significantly with a comprehensive feature set includin
 - Google Cloud Storage account (for image uploads)
 - Google OAuth credentials (for authentication)
 - Resend API key (for email/magic links)
+- YouTube Data API v3 key (for playlist parsing - Super Admin feature)
+- Groq API key (for LLM-powered playlist parsing - Super Admin feature)
 
 ### Local Development Setup
 
