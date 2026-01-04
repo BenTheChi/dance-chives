@@ -25,15 +25,18 @@ const SECTION_TYPE_COLORS: Record<
   Section["sectionType"],
   { bg: string; text: string }
 > = {
-  Battle: { bg: "rgba(255, 82, 82, 0.25)", text: "#FF5252" },
-  Tournament: { bg: "rgba(255, 107, 53, 0.25)", text: "#FF6B35" },
-  Competition: { bg: "rgba(247, 147, 30, 0.25)", text: "#F7931E" },
-  Performance: { bg: "rgba(74, 144, 226, 0.25)", text: "#4A90E2" },
-  Showcase: { bg: "rgba(123, 104, 238, 0.25)", text: "#7B68EE" },
-  Class: { bg: "rgba(80, 200, 120, 0.25)", text: "#50C878" },
-  Session: { bg: "rgba(0, 206, 209, 0.25)", text: "#00CED1" },
-  Mixed: { bg: "rgba(147, 112, 219, 0.25)", text: "#9370DB" },
-  Other: { bg: "rgba(112, 128, 144, 0.25)", text: "#708090" },
+  Battle: {
+    bg: "hsla(3, 92.90%, 49.80%, 0.65)",
+    text: "white",
+  },
+  Tournament: { bg: "rgba(255, 107, 53, 0.65)", text: "white" },
+  Competition: { bg: "rgba(247, 147, 30, 0.65)", text: "white" },
+  Performance: { bg: "rgba(74, 144, 226, 0.65)", text: "white" },
+  Showcase: { bg: "rgba(123, 104, 238, 0.65)", text: "white" },
+  Class: { bg: "rgba(80, 200, 120, 0.65)", text: "white" },
+  Session: { bg: "rgba(0, 206, 209, 0.65)", text: "white" },
+  Mixed: { bg: "rgba(147, 112, 219, 0.65)", text: "white" },
+  Other: { bg: "rgba(112, 128, 144, 0.65)", text: "white" },
 };
 
 export function SectionCard({
@@ -103,7 +106,7 @@ export function SectionCard({
 
   return (
     <div
-      className="section-card h-[180px] bg-secondary-dark cursor-pointer overflow-hidden relative"
+      className="section-card h-[225px] bg-secondary-dark cursor-pointer overflow-hidden relative"
       style={{ backgroundColor: sectionColor.bg }}
     >
       <Link
@@ -120,7 +123,7 @@ export function SectionCard({
               {sectionType}
             </span>
             {totalVideoCount > 0 && (
-              <span className="text-sm text-accent-yellow">
+              <span className="text-sm font-bold text-accent-yellow">
                 {totalVideoCount} {totalVideoCount === 1 ? "video" : "videos"}
               </span>
             )}
@@ -128,7 +131,7 @@ export function SectionCard({
 
           {/* Event title - shown only when showEventTitle is true - more prominent */}
           {showEventTitle && eventTitle && (
-            <h2 className="text-center mb-2">{eventTitle}</h2>
+            <h2 className="text-center my-2">{eventTitle}</h2>
           )}
 
           {/* Section title - smaller when event title is shown */}
