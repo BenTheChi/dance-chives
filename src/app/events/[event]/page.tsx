@@ -747,19 +747,18 @@ export default async function EventPage({ params }: PageProps) {
               />
             </div>
 
-            {/* Sections - each takes up full width */}
+            {/* Sections - grid layout */}
             {event.sections && event.sections.length > 0 && (
-              <>
+              <div className="sections-grid w-full">
                 {event.sections.map((section) => (
-                  <div key={section.id} className="w-full">
-                    <SectionCard
-                      section={section}
-                      eventId={event.id}
-                      eventTitle={event.eventDetails.title}
-                    />
-                  </div>
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    eventId={event.id}
+                    eventTitle={event.eventDetails.title}
+                  />
                 ))}
-              </>
+              </div>
             )}
 
             {/* Photo Gallery - takes up full width */}

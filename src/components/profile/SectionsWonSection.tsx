@@ -95,24 +95,24 @@ export function SectionsWonSection({ sections }: SectionsWonSectionProps) {
       </h2>
       <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
         <div className="max-h-[600px] overflow-y-auto py-3 px-3">
-          <div className="flex flex-col gap-4 overflow-visible">
+          <div className="sections-grid overflow-visible">
             {sortedSections.map((section: WinningSection) => (
-              <div key={section.sectionId} className="overflow-visible">
-                <SectionCard
-                  section={{
-                    id: section.sectionId,
-                    title: section.sectionTitle,
-                    sectionType: section.sectionType as
-                      | Section["sectionType"]
-                      | undefined,
-                    poster: section.imageUrl ? { url: section.imageUrl } : null,
-                    videos: [],
-                    brackets: [],
-                  }}
-                  eventId={section.eventId}
-                  eventTitle={section.eventTitle}
-                />
-              </div>
+              <SectionCard
+                key={section.sectionId}
+                section={{
+                  id: section.sectionId,
+                  title: section.sectionTitle,
+                  sectionType: section.sectionType as
+                    | Section["sectionType"]
+                    | undefined,
+                  poster: section.imageUrl ? { url: section.imageUrl } : null,
+                  videos: [],
+                  brackets: [],
+                }}
+                eventId={section.eventId}
+                eventTitle={section.eventTitle}
+                showEventTitle={true}
+              />
             ))}
           </div>
         </div>

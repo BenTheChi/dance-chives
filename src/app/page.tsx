@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AppNavbar } from "@/components/AppNavbar";
 import { ParallaxBackground } from "@/components/ParallaxBackground";
-import { RecentlyAddedVideos } from "@/components/RecentlyAddedVideos";
-import { getLatestEventVideos } from "@/db/queries/event";
+import { SectionCard } from "@/components/ui/section-card";
+import { getLatestBattleSections } from "@/db/queries/event";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
 import Script from "next/script";
@@ -13,8 +13,8 @@ import Script from "next/script";
 export const revalidate = 60;
 
 export default async function Home() {
-  // Fetch latest videos from 6 events
-  const latestVideos = await getLatestEventVideos();
+  // Fetch latest battle sections from 6 events
+  const latestBattleSections = await getLatestBattleSections();
 
   return (
     <div className="flex flex-col">
@@ -180,17 +180,27 @@ export default async function Home() {
               </div>
             </section>
 
-            {/* Latest Videos */}
+            {/* Recently Added Battles */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm p-4 border-4 border-secondary-light">
               <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
-                Recently Added
+                Recently Added Battles
               </h2>
-              {latestVideos.length > 0 ? (
-                <RecentlyAddedVideos videos={latestVideos} />
+              {latestBattleSections.length > 0 ? (
+                <div className="sections-grid">
+                  {latestBattleSections.map(({ section, eventId, eventTitle }) => (
+                    <SectionCard
+                      key={section.id}
+                      section={section}
+                      eventId={eventId}
+                      eventTitle={eventTitle}
+                      showEventTitle={true}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    No videos available yet.
+                    No battle sections available yet.
                   </p>
                 </div>
               )}

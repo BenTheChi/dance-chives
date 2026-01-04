@@ -220,8 +220,29 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .section-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 6px 6px 0 0 var(--secondary-color-light);
+    transform: translateY(-4px);
+    box-shadow: 4px 4px 0 0 var(--secondary-color-light);
+  }
+
+  /* Sections grid layout */
+  .sections-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 640px) {
+    .sections-grid {
+      grid-template-columns: repeat(2, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .sections-grid {
+      grid-template-columns: repeat(3, 1fr);
+      max-width: 100%;
+    }
   }
 
   .shadow-hover:hover {

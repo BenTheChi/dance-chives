@@ -4533,3 +4533,147 @@ export async function getLatestEventVideos(): Promise<
     await session.close();
   }
 }
+
+export async function getLatestBattleSections(): Promise<
+  Array<{
+    section: Section;
+    eventId: string;
+    eventTitle: string;
+  }>
+> {
+  const session = driver.session();
+
+  try {
+    // Get latest events that have battle sections, with one battle section per event
+    const eventsResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE (e.status = 'visible' OR e.status IS NULL)
+      MATCH (e)<-[:IN]-(s:BattleSection)
+      WITH e, s
+      ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
+      WITH e, collect(s)[0] as firstSection
+      RETURN e.id as eventId, e.title as eventTitle, firstSection.id as sectionId, firstSection.title as sectionTitle
+      LIMIT 6
+      `
+    );
+
+    const result: Array<{
+      section: Section;
+      eventId: string;
+      eventTitle: string;
+    }> = [];
+
+    for (const record of eventsResult.records) {
+      const eventId = record.get("eventId");
+      const eventTitle = record.get("eventTitle");
+      const sectionId = record.get("sectionId");
+      const sectionTitle = record.get("sectionTitle");
+
+      // Get section details with video and bracket counts
+      const sectionResult = await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})
+        OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+        OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+        OPTIONAL MATCH (b)<-[:IN]-(v2:Video)
+        WITH s, 
+             collect(DISTINCT v) as directVideos,
+             collect(DISTINCT b) as brackets,
+             collect(DISTINCT v2) as bracketVideos
+        RETURN s.id as id, s.title as title, s.description as description,
+               s.applyStylesToVideos as applyStylesToVideos,
+               size(directVideos) as directVideoCount,
+               size(brackets) as bracketCount,
+               size(bracketVideos) as bracketVideoCount
+        `,
+        { sectionId }
+      );
+
+      if (sectionResult.records.length === 0) continue;
+
+      const sectionRecord = sectionResult.records[0];
+      // Convert BigInt values from Neo4j to numbers
+      const directVideoCount = Number(sectionRecord.get("directVideoCount"));
+      const bracketCount = Number(sectionRecord.get("bracketCount"));
+      const bracketVideoCount = Number(sectionRecord.get("bracketVideoCount"));
+      const hasBrackets = bracketCount > 0;
+
+      // Get section styles
+      const stylesResult = await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})-[:STYLE]->(style:Style)
+        RETURN collect(style.name) as styles
+        `,
+        { sectionId }
+      );
+
+      const styles =
+        stylesResult.records.length > 0
+          ? (stylesResult.records[0].get("styles") as string[])
+          : [];
+
+      // Create minimal video/bracket objects for counting
+      // The section card calculates counts from array lengths
+      const videos: Video[] = Array(directVideoCount)
+        .fill(null)
+        .map((_, i) => ({
+          id: `temp-${sectionId}-video-${i}`,
+          title: "",
+          src: "",
+          type: "battle" as const,
+        }));
+
+      // Distribute bracket videos across brackets for accurate counting
+      const brackets: Bracket[] = hasBrackets
+        ? Array(bracketCount)
+            .fill(null)
+            .map((_, i) => {
+              // Distribute videos evenly, with remainder going to first brackets
+              const videosPerBracket = Math.floor(
+                bracketVideoCount / bracketCount
+              );
+              const remainder = bracketVideoCount % bracketCount;
+              const videoCount = videosPerBracket + (i < remainder ? 1 : 0);
+              return {
+                id: `temp-${sectionId}-bracket-${i}`,
+                title: "",
+                videos: Array(videoCount)
+                  .fill(null)
+                  .map((_, j) => ({
+                    id: `temp-${sectionId}-bracket-${i}-video-${j}`,
+                    title: "",
+                    src: "",
+                    type: "battle" as const,
+                  })),
+              };
+            })
+        : [];
+
+      // Build section object
+      const section: Section = {
+        id: sectionId,
+        title: sectionTitle,
+        description: sectionRecord.get("description") as string | undefined,
+        sectionType: "Battle",
+        hasBrackets,
+        videos,
+        brackets,
+        styles: styles.length > 0 ? styles : undefined,
+        // Set applyStylesToVideos to true to ensure section styles are displayed
+        // (since temporary videos don't have their own styles)
+        applyStylesToVideos: true,
+      };
+
+      result.push({
+        section,
+        eventId,
+        eventTitle,
+      });
+    }
+
+    return result;
+  } finally {
+    await session.close();
+  }
+}
