@@ -431,11 +431,19 @@ ${existingSectionsInfo}
 YOUR TASK:
 Parse this playlist and organize videos into sections, brackets, and individual video entries. Return ONLY valid JSON matching the exact schema below.
 
+⚠️⚠️⚠️ CRITICAL FIRST STEP: Before creating any sections, READ THROUGH ALL THE VIDEO TITLES ABOVE carefully. Identify what keywords, formats, and patterns are ACTUALLY PRESENT in the titles. Make a mental list of what you see (e.g., "I see Top 8, Top 4, Finals", "I see Judge Showcase", "I see Performance"). ⚠️⚠️⚠️
+
+⚠️⚠️⚠️ CRITICAL SECOND STEP: ONLY create sections based on patterns that ACTUALLY EXIST in the video titles above. DO NOT create sections for patterns you don't see in the actual titles. Examples:
+- If you don't see "7-to-smoke" or "7 to smoke" in ANY video title → DO NOT create a "7 to Smoke" section
+- If you don't see "2v2" in ANY video title → DO NOT create a "2v2" section  
+- If you don't see "Prelims" in ANY video title → DO NOT create a "Prelims" bracket
+- Only use what is explicitly written in the video titles above ⚠️⚠️⚠️
+
 SECTION NAMING RULES:
 1. BATTLES: Name sections based on format and style (e.g., "2v2 Breaking", "1v1 Popping", "Crew vs Crew Waacking")
-   - Look for "v" or "vs" in titles
-   - Extract battle format (1v1, 2v2, crew vs crew, etc.)
-   - Extract dance style to one or a few of the following: ${DANCE_STYLES.join(
+   - ⚠️ CRITICAL: ONLY extract battle format if it's explicitly mentioned in the video titles (e.g., "1v1", "2v2", "3v3", "crew vs crew")
+   - Look for "v" or "vs" in titles to identify battles
+   - Extract dance style ONLY if mentioned in titles to one or a few of the following: ${DANCE_STYLES.join(
      ", "
    )}
    - If multiple conflicting styles mentioned, leave style off
@@ -445,8 +453,9 @@ SECTION NAMING RULES:
    - Key indicator: If Top 8/Finals videos show mixed styles (e.g., "Locking vs Waacking"), it's a lottery battle - group prelims/pre-selections together
    - Key indicator: If Top 8/Finals videos are all the same style, prelims/pre-selections should be separate sections
    - NOTE: "Pre-Selection", "Pre-Selections", and variations are treated EXACTLY the same as "Prelims" and "Preliminary"
-   - 7-TO-SMOKE BATTLES: If you see "7 to smoke", "7-to-smoke", "7-to-Smoke", or similar variations in video titles, create a section called "7 to Smoke" (or "7-to-Smoke" if style is specified, e.g., "7-to-Smoke Locking")
-   - For 7-to-smoke sections: Set hasBrackets: true, create ONE bracket called "7 to Smoke", and put ALL 7-to-smoke videos in that bracket (regardless of style)
+   - ⚠️ 7-TO-SMOKE BATTLES: ONLY create a "7 to Smoke" section IF you actually see "7 to smoke", "7-to-smoke", "7-to-Smoke", or similar variations EXPLICITLY written in the video titles above
+   - ⚠️ If there are NO videos with "7 to smoke" in their titles, DO NOT create a 7 to Smoke section
+   - For 7-to-smoke sections (ONLY when they exist): Set hasBrackets: true, create ONE bracket called "7 to Smoke", and put ALL 7-to-smoke videos in that bracket (regardless of style)
 
 2. SHOWCASES: Name as "Judge Showcases" or "Showcases"
    - Look for words "showcase" or "judge" in title/description
@@ -466,23 +475,28 @@ SECTION NAMING RULES:
 7. RECAPS: Name as "Recaps" or "Recaps by [Group Name]"
    - Look for words like "recap", "recap of", or "recap of the event". "hypest", "best of", "dopest", "coolest", "moments" or similar words that have a lot of energy and excitement.
 
-Only add sections and name them once you know what videos to put in them.  There should be no empty sections or brackets.
+⚠️ CRITICAL RULE: Only add sections and name them once you know what videos to put in them. There should be no empty sections or brackets. Do NOT create sections based on examples or patterns you think might exist - ONLY create sections for videos that actually exist in the provided list above.
 
 BRACKET DETECTION (for Battle sections only):
 - CRITICAL: Battle sections MUST ALWAYS have brackets (hasBrackets: true)
 - Battle sections CANNOT have videos directly in the section - ALL videos must be in brackets
-- Create brackets based on video titles/descriptions
-- Common bracket names: "Finals", "Semi Finals" (or "Semi-Finals"), "Top 8", "Top 16", "Prelims" (or "Preliminary"), "Pre-Selection" (or "Pre-Selections"), "7 to Smoke"
-- Look for these keywords in video titles
-- Sort videos into appropriate brackets
-- If a video contains "Prelims", "Preliminary", "Pre-Selection", "Pre-Selections", "Pre Selection", "Pre Selections", "Top 8", "Top 4", "Finals", "Semi Finals", or similar bracket indicators, it MUST be placed in a bracket
+- ⚠️ CRITICAL: Create brackets ONLY based on keywords that ACTUALLY APPEAR in the video titles above
+- ⚠️ Bracket naming: Look at the actual video titles and extract bracket indicators like "Finals", "Semi Finals", "Top 8", "Top 16", "Prelims", "Preliminary", "Pre-Selection", "Pre-Selections", "7 to Smoke"
+- ⚠️ ONLY create a bracket if you see that bracket name in at least one video title
+- ⚠️ DO NOT create "Finals" bracket if no video title contains "Finals"
+- ⚠️ DO NOT create "Top 8" bracket if no video title contains "Top 8"
+- ⚠️ DO NOT create "Prelims" bracket if no video title contains "Prelims" or "Preliminary"
+- If you see bracket indicators in titles, sort videos into appropriate brackets based on what's in their titles
+- ⚠️ If a video's title contains "Prelims", "Preliminary", "Pre-Selection", "Pre-Selections", "Pre Selection", "Pre Selections", "Top 8", "Top 4", "Finals", "Semi Finals", or similar bracket indicators, it MUST be placed in a bracket with that bracket name
+- ⚠️ The bracket name should match what's in the video title (e.g., if title says "Top 8", create/use a "Top 8" bracket)
 - CRITICAL: "Pre-Selection" and "Pre-Selections" (and variations like "Pre Selection", "Pre Selections") are treated EXACTLY the same as "Prelims" - they indicate preliminary rounds and should be grouped using the same logic
-- 7-TO-SMOKE RULE: If ANY video contains "7 to smoke", "7-to-smoke", "7-to-Smoke", or similar variations:
+- ⚠️ 7-TO-SMOKE RULE: ONLY apply this if video titles actually contain "7 to smoke", "7-to-smoke", "7-to-Smoke", or similar variations:
   * Create a section called "7 to Smoke" (or include style if specified, e.g., "7-to-Smoke Locking")
   * Set hasBrackets: true
   * Create ONE bracket with title "7 to Smoke"
   * Put ALL 7-to-smoke videos (all styles) in that single bracket
   * Do NOT create separate brackets or sections for different styles of 7-to-smoke
+  * ⚠️ If NO videos contain "7 to smoke" in their titles, DO NOT create this section
 - PRELIM/PRE-SELECTION GROUPING LOGIC:
   * NOTE: "Pre-Selection", "Pre-Selections", and variations are treated EXACTLY the same as "Prelims" and "Preliminary"
   * LOTTERY/MIXED STYLE BATTLES: If you see multiple prelim/pre-selection videos with different styles (e.g., "2v2 Locking Prelims" and "2v2 Waacking Prelims", or "2v2 Locking Pre-Selection" and "2v2 Waacking Pre-Selection") AND the later brackets (Top 8, Top 4, Finals) show mixed styles or style pairings, this is a lottery-style battle
@@ -519,7 +533,7 @@ VIDEO TYPE MAPPING (match video type to section type):
 - Tournament sections → use "battle" for all videos (tournaments are structured battles)
 - Competition sections → use "battle" for competitive videos, "freestyle" for non-competitive
 - Performance sections → use "choreography" for all videos
-- Showcase sections → use "choreography" for all videos
+- Showcase sections → use "freestyle" for all videos
 - Class sections → use "class" for all videos
 - Session sections → use "class" for instructional content, "choreography" for performances
 - Mixed sections → use appropriate type based on video content ("battle", "choreography", "class", or "other")
@@ -564,7 +578,9 @@ JSON SCHEMA (return ONLY this structure, no other text):
 
 CRITICAL CATEGORIZATION PATTERNS - STUDY THESE CAREFULLY:
 
-1. LOTTERY BATTLE DETECTION (MOST IMPORTANT):
+⚠️⚠️⚠️ MOST IMPORTANT RULE: These patterns are EXAMPLES. ONLY apply them if the actual video titles above match these patterns. DO NOT create sections for patterns that don't exist in the provided video titles. Always examine the actual video titles FIRST before deciding what sections to create. ⚠️⚠️⚠️
+
+1. LOTTERY BATTLE DETECTION:
    - When you see prelim videos with DIFFERENT styles (e.g., "2v2 Locking Prelims" and "2v2 Waacking Prelims"), you MUST check the later brackets (Top 8, Top 4, Finals)
    - If later brackets show MIXED STYLES or style pairings (e.g., videos that don't specify a single style, or show both styles together), this is a LOTTERY BATTLE
    - In lottery battles: Group ALL prelim/pre-selection videos (ALL styles) into ONE "Prelims" bracket within a SINGLE section
@@ -580,16 +596,19 @@ CRITICAL CATEGORIZATION PATTERNS - STUDY THESE CAREFULLY:
    - If you see a Battle section with videos directly in it, that's WRONG - move them to brackets
 
 3. BRACKET ORGANIZATION WITHIN BATTLE SECTIONS:
-   - Organize brackets by progression: Prelims → Top 16 → Top 8 → Top 4 → Semi Finals → Finals
-   - Each bracket should contain videos that match that stage
-   - Videos with "Prelims" or "Preliminary" go in "Prelims" bracket
-   - Videos with "Top 8" go in "Top 8" bracket
-   - Videos with "Top 4" go in "Top 4" bracket
-   - Videos with "Finals" go in "Finals" bracket
-   - If no clear bracket indicator, create a default bracket like "All Battles"
+   - ⚠️ First, examine the video titles to see what bracket stages are actually mentioned
+   - ⚠️ ONLY create brackets for stages that appear in the video titles
+   - ⚠️ If you see "Top 8" in a video title, create a "Top 8" bracket and put that video in it
+   - ⚠️ If you see "Prelims" or "Preliminary" in a video title, create a "Prelims" bracket and put that video in it
+   - ⚠️ If you see "Top 4" in a video title, create a "Top 4" bracket and put that video in it
+   - ⚠️ If you see "Finals" in a video title, create a "Finals" bracket and put that video in it
+   - Organize brackets by progression (e.g., Prelims → Top 16 → Top 8 → Top 4 → Semi Finals → Finals) ONLY using brackets that exist in titles
+   - If no clear bracket indicators are found in ANY video titles, create a single default bracket like "Battles" or "All Battles"
 
-4. 7-TO-SMOKE CATEGORIZATION:
-   - When ANY video contains "7 to smoke", "7-to-smoke", or similar variations:
+4. 7-TO-SMOKE CATEGORIZATION (ONLY IF IT EXISTS IN VIDEO TITLES):
+   - ⚠️ First check: Do ANY of the actual video titles above contain "7 to smoke", "7-to-smoke", or similar variations?
+   - ⚠️ If NO videos have "7 to smoke" in their titles, SKIP this entire rule and DO NOT create a 7-to-smoke section
+   - ⚠️ If YES, videos contain "7 to smoke" in their titles, then:
    - Create ONE section called "7 to Smoke" (or "7-to-Smoke [Style]" if style is clear, e.g., "7-to-Smoke Locking")
    - Set hasBrackets: true (7-to-smoke sections are Battle type and need brackets)
    - Create ONE bracket with title "7 to Smoke"
@@ -598,12 +617,14 @@ CRITICAL CATEGORIZATION PATTERNS - STUDY THESE CAREFULLY:
    - The section name can include "Rookie" if all videos are rookie level, but all videos still go in one bracket
 
 5. SECTION TYPE CATEGORIZATION BY KEYWORDS:
-   - Videos with "Judge Showcase" or "Showcase" → "Judge Showcases" section (sectionType: "Showcase")
-   - Videos with "Performance" → "Performances" section (sectionType: "Performance")
-   - Videos with "Battle", "vs", "v." → Battle section (sectionType: "Battle")
-   - Videos with "Class", "Workshop", "Session" → Class section (sectionType: "Class")
+   - ⚠️ Look at the actual video titles to determine section types
+   - Videos with "Judge Showcase" or "Showcase" in their titles → "Judge Showcases" section (sectionType: "Showcase")
+   - Videos with "Performance" in their titles → "Performances" section (sectionType: "Performance")
+   - Videos with "Battle", "vs", "v." in their titles → Battle section (sectionType: "Battle")
+   - Videos with "Class", "Workshop", "Session" in their titles → Class section (sectionType: "Class")
    - Group ALL videos of the same type together in one section
    - Don't create separate sections for each individual showcase or performance - group them
+   - ⚠️ Don't categorize videos into types that aren't indicated by their titles
 
 6. TITLE CLEANING PATTERNS:
    - Remove event name prefixes: "Waack, Crackle, Lock! III Top 8: Nana/Nightstorm v. Trouble/Danzel" → "Nana/Nightstorm v. Trouble/Danzel"
@@ -642,6 +663,8 @@ CRITICAL REQUIREMENTS:
 - If hasBrackets is false, brackets array should be empty (videos go directly in section)
 - MANDATORY: Battle sections MUST have hasBrackets: true and ALL videos must be in brackets - Battle sections CANNOT have videos directly in the section
 - MANDATORY: Any video with "Prelims", "Preliminary", "Pre-Selection", "Pre-Selections", "Pre Selection", "Pre Selections", "Top 8", "Top 4", "Finals", or similar bracket keywords MUST be placed in a bracket, never directly in a section
+- ⚠️ MANDATORY: Bracket names must be extracted from the actual video titles - if a video title says "Top 8", create a "Top 8" bracket; if no videos mention "Top 8", don't create a "Top 8" bracket
+- ⚠️ MANDATORY: Only create brackets that have videos to put in them based on what's in the video titles
 - MANDATORY: "Pre-Selection" and "Pre-Selections" (and variations) are treated EXACTLY the same as "Prelims" - they indicate preliminary rounds and follow the same grouping logic
 - MANDATORY: 7-TO-SMOKE RULE - If ANY video contains "7 to smoke", "7-to-smoke", or similar:
   * Create a section called "7 to Smoke" (or "7-to-Smoke [Style]" if style is specified)
@@ -656,10 +679,12 @@ CRITICAL REQUIREMENTS:
 - Video types must match section type according to the mapping rules above
 - Clean all video titles to remove redundant event information
 - Apply styles only when consistent across section
-- There should be no empty sections or brackets
+- ⚠️ There should be no empty sections or brackets - only create brackets that have videos to put in them
+- ⚠️ Bracket names must come from the actual video titles - don't invent bracket names
 - STYLES RESTRICTION: The "styles" field is OPTIONAL. If included, it MUST ONLY contain values from this exact list: ${DANCE_STYLES.join(
     ", "
   )}. Any style not in this list will be automatically filtered out and rejected. If you cannot identify a style that matches the allowed list, simply omit the "styles" field entirely (do not include an empty array)
+- ⚠️⚠️⚠️ FINAL REMINDER: ONLY create sections and brackets for content that ACTUALLY EXISTS in the video titles above. DO NOT create sections or brackets based on examples, patterns, or assumptions. If you don't see "7 to smoke" in any title, don't create it. If you don't see "2v2" in any title, don't create it. If you don't see "Finals" in any title, don't create a Finals bracket. Examine the ACTUAL video titles FIRST, then create sections and brackets ONLY for what you find. ⚠️⚠️⚠️
 
 Now parse the playlist and return the JSON:`;
 }
