@@ -11,6 +11,8 @@ import {
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
 import { RecentVideosSection } from "@/components/RecentVideosSection";
+import { MobileAuthSection } from "@/components/MobileAuthSection";
+import { HomePageCTA } from "@/components/HomePageCTA";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -57,17 +59,11 @@ export default async function Home() {
           </section>
 
           <div className="flex flex-col items-center gap-20 px-2">
-            {/* Final CTA */}
-            <section className="w-full mx-auto text-center">
-              <MaintenanceLink href="/signup">
-                <Button
-                  size="xl"
-                  className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal px-4 sm:px-6 md:px-10"
-                >
-                  Create a Profile
-                </Button>
-              </MaintenanceLink>
-            </section>
+            {/* Mobile Auth Section - Only shows on mobile when not logged in */}
+            <MobileAuthSection />
+
+            {/* CTA - Changes based on login status */}
+            <HomePageCTA variant="primary" />
             {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
               <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Tired of bouncing between Youtube, Facebook, and Instagram?
@@ -238,17 +234,8 @@ export default async function Home() {
               )}
             </section>
 
-            {/* Final CTA */}
-            <section className="w-full mx-auto text-center">
-              <MaintenanceLink href="/signup">
-                <Button
-                  size="xl"
-                  className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal px-4 sm:px-6 md:px-10"
-                >
-                  Sign Up Free
-                </Button>
-              </MaintenanceLink>
-            </section>
+            {/* CTA - Changes based on login status */}
+            <HomePageCTA variant="secondary" />
 
             {/* Contribute Section */}
             <section

@@ -129,13 +129,14 @@ export function AppNavbar() {
             <UserMenu session={session} />
           ) : (
             <>
-              <MaintenanceLink href="/login">
-                <Button size={isMobile ? "sm" : "default"} variant="secondary">
+              {/* Hide login/signup buttons on mobile when not logged in */}
+              <MaintenanceLink href="/login" className="hidden md:inline-block">
+                <Button size="default" variant="secondary">
                   Login
                 </Button>
               </MaintenanceLink>
-              <MaintenanceLink href="/signup">
-                <Button size={isMobile ? "sm" : "default"}>Sign Up</Button>
+              <MaintenanceLink href="/signup" className="hidden md:inline-block">
+                <Button size="default">Sign Up</Button>
               </MaintenanceLink>
             </>
           )}

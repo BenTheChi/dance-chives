@@ -81,7 +81,7 @@ export function EventCard({
       </Link>
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}
-      <div className="w-full bg-primary-dark sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 border-t-4 border-primary-light py-[5px] sm:py-[7px]">
+      <div className="w-full bg-primary-dark sm:absolute sm:inset-x-0 sm:bottom-0 sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity sm:pointer-events-none sm:group-hover:pointer-events-auto overflow-hidden flex flex-col justify-end z-10 py-[5px] sm:py-[7px]">
         <div className="pt-4 sm:pt-3 px-5 sm:px-6 sm:pb-2 flex flex-col gap-5 sm:gap-7">
           <div className="flex justify-between items-center">
             {/* Title */}

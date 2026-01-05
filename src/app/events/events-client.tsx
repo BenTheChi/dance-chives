@@ -115,7 +115,7 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
       }
     }
 
-    return events.filter((event) => {
+    const filtered = events.filter((event) => {
       if (!event.date) return false;
 
       const eventDate = parseEventDate(event.date);
@@ -157,6 +157,24 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
       }
 
       return true;
+    });
+
+    // Sort events based on whether showing future or past
+    return filtered.sort((a, b) => {
+      const dateA = parseEventDate(a.date);
+      const dateB = parseEventDate(b.date);
+
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      if (showFutureEvents) {
+        // Future events: soonest to later (ascending)
+        return dateA.getTime() - dateB.getTime();
+      } else {
+        // Past events: most recent to oldest (descending)
+        return dateB.getTime() - dateA.getTime();
+      }
     });
   }, [
     events,

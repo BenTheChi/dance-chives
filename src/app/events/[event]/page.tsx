@@ -21,6 +21,7 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberButton";
 import { MessageTemplateDialog } from "@/components/events/MessageTemplateDialog";
+import { LinkifiedText } from "@/components/LinkifiedText";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -723,17 +724,19 @@ export default async function EventPage({ params }: PageProps) {
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <h2 className="text-center mx-auto underline">Description</h2>
                 {event.eventDetails.description && (
-                  <div className="text-sm whitespace-pre-wrap">
-                    {event.eventDetails.description}
-                  </div>
+                  <LinkifiedText
+                    text={event.eventDetails.description}
+                    className="text-sm whitespace-pre-wrap"
+                  />
                 )}
               </div>
               <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <h2 className="text-center mx-auto underline">Schedule</h2>
                 {event.eventDetails.schedule && (
-                  <div className="text-sm whitespace-pre-wrap">
-                    {event.eventDetails.schedule}
-                  </div>
+                  <LinkifiedText
+                    text={event.eventDetails.schedule}
+                    className="text-sm whitespace-pre-wrap"
+                  />
                 )}
               </div>
               <EventRoles

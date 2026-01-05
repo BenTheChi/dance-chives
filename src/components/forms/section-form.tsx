@@ -913,16 +913,16 @@ export function SectionForm({
 
           {/* Bracket Tabs */}
           {activeSection.brackets.length > 0 && (
-            <div className="flex flex-wrap justify-center items-center gap-2">
+            <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2">
               {activeSection.brackets.map((bracket, index) => {
                 const isActive = activeBracketId === bracket.id;
                 return (
-                  <div key={bracket.id} className="relative group">
+                  <div key={bracket.id} className="relative group w-full md:w-auto">
                     <button
                       type="button"
                       onClick={() => handleSetActiveBracketId(bracket.id)}
                       className={cn(
-                        "px-3 py-1.5 rounded-sm transition-all duration-200",
+                        "px-3 py-1.5 rounded-sm transition-all duration-200 w-full md:w-auto",
                         "border-2 border-transparent",
                         "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
                         "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",

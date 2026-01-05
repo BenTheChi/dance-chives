@@ -20,7 +20,7 @@ export default async function EventsPage() {
         <AppNavbar />
         <h1 className="py-7 border-b-2 border-primary-light">All Events</h1>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col items-center px-4 py-8 w-full">
+          <div className="flex flex-col items-center py-8 w-full">
             {/* Client component handles auth-dependent features */}
             <EventsClient events={events} cities={cities} styles={styles} />
           </div>

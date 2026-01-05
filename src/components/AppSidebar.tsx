@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { Button } from "./ui/button";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
+import { MaintenanceLink } from "./MaintenanceLink";
 
 const menuItems = [
   {
@@ -164,13 +165,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      {canCreateEvents && (
-        <SidebarFooter className="p-2 sm:hidden">
-          <Button asChild className="w-full">
+      <SidebarFooter className="p-2 flex flex-col gap-2">
+        {canCreateEvents && (
+          <Button asChild className="w-full sm:hidden">
             <Link href="/add-event">Add Event</Link>
           </Button>
-        </SidebarFooter>
-      )}
+        )}
+        {/* Show login/signup buttons on mobile when not logged in */}
+        {!session && (
+          <>
+            <MaintenanceLink href="/login" className="w-full md:hidden">
+              <Button variant="secondary" className="w-full">
+                Login
+              </Button>
+            </MaintenanceLink>
+            <MaintenanceLink href="/signup" className="w-full md:hidden">
+              <Button className="w-full">Sign Up</Button>
+            </MaintenanceLink>
+          </>
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }

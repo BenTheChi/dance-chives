@@ -759,7 +759,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-4 py-6 max-w-full overflow-x-hidden">
+    <div className="container mx-auto px-0 sm:px-4 py-6 max-w-full overflow-x-hidden">
       <h1 className="text-3xl font-bold text-center mb-8">
         {isEditing ? "Edit Event" : "New Event"}
       </h1>
@@ -767,7 +767,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit, onError)}>
           {/* Main Navigation - Text Style Tabs */}
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex flex-col md:flex-row justify-center gap-2 mb-8">
             {mainTabs.map((tab) => {
               const isActive = activeMainTab === tab;
               return (
@@ -814,7 +814,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   onParseSuccess={handlePlaylistParseSuccess}
                 />
               )}
-              <div className="flex flex-wrap justify-center items-center gap-2 mb-6">
+              <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2 mb-6">
                 {sections.length === 0 ? (
                   <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
                     <div className="text-sm mb-6">
@@ -829,7 +829,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     {sections.map((section, index) => {
                       const isActive = activeSectionId === section.id;
                       return (
-                        <div key={section.id} className="relative group">
+                        <div
+                          key={section.id}
+                          className="relative group w-full md:w-auto"
+                        >
                           <button
                             type="button"
                             onClick={() => {
@@ -840,7 +843,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                               });
                             }}
                             className={cn(
-                              "px-3 py-1.5 rounded-sm transition-all duration-200",
+                              "px-3 py-1.5 rounded-sm transition-all duration-200 w-full md:w-auto",
                               "border-2 border-transparent",
                               "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
                               "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
@@ -1011,11 +1014,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           )}
 
           {/* Bottom Navigation */}
-          <div className="flex justify-center gap-4 mt-8">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-8">
             <Button
               type="button"
               variant="destructive"
               onClick={() => router.back()}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
@@ -1024,6 +1028,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               variant="secondary"
               onClick={handlePreviousTab}
               disabled={activeTabIndex === 0}
+              className="w-full sm:w-auto"
             >
               Previous
             </Button>
@@ -1032,10 +1037,15 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               variant="secondary"
               onClick={handleNextTab}
               disabled={activeTabIndex === mainTabs.length - 1}
+              className="w-full sm:w-auto"
             >
               Next
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
               {isSubmitting ? "Submitting Event..." : "Save"}
             </Button>
           </div>
