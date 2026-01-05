@@ -206,10 +206,10 @@ export default async function Home() {
               )}
             </section>
 
-            {/* Recently Added Battles */}
+            {/* Watch Battles */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
               <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
-                Recently Added Battles
+                Watch Battles
               </h2>
               {latestBattleSections.length > 0 ? (
                 <div className="sections-grid">

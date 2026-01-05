@@ -457,7 +457,7 @@ export default async function EventPage({ params }: PageProps) {
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Image */}
-              <div className="w-full sm:flex-1 lg:max-w-[400px]">
+              <div className="w-full sm:flex-2 lg:max-w-[400px]">
                 <div className="w-full aspect-square">
                   <PosterImage
                     poster={event.eventDetails.poster ?? null}
@@ -470,17 +470,19 @@ export default async function EventPage({ params }: PageProps) {
                 </div>
               </div>
               {/* Event Details */}
-              <div className="w-full sm:flex-1 lg:max-w-[800px]">
-                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
+              <div className="w-full sm:flex-2 lg:max-w-[800px]">
+                <section className="border-2 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
                   <div className="flex flex-col">
                     {/* City | Event type */}
                     <div className="flex flex-row gap-1 items-center justify-center mb-4">
                       {event.eventDetails.city.name && (
-                        <h2>{event.eventDetails.city.name}</h2>
+                        <h2 className="!font-extrabold">
+                          {event.eventDetails.city.name}
+                        </h2>
                       )}
 
                       {event.eventDetails.eventType && (
-                        <h2>
+                        <h2 className="!font-extrabold">
                           {` | `}
                           {event.eventDetails.eventType}
                         </h2>
@@ -718,11 +720,20 @@ export default async function EventPage({ params }: PageProps) {
                   </div>
                 </section>
               </div>
+              <div className="w-full sm:flex-1 bg-primary-dark rounded-sm border-2 border-primary-light p-4">
+                <h2 className="text-center mx-auto underline mb-4">Schedule</h2>
+                {event.eventDetails.schedule && (
+                  <LinkifiedText
+                    text={event.eventDetails.schedule}
+                    className="text-sm whitespace-pre-wrap"
+                  />
+                )}
+              </div>
             </div>
 
             {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
-            <div className="grid grid-cols-6 gap-5 w-full items-start">
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
+            <div className="grid grid-cols-3 gap-5 w-full items-start">
+              <div className="col-span-3 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
                 <h2 className="text-center mx-auto underline">Description</h2>
                 {event.eventDetails.description && (
                   <LinkifiedText
@@ -731,15 +742,7 @@ export default async function EventPage({ params }: PageProps) {
                   />
                 )}
               </div>
-              <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-                <h2 className="text-center mx-auto underline">Schedule</h2>
-                {event.eventDetails.schedule && (
-                  <LinkifiedText
-                    text={event.eventDetails.schedule}
-                    className="text-sm whitespace-pre-wrap"
-                  />
-                )}
-              </div>
+
               <EventRoles
                 eventId={event.id}
                 rolesByTitle={rolesByTitle}

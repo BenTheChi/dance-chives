@@ -4544,12 +4544,17 @@ export async function getLatestBattleSections(): Promise<
   const session = driver.session();
 
   try {
-    // Get latest events that have battle sections, with one battle section per event
+    // Get latest events that have battle sections with videos, with one battle section per event
     const eventsResult = await session.run(
       `
       MATCH (e:Event)
       WHERE (e.status = 'visible' OR e.status IS NULL)
       MATCH (e)<-[:IN]-(s:BattleSection)
+      WHERE EXISTS {
+        MATCH (s)<-[:IN]-(v:Video)
+      } OR EXISTS {
+        MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+      }
       WITH e, s
       ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
       WITH e, collect(s)[0] as firstSection

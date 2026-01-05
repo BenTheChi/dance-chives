@@ -47,7 +47,7 @@ export function EventRoles({
   };
 
   return (
-    <div className="col-span-6 sm:col-span-2 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
+    <div className="col-span-3 sm:col-span-1 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
       <div className="flex gap-2 justify-center items-center">
         <h2 className="text-center underline">Roles</h2>
         <EventTagSelfButton eventId={eventId} />
@@ -73,16 +73,10 @@ export function EventRoles({
                   key={`${role.id}-${index}`}
                   username={role.user?.username ?? ""}
                   displayName={
-                    role.user?.displayName ??
-                    role.user?.username ??
-                    ""
+                    role.user?.displayName ?? role.user?.username ?? ""
                   }
-                  avatar={
-                    (role.user as { avatar?: string | null }).avatar
-                  }
-                  image={
-                    (role.user as { image?: string | null }).image
-                  }
+                  avatar={(role.user as { avatar?: string | null }).avatar}
+                  image={(role.user as { image?: string | null }).image}
                   showHoverCard
                   city={(role.user as { city?: string }).city || ""}
                   styles={(role.user as { styles?: string[] }).styles}
@@ -95,14 +89,10 @@ export function EventRoles({
                 />
               );
             })}
-            <RolePendingBadge
-              eventId={eventId}
-              roleTitle={roleTitle}
-            />
+            <RolePendingBadge eventId={eventId} roleTitle={roleTitle} />
           </div>
         </div>
       ))}
     </div>
   );
 }
-
