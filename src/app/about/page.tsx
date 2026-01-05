@@ -1,6 +1,5 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import Image from "next/image";
-import Link from "next/link";
+
 
 export default function AboutPage() {
   return (
@@ -158,7 +157,6 @@ export default function AboutPage() {
                 </div>
               </div>
             </section>
-
             {/* Community Guidelines Section */}
             {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-4 sm:px-8 border-4 border-primary-light w-full">
               <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8">

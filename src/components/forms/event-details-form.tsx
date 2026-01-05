@@ -2,11 +2,9 @@
 
 import * as React from "react";
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 import {
   Control,
   FieldPath,
-  UseFormRegister,
   UseFormSetValue,
   useFieldArray,
   useWatch,
@@ -49,7 +47,6 @@ interface EventDetailsFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
   eventDetails: EventDetails;
-  register: UseFormRegister<FormValues>;
 }
 
 interface CitySearchResponse {
@@ -98,10 +95,7 @@ export function EventDetailsForm({
   control,
   setValue,
   eventDetails,
-  register,
 }: EventDetailsFormProps) {
-  const pathname = usePathname();
-  const isEditing = pathname.split("/").pop() === "edit";
   const { fields, append, remove } = useFieldArray({
     control,
     name: "eventDetails.dates",

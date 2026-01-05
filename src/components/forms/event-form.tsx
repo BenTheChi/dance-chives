@@ -4,14 +4,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { FieldErrors, useForm, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
-import { Section, EventDetails, Role, Bracket } from "@/types/event";
+import { Section, EventDetails, Role } from "@/types/event";
 import { Image } from "@/types/image";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
@@ -22,23 +21,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { isTimeEmpty } from "@/lib/utils/event-utils";
-import {
-  SectionType,
-  updateSectionType,
-  sectionTypeRequiresBrackets,
-  sectionTypeDisallowsBrackets,
-} from "@/lib/utils/section-helpers";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { PlaylistParser } from "./playlist-parser";
-import { FormContext } from "@/lib/groq-llm";
 import { mergeSections } from "@/lib/playlist-parser-utils";
 
 const userSearchItemSchema = z.object({
@@ -909,7 +893,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               control={control}
               setValue={setValue}
               eventDetails={eventDetails as EventDetails}
-              register={register}
             />
           )}
 
@@ -973,7 +956,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                             {...commonProps}
                             mode="brackets"
                             externalActiveBracketId={null}
-                            onActiveBracketChange={(bracketId) => {
+                            onActiveBracketChange={() => {
                               // Keep track of active bracket but don't change selection type
                             }}
                           />

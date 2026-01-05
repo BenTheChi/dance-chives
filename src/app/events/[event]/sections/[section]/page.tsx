@@ -9,14 +9,7 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { SectionDetails } from "@/components/sections/SectionDetails";
 import { DescriptionWinnerColumns } from "@/components/sections/DescriptionWinnerColumns";
 import { Button } from "@/components/ui/button";
-import {
-  Pencil,
-  Settings,
-  Globe,
-  Instagram,
-  Youtube,
-  Facebook,
-} from "lucide-react";
+import { Pencil, Settings } from "lucide-react";
 import Link from "next/link";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { getUser } from "@/db/queries/user";

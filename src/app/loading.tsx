@@ -1,12 +1,10 @@
 "use client";
 
 import { AppNavbar } from "@/components/AppNavbar";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 
 export default function Loading() {
-  const pathname = usePathname();
   const [imageSize, setImageSize] = useState(300); // Default to mobile size
 
   useEffect(() => {

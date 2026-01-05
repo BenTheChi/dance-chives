@@ -9,7 +9,6 @@ interface MaintenanceLinkProps {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
-  [key: string]: any; // Allow other Link props
 }
 
 /**
@@ -21,7 +20,6 @@ export function MaintenanceLink({
   children,
   className = "",
   onClick,
-  ...props
 }: MaintenanceLinkProps) {
   const maintenanceMode = isMaintenanceMode();
 
@@ -43,7 +41,6 @@ export function MaintenanceLink({
           : ""
       }`}
       onClick={handleClick}
-      {...props}
     >
       {children}
     </Link>

@@ -17,7 +17,6 @@ import { RequestOwnershipButton } from "@/components/events/RequestOwnershipButt
 import { TeamMembersDisplay } from "@/components/events/TeamMembersDisplay";
 import { getEventTeamMembers, isTeamMember } from "@/db/queries/team-member";
 import { EventRoles } from "./event-roles";
-import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberButton";
@@ -389,9 +388,6 @@ export default async function EventPage({ params }: PageProps) {
   const isCurrentUserTeamMember = currentUserId
     ? await isTeamMember(event.id, currentUserId)
     : false;
-
-  // Get timezone for date display
-  const eventTimezone = event.eventDetails.city.timezone || "UTC";
 
   // Helper to parse date string (MM/DD/YYYY or YYYY-MM-DD format)
   const parseEventDate = (dateStr: string): Date => {
