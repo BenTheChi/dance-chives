@@ -9,7 +9,7 @@ interface MaintenanceLinkProps {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
-  [key: string]: any; // Allow other Link props
+  [key: string]: unknown; // Allow other Link props
 }
 
 /**

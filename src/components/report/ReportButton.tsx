@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ReportDialog } from "./ReportDialog";
+import { useCurrentUrl } from "@/hooks/useCurrentUrl";
 
 interface ReportButtonProps {
   className?: string;
@@ -20,18 +20,8 @@ export function ReportButton({
   size = "icon" 
 }: ReportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentUrl, setCurrentUrl] = useState<string>("");
-  const pathname = usePathname();
+  const currentUrl = useCurrentUrl();
   const { data: session } = useSession();
-
-  // Construct full URL from pathname
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const origin = window.location.origin;
-      const url = `${origin}${pathname}`;
-      setCurrentUrl(url);
-    }
-  }, [pathname]);
 
   const username =
     session?.user?.username || session?.user?.displayName || session?.user?.name || undefined;

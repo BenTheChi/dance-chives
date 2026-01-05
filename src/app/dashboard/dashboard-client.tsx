@@ -12,7 +12,6 @@ import { CalendarEventData } from "@/db/queries/event";
 import { RequestSection } from "@/components/requests/RequestSection";
 import { getAuthLevelName } from "@/lib/utils/auth-utils-shared";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
-import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";

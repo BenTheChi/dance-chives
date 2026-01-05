@@ -1,13 +1,4 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getCityData } from "@/db/queries/event";
-import { notFound } from "next/navigation";
-import { EventCard } from "@/components/EventCard";
-import { UserCard } from "@/components/UserCard";
-import { GoogleMapEmbed } from "@/components/GoogleMapEmbed";
-import { CityCalendarSection } from "@/components/CityCalendarSection";
-import { auth } from "@/auth";
-import { getSavedEventIds } from "@/lib/server_actions/event_actions";
-import { cn } from "@/lib/utils";
 import { UnderConstruction } from "@/components/UnderConstruction";
 
 type PageProps = {

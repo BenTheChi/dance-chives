@@ -1,6 +1,4 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import { getAllCities } from "@/db/queries/event";
-import { CityCard } from "@/components/CityCard";
 import { UnderConstruction } from "@/components/UnderConstruction";
 
 // Enable static generation with revalidation

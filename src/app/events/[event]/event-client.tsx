@@ -25,7 +25,7 @@ interface EventClientProps {
 
 // Hook to fetch and manage event auth data
 function useEventAuthData(eventId: string) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [authData, setAuthData] = useState<EventAuthData | null>(null);
   const [loading, setLoading] = useState(true);
 

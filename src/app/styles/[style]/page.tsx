@@ -1,10 +1,7 @@
 import { AppNavbar } from "@/components/AppNavbar";
 import { getStyleData } from "@/db/queries/event";
 import { notFound } from "next/navigation";
-import { EventCard } from "@/components/EventCard";
-import { StyleVideoGallery } from "@/components/ui/style-video-gallery";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
-import { UserCard } from "@/components/UserCard";
 import { StyleClient } from "./style-client";
 
 type PageProps = {

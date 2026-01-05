@@ -74,6 +74,7 @@ interface TrainingExample {
 /**
  * Training examples for the LLM
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TRAINING_EXAMPLES: TrainingExample[] = [
   {
     input: {

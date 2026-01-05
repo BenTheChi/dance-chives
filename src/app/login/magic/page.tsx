@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,59 +16,57 @@ export default function MagicLoginPage() {
     "Signing you in with your magic link..."
   );
 
-  useEffect(() => {
-    const token = searchParams.get("token");
-
+  const verify = useEffectEvent(async (token: string | null) => {
     if (!token) {
       setStatus("error");
       setMessage("This magic link is invalid. Please request a new one.");
       return;
     }
 
-    const verify = async () => {
-      try {
-        const response = await fetch("/api/auth/magic-link/verify", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token }),
-        });
+    try {
+      const response = await fetch("/api/auth/magic-link/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
 
-        if (!response.ok) {
-          setStatus("error");
-          setMessage(
-            "This magic link is invalid or has expired. Please request a new one."
-          );
-          return;
-        }
-
-        const data = await response.json();
-        let redirectPath =
-          data.redirectPath || (data.needsProfile ? "/signup" : "/dashboard");
-
-        // Add query parameter to indicate magic link flow for signup page
-        if (redirectPath === "/signup") {
-          redirectPath = "/signup?fromMagicLink=true";
-        }
-
-        // Add query parameter to indicate magic link flow for login/dashboard
-        if (redirectPath === "/dashboard") {
-          redirectPath = "/dashboard?fromMagicLinkLogin=true";
-        }
-
-        router.replace(redirectPath);
-      } catch (error) {
-        console.error("Error verifying magic link:", error);
+      if (!response.ok) {
         setStatus("error");
         setMessage(
           "This magic link is invalid or has expired. Please request a new one."
         );
+        return;
       }
-    };
 
-    verify();
-  }, [router, searchParams]);
+      const data = await response.json();
+      let redirectPath =
+        data.redirectPath || (data.needsProfile ? "/signup" : "/dashboard");
+
+      // Add query parameter to indicate magic link flow for signup page
+      if (redirectPath === "/signup") {
+        redirectPath = "/signup?fromMagicLink=true";
+      }
+
+      // Add query parameter to indicate magic link flow for login/dashboard
+      if (redirectPath === "/dashboard") {
+        redirectPath = "/dashboard?fromMagicLinkLogin=true";
+      }
+
+      router.replace(redirectPath);
+    } catch (error) {
+      console.error("Error verifying magic link:", error);
+      setStatus("error");
+      setMessage(
+        "This magic link is invalid or has expired. Please request a new one."
+      );
+    }
+  });
+
+  useEffect(() => {
+    verify(searchParams.get("token"));
+  }, [verify, searchParams]);
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">

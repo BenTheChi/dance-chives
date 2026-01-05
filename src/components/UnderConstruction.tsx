@@ -1,13 +1,11 @@
 import { cn } from "@/lib/utils";
 
 interface UnderConstructionProps {
-  title?: string;
   message?: string;
   className?: string;
 }
 
 export function UnderConstruction({
-  title = "Under Construction",
   message = "We're working on something amazing! Check back soon.",
   className,
 }: UnderConstructionProps) {

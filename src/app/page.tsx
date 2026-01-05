@@ -10,7 +10,6 @@ import {
 } from "@/db/queries/event";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
-import Script from "next/script";
 import { RecentVideosSection } from "@/components/RecentVideosSection";
 
 // Enable ISR - revalidate every 60 seconds

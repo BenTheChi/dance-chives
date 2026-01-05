@@ -1,6 +1,4 @@
 import { AppNavbar } from "@/components/AppNavbar";
-import Image from "next/image";
-import Link from "next/link";
 
 export default function AboutPage() {
   return (
@@ -100,7 +98,7 @@ export default function AboutPage() {
 
             {/* Open Source Section */}
             <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-4 sm:px-8 border-4 border-secondary-light w-full">
-              <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8 text-white">
+              <h2 className="sm:text-3xl! text-2xl! !font-extrabold text-center mb-8 text-white">
                 Open Source
               </h2>
               <div className="space-y-6 text-base leading-relaxed">
@@ -158,74 +156,6 @@ export default function AboutPage() {
                 </div>
               </div>
             </section>
-
-            {/* Community Guidelines Section */}
-            {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-4 sm:px-8 border-4 border-primary-light w-full">
-              <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8">
-                Community Guidelines
-              </h2>
-              <div className="space-y-6 text-lg">
-                <p>
-                  Dance Chives is built on respect, inclusivity, and the shared
-                  love of street dance culture. We are committed to maintaining
-                  a positive and welcoming environment for all members of our
-                  community.
-                </p>
-                <p>
-                  Our community guidelines outline the standards and
-                  expectations for participation on the platform. These
-                  guidelines help ensure that Dance Chives remains a safe,
-                  respectful, and constructive space for everyone.
-                </p>
-                <div className="flex justify-center mt-6">
-                  <Link
-                    href="/community-guidelines"
-                    className="bg-accent-blue text-charcoal px-6 py-3 rounded-sm font-rubik-mono-one text-lg hover:bg-accent-blue/90 transition-colors pointer-events-none opacity-50"
-                  >
-                    View Community Guidelines
-                  </Link>
-                </div>
-              </div>
-            </section> */}
-
-            {/* Creator Section */}
-            {/* <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-4 sm:px-8 border-4 border-secondary-light w-full">
-              <h2 className="sm:!text-3xl !text-2xl !font-extrabold text-center mb-8">
-                About the Creator
-              </h2>
-              <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-                <div className="flex-shrink-0">
-                  <Image
-                    src="/ben-chi.jpg"
-                    alt="Ben Chi"
-                    width={200}
-                    height={200}
-                    className="rounded-sm border-4 border-secondary-light object-cover"
-                    style={{ aspectRatio: "1/1" }}
-                  />
-                </div>
-                <div className="flex-1 space-y-4 text-lg">
-                  <h3 className="text-2xl font-bold">Ben Chi</h3>
-                  <p>
-                    Dance Chives was created by Ben Chi aka Heartbreaker, a long
-                    time street dancer. He was first introduced to breaking and
-                    popping in 2007 when he was 17 years old through Youtube and
-                    a site called Bboy.org. It was a vital moment of being
-                    introduced into an underground culture of freestyle dance
-                    which led him to eventually discover his local scene in
-                    Maui.
-                    <br />
-                    <br />
-                    In 2015 he moved to Seattle. He explored new styles and a
-                    new dance commmunity. He continued to watch battles on
-                    Youtube and watched how technology evolved with street
-                    dance. The community drifted from forums to Facebook and
-                    then to Instagram. However, he felt like there was always
-                    something lacking.
-                  </p>
-                </div>
-              </div>
-            </section> */}
           </div>
         </div>
       </main>

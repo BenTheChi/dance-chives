@@ -1,20 +1,13 @@
 "use client";
 
 import { AppNavbar } from "@/components/AppNavbar";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Loading() {
-  const pathname = usePathname();
-  const [imageSize, setImageSize] = useState(300); // Default to mobile size
-
-  useEffect(() => {
-    // Only access screen on client side
-    if (typeof window !== "undefined") {
-      setImageSize(window.innerWidth > 768 ? 500 : 300);
-    }
-  }, []);
+  const [imageSize] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth > 768 ? 500 : 300
+  );
 
   return (
     <>
