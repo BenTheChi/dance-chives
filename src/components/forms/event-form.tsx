@@ -893,7 +893,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               control={control}
               setValue={setValue}
               eventDetails={eventDetails as EventDetails}
-              register={register}
             />
           )}
 
