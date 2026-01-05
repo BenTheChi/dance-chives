@@ -447,7 +447,7 @@ export function DashboardClient({
             )}
 
             {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
-            {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
+            {user?.auth != null && user.auth >= AUTH_LEVELS.ADMIN && (
               <>
                 <AuthorizationChanger />
                 <Dialog
