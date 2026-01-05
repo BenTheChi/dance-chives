@@ -100,7 +100,6 @@ export function AppNavbar() {
                 !isActive &&
                   "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark"
               )}
-              style={{ fontFamily: "var(--font-display)" }}
             >
               {item.title}
             </MaintenanceLink>
@@ -135,7 +134,10 @@ export function AppNavbar() {
                   Login
                 </Button>
               </MaintenanceLink>
-              <MaintenanceLink href="/signup" className="hidden md:inline-block">
+              <MaintenanceLink
+                href="/signup"
+                className="hidden md:inline-block"
+              >
                 <Button size="default">Sign Up</Button>
               </MaintenanceLink>
             </>

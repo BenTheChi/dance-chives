@@ -46,7 +46,6 @@ export default async function StylePage({ params }: PageProps) {
         {styleData.videos.length > 0 && (
           <section className="mb-12">
             <h2 className="text-2xl font-semibold mb-6">Videos</h2>
-            <StyleVideoGallery videos={styleData.videos} />
           </section>
         )}
       </div>
