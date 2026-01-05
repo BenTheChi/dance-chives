@@ -22,6 +22,7 @@ import { auth } from "@/auth";
 import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberButton";
 import { MessageTemplateDialog } from "@/components/events/MessageTemplateDialog";
 import { LinkifiedText } from "@/components/LinkifiedText";
+import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 
 type PageProps = {
   params: Promise<{ event: string }>;
