@@ -328,7 +328,9 @@ export function DashboardClient({
       <AccountVerificationGuard requireVerification={true}>
         <AppNavbar />
         <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
-          <h1 className="py-7 border-b-2 border-primary-light">Dashboard</h1>
+          <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
+            Dashboard
+          </h1>
           <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[800px] w-full">
               <div className="text-center py-12">Loading dashboard...</div>
@@ -343,7 +345,9 @@ export function DashboardClient({
     <AccountVerificationGuard requireVerification={true}>
       <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
-        <h1 className="py-7 border-b-2 border-primary-light">Dashboard</h1>
+        <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
+          Dashboard
+        </h1>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col gap-4 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1500px] w-full">
             {/* Welcome Section */}

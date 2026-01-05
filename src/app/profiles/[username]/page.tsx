@@ -258,7 +258,7 @@ export default async function ProfilePage({ params }: PageProps) {
     <>
       <AppNavbar />
       <div className="flex flex-col items-center justify-center">
-        <div className="flex items-center justify-between py-7 border-b-2 border-primary-light">
+        <div className="flex items-center justify-between py-7 border-b-2 border-primary-light bg-charcoal">
           <h1 className="flex-1">{profile.displayName || profile.username}</h1>
         </div>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto overflow-x-visible">

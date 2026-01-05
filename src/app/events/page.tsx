@@ -18,11 +18,16 @@ export default async function EventsPage() {
     <>
       <div className="flex flex-col">
         <AppNavbar />
-        <h1 className="py-7 border-b-2 border-primary-light">All Events</h1>
-        <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col items-center py-8 w-full">
-            {/* Client component handles auth-dependent features */}
-            <EventsClient events={events} cities={cities} styles={styles} />
+        <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
+          All Events
+        </h1>
+        <div className="relative flex-1 flex flex-col">
+          {/* Content */}
+          <div className="relative z-10 flex justify-center flex-1 min-h-0 overflow-y-auto">
+            <div className="flex flex-col items-center py-8 w-full">
+              {/* Client component handles auth-dependent features */}
+              <EventsClient events={events} cities={cities} styles={styles} />
+            </div>
           </div>
         </div>
       </div>

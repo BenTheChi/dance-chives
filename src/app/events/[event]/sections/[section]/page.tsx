@@ -243,7 +243,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
     <>
       <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
-        <h1 className="py-7 border-b-2 border-primary-light">
+        <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
           {section.title}
         </h1>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">

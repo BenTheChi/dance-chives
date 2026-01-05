@@ -136,7 +136,9 @@ export function CalendarPageClient({
 
   return (
     <div className="flex flex-col">
-      <h1 className="py-7 border-b-2 border-primary-light">Calendar</h1>
+      <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
+        Calendar
+      </h1>
       <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col px-5 gap-4 sm:gap-8 py-3 sm:py-5 px-0 sm:px-10 lg:px-15 max-w-full sm:max-w-[1000px] lg:max-w-[1200px] w-full">
           {/* Filters */}

@@ -2,17 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AppNavbar } from "@/components/AppNavbar";
-import { ParallaxBackground } from "@/components/ParallaxBackground";
 import { SectionCard } from "@/components/ui/section-card";
 import {
   getLatestBattleSections,
   getLatestEventVideos,
 } from "@/db/queries/event";
+import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
 import { RecentVideosSection } from "@/components/RecentVideosSection";
 import { MobileAuthSection } from "@/components/MobileAuthSection";
 import { HomePageCTA } from "@/components/HomePageCTA";
+import { EventCard } from "@/components/EventCard";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -24,15 +25,15 @@ export default async function Home() {
   // Fetch latest videos from 6 events
   const latestVideos = await getLatestEventVideos();
 
+  // Fetch upcoming events
+  const upcomingEvents = await getUpcomingEventCards(3);
+
   return (
     <div className="flex flex-col">
       <AppNavbar />
-      <main className="flex-1 flex flex-col relative bg-charcoal/15 mb-10">
-        {/* Pattern background that repeats for entire page */}
-        <ParallaxBackground />
-
+      <main className="flex-1 flex flex-col bg-charcoal/15 mb-10">
         {/* Content */}
-        <div className="relative z-10">
+        <div>
           {/* Hero Section */}
           <section className="flex flex-col items-center px-8 gap-10 py-20 sm:py-32">
             <div className="flex flex-col items-center gap-10 bg-charcoal p-6 border-4 border-primary-light rounded-sm">
@@ -190,6 +191,20 @@ export default async function Home() {
               </div>
             </section> */}
 
+            {/* Upcoming Events */}
+            {upcomingEvents.length > 0 && (
+              <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
+                <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
+                  Upcoming Events
+                </h2>
+                <div className="flex flex-wrap justify-center gap-6">
+                  {upcomingEvents.map((event) => (
+                    <EventCard key={event.id} {...event} />
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Recently Added Videos */}
             <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm py-8 px-4 border-4 border-primary-light">
               <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
@@ -233,9 +248,6 @@ export default async function Home() {
                 </div>
               )}
             </section>
-
-            {/* CTA - Changes based on login status */}
-            <HomePageCTA variant="secondary" />
 
             {/* Contribute Section */}
             <section

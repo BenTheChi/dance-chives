@@ -132,11 +132,20 @@ export default function RootLayout({
         />
         {/* End MailerLite Universal */}
       </head>
-      <body className="antialiased">
+      <body className="antialiased relative">
+        {/* Background pattern for all pages */}
+        <div
+          className="fixed inset-0 z-0 opacity-80"
+          style={{
+            backgroundImage: "url(/shattered-island.gif)",
+            backgroundRepeat: "repeat",
+            backgroundSize: "auto",
+          }}
+        />
         <SessionProvider>
           <SidebarProvider>
             <AppSidebar />
-            <div className="flex flex-col min-h-screen w-full">
+            <div className="flex flex-col min-h-screen w-full relative z-10">
               <main className="flex flex-col flex-1">{children}</main>
               <Footer />
             </div>

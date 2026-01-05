@@ -18,7 +18,7 @@ export function ParallaxBackground() {
         const extraHeight = maxScroll * parallaxFactor - 50;
 
         // Set height to cover full viewport plus parallax movement
-        parallaxRef.current.style.height = `calc(100% + ${extraHeight}px)`;
+        parallaxRef.current.style.height = `calc(110%)`;
       }
     };
 

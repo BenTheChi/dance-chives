@@ -1,11 +1,10 @@
 import { AppNavbar } from "@/components/AppNavbar";
 
-
 export default function AboutPage() {
   return (
     <div className="flex flex-col">
       <AppNavbar />
-      <h1 className="py-7 border-b-2 border-primary-light">
+      <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
         About Dance Chives
       </h1>
       <main className="flex-1 flex flex-col relative mb-10">
