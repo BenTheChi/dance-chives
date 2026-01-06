@@ -509,7 +509,7 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "dates",
                           content: (
-                            <div className="flex flex-col">
+                            <div className="flex flex-col justify-center">
                               {showMoreDatesButton && (
                                 <EventDatesDialog eventId={event.id} />
                               )}
