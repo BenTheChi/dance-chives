@@ -54,6 +54,8 @@ export function updateSectionType(
       ? true
       : disallowsBrackets
       ? false
+      : newType === "Battle"
+      ? true
       : section.hasBrackets;
 
     const shouldKeepBrackets =

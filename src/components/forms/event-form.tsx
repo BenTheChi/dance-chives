@@ -25,6 +25,10 @@ import { cn } from "@/lib/utils";
 import { PlaylistParser } from "./playlist-parser";
 import { mergeSections } from "@/lib/playlist-parser-utils";
 
+const CREATE_DRAFT_STORAGE_KEY = "event-form-draft";
+const getEditDraftStorageKey = (eventId: string) =>
+  `event-form-draft-${eventId}`;
+
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
   displayName: z.string(),
@@ -388,6 +392,7 @@ interface EventFormProps {
 export default function EventForm({ initialData }: EventFormProps = {}) {
   const pathname = usePathname().split("/");
   const isEditing = pathname[pathname.length - 1] === "edit";
+  const eventId = isEditing ? pathname[pathname.length - 2] : undefined;
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -441,7 +446,86 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     },
   });
 
-  const { control, handleSubmit, setValue, getValues, register, watch } = form;
+  const { control, handleSubmit, setValue, getValues, register, watch, reset } =
+    form;
+
+  // Restore draft from sessionStorage on first load (creation only)
+  useEffect(() => {
+    if (isEditing || initialData) return;
+    if (typeof window === "undefined") return;
+
+    const saved = sessionStorage.getItem(CREATE_DRAFT_STORAGE_KEY);
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      reset(parsed);
+    } catch (error) {
+      console.error(
+        "Failed to parse event form draft from sessionStorage",
+        error
+      );
+    }
+  }, [isEditing, initialData, reset]);
+
+  // Restore draft when editing an event (per-event storage)
+  useEffect(() => {
+    if (!isEditing || !eventId) return;
+    if (typeof window === "undefined") return;
+
+    const saved = sessionStorage.getItem(getEditDraftStorageKey(eventId));
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      reset(parsed);
+    } catch (error) {
+      console.error(
+        "Failed to parse event form draft from sessionStorage",
+        error
+      );
+    }
+  }, [isEditing, eventId, reset]);
+
+  // Persist draft to sessionStorage on change (creation or edit)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let storageKey: string | null = null;
+    if (isEditing) {
+      if (!eventId) return;
+      storageKey = getEditDraftStorageKey(eventId);
+    } else if (!initialData) {
+      storageKey = CREATE_DRAFT_STORAGE_KEY;
+    } else {
+      return;
+    }
+
+    const subscription = watch((value) => {
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(value));
+      } catch (error) {
+        console.error(
+          "Failed to save event form draft to sessionStorage",
+          error
+        );
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [isEditing, initialData, watch, eventId]);
+
+  const clearDraft = () => {
+    if (typeof window === "undefined") return;
+
+    if (isEditing) {
+      if (!eventId) return;
+      sessionStorage.removeItem(getEditDraftStorageKey(eventId));
+      return;
+    }
+
+    sessionStorage.removeItem(CREATE_DRAFT_STORAGE_KEY);
+  };
 
   // Ensure eventType is always set to a valid value
   useEffect(() => {
@@ -514,7 +598,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       title: `New Section ${sections.length + 1}`,
       description: "",
       sectionType: "Battle",
-      hasBrackets: false,
+      hasBrackets: true,
       videos: [],
       brackets: [],
       bgColor: "#ffffff",
@@ -623,10 +707,13 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
       let response;
       if (isEditing) {
-        response = await editEvent(
-          pathname[pathname.length - 2],
-          normalizedData
-        );
+        if (!eventId) {
+          toast.error("Failed to update event", {
+            description: "Missing event id.",
+          });
+          return;
+        }
+        response = await editEvent(eventId, normalizedData);
       } else {
         response = await addEvent(normalizedData);
       }
@@ -648,7 +735,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.status === 200) {
-            router.push(`/events/${pathname[pathname.length - 2]}`);
+            clearDraft();
+            if (eventId) {
+              router.push(`/events/${eventId}`);
+            }
           } else {
             toast.error("Failed to update event", {
               description: "Please try again.",
@@ -660,6 +750,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
 
           if (response.event) {
+            clearDraft();
             router.push(`/events/${response.event.id}`);
           } else {
             toast.error("Failed to submit event", {
@@ -993,9 +1084,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     activeSection: selectedSection,
                     sections,
                     activeSectionId: selectedSection.id,
-                    eventId: isEditing
-                      ? pathname[pathname.length - 2]
-                      : undefined,
+                    eventId: isEditing ? eventId : undefined,
                   };
 
                   return (
@@ -1071,7 +1160,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             <Button
               type="button"
               variant="destructive"
-              onClick={() => router.back()}
+              onClick={() => {
+                clearDraft();
+                router.back();
+              }}
               className="w-full sm:w-auto"
             >
               Cancel
