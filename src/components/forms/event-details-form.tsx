@@ -486,14 +486,15 @@ export function EventDetailsForm({
           <Button
             variant="outline"
             className="w-full sm:w-auto border-2 border-dashed hover:border-solid hover:bg-gray-50 text-black"
-            onClick={() =>
+            onClick={() => {
+              const lastEntry = dates?.[dates.length - 1];
               append({
-                date: "",
-                isAllDay: true,
-                startTime: undefined,
-                endTime: undefined,
-              })
-            }
+                date: lastEntry?.date ?? "",
+                isAllDay: lastEntry?.isAllDay ?? true,
+                startTime: lastEntry?.startTime ?? undefined,
+                endTime: lastEntry?.endTime ?? undefined,
+              });
+            }}
             type="button"
           >
             <PlusIcon className="mr-2 h-4 w-4 text-black" />
