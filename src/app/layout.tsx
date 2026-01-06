@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Footer } from "@/components/Footer";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AccountVerificationRedirector } from "@/components/account-verification-redirector";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -143,6 +144,7 @@ export default function RootLayout({
           }}
         />
         <SessionProvider>
+          <AccountVerificationRedirector />
           <SidebarProvider>
             <AppSidebar />
             <div className="flex flex-col min-h-screen w-full relative z-10">
