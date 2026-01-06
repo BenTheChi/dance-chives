@@ -164,27 +164,21 @@ const sectionSchema = z
     winners: z.array(userSearchItemSchema).optional(),
     bgColor: z.string().optional(),
     poster: imageSchema.nullable().optional(),
-    date: z
-      .preprocess(
-        (val) =>
-          typeof val === "string" && val.trim().length === 0 ? undefined : val,
-        z.string().regex(dateRegex, "Date must be in MM/DD/YYYY format")
-      )
-      .optional(),
-    startTime: z
-      .preprocess(
-        (val) =>
-          typeof val === "string" && val.trim().length === 0 ? undefined : val,
-        z.string().regex(timeRegex, "Start time must be in HH:MM format")
-      )
-      .optional(),
-    endTime: z
-      .preprocess(
-        (val) =>
-          typeof val === "string" && val.trim().length === 0 ? undefined : val,
-        z.string().regex(timeRegex, "End time must be in HH:MM format")
-      )
-      .optional(),
+    date: z.preprocess((val) => {
+      if (val === null || val === undefined) return undefined;
+      if (typeof val === "string" && val.trim().length === 0) return undefined;
+      return val;
+    }, z.string().regex(dateRegex, "Date must be in MM/DD/YYYY format").optional()),
+    startTime: z.preprocess((val) => {
+      if (val === null || val === undefined) return undefined;
+      if (typeof val === "string" && val.trim().length === 0) return undefined;
+      return val;
+    }, z.string().regex(timeRegex, "Start time must be in HH:MM format").optional()),
+    endTime: z.preprocess((val) => {
+      if (val === null || val === undefined) return undefined;
+      if (typeof val === "string" && val.trim().length === 0) return undefined;
+      return val;
+    }, z.string().regex(timeRegex, "End time must be in HH:MM format").optional()),
   })
   .superRefine((section, context) => {
     const hasDate = Boolean(section.date);

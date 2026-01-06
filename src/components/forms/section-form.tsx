@@ -210,27 +210,6 @@ export function SectionForm({
   const [newBracketTitle, setNewBracketTitle] = useState("");
   const [bracketTitleError, setBracketTitleError] = useState<string>("");
 
-  // Ensure form field reflects any existing section type on mount
-  useEffect(() => {
-    if (!activeSection) return;
-    const fieldPath =
-      `sections.${activeSectionIndex}.sectionType` as FieldPath<FormValues>;
-    const currentType = getValues(fieldPath);
-    if (!currentType && activeSection.sectionType) {
-      setValue(fieldPath, activeSection.sectionType, {
-        shouldDirty: false,
-        shouldValidate: false,
-        shouldTouch: false,
-      });
-    }
-  }, [
-    activeSection,
-    activeSectionIndex,
-    activeSection?.sectionType,
-    getValues,
-    setValue,
-  ]);
-
   // Load existing section winners from activeSection.winners
   // Use a Map to deduplicate winners by username
   useEffect(() => {
