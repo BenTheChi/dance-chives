@@ -509,7 +509,7 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "dates",
                           content: (
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col">
                               {showMoreDatesButton && (
                                 <EventDatesDialog eventId={event.id} />
                               )}
@@ -518,7 +518,7 @@ export default async function EventPage({ params }: PageProps) {
                                   <h3 className="text-center underline">
                                     {hasBothTypes ? "Past Date" : "Date"}
                                   </h3>
-                                  <div className="flex flex-col text-center gap-1">
+                                  <div className="flex flex-col text-center gap-2">
                                     {pastDates.map((d, idx) => {
                                       const isAllDay =
                                         !d.startTime && !d.endTime;
@@ -549,7 +549,7 @@ export default async function EventPage({ params }: PageProps) {
                                   <h3 className="text-center underline">
                                     {hasBothTypes ? "Future Date(s)" : "Date"}
                                   </h3>
-                                  <div className="flex flex-col gap-1 text-sm text-center leading-tight">
+                                  <div className="flex flex-col gap-2 text-sm text-center leading-tight">
                                     {upcomingDates.map((d, idx) => {
                                       const isAllDay =
                                         !d.startTime && !d.endTime;
