@@ -94,6 +94,7 @@ export function getSectionTypeLabel(
     Class: "ClassSection",
     Session: "SessionSection",
     Party: "PartySection",
+    Other: "OtherSection",
   };
   return labelMap[sectionType] || null;
 }
@@ -107,6 +108,7 @@ export function getSectionTypeFromLabel(label: string): string | null {
     ClassSection: "Class",
     SessionSection: "Session",
     PartySection: "Party",
+    OtherSection: "Other",
   };
   return reverseMap[label] || null;
 }
