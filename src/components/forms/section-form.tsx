@@ -570,7 +570,9 @@ export function SectionForm({
               control={control}
               name={`sections.${activeSectionIndex}.sectionType`}
               render={({ field }) => {
-                const value = field.value || "Battle";
+                // Preserve existing section type when editing instead of forcing "Battle"
+                const value =
+                  (field.value ?? activeSection.sectionType) ?? "";
                 const requiresBrackets = sectionTypeRequiresBrackets(
                   value as SectionType
                 );

@@ -1,11 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { removeRoleFromEvent } from "@/lib/server_actions/request_actions";
+import { getEventAuthData } from "@/lib/server_actions/event_actions";
 import { Role } from "@/types/event";
 import { EventTagSelfButton } from "./event-client";
 
@@ -22,6 +23,35 @@ export function EventRoles({
 }: EventRolesProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [canManageRoles, setCanManageRoles] = useState(false);
+
+  // Determine whether current user can remove any roles (creator, team, moderator/admin).
+  useEffect(() => {
+    let cancelled = false;
+    const loadAuth = async () => {
+      try {
+        const result = await getEventAuthData(eventId);
+        if (cancelled) return;
+        const authData = result.data;
+        if (authData) {
+          setCanManageRoles(
+            !!(
+              authData.isModeratorOrAdmin ||
+              authData.isTeamMember ||
+              authData.isCreator
+            )
+          );
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Failed to fetch event auth data:", error);
+      }
+    };
+    loadAuth();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
   const handleRemoveRole = (userId: string, roleTitle: string) => {
     if (!currentUserId) return;
@@ -63,11 +93,9 @@ export function EventRoles({
               {roles.map((role, index) => {
                 const roleUserId = role.user?.id || role.user?.username;
                 const canRemove =
-                  currentUserId &&
-                  roleUserId &&
-                  (currentUserId === roleUserId ||
-                    currentUserId === role.user?.id ||
-                    currentUserId === role.user?.username);
+                  !!currentUserId &&
+                  !!roleUserId &&
+                  (currentUserId === roleUserId || canManageRoles);
 
                 return (
                   <UserAvatar
