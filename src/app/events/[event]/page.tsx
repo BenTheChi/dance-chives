@@ -579,7 +579,7 @@ export default async function EventPage({ params }: PageProps) {
                                         >
                                           <span>{d.date}</span>
                                           {!isAllDay && (
-                                            <span className="!text-[15px] font-italic">
+                                            <span className="!text-[15px] italic">
                                               {timeStr}
                                             </span>
                                           )}

@@ -53,8 +53,10 @@ export default async function Home() {
               </div>
               <h2 className="sm:!text-[40px] max-w-2xl text-center tracking-wider">
                 The free community ar
-                <span className="text-primary-light">chive</span> for street
-                dance events
+                <span className="text-primary-light !text-[40px]">
+                  chive
+                </span>{" "}
+                for street dance events
               </h2>
             </div>
           </section>
