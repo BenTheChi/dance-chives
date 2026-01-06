@@ -59,7 +59,7 @@ export default async function Home() {
             </div>
           </section>
 
-          <div className="flex flex-col items-center gap-20 px-2">
+          <div className="flex flex-col items-center gap-20">
             {/* Mobile Auth Section - Only shows on mobile when not logged in */}
             <MobileAuthSection />
 

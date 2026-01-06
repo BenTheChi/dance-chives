@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { AVAILABLE_ROLES } from "@/lib/utils/roles";
 import {
   tagSelfWithRole,
@@ -17,6 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { RolePendingBadge } from "@/components/events/RolePendingBadge";
 
 interface TagSelfDropdownProps {
   eventId: string;
@@ -157,9 +157,13 @@ export function TagSelfDropdown({
         <label className="text-sm font-semibold">Tag Self:</label>
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (
-            <Badge key={role} variant="outline" className="w-fit">
-              {role} tag request pending
-            </Badge>
+            <RolePendingBadge
+              key={role}
+              eventId={eventId}
+              roleTitle={role}
+              className="w-fit"
+              hasPendingOverride
+            />
           ))}
         </div>
       </div>
@@ -188,9 +192,13 @@ export function TagSelfDropdown({
       {pendingRoles.size > 0 && (
         <div className="flex flex-col gap-2">
           {Array.from(pendingRoles).map((role) => (
-            <Badge key={role} variant="outline" className="w-fit">
-              {role} tag request pending
-            </Badge>
+            <RolePendingBadge
+              key={role}
+              eventId={eventId}
+              roleTitle={role}
+              className="w-fit"
+              hasPendingOverride
+            />
           ))}
         </div>
       )}

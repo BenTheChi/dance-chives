@@ -8,7 +8,6 @@ import { fromNeo4jRoleFormat } from "@/lib/utils/roles";
 import { removeRoleFromEvent } from "@/lib/server_actions/request_actions";
 import { Role } from "@/types/event";
 import { EventTagSelfButton } from "./event-client";
-import { RolePendingBadge } from "./role-pending-badge";
 
 interface EventRolesProps {
   eventId: string;
@@ -47,49 +46,51 @@ export function EventRoles({
   };
 
   return (
-    <div className="col-span-3 sm:col-span-1 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-      <div className="flex gap-2 justify-center items-center">
+    <div className="w-full sm:flex-1 bg-primary-dark rounded-sm border-2 border-primary-light p-4">
+      <div className="flex gap-2 justify-center items-center mb-4">
         <h2 className="text-center underline">Roles</h2>
         <EventTagSelfButton eventId={eventId} />
       </div>
       {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
-        <div
-          key={roleTitle}
-          className="flex flex-row flex-wrap gap-2 items-center"
-        >
-          <h3>{fromNeo4jRoleFormat(roleTitle) || roleTitle}</h3>
-          <div className="flex flex-row gap-2 items-center flex-wrap">
-            {roles.map((role, index) => {
-              const roleUserId = role.user?.id || role.user?.username;
-              const canRemove =
-                currentUserId &&
-                roleUserId &&
-                (currentUserId === roleUserId ||
-                  currentUserId === role.user?.id ||
-                  currentUserId === role.user?.username);
+        <div key={roleTitle} className="flex flex-col gap-1">
+          <div
+            key={roleTitle}
+            className="flex flex-row flex-wrap gap-2 items-center"
+          >
+            <h3>{fromNeo4jRoleFormat(roleTitle) || roleTitle}</h3>
 
-              return (
-                <UserAvatar
-                  key={`${role.id}-${index}`}
-                  username={role.user?.username ?? ""}
-                  displayName={
-                    role.user?.displayName ?? role.user?.username ?? ""
-                  }
-                  avatar={(role.user as { avatar?: string | null }).avatar}
-                  image={(role.user as { image?: string | null }).image}
-                  showHoverCard
-                  city={(role.user as { city?: string }).city || ""}
-                  styles={(role.user as { styles?: string[] }).styles}
-                  isSmall={true}
-                  showRemoveButton={canRemove || false}
-                  onRemove={() =>
-                    roleUserId && handleRemoveRole(roleUserId, roleTitle)
-                  }
-                  isRemoving={isPending}
-                />
-              );
-            })}
-            <RolePendingBadge eventId={eventId} roleTitle={roleTitle} />
+            <div className="flex flex-row gap-2 items-center flex-wrap">
+              {roles.map((role, index) => {
+                const roleUserId = role.user?.id || role.user?.username;
+                const canRemove =
+                  currentUserId &&
+                  roleUserId &&
+                  (currentUserId === roleUserId ||
+                    currentUserId === role.user?.id ||
+                    currentUserId === role.user?.username);
+
+                return (
+                  <UserAvatar
+                    key={`${role.id}-${index}`}
+                    username={role.user?.username ?? ""}
+                    displayName={
+                      role.user?.displayName ?? role.user?.username ?? ""
+                    }
+                    avatar={(role.user as { avatar?: string | null }).avatar}
+                    image={(role.user as { image?: string | null }).image}
+                    showHoverCard
+                    city={(role.user as { city?: string }).city || ""}
+                    styles={(role.user as { styles?: string[] }).styles}
+                    isSmall={true}
+                    showRemoveButton={canRemove || false}
+                    onRemove={() =>
+                      roleUserId && handleRemoveRole(roleUserId, roleTitle)
+                    }
+                    isRemoving={isPending}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
       ))}

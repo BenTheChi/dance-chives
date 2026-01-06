@@ -720,15 +720,11 @@ export default async function EventPage({ params }: PageProps) {
                   </div>
                 </section>
               </div>
-              <div className="w-full sm:flex-1 bg-primary-dark rounded-sm border-2 border-primary-light p-4">
-                <h2 className="text-center mx-auto underline mb-4">Schedule</h2>
-                {event.eventDetails.schedule && (
-                  <LinkifiedText
-                    text={event.eventDetails.schedule}
-                    className="text-sm whitespace-pre-wrap"
-                  />
-                )}
-              </div>
+              <EventRoles
+                eventId={event.id}
+                rolesByTitle={rolesByTitle}
+                currentUserId={currentUserId}
+              />
             </div>
 
             {/* Row 2: Description (2 cols) + Schedule (2 cols) + Roles (2 cols) */}
@@ -743,11 +739,15 @@ export default async function EventPage({ params }: PageProps) {
                 )}
               </div>
 
-              <EventRoles
-                eventId={event.id}
-                rolesByTitle={rolesByTitle}
-                currentUserId={currentUserId}
-              />
+              <div className="col-span-3 sm:col-span-1 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
+                <h2 className="text-center mx-auto underline mb-4">Schedule</h2>
+                {event.eventDetails.schedule && (
+                  <LinkifiedText
+                    text={event.eventDetails.schedule}
+                    className="text-sm whitespace-pre-wrap"
+                  />
+                )}
+              </div>
             </div>
 
             {/* Sections - grid layout */}

@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +34,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
+import { RolePendingBadge } from "@/components/events/RolePendingBadge";
 
 interface TagSelfCircleButtonProps {
   eventId: string;
@@ -393,19 +393,6 @@ export function TagSelfCircleButton({
           setIsDialogOpen(true);
         }}
       />
-      {pendingRoles.size > 0 && (
-        <div className="flex flex-col gap-2">
-          {Array.from(pendingRoles).map((role) => (
-            <Badge
-              key={role}
-              variant="outline"
-              className="w-fit bg-gray-200 text-black hover:bg-gray-300"
-            >
-              {role} tag request pending
-            </Badge>
-          ))}
-        </div>
-      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-primary">
@@ -428,13 +415,15 @@ export function TagSelfCircleButton({
                 </p>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {Array.from(pendingRoles).map((role) => (
-                    <Badge
+                    <RolePendingBadge
                       key={role}
-                      variant="outline"
-                      className="bg-yellow-500/30 text-yellow-100 border-yellow-500/50"
-                    >
-                      {role}
-                    </Badge>
+                      eventId={eventId}
+                      roleTitle={role}
+                      target={target}
+                      targetId={targetId}
+                      className="bg-yellow-500/30 text-yellow-100 border-yellow-500/50 hover:bg-yellow-500/30"
+                      hasPendingOverride
+                    />
                   ))}
                 </div>
                 <p className="text-xs text-yellow-200 mt-1">

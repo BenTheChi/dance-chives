@@ -90,7 +90,7 @@ export function EventCard({
                 {title}
               </h2>
               <span className="!text-[12px] sm:!text-md ">{formattedDate}</span>
-              {additionalDatesCount && additionalDatesCount > 0 && (
+              {(additionalDatesCount ?? 0) > 0 && (
                 <span className="!text-[12px] sm:!text-md ">
                   +{additionalDatesCount} more dates
                 </span>
