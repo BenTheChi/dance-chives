@@ -440,6 +440,15 @@ export default async function EventPage({ params }: PageProps) {
     return `${dateEntry.date} (${timeStr})`;
   };
 
+  // Convert 24-hour time (HH:mm) to 12-hour format with AM/PM
+  const convertTo12Hour = (time24: string): string => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+  };
+
   return (
     <>
       <AppNavbar />
@@ -509,6 +518,8 @@ export default async function EventPage({ params }: PageProps) {
                       }> = [];
 
                       if (hasDates) {
+                        const hasBothTypes =
+                          pastDates.length > 0 && upcomingDates.length > 0;
                         items.push({
                           key: "dates",
                           content: (
@@ -517,30 +528,64 @@ export default async function EventPage({ params }: PageProps) {
                                 <EventDatesDialog eventId={event.id} />
                               )}
                               {pastDates.length > 0 && (
-                                <div className="flex flex-col justify-center gap-1">
+                                <div className="flex flex-col justify-center gap-2">
                                   <h3 className="text-center underline">
-                                    Past Date
+                                    {hasBothTypes ? "Past Date" : "Date"}
                                   </h3>
-                                  <div className="flex flex-col text-center">
-                                    {pastDates.map((d, idx) => (
-                                      <span key={`past-${d.date}-${idx}`}>
-                                        {formatEventDateRow(d)}
-                                      </span>
-                                    ))}
+                                  <div className="flex flex-col text-center gap-1">
+                                    {pastDates.map((d, idx) => {
+                                      const isAllDay =
+                                        !d.startTime && !d.endTime;
+                                      const timeStr = d.endTime
+                                        ? `${convertTo12Hour(
+                                            d.startTime || ""
+                                          )} - ${convertTo12Hour(d.endTime)}`
+                                        : convertTo12Hour(d.startTime || "");
+                                      return (
+                                        <div
+                                          key={`past-${d.date}-${idx}`}
+                                          className="flex flex-col leading-tight"
+                                        >
+                                          <span>{d.date}</span>
+                                          {!isAllDay && (
+                                            <span className="!text-[15px] italic">
+                                              {timeStr}
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
                               {upcomingDates.length > 0 && (
-                                <div className="flex flex-col justify-center gap-1">
+                                <div className="flex flex-col justify-center gap-2">
                                   <h3 className="text-center underline">
-                                    Future Date(s)
+                                    {hasBothTypes ? "Future Date(s)" : "Date"}
                                   </h3>
-                                  <div className="flex flex-col text-sm text-center">
-                                    {upcomingDates.map((d, idx) => (
-                                      <span key={`upcoming-${d.date}-${idx}`}>
-                                        {formatEventDateRow(d)}
-                                      </span>
-                                    ))}
+                                  <div className="flex flex-col text-sm text-center leading-tight">
+                                    {upcomingDates.map((d, idx) => {
+                                      const isAllDay =
+                                        !d.startTime && !d.endTime;
+                                      const timeStr = d.endTime
+                                        ? `${convertTo12Hour(
+                                            d.startTime || ""
+                                          )} - ${convertTo12Hour(d.endTime)}`
+                                        : convertTo12Hour(d.startTime || "");
+                                      return (
+                                        <div
+                                          key={`upcoming-${d.date}-${idx}`}
+                                          className="flex flex-col"
+                                        >
+                                          <span>{d.date}</span>
+                                          {!isAllDay && (
+                                            <span className="!text-[15px] font-italic">
+                                              {timeStr}
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
@@ -553,7 +598,7 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "location",
                           content: (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                               <h3 className="text-center underline">
                                 Location
                               </h3>
@@ -569,7 +614,7 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "cost",
                           content: (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                               <h3 className="text-center underline">Cost</h3>
                               <p className="text-left">
                                 {event.eventDetails.cost}
@@ -583,7 +628,7 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "prize",
                           content: (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                               <h3 className="text-center underline">Prize</h3>
                               <p className="text-left">
                                 {event.eventDetails.prize}
@@ -737,7 +782,7 @@ export default async function EventPage({ params }: PageProps) {
               </div>
 
               <div className="col-span-3 sm:col-span-1 flex flex-col gap-4 p-4 bg-primary-dark rounded-sm border-2 border-primary-light">
-                <h2 className="text-center mx-auto underline mb-4">Schedule</h2>
+                <h2 className="text-center mx-auto underline">Schedule</h2>
                 {event.eventDetails.schedule && (
                   <LinkifiedText
                     text={event.eventDetails.schedule}
