@@ -103,7 +103,11 @@ export function EventDatesDialog(props: { eventId: string }) {
 
   return (
     <>
-      <Button variant="link" onClick={() => onOpenChange(true)}>
+      <Button
+        variant="link"
+        className="!text-primary-light"
+        onClick={() => onOpenChange(true)}
+      >
         More dates
       </Button>
       <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { City } from "@/types/city";
 import { CalendarEventData } from "@/db/queries/event";
 import { CityCalendar } from "./CityCalendar";
@@ -34,10 +35,12 @@ export function CalendarPageClient({
 }: CalendarPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status } = useSession();
   const [selectedCity, setSelectedCity] = useState<City | null>(initialCity);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(
     initialStyle
   );
+  const hasSetUserCity = useRef(false);
 
   const [currentEvents, setCurrentEvents] =
     useState<CalendarEventData[]>(events);
@@ -57,6 +60,41 @@ export function CalendarPageClient({
   useEffect(() => {
     setCurrentEvents(events);
   }, [events]);
+
+  // Set user's city as default if no city is selected and user is logged in
+  useEffect(() => {
+    // Only run once and only if no initial city is set
+    if (hasSetUserCity.current || initialCity || status === "loading") {
+      return;
+    }
+
+    if (session?.user?.id && !selectedCity) {
+      hasSetUserCity.current = true;
+
+      // Fetch user's city
+      fetch("/api/user/city")
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
+          return null;
+        })
+        .then((data) => {
+          if (data?.citySlug) {
+            const userCity = cities.find((c) => {
+              const citySlug = c.slug || generateCitySlug(c);
+              return citySlug === data.citySlug;
+            });
+            if (userCity) {
+              setSelectedCity(userCity);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching user city:", err);
+        });
+    }
+  }, [session, status, initialCity, cities]);
 
   // Update URL when selections change
   useEffect(() => {

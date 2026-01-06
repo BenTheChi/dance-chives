@@ -9,10 +9,11 @@ import {
   parseCityFromUrl,
   parseStyleFromUrl,
 } from "@/lib/utils/calendar-url-utils";
-import { auth } from "@/auth";
-import { getUser } from "@/db/queries/user";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
+
+// Enable static generation with revalidation (ISR)
+export const revalidate = 3600; // Revalidate every hour
 
 type PageProps = {
   searchParams: Promise<{ city?: string; style?: string }>;
@@ -23,35 +24,20 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const cityParam = params.city;
   const styleParam = params.style;
 
-  // Fetch all cities and styles
-  const citiesRaw = await getAllCities();
+  // Fetch all cities and styles in parallel (no auth dependency - enables ISR)
+  const [citiesRaw, styles] = await Promise.all([
+    getAllCities(),
+    getAllStyles(),
+  ]);
+  
   // Compute slugs for all cities
   const cities = citiesRaw.map((city) => ({
     ...city,
     slug: generateCitySlug(city),
   }));
-  const styles = await getAllStyles();
 
-  // Get current user's city if logged in
-  const session = await auth();
-  let userCity: { slug?: string } | null = null;
-  if (session?.user?.id) {
-    const user = await getUser(session.user.id);
-    if (user?.city?.slug) {
-      userCity = { slug: user.city.slug };
-    }
-  }
-
-  // Parse city from URL param
-  let selectedCity = cityParam ? parseCityFromUrl(cityParam, cities) : null;
-
-  // If no city selected, default to user's city if logged in (no redirect)
-  if (!selectedCity && userCity?.slug) {
-    const userCityInList = cities.find((c) => c.slug === userCity.slug);
-    if (userCityInList) {
-      selectedCity = userCityInList;
-    }
-  }
+  // Parse city from URL param (user-specific defaults handled client-side)
+  const selectedCity = cityParam ? parseCityFromUrl(cityParam, cities) : null;
 
   const selectedStyle = styleParam
     ? parseStyleFromUrl(styleParam, styles)
@@ -67,7 +53,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         selectedCity.slug!,
         selectedStyle || undefined,
         startDate.toISOString().split("T")[0],
-        endDate.toISOString().split("T")[0]
+        endDate.toISOString().split("T")[0],
+        citiesRaw // Reuse already-fetched cities to avoid redundant getAllCities call
       )
     : [];
 

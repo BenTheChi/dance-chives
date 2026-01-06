@@ -681,9 +681,7 @@ export default function SignUpForm({
                           />
                         </FormControl>
                         <FormLabel className="!font-normal leading-relaxed text-sm pointer-events-none !text-white data-[error=true]:!text-white">
-                          <span className="block mb-1">
                             By checking this box, you agree to the:
-                          </span>
                           <Link
                             href="/content-usage"
                             target="_blank"

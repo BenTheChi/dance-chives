@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AppNavbar } from "@/components/AppNavbar";
+import AccountVerificationReminder from "@/components/account-verification-reminder";
 import { SectionCard } from "@/components/ui/section-card";
 import {
   getLatestBattleSections,
@@ -32,6 +33,7 @@ export default async function Home() {
     <div className="flex flex-col">
       <AppNavbar />
       <main className="flex-1 flex flex-col bg-charcoal/15 mb-10">
+        <AccountVerificationReminder />
         {/* Content */}
         <div>
           {/* Hero Section */}

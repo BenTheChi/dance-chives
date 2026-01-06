@@ -4180,17 +4180,19 @@ export const getCitySchedule = async (
  * @param style - Optional style name to filter events
  * @param startDate - Optional start date for filtering events (ISO string)
  * @param endDate - Optional end date for filtering events (ISO string)
+ * @param cities - Optional array of cities to reuse instead of fetching (avoids redundant getAllCities call)
  * @returns Array of CalendarEventData
  */
 export const getCalendarEvents = async (
   citySlug: string,
   style?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  cities?: City[]
 ): Promise<CalendarEventData[]> => {
-  // Get all cities to find the one with matching slug
-  const cities = await getAllCities();
-  const city = cities.find((c) => {
+  // Use provided cities or fetch if not provided
+  const citiesList = cities || (await getAllCities());
+  const city = citiesList.find((c) => {
     const computedSlug = generateCitySlug(c);
     return computedSlug === citySlug;
   });

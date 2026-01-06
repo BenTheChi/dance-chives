@@ -426,20 +426,6 @@ export default async function EventPage({ params }: PageProps) {
   // Show "More dates" button if there are more than 3 upcoming OR more than 1 past
   const showMoreDatesButton = allUpcoming.length > 3 || allPast.length > 1;
 
-  // Format a date entry for display
-  const formatEventDateRow = (dateEntry: {
-    date: string;
-    startTime?: string;
-    endTime?: string;
-  }) => {
-    const isAllDay = !dateEntry.startTime && !dateEntry.endTime;
-    if (isAllDay) return `${dateEntry.date}`;
-    const timeStr = dateEntry.endTime
-      ? `${dateEntry.startTime}-${dateEntry.endTime}`
-      : dateEntry.startTime;
-    return `${dateEntry.date} (${timeStr})`;
-  };
-
   // Convert 24-hour time (HH:mm) to 12-hour format with AM/PM
   const convertTo12Hour = (time24: string): string => {
     if (!time24) return "";
@@ -563,7 +549,7 @@ export default async function EventPage({ params }: PageProps) {
                                   <h3 className="text-center underline">
                                     {hasBothTypes ? "Future Date(s)" : "Date"}
                                   </h3>
-                                  <div className="flex flex-col text-sm text-center leading-tight">
+                                  <div className="flex flex-col gap-1 text-sm text-center leading-tight">
                                     {upcomingDates.map((d, idx) => {
                                       const isAllDay =
                                         !d.startTime && !d.endTime;

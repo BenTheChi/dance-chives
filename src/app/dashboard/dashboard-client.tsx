@@ -411,7 +411,7 @@ export function DashboardClient({
                     </div> */}
                     </div>
                   </section>
-                  <div className="flex gap-6 justify-center">
+                  <div className="flex flex-col sm:flex-row gap-6 justify-center">
                     {canCreateEvents && (
                       <div className="flex justify-center">
                         <Button asChild size="xl">
