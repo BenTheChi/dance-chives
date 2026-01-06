@@ -153,6 +153,7 @@ export function getAllSectionTypeLabels(): string[] {
     "ClassSection",
     "SessionSection",
     "PartySection",
+    "OtherSection",
   ];
 }
 
@@ -424,7 +425,7 @@ export const getEvent = async (
     OPTIONAL MATCH (s)<-[:POSTER_OF]-(poster:Image)
     
     WITH s, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets, poster,
-         [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection']] as sectionTypeLabels
+         [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection', 'OtherSection']] as sectionTypeLabels
     
     RETURN collect({
       id: s.id,
@@ -440,6 +441,7 @@ export const getEvent = async (
             WHEN 'ClassSection' THEN 'Class'
             WHEN 'SessionSection' THEN 'Session'
             WHEN 'PartySection' THEN 'Party'
+            WHEN 'OtherSection' THEN 'Other'
             ELSE null
           END
         ELSE null 
