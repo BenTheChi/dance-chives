@@ -28,13 +28,12 @@ export interface ParsedSection {
   description: string;
   sectionType:
     | "Battle"
-    | "Tournament"
     | "Competition"
     | "Performance"
     | "Showcase"
     | "Class"
     | "Session"
-    | "Mixed"
+    | "Party"
     | "Other";
   hasBrackets: boolean;
   videos: Array<{
@@ -62,8 +61,6 @@ export interface ParsedSection {
 export interface ParsedPlaylistResponse {
   sections: ParsedSection[];
 }
-
-
 
 /**
  * Build comprehensive prompt for Groq LLM to parse playlist into sections
@@ -171,9 +168,7 @@ SECTION NAMING RULES:
     videos.length
   } (the number of input videos). Count carefully and ensure no videos are left out.
 
-BRACKET DETECTION (for Battle sections only):
-- CRITICAL: Battle sections MUST ALWAYS have brackets (hasBrackets: true)
-- Battle sections CANNOT have videos directly in the section - ALL videos must be in brackets
+BRACKET DETECTION:
 - ⚠️ CRITICAL: Create brackets ONLY based on keywords that ACTUALLY APPEAR in the video titles above
 - ⚠️ Bracket naming: Look at the actual video titles and extract bracket indicators like "Finals", "Semi Finals", "Top 8", "Top 16", "Prelims", "Preliminary", "Pre-Selection", "Pre-Selections", "7 to Smoke"
 - ⚠️ ONLY create a bracket if you see that bracket name in at least one video title
@@ -197,7 +192,7 @@ BRACKET DETECTION (for Battle sections only):
   * In lottery battles: Group ALL prelim/pre-selection videos (all styles) into ONE "Prelims" or "Pre-Selection" bracket within a single section (e.g., "2v2 Locking Waacking" section with "Prelims" bracket containing both Locking and Waacking prelim/pre-selection videos)
   * STANDARD BATTLES: If prelim/pre-selection videos have different styles and later brackets are single-style, create separate sections (e.g., "2v2 Locking" section with "Prelims" bracket, and "2v2 Waacking" section with "Prelims" bracket)
   * How to detect lottery battles: Look at Top 8/Finals video titles - if they show style mixing (e.g., "Locking vs Waacking", or multiple styles in one bracket), it's a lottery battle
-- If no clear bracket indicators are found, create a single bracket (e.g., "All Battles" or "Main Bracket") and put all videos there - NEVER put battle videos directly in the section
+- If no clear bracket indicators are found, you can either create a single bracket (e.g., "All Battles" or "Main Bracket") or add videos directly to the section
 
 TITLE PARSING:
 - Remove redundant event information from video titles
@@ -224,13 +219,11 @@ PRIORITIZATION:
 
 VIDEO TYPE MAPPING (match video type to section type):
 - Battle sections → use "battle" for all videos
-- Tournament sections → use "battle" for all videos (tournaments are structured battles)
 - Competition sections → use "battle" for competitive videos, "freestyle" for non-competitive
 - Performance sections → use "choreography" for all videos
 - Showcase sections → use "freestyle" for all videos
 - Class sections → use "class" for all videos
 - Session sections → use "class" for instructional content, "choreography" for performances
-- Mixed sections → use appropriate type based on video content ("battle", "choreography", "class", or "other")
 - Other sections → use "other" for all videos, or specific type if clear from content
 
 JSON SCHEMA (return ONLY this structure, no other text):
@@ -240,7 +233,7 @@ JSON SCHEMA (return ONLY this structure, no other text):
       "id": "unique-id-1",
       "title": "Section Name",
       "description": "",
-      "sectionType": "Battle" | "Tournament" | "Competition" | "Performance" | "Showcase" | "Class" | "Session" | "Mixed" | "Other",
+      "sectionType": "Battle" | "Competition" | "Performance" | "Showcase" | "Class" | "Session" | "Party" | "Other",
       "hasBrackets": true | false,
       "videos": [
         {
@@ -282,12 +275,10 @@ CRITICAL CATEGORIZATION PATTERNS - STUDY THESE CAREFULLY:
    - Why: The battle format pairs different styles together, so prelims from all styles feed into the same tournament structure
    - If later brackets are SINGLE-STYLE (all Locking or all Waacking), then it's a STANDARD BATTLE and prelims should be in SEPARATE sections
 
-2. BATTLE SECTION STRUCTURE (MANDATORY):
-   - ALL Battle sections MUST have hasBrackets: true
-   - ALL videos in Battle sections MUST be in brackets - NEVER put videos directly in the section videos array
-   - Even if there's only one bracket, it must be in brackets, not directly in the section
-   - Example structure: hasBrackets: true, videos: [], brackets: [{title: "...", videos: [...]}]
-   - If you see a Battle section with videos directly in it, that's WRONG - move them to brackets
+2. BATTLE SECTION STRUCTURE:
+   - Battle sections can use brackets (hasBrackets: true) or have videos directly in the section (hasBrackets: false)
+   - Use brackets when you see clear bracket indicators in video titles (e.g., "Finals", "Top 8", "Prelims")
+   - If no bracket indicators are found, you can add videos directly to the section
 
 3. BRACKET ORGANIZATION WITHIN BATTLE SECTIONS:
    - ⚠️ First, examine the video titles to see what bracket stages are actually mentioned

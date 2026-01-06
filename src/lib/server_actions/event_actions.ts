@@ -143,13 +143,12 @@ interface addEventProps {
     description?: string;
     sectionType:
       | "Battle"
-      | "Tournament"
       | "Competition"
       | "Performance"
       | "Showcase"
       | "Class"
       | "Session"
-      | "Mixed"
+      | "Party"
       | "Other";
     hasBrackets: boolean;
     styles?: string[];
@@ -1716,6 +1715,7 @@ function buildSectionCardRow(input: { eventId: string; section: Section }) {
     (sum, b) => sum + (b.videos?.length || 0),
     0
   );
+  const parsedDate = section.date ? parseMmddyyyy(section.date) : null;
 
   // Match existing UI semantics: either section.styles when applyStylesToVideos,
   // otherwise aggregate from videos.
@@ -1751,6 +1751,9 @@ function buildSectionCardRow(input: { eventId: string; section: Section }) {
     posterUrl: section.poster?.url ?? null,
     styles: displayStyles,
     totalVideoCount: directVideoCount + bracketVideoCount,
+    date: parsedDate,
+    startTime: section.startTime || null,
+    endTime: section.endTime || null,
   };
 }
 

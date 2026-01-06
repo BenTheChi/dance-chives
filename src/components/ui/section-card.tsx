@@ -29,15 +29,33 @@ const SECTION_TYPE_COLORS: Record<
     bg: "rgba(247, 147, 30, 0.85)",
     text: "white",
   },
-  Tournament: { bg: "rgba(255, 107, 53, 0.85)", text: "white" },
   Competition: { bg: "rgba(247, 147, 30, 0.85)", text: "white" },
   Performance: { bg: "rgba(74, 144, 226, 0.85)", text: "white" },
   Showcase: { bg: "rgba(123, 104, 238, 0.85)", text: "white" },
   Class: { bg: "rgba(80, 200, 120, 0.85)", text: "white" },
   Session: { bg: "rgba(0, 206, 209, 0.85)", text: "white" },
-  Mixed: { bg: "rgba(147, 112, 219, 0.85)", text: "white" },
+  Party: { bg: "rgba(255, 20, 147, 0.85)", text: "white" },
   Other: { bg: "rgba(112, 128, 144, 0.85)", text: "white" },
 };
+
+const formatTime = (time: string) => {
+  const [hours, minutes] = time.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return time;
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const hasSectionDateTime = (
+  section: SectionCardProps["section"]
+): section is Section & {
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+} => "date" in section;
 
 export function SectionCard({
   section,
@@ -48,6 +66,13 @@ export function SectionCard({
   const sectionId = section.id;
   const sectionTitle = section.title;
   const sectionType = section.sectionType || "Other";
+  const sectionWithDate = hasSectionDateTime(section) ? section : undefined;
+  const formattedStart = sectionWithDate?.startTime
+    ? formatTime(sectionWithDate.startTime)
+    : null;
+  const formattedEnd = sectionWithDate?.endTime
+    ? formatTime(sectionWithDate.endTime)
+    : null;
 
   // Calculate total video count (if videos/brackets are available)
   const videos = section.videos || [];
@@ -103,6 +128,10 @@ export function SectionCard({
   const remainingCount = displayStyles.length - maxVisibleBadges;
 
   const sectionColor = SECTION_TYPE_COLORS[sectionType];
+  const dateTimeText =
+    sectionWithDate && sectionWithDate.date && formattedStart && formattedEnd
+      ? `${sectionWithDate.date} • ${formattedStart} - ${formattedEnd}`
+      : null;
 
   return (
     <div
@@ -131,17 +160,32 @@ export function SectionCard({
 
           {/* Event title - shown only when showEventTitle is true - more prominent */}
           {showEventTitle && eventTitle && (
-            <h2 className="text-center my-2">{eventTitle}</h2>
+            <>
+              <h2 className="text-center my-2">{eventTitle}</h2>
+              {dateTimeText && (
+                <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">
+                  {dateTimeText}
+                </p>
+              )}
+            </>
           )}
 
-          {/* Section title - smaller when event title is shown */}
-          <h3
-            className={`line-clamp-2 flex-1 flex items-center justify-center ${
-              showEventTitle ? "text-base mb-2" : "text-lg mb-3"
-            }`}
-          >
-            {sectionTitle}
-          </h3>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            {/* Section title - smaller when event title is shown */}
+            <h3
+              className={`line-clamp-2  ${
+                showEventTitle ? "text-base mb-2" : "text-lg mb-3"
+              }`}
+            >
+              {sectionTitle}
+            </h3>
+
+            {!showEventTitle && dateTimeText && (
+              <p className="text-center !text-[12px] uppercase tracking-[0.08em] mb-1">
+                {dateTimeText}
+              </p>
+            )}
+          </div>
 
           {/* Large style badges row */}
           {displayStyles.length > 0 && (

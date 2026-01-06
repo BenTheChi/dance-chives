@@ -137,30 +137,89 @@ const normalizeFacebook = (
   return `https://facebook.com/${username}`;
 };
 
-const sectionSchema = z.object({
-  id: z.string(),
-  title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
-  description: z.preprocess((val) => val ?? "", z.string()),
-  sectionType: z.enum([
-    "Battle",
-    "Tournament",
-    "Competition",
-    "Performance",
-    "Showcase",
-    "Class",
-    "Session",
-    "Mixed",
-    "Other",
-  ]),
-  hasBrackets: z.boolean(),
-  videos: z.array(videoSchema),
-  brackets: z.array(bracketSchema),
-  styles: z.array(z.string()).optional(),
-  applyStylesToVideos: z.boolean().optional(),
-  winners: z.array(userSearchItemSchema).optional(),
-  bgColor: z.string().optional(),
-  poster: imageSchema.nullable().optional(),
-});
+const dateRegex =
+  /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/;
+const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const sectionSchema = z
+  .object({
+    id: z.string(),
+    title: z.string().min(1, "Section title is required"), // switch to min for all non-optional
+    description: z.preprocess((val) => val ?? "", z.string()),
+    sectionType: z.enum([
+      "Battle",
+      "Competition",
+      "Performance",
+      "Showcase",
+      "Class",
+      "Session",
+      "Party",
+      "Other",
+    ]),
+    hasBrackets: z.boolean(),
+    videos: z.array(videoSchema),
+    brackets: z.array(bracketSchema),
+    styles: z.array(z.string()).optional(),
+    applyStylesToVideos: z.boolean().optional(),
+    winners: z.array(userSearchItemSchema).optional(),
+    bgColor: z.string().optional(),
+    poster: imageSchema.nullable().optional(),
+    date: z
+      .preprocess(
+        (val) =>
+          typeof val === "string" && val.trim().length === 0 ? undefined : val,
+        z.string().regex(dateRegex, "Date must be in MM/DD/YYYY format")
+      )
+      .optional(),
+    startTime: z
+      .preprocess(
+        (val) =>
+          typeof val === "string" && val.trim().length === 0 ? undefined : val,
+        z.string().regex(timeRegex, "Start time must be in HH:MM format")
+      )
+      .optional(),
+    endTime: z
+      .preprocess(
+        (val) =>
+          typeof val === "string" && val.trim().length === 0 ? undefined : val,
+        z.string().regex(timeRegex, "End time must be in HH:MM format")
+      )
+      .optional(),
+  })
+  .superRefine((section, context) => {
+    const hasDate = Boolean(section.date);
+    const hasStart = Boolean(section.startTime);
+    const hasEnd = Boolean(section.endTime);
+    const anyProvided = hasDate || hasStart || hasEnd;
+
+    if (!anyProvided) {
+      return;
+    }
+
+    if (!hasDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Date is required when adding a time",
+        path: ["date"],
+      });
+    }
+
+    if (!hasStart) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Start time is required when adding a date/time",
+        path: ["startTime"],
+      });
+    }
+
+    if (!hasEnd) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time is required when adding a date/time",
+        path: ["endTime"],
+      });
+    }
+  });
 
 const eventDetailsSchema = z.object({
   creatorId: z.string().nullable().optional(), // Set server-side from session, can be null

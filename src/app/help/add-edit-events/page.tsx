@@ -230,14 +230,8 @@ export default function AddEditEventsPage() {
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>
                   <strong>Battle:</strong> Competitive dance battles. This type
-                  <strong> requires brackets</strong> and supports winners and
-                  judges. Videos are organized within brackets.
-                </li>
-                <li>
-                  <strong>Tournament:</strong> Multi-stage competitions. This
-                  type
-                  <strong> requires brackets</strong> and supports winners and
-                  judges. Videos are organized within brackets.
+                  supports winners and judges. Videos can be organized within
+                  brackets or directly in the section.
                 </li>
                 <li>
                   <strong>Competition:</strong> Judged dance competitions. This
@@ -266,11 +260,6 @@ export default function AddEditEventsPage() {
                   winners or judges. Videos are added directly to the section.
                 </li>
                 <li>
-                  <strong>Mixed:</strong> Sections with various content types.
-                  This type allows you to choose whether to use brackets or not,
-                  and doesn&apos;t support winners or judges.
-                </li>
-                <li>
                   <strong>Other:</strong> For sections that don&apos;t fit the
                   above categories. This type allows you to choose whether to
                   use brackets or not, and doesn&apos;t support winners or
@@ -291,9 +280,7 @@ export default function AddEditEventsPage() {
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>
-                  <strong>Battle</strong> and <strong>Tournament</strong>{" "}
-                  sections automatically require brackets - you cannot disable
-                  this option
+                  Sections can optionally use brackets to organize videos
                 </li>
                 <li>
                   <strong>Performance</strong>, <strong>Showcase</strong>,{" "}
@@ -301,7 +288,7 @@ export default function AddEditEventsPage() {
                   cannot use brackets
                 </li>
                 <li>
-                  <strong>Mixed</strong> and <strong>Other</strong> sections
+                  <strong>Other</strong> sections
                   allow you to choose whether to use brackets
                 </li>
                 <li>
@@ -353,11 +340,11 @@ export default function AddEditEventsPage() {
                 </li>
                 <li>
                   <strong>Winners:</strong> Tag section winners (only available
-                  for Battle, Tournament, and Competition types)
+                  for Battle and Competition types)
                 </li>
                 <li>
                   <strong>Judges:</strong> Tag section judges (only available
-                  for Battle, Tournament, and Competition types)
+                  for Battle and Competition types)
                 </li>
                 <li>
                   <strong>Poster:</strong> Upload a poster image specific to

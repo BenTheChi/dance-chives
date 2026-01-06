@@ -9,13 +9,12 @@ import { DANCE_STYLES, validateDanceStyles } from "./utils/dance-styles";
 
 const VALID_SECTION_TYPES = [
   "Battle",
-  "Tournament",
   "Competition",
   "Performance",
   "Showcase",
   "Class",
   "Session",
-  "Mixed",
+  "Party",
   "Other",
 ] as const;
 
@@ -160,14 +159,6 @@ function sanitizeSection(section: any, index: number): Section {
 
   // Validate hasBrackets
   let hasBrackets = Boolean(section.hasBrackets);
-
-  // CRITICAL: Battle sections MUST have brackets
-  if (validSectionType === "Battle" && !hasBrackets) {
-    console.warn(
-      `Section "${title}" is a Battle section but hasBrackets=false. Battle sections must have brackets. Setting hasBrackets=true.`
-    );
-    hasBrackets = true;
-  }
 
   // Sanitize description
   const description =

@@ -190,6 +190,10 @@ model SectionCard {
   sectionType String?
   posterUrl   String?
 
+  date DateTime? @db.Date
+  startTime String?
+  endTime String?
+
   styles String[] @default([])
   totalVideoCount Int @default(0)
 

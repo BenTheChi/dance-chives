@@ -297,9 +297,9 @@
 }
 
 h1 {
-  font-size: 60px;
+  font-size: 50px;
   font-family: var(--font-rubik-mono-one);
-  word-spacing: -10px;
+  word-spacing: -18px;
   line-height: 1;
   text-align: center;
 }

@@ -5,16 +5,16 @@ export type SectionType = Section["sectionType"];
 export type VideoType = Video["type"];
 
 export const sectionTypeSupportsWinners = (sectionType?: string): boolean =>
-  ["Battle", "Tournament", "Competition"].includes(sectionType || "");
+  ["Battle", "Competition"].includes(sectionType || "");
 
 export const sectionTypeSupportsJudges = (sectionType?: string): boolean =>
-  ["Battle", "Tournament", "Competition"].includes(sectionType || "");
+  ["Battle", "Competition"].includes(sectionType || "");
 
 export const sectionTypeRequiresBrackets = (sectionType?: string): boolean =>
-  ["Battle", "Tournament"].includes(sectionType || "");
+  false; // No section types require brackets anymore
 
 export const sectionTypeDisallowsBrackets = (sectionType?: string): boolean =>
-  ["Showcase", "Class", "Session", "Performance"].includes(sectionType || "");
+  ["Showcase", "Class", "Session", "Performance", "Party"].includes(sectionType || "");
 
 export const getDefaultVideoType = (sectionType?: string): VideoType => {
   switch (sectionType) {

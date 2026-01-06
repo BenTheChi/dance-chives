@@ -19,6 +19,7 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
   UseFormRegister,
+  FieldPath,
 } from "react-hook-form";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
@@ -57,6 +58,8 @@ import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PosterUpload } from "../ui/poster-upload";
+import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
@@ -126,6 +129,32 @@ export function SectionForm({
   externalActiveBracketId,
   onActiveBracketChange,
 }: SectionFormPropsWithMode) {
+  type SectionDateField = "date" | "startTime" | "endTime";
+  const sectionDateFields: SectionDateField[] = [
+    "date",
+    "startTime",
+    "endTime",
+  ];
+
+  const setSectionDateValue = (
+    field: SectionDateField,
+    value: string | undefined
+  ) => {
+    setValue(
+      `sections.${activeSectionIndex}.${field}` as FieldPath<FormValues>,
+      value,
+      {
+        shouldValidate: false,
+        shouldDirty: true,
+        shouldTouch: true,
+      }
+    );
+  };
+
+  const clearSectionDateTime = () => {
+    sectionDateFields.forEach((field) => setSectionDateValue(field, undefined));
+  };
+
   const [internalActiveBracketId, setInternalActiveBracketId] = useState(
     activeSection.brackets.length > 0 ? activeSection.brackets[0].id : ""
   );
@@ -571,8 +600,7 @@ export function SectionForm({
               name={`sections.${activeSectionIndex}.sectionType`}
               render={({ field }) => {
                 // Preserve existing section type when editing instead of forcing "Battle"
-                const value =
-                  (field.value ?? activeSection.sectionType) ?? "";
+                const value = field.value ?? activeSection.sectionType ?? "";
                 const requiresBrackets = sectionTypeRequiresBrackets(
                   value as SectionType
                 );
@@ -617,9 +645,12 @@ export function SectionForm({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Battle">Battle</SelectItem>
+                          <SelectItem value="Competition">
+                            Competition
+                          </SelectItem>
                           <SelectItem value="Class">Class</SelectItem>
-                          <SelectItem value="Mixed">Mixed</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="Party">Party</SelectItem>
                           <SelectItem value="Performance">
                             Performance
                           </SelectItem>
@@ -754,6 +785,76 @@ export function SectionForm({
               </FormItem>
             )}
           />
+
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <FormLabel>Section Date & Time</FormLabel>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearSectionDateTime}
+                className="hover:text-primary-light"
+              >
+                Clear date/time
+              </Button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr]  rounded-sm bg-neutral-300 border border-charcoal p-4">
+              <div className="min-w-0">
+                <DatePicker
+                  control={control as Control<FormValues>}
+                  name={
+                    `sections.${activeSectionIndex}.date` as FieldPath<FormValues>
+                  }
+                  label="Section Date"
+                  labelClassName="text-black"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <FormField
+                  control={control}
+                  name={`sections.${activeSectionIndex}.startTime`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-black">Start Time</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="time"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="bg-neutral-300 w-full"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="min-w-0">
+                <FormField
+                  control={control}
+                  name={`sections.${activeSectionIndex}.endTime`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-black">End Time</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="time"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="bg-neutral-300 w-full"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Section Winners - only show if section type supports winners */}
           {sectionTypeSupportsWinners(activeSection.sectionType) && (
@@ -919,7 +1020,10 @@ export function SectionForm({
               {activeSection.brackets.map((bracket, index) => {
                 const isActive = activeBracketId === bracket.id;
                 return (
-                  <div key={bracket.id} className="relative group w-full md:w-auto">
+                  <div
+                    key={bracket.id}
+                    className="relative group w-full md:w-auto"
+                  >
                     <button
                       type="button"
                       onClick={() => handleSetActiveBracketId(bracket.id)}

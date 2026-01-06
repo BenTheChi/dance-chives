@@ -69,7 +69,7 @@ export function BracketForm({
       case "Class":
         return "class";
       default:
-        return "battle"; // Default for Tournament, Mixed, or undefined
+        return "battle"; // Default for undefined
     }
   };
 

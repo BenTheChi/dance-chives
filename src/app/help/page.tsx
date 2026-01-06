@@ -448,7 +448,6 @@ export default function FAQPage() {
                       brackets
                     </li>
                     <li>
-                      <strong>Tournament:</strong> Multi-stage competitions
                     </li>
                     <li>
                       <strong>Competition:</strong> Judged dance competitions
@@ -464,10 +463,6 @@ export default function FAQPage() {
                     </li>
                     <li>
                       <strong>Session:</strong> Open dance sessions
-                    </li>
-                    <li>
-                      <strong>Mixed:</strong> Sections with various content
-                      types
                     </li>
                   </ul>
                   <p className="mb-4">

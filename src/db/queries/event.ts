@@ -77,25 +77,23 @@ export function getEventTypeFromLabel(label: string): EventType | null {
 export function getSectionTypeLabel(
   sectionType:
     | "Battle"
-    | "Tournament"
     | "Competition"
     | "Performance"
     | "Showcase"
     | "Class"
     | "Session"
-    | "Mixed"
+    | "Party"
     | "Other"
 ): string | null {
   if (!sectionType) return null;
   const labelMap: Record<string, string> = {
     Battle: "BattleSection",
-    Tournament: "TournamentSection",
     Competition: "CompetitionSection",
     Performance: "PerformanceSection",
     Showcase: "ShowcaseSection",
     Class: "ClassSection",
     Session: "SessionSection",
-    Mixed: "MixedSection",
+    Party: "PartySection",
   };
   return labelMap[sectionType] || null;
 }
@@ -103,13 +101,12 @@ export function getSectionTypeLabel(
 export function getSectionTypeFromLabel(label: string): string | null {
   const reverseMap: Record<string, string> = {
     BattleSection: "Battle",
-    TournamentSection: "Tournament",
     CompetitionSection: "Competition",
     PerformanceSection: "Performance",
     ShowcaseSection: "Showcase",
     ClassSection: "Class",
     SessionSection: "Session",
-    MixedSection: "Mixed",
+    PartySection: "Party",
   };
   return reverseMap[label] || null;
 }
@@ -148,13 +145,12 @@ export function getVideoTypeFromLabel(
 export function getAllSectionTypeLabels(): string[] {
   return [
     "BattleSection",
-    "TournamentSection",
     "CompetitionSection",
     "PerformanceSection",
     "ShowcaseSection",
     "ClassSection",
     "SessionSection",
-    "MixedSection",
+    "PartySection",
   ];
 }
 
@@ -426,7 +422,7 @@ export const getEvent = async (
     OPTIONAL MATCH (s)<-[:POSTER_OF]-(poster:Image)
     
     WITH s, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets, poster,
-         [label IN labels(s) WHERE label IN ['BattleSection', 'TournamentSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'MixedSection']] as sectionTypeLabels
+         [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection']] as sectionTypeLabels
     
     RETURN collect({
       id: s.id,
@@ -436,19 +432,21 @@ export const getEvent = async (
         WHEN size(sectionTypeLabels) > 0 THEN 
           CASE sectionTypeLabels[0]
             WHEN 'BattleSection' THEN 'Battle'
-            WHEN 'TournamentSection' THEN 'Tournament'
             WHEN 'CompetitionSection' THEN 'Competition'
             WHEN 'PerformanceSection' THEN 'Performance'
             WHEN 'ShowcaseSection' THEN 'Showcase'
             WHEN 'ClassSection' THEN 'Class'
             WHEN 'SessionSection' THEN 'Session'
-            WHEN 'MixedSection' THEN 'Mixed'
+            WHEN 'PartySection' THEN 'Party'
             ELSE null
           END
         ELSE null 
       END,
       hasBrackets: size(brackets) > 0,
       bgColor: s.bgColor,
+      date: s.date,
+      startTime: s.startTime,
+      endTime: s.endTime,
       poster: CASE WHEN poster IS NOT NULL THEN {
         id: poster.id,
         title: poster.title,
@@ -1336,12 +1334,18 @@ const createSections = async (eventId: string, sections: Section[]) => {
            s.title = $title,
            s.description = $description,
            s.applyStylesToVideos = $applyStylesToVideos,
-           s.bgColor = $bgColor
+           s.bgColor = $bgColor,
+           s.date = $date,
+           s.startTime = $startTime,
+           s.endTime = $endTime
          ON MATCH SET
            s.title = $title,
            s.description = $description,
            s.applyStylesToVideos = $applyStylesToVideos,
-           s.bgColor = $bgColor
+           s.bgColor = $bgColor,
+           s.date = $date,
+           s.startTime = $startTime,
+           s.endTime = $endTime
          WITH s, e
          // Remove old section type labels if section type changed
          CALL apoc.create.removeLabels(s, $sectionTypeLabels) YIELD node as removedNode
@@ -1354,6 +1358,9 @@ const createSections = async (eventId: string, sections: Section[]) => {
           description: sec.description || null,
           applyStylesToVideos: sec.applyStylesToVideos || false,
           bgColor: sec.bgColor || null,
+          date: sec.date || null,
+          startTime: sec.startTime || null,
+          endTime: sec.endTime || null,
           sectionTypeLabels: getAllSectionTypeLabels(),
         }
       );

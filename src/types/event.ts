@@ -73,13 +73,12 @@ export interface Section {
   description?: string;
   sectionType:
     | "Battle"
-    | "Tournament"
     | "Competition"
     | "Performance"
     | "Showcase"
     | "Class"
     | "Session"
-    | "Mixed"
+    | "Party"
     | "Other"; // Section type stored as Neo4j label
   hasBrackets: boolean; // Whether this section uses brackets (auto-set based on section type)
   videos: Video[]; // Direct videos in section (when hasBrackets is false)
@@ -89,6 +88,9 @@ export interface Section {
   applyVideoTypeToVideos?: boolean; // Apply video type to all videos in section
   winners?: UserSearchItem[]; // Section winners (optional, depends on section type)
   judges?: UserSearchItem[]; // Section judges (optional, depends on section type)
+  date?: string;
+  startTime?: string;
+  endTime?: string;
   bgColor?: string; // Form-only background color for poster thumbnail
   poster?: Image | null;
 }

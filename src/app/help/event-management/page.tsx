@@ -73,7 +73,7 @@ export default function EventManagementPage() {
                 <strong>Sections:</strong> Create and organize sections within
                 your event. Sections are the main organizational units where
                 videos are stored. You can categorize sections by type (Battle,
-                Tournament, Competition, Performance, Showcase, Class, Session,
+                Competition, Performance, Showcase, Class, Session,
                 Mixed) and organize videos within them, optionally using
                 brackets for structured competitions.
               </li>

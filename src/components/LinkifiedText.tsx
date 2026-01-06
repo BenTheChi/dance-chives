@@ -8,18 +8,22 @@ interface LinkifiedTextProps {
 /**
  * Component that automatically converts URLs and @handles in text to clickable links
  * - URLs (http, https, www) become regular links
+ * - Email addresses (username@domain.com or @username@domain.com) become mailto: links
  * - @handles become Instagram profile links
  * Links open in a new tab with security attributes
  */
 export function LinkifiedText({ text, className }: LinkifiedTextProps) {
-  // Regex to match URLs (http, https, www) and Instagram handles (@username)
+  // Regex to match URLs (http, https, www)
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  // Regex to match Instagram handles (@username, but not email addresses)
   const instagramRegex = /@([a-zA-Z0-9_.]+)/g;
 
-  // Combined regex to split by both URLs and Instagram handles
-  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.]+)/g;
+  // Combined regex to split by URLs, email addresses, and Instagram handles
+  // Email regex must come before Instagram regex to match emails first
+  // Match emails with leading @ first, then regular emails, then Instagram handles
+  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|@[a-zA-Z0-9_.]+)/g;
 
-  // Split text by URLs and Instagram handles
+  // Split text by URLs, email addresses, and Instagram handles
   const parts = text.split(combinedRegex);
 
   return (
@@ -36,6 +40,25 @@ export function LinkifiedText({ text, className }: LinkifiedTextProps) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
+              className="text-accent-blue hover:underline break-all"
+            >
+              {part}
+            </a>
+          );
+        }
+
+        // Check if this part is an email address (must check before Instagram)
+        // Email addresses contain @ followed by domain with TLD (e.g., user@domain.com or @user@domain.com)
+        // Check if part contains @ and looks like an email (has domain with TLD)
+        if (part.includes("@") && /[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(part)) {
+          // Extract email (remove leading @ symbol if present)
+          const email = part.startsWith("@") ? part.substring(1) : part;
+          const href = `mailto:${email}`;
+
+          return (
+            <a
+              key={index}
+              href={href}
               className="text-accent-blue hover:underline break-all"
             >
               {part}

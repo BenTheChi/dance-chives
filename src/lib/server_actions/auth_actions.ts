@@ -696,19 +696,18 @@ export async function getUserProfile(userIdOrUsername: string) {
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
       WITH s, e, c, poster,
-           [label IN labels(s) WHERE label IN ['BattleSection', 'TournamentSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'MixedSection']] as sectionTypeLabels
+           [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection']] as sectionTypeLabels
       RETURN s.id as sectionId, s.title as sectionTitle,
              CASE 
                WHEN size(sectionTypeLabels) > 0 THEN 
                  CASE sectionTypeLabels[0]
                    WHEN 'BattleSection' THEN 'Battle'
-                   WHEN 'TournamentSection' THEN 'Tournament'
                    WHEN 'CompetitionSection' THEN 'Competition'
                    WHEN 'PerformanceSection' THEN 'Performance'
                    WHEN 'ShowcaseSection' THEN 'Showcase'
                    WHEN 'ClassSection' THEN 'Class'
                    WHEN 'SessionSection' THEN 'Session'
-                   WHEN 'MixedSection' THEN 'Mixed'
+                   WHEN 'PartySection' THEN 'Party'
                    ELSE null
                  END
                ELSE null 
