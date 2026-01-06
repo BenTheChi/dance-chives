@@ -1263,3 +1263,34 @@ export async function deleteUserAccount(
     };
   }
 }
+
+/**
+ * Update user's opt-out of marketing preference
+ */
+export async function updateOptOutOfMarketing(optOut: boolean) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        optOutOfMarketing: optOut,
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update opt-out of marketing:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update marketing preference",
+    };
+  }
+}

@@ -259,28 +259,25 @@ export default function EventSettingsForm({
     hasTeamMembersChanges || hasCreatorChanges || hasStatusChanges;
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
-      <div className="space-y-4">
+    <div className="flex flex-col gap-6 max-w-md mx-auto w-full bg-primary rounded-sm p-6">
+      <div className="space-y-10">
         <div>
-          <h3 className="text-lg font-semibold mb-2">Ownership</h3>
+          <h3 className="mb-2">Current Page Owner</h3>
+          {initialCreator && (
+            <p className="text-sm mb-2">
+              {initialCreator.displayName
+                ? `${initialCreator.displayName} (${initialCreator.username})`
+                : initialCreator.username}
+            </p>
+          )}
           <Button
             type="button"
-            variant="link"
-            className="p-0 h-auto text-sm font-normal"
+            variant="secondary"
             onClick={() => setShowChangeOwnershipDialog(true)}
           >
-            Change ownership
+            Change Ownership
           </Button>
-          {initialCreator && (
-            <div className="mb-4 mt-2">
-              <p className="text-sm font-medium mb-1">Current Creator:</p>
-              <p className="text-sm text-muted-foreground">
-                {initialCreator.displayName
-                  ? `${initialCreator.displayName} (${initialCreator.username})`
-                  : initialCreator.username}
-              </p>
-            </div>
-          )}
+
           {selectedCreator && selectedCreator.id !== initialCreator?.id && (
             <div className="mb-4">
               <p className="text-sm font-medium mb-1">New Creator:</p>
@@ -294,13 +291,9 @@ export default function EventSettingsForm({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2">Event Status</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Control the visibility of this event. Hidden events are only visible
-            to creators, team members, moderators, and admins.
-          </p>
+          <h3 className="mb-2">Event Status</h3>
+
           <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
             <Select
               value={status}
               onValueChange={(value: "hidden" | "visible") => setStatus(value)}
@@ -317,10 +310,8 @@ export default function EventSettingsForm({
         </div>
 
         <div>
-          <h3 className="text-lg font-semibold mb-2">Team Members</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Manage team members who have edit access to this event.
-          </p>
+          <h3 className="mb-2">Team Members</h3>
+
           <DebouncedSearchMultiSelect<UserSearchItem>
             onSearch={getUserSearchItems}
             placeholder="Search for users..."

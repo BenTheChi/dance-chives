@@ -14,6 +14,7 @@ model User {
   accountVerified  DateTime? // User completed registration after OAuth
   termsAcceptedAt  DateTime? // Date when user accepted terms of service and privacy policy
   contentUsageAcceptedAt DateTime? // Date when user accepted content usage and marketing policy
+  optOutOfMarketing Boolean @default(false) // User preference to opt out of marketing emails
   image            String?
   accounts         Account[]
   sessions         Session[]

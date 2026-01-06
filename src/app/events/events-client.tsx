@@ -236,7 +236,7 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
           </div>
         </div>
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-6">
+      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-12">
         {filteredEvents.map((event: TEventCard) => (
           <EventCard
             key={event.id}

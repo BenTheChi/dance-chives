@@ -284,6 +284,8 @@ export function DashboardClient({
     ...(outgoingRequests.authLevelChange || []),
   ];
 
+  const canCreateEvents = (user?.auth ?? 0) >= AUTH_LEVELS.CREATOR;
+
   // Convert saved TEventCard[] to CalendarEventData[] format
   const convertToCalendarEvents = (
     events: TEventCard[]
@@ -349,47 +351,54 @@ export function DashboardClient({
           Dashboard
         </h1>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-4 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1500px] w-full">
-            {/* Welcome Section */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-              {/* Profile Picture */}
-              <div className="w-full sm:w-[250px] shrink-0">
-                <div className="relative w-full sm:w-[250px] h-[250px] sm:h-[350px] rounded-sm border-4 border-primary-light overflow-hidden bg-primary-dark">
-                  {user?.image ? (
-                    <Image
-                      src={user.image}
-                      alt={user?.displayName || user?.name || "Profile picture"}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <Image
-                      src="/mascot/Default_Mascot2_Mono_onLight.png"
-                      alt=""
-                      fill
-                      className="object-contain"
-                      unoptimized
-                    />
-                  )}
+          <div className="flex flex-col gap-20 py-10 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1500px] w-full">
+            <div className="flex flex-col gap-8">
+              {/* Welcome Section */}
+              <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                {/* Profile Picture */}
+                <div className="w-full sm:w-[250px] shrink-0">
+                  <div className="relative w-full sm:w-[250px] h-[250px] sm:h-[350px] rounded-sm border-4 border-primary-light overflow-hidden bg-primary-dark">
+                    {user?.image ? (
+                      <Image
+                        src={user.image}
+                        alt={
+                          user?.displayName || user?.name || "Profile picture"
+                        }
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <Image
+                        src="/mascot/Default_Mascot2_Mono_onLight.png"
+                        alt=""
+                        fill
+                        className="object-contain"
+                        unoptimized
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-              {/* Welcome Content */}
-              <div className="w-full sm:flex-1 lg:max-w-[800px] flex flex-col gap-4">
-                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
-                  <div className="flex flex-col gap-4">
-                    <h2 className="text-2xl font-semibold text-center">
-                      Welcome back,{" "}
-                      {user?.displayName || user?.name || user?.email || "User"}
-                      !
-                    </h2>
-                    <div className="text-center">
+                {/* Welcome Content */}
+                <div className="w-full sm:flex-1 lg:max-w-[800px] flex flex-col gap-4">
+                  <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
+                    <div className="flex flex-col gap-4">
+                      <h2 className="text-2xl font-semibold text-center">
+                        Welcome back,{" "}
+                        {user?.displayName ||
+                          user?.name ||
+                          user?.email ||
+                          "User"}
+                        !
+                      </h2>
+                      {/* <div className="text-center">
                       <p className="text-sm">
                         Auth Level: {getAuthLevelName(user?.auth ?? 0)} (
                         {user?.auth ?? 0})
                       </p>
-                    </div>
-                    {/* <div className="flex flex-wrap gap-2 justify-center mt-4">
+                    </div> */}
+
+                      {/* <div className="flex flex-wrap gap-2 justify-center mt-4">
                       {user?.auth != null && user.auth < AUTH_LEVELS.ADMIN && (
                         <Button
                           variant="outline"
@@ -400,17 +409,78 @@ export function DashboardClient({
                         </Button>
                       )}
                     </div> */}
+                    </div>
+                  </section>
+                  <div className="flex gap-6 justify-center">
+                    {canCreateEvents && (
+                      <div className="flex justify-center">
+                        <Button asChild size="xl">
+                          <Link
+                            href="/add-event"
+                            className="!font-bold text-[18px]"
+                          >
+                            Add Event
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex justify-center">
+                      <Button asChild size="xl" variant="secondary">
+                        <Link
+                          href={`/profiles/${user?.username}`}
+                          className="!font-bold text-[18px]"
+                        >
+                          My Profile
+                        </Link>
+                      </Button>
+                    </div>
+                    <div className="flex justify-center">
+                      <Button asChild size="xl" variant="outline">
+                        <Link
+                          href={`/settings`}
+                          className="!font-bold text-[18px]"
+                        >
+                          Settings
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                </section>
+                </div>
               </div>
-            </div>
+              {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
+              {user?.auth != null && user.auth >= AUTH_LEVELS.ADMIN && (
+                <>
+                  <AuthorizationChanger />
+                  <Dialog
+                    open={isUpgradeDialogOpen}
+                    onOpenChange={setIsUpgradeDialogOpen}
+                  >
+                    <DialogContent>
+                      <AuthorizationRequestForm
+                        currentUserAuthLevel={user.auth ?? 0}
+                        onRequestSubmitted={async () => {
+                          await loadDashboard();
+                          setIsUpgradeDialogOpen(false);
+                        }}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
 
+              {/* Requests Section */}
+              <RequestSection
+                incomingRequests={allIncoming}
+                outgoingRequests={allOutgoing}
+                onRequestUpdated={handleRequestUpdated}
+              />
+            </div>
             {/* Saved Events Calendar */}
             <SavedEventsCalendarSection events={calendarEvents} />
 
             {/* Saved Events Gallery */}
             {savedEvents.length > 0 ? (
-              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+              <section className="border-4 border-secondary-light py-4 px-4 bg-secondary-dark rounded-sm w-full">
                 <h2 className="text-2xl font-semibold mb-2 text-center">
                   Saved Events
                 </h2>
@@ -438,7 +508,7 @@ export function DashboardClient({
                 </div>
               </section>
             ) : (
-              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+              <section className="border-4 border-secondary-light py-4 px-4 bg-secondary-dark rounded-sm w-full">
                 <h2 className="text-2xl font-semibold mb-2 text-center">
                   Saved Events
                 </h2>
@@ -449,37 +519,9 @@ export function DashboardClient({
               </section>
             )}
 
-            {/* Authorization Request Form Dialog - Base Users, Creators, and Moderators Only */}
-            {user?.auth != null && user.auth >= AUTH_LEVELS.ADMIN && (
-              <>
-                <AuthorizationChanger />
-                <Dialog
-                  open={isUpgradeDialogOpen}
-                  onOpenChange={setIsUpgradeDialogOpen}
-                >
-                  <DialogContent>
-                    <AuthorizationRequestForm
-                      currentUserAuthLevel={user.auth ?? 0}
-                      onRequestSubmitted={async () => {
-                        await loadDashboard();
-                        setIsUpgradeDialogOpen(false);
-                      }}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </>
-            )}
-
-            {/* Requests Section */}
-            <RequestSection
-              incomingRequests={allIncoming}
-              outgoingRequests={allOutgoing}
-              onRequestUpdated={handleRequestUpdated}
-            />
-
             {/* Events Created Section */}
             {userEvents.length > 0 && (
-              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+              <section className="border-4 border-secondary-light py-4 px-4 bg-secondary-dark rounded-sm w-full">
                 <h2 className="text-2xl font-semibold mb-2 text-center">
                   Your Events
                 </h2>
@@ -510,7 +552,7 @@ export function DashboardClient({
 
             {/* Team Memberships Section */}
             {teamMemberships.length > 0 && (
-              <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+              <section className="border-4 border-secondary-light py-4 px-4 bg-secondary-dark rounded-sm w-full">
                 <h2 className="text-2xl font-semibold mb-2 text-center">
                   Team Memberships
                 </h2>
@@ -549,7 +591,7 @@ export function DashboardClient({
             {/* Hidden Events Section - Only for moderators/admins */}
             {initialData?.hiddenEvents &&
               initialData.hiddenEvents.length > 0 && (
-                <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+                <section className="border-4 border-secondary-light py-4 px-4 bg-secondary-dark rounded-sm w-full">
                   <h2 className="text-2xl font-semibold mb-2 text-center">
                     Hidden Events
                   </h2>

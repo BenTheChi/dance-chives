@@ -12,7 +12,7 @@ export function SavedEventsCalendarSection({
 }: SavedEventsCalendarSectionProps) {
   if (events.length === 0) {
     return (
-      <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full">
+      <section className="border-4 border-secondary-light py-4 px-4 bg-secondary-dark rounded-sm w-full">
         <h2 className="text-2xl font-semibold mb-2 text-center">
           Saved Events Calendar
         </h2>
@@ -34,4 +34,3 @@ export function SavedEventsCalendarSection({
     </section>
   );
 }
-

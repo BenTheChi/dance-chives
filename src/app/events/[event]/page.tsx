@@ -435,7 +435,7 @@ export default async function EventPage({ params }: PageProps) {
     const isAllDay = !dateEntry.startTime && !dateEntry.endTime;
     if (isAllDay) return `${dateEntry.date}`;
     const timeStr = dateEntry.endTime
-      ? `${dateEntry.startTime} - ${dateEntry.endTime}`
+      ? `${dateEntry.startTime}-${dateEntry.endTime}`
       : dateEntry.startTime;
     return `${dateEntry.date} (${timeStr})`;
   };
@@ -453,7 +453,7 @@ export default async function EventPage({ params }: PageProps) {
           )}
         </div>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+          <div className="flex flex-col py-10 pt-5 px-3 gap-5 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
             <div className="flex flex-col sm:flex-row gap-4 w-full">
               {/* Image */}
@@ -474,7 +474,7 @@ export default async function EventPage({ params }: PageProps) {
                 <section className="border-2 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
                   <div className="flex flex-col">
                     {/* City | Event type */}
-                    <div className="flex flex-row gap-1 items-center justify-center mb-4">
+                    <div className="flex flex-row gap-5 items-center justify-center mb-4">
                       {event.eventDetails.city.name && (
                         <h2 className="!font-extrabold">
                           {event.eventDetails.city.name}
@@ -482,10 +482,7 @@ export default async function EventPage({ params }: PageProps) {
                       )}
 
                       {event.eventDetails.eventType && (
-                        <h2 className="!font-extrabold">
-                          {` | `}
-                          {event.eventDetails.eventType}
-                        </h2>
+                        <h3>{event.eventDetails.eventType}</h3>
                       )}
                     </div>
 
@@ -524,7 +521,7 @@ export default async function EventPage({ params }: PageProps) {
                                   <h3 className="text-center underline">
                                     Past Date
                                   </h3>
-                                  <div className="flex flex-col text-sm text-center">
+                                  <div className="flex flex-col text-center">
                                     {pastDates.map((d, idx) => (
                                       <span key={`past-${d.date}-${idx}`}>
                                         {formatEventDateRow(d)}
@@ -752,7 +749,7 @@ export default async function EventPage({ params }: PageProps) {
 
             {/* Sections - grid layout */}
             {event.sections && event.sections.length > 0 && (
-              <div className="sections-grid w-full">
+              <div className="mt-[100px] sections-grid w-full">
                 {event.sections.map((section) => (
                   <SectionCard
                     key={section.id}

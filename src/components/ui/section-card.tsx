@@ -26,17 +26,17 @@ const SECTION_TYPE_COLORS: Record<
   { bg: string; text: string }
 > = {
   Battle: {
-    bg: "hsla(3, 92.90%, 49.80%, 0.65)",
+    bg: "rgba(247, 147, 30, 0.85)",
     text: "white",
   },
-  Tournament: { bg: "rgba(255, 107, 53, 0.65)", text: "white" },
-  Competition: { bg: "rgba(247, 147, 30, 0.65)", text: "white" },
-  Performance: { bg: "rgba(74, 144, 226, 0.65)", text: "white" },
-  Showcase: { bg: "rgba(123, 104, 238, 0.65)", text: "white" },
-  Class: { bg: "rgba(80, 200, 120, 0.65)", text: "white" },
-  Session: { bg: "rgba(0, 206, 209, 0.65)", text: "white" },
-  Mixed: { bg: "rgba(147, 112, 219, 0.65)", text: "white" },
-  Other: { bg: "rgba(112, 128, 144, 0.65)", text: "white" },
+  Tournament: { bg: "rgba(255, 107, 53, 0.85)", text: "white" },
+  Competition: { bg: "rgba(247, 147, 30, 0.85)", text: "white" },
+  Performance: { bg: "rgba(74, 144, 226, 0.85)", text: "white" },
+  Showcase: { bg: "rgba(123, 104, 238, 0.85)", text: "white" },
+  Class: { bg: "rgba(80, 200, 120, 0.85)", text: "white" },
+  Session: { bg: "rgba(0, 206, 209, 0.85)", text: "white" },
+  Mixed: { bg: "rgba(147, 112, 219, 0.85)", text: "white" },
+  Other: { bg: "rgba(112, 128, 144, 0.85)", text: "white" },
 };
 
 export function SectionCard({
@@ -106,8 +106,8 @@ export function SectionCard({
 
   return (
     <div
-      className="section-card h-[225px] bg-secondary-dark cursor-pointer overflow-hidden relative"
-      style={{ backgroundColor: sectionColor.bg }}
+      className="section-card h-[225px] cursor-pointer overflow-hidden relative bg-secondary"
+      style={{ borderColor: sectionColor.bg }}
     >
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}

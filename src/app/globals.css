@@ -10,6 +10,7 @@
   --breakpoint-md: 60rem;
   --breakpoint-lg: 90rem;
   --breakpoint-xl: 120rem;
+  --font-size-sm: 18px;
   --font-sans: var(--font-archivo);
   --font-mono: var(--font-archivo);
   --font-display: var(--font-archivo);
@@ -205,11 +206,10 @@
     overflow: hidden;
   }
   .card:hover {
-    transform: translateY(-8px);
-    box-shadow: 6px 6px 0 0 var(--primary-color-light);
+    transform: scale(1.05);
   }
   .card:active {
-    box-shadow: none;
+    transform: scale(1.05);
   }
 
   .section-card {
@@ -219,8 +219,7 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .section-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 4px 4px 0 0 var(--secondary-color-light);
+    transform: scale(1.05);
   }
 
   /* Sections grid layout */
@@ -312,14 +311,14 @@ h1 {
 }
 
 h2 {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 550;
   font-family: var(--font-display);
   line-height: 1;
 }
 
 h3 {
-  font-size: 20px;
+  font-size: 23px;
   font-weight: 450;
   font-family: var(--font-display);
   line-height: 1;
@@ -327,7 +326,13 @@ h3 {
 
 p {
   font-weight: 400;
-  font-size: 17px;
+  font-size: 18px;
+  font-family: var(--font-archivo);
+}
+
+span {
+  font-weight: 400;
+  font-size: 18px;
   font-family: var(--font-archivo);
 }
 
