@@ -294,7 +294,7 @@ export function PosterUpload({
       {/* Preview Box - 450x450 Canvas */}
       {hasPreview && (
         <div className="flex flex-col items-center gap-4">
-          <div className="relative w-[450px] h-[450px] rounded-sm border border-charcoal overflow-hidden">
+        <div className="relative w-full max-w-[320px] sm:max-w-[450px] aspect-square rounded-sm border border-charcoal overflow-hidden">
             <canvas
               ref={previewCanvasRef}
               className="w-full h-full"

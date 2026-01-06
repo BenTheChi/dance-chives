@@ -447,6 +447,8 @@ export default async function EventPage({ params }: PageProps) {
             <p className="text-medium mt-1 text-center">(hidden)</p>
           )}
         </div>
+        {/* Settings and Edit buttons - handled by client component */}
+        <EventEditButtons eventId={event.id} />
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col py-10 pt-5 px-3 gap-5 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
@@ -467,7 +469,7 @@ export default async function EventPage({ params }: PageProps) {
               {/* Event Details */}
               <div className="w-full sm:flex-2 lg:max-w-[800px]">
                 <section className="border-2 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center">
                     {/* City | Event type */}
                     <div className="flex flex-row gap-5 items-center justify-center mb-4">
                       {event.eventDetails.city.name && (
@@ -510,9 +512,6 @@ export default async function EventPage({ params }: PageProps) {
                           key: "dates",
                           content: (
                             <div className="flex flex-col items-center">
-                              {showMoreDatesButton && (
-                                <EventDatesDialog eventId={event.id} />
-                              )}
                               {pastDates.length > 0 && (
                                 <div className="flex flex-col justify-center gap-2">
                                   <h3 className="text-center underline">
@@ -574,6 +573,9 @@ export default async function EventPage({ params }: PageProps) {
                                     })}
                                   </div>
                                 </div>
+                              )}
+                              {showMoreDatesButton && (
+                                <EventDatesDialog eventId={event.id} />
                               )}
                             </div>
                           ),
@@ -854,8 +856,6 @@ export default async function EventPage({ params }: PageProps) {
                 eventId={event.id}
                 eventTitle={event.eventDetails.title}
               />
-              {/* Settings and Edit buttons - handled by client component */}
-              <EventEditButtons eventId={event.id} />
             </div>
           </div>
         </div>
