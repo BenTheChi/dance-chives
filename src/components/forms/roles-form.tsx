@@ -1,33 +1,15 @@
 "use client";
 
-import { Control, UseFormSetValue } from "react-hook-form";
+import { UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Role } from "@/types/event";
-import { Button } from "../ui/button";
-import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormField,
-  FormMessage,
-} from "../ui/form"; // form components
-import { X } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { UserSearchItem } from "@/types/user";
-import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
-import { AVAILABLE_ROLES } from "@/lib/utils/roles";
-import { CirclePlusButton } from "../ui/circle-plus-button";
+import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
+import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 
 interface RolesFormProps {
-  control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
-  roles: Role[];
+  roles?: Role[];
 }
 
 async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
@@ -48,126 +30,86 @@ async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
     });
 }
 
-// This component is used to render the roles form in the event creation process.
-export default function RolesForm({
-  control,
-  setValue,
-  roles,
-}: RolesFormProps) {
-  // Add a new role entry
-  const addRole = () => {
-    const newRoleId = Math.random().toString(36).substring(2, 9);
-    const newRole = {
-      id: newRoleId,
-      title: "",
-      user: {
-        id: "",
-        displayName: "",
-        username: "",
-      },
+const generateRoleId = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).substring(2, 9);
+
+export default function RolesForm({ setValue, roles = [] }: RolesFormProps) {
+  const getUsersForRole = (title: RoleTitle) =>
+    roles
+      .filter((role) => role.title === title && role.user)
+      .map((role) => role.user as UserSearchItem);
+
+  const handleRoleUsersChange = (
+    roleTitle: RoleTitle,
+    selectedUsers: UserSearchItem[]
+  ) => {
+    const existingRolesMap = new Map<string, Role>();
+
+    roles.forEach((role) => {
+      if (role.user) {
+        const key = `${role.title}-${role.user.username}`;
+        if (!existingRolesMap.has(key)) {
+          existingRolesMap.set(key, role);
+        }
+      }
+    });
+
+    const buildRoleEntry = (title: RoleTitle, user: UserSearchItem): Role => {
+      const key = `${title}-${user.username}`;
+      const existing = existingRolesMap.get(key);
+      return {
+        id:
+          existing?.id ?? `role-${title}-${user.username}-${generateRoleId()}`,
+        title,
+        user,
+      };
     };
 
-    // Add to our local state array
-    setValue("roles", [...roles, newRole]);
-  };
+    const updatedRoles = AVAILABLE_ROLES.flatMap((title) => {
+      const usersForTitle =
+        title === roleTitle ? selectedUsers : getUsersForRole(title);
+      return usersForTitle.map((user) => buildRoleEntry(title, user));
+    });
 
-  // Remove a role entry
-  const removeRole = (idToRemove: string) => {
-    setValue(
-      "roles",
-      roles.filter((r) => r.id !== idToRemove)
+    const otherRoles = roles.filter(
+      (role) => !AVAILABLE_ROLES.includes(role.title as RoleTitle)
     );
+
+    setValue("roles", [...updatedRoles, ...otherRoles]);
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full border-2 rounded-sm border-black bg-primary">
-      {roles.length === 0 ? (
-        <div className="p-6 text-center">
-          <div className="text-sm mb-6">
-            No roles yet. Let&apos;s create one!
+    <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full border-2 rounded-sm border-black bg-primary p-5">
+      <div className="text-sm text-center">
+        Assign event-level roles using the search field below. Tag multiple
+        users per role and update assignments anytime.
+      </div>
+      <div className="space-y-4">
+        {AVAILABLE_ROLES.map((roleTitle) => (
+          <div
+            key={roleTitle}
+            className="rounded-sm border border-black bg-neutral-200 p-4 space-y-2"
+          >
+            <h3 className="text-lg font-semibold">{roleTitle}</h3>
+            <DebouncedSearchMultiSelect<UserSearchItem>
+              label="Users"
+              name={`roles-${roleTitle}`}
+              onSearch={getUserSearchItems}
+              placeholder={`Search for ${roleTitle.toLowerCase()}s...`}
+              value={getUsersForRole(roleTitle)}
+              onChange={(value) => handleRoleUsersChange(roleTitle, value)}
+              getDisplayValue={(item) =>
+                item.displayName && item.username
+                  ? `${item.displayName} (${item.username})`
+                  : item.username
+              }
+              getItemId={(item) => item.username}
+            />
           </div>
-          <div className="flex justify-center">
-            <CirclePlusButton size="lg" onClick={addRole} />
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-2 py-5">
-          {roles.map((role, index) => (
-            <div key={role.id}>
-              <div className="px-5 py-2">
-                <div className="flex items-end gap-4">
-                  <FormField
-                    control={control}
-                    name={`roles.${index}.title`}
-                    render={() => (
-                      <FormItem className="flex-1">
-                        <FormLabel>Role</FormLabel>
-                        <FormControl>
-                          <Select
-                            onValueChange={(value) => {
-                              setValue(`roles.${index}.title`, value);
-                            }}
-                            value={roles[index].title ?? ""}
-                          >
-                            <SelectTrigger className="bg-neutral-300 w-full">
-                              <SelectValue placeholder="Select Role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {AVAILABLE_ROLES.map((role) => (
-                                <SelectItem key={role} value={role}>
-                                  {role}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex-1">
-                    <DebouncedSearchSelect<UserSearchItem, FormValues>
-                      control={control as Control<FormValues>}
-                      name={`roles.${index}.user`}
-                      onSearch={getUserSearchItems}
-                      placeholder="Search..."
-                      getDisplayValue={(item: UserSearchItem) => {
-                        if (!item.displayName || !item.username) return "";
-                        return `${item.displayName} (${item.username})`;
-                      }}
-                      getItemId={(item) => item.username}
-                      onChange={(value) => {
-                        setValue(
-                          `roles.${index}.user`,
-                          value as UserSearchItem
-                        );
-                      }}
-                      value={roles[index].user}
-                      label="User"
-                    />
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeRole(role.id)}
-                    className="h-6 w-6 rounded-full p-0 text-destructive hover:text-destructive bg-transparent hover:bg-destructive/10 mb-1"
-                    aria-label={`Remove role ${index + 1}`}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          <div className="flex justify-center mt-6">
-            <CirclePlusButton size="lg" onClick={addRole} />
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

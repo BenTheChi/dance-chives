@@ -1044,11 +1044,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           )}
 
           {activeMainTab === "Roles" && (
-            <RolesForm
-              control={control}
-              setValue={setValue}
-              roles={roles as Role[]}
-            />
+            <RolesForm setValue={setValue} roles={roles as Role[]} />
           )}
 
           {activeMainTab === "Sections" && (
