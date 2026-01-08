@@ -277,6 +277,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                   eventId={event.id}
                   canTagDirectly={canTagDirectly}
                   currentUserId={session?.user?.id}
+                  canEdit={canEdit}
                 />
               </div>
             </div>
@@ -287,6 +288,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                 section={section}
                 eventTitle={event.eventDetails.title}
                 eventId={event.id}
+                canEdit={canEdit}
               />
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { Section } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
+import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
 import { useEffect, useState } from "react";
 import { checkUserWinnerOfSection } from "@/lib/server_actions/request_actions";
 import Link from "next/link";

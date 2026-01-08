@@ -9,6 +9,7 @@ import { removeRoleFromEvent } from "@/lib/server_actions/request_actions";
 import { getEventAuthData } from "@/lib/server_actions/event_actions";
 import { Role } from "@/types/event";
 import { EventTagSelfButton } from "./event-client";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface EventRolesProps {
   eventId: string;
@@ -24,6 +25,11 @@ export function EventRoles({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [canManageRoles, setCanManageRoles] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    userId: string;
+    roleTitle: string;
+    displayName: string;
+  } | null>(null);
 
   // Determine whether current user can remove any roles (creator, team, moderator/admin).
   useEffect(() => {
@@ -34,13 +40,12 @@ export function EventRoles({
         if (cancelled) return;
         const authData = result.data;
         if (authData) {
-          setCanManageRoles(
-            !!(
-              authData.isModeratorOrAdmin ||
-              authData.isTeamMember ||
-              authData.isCreator
-            )
-          );
+          const canEditRoles =
+            authData.canEdit ||
+            authData.isModeratorOrAdmin ||
+            authData.isTeamMember ||
+            authData.isCreator;
+          setCanManageRoles(!!canEditRoles);
         }
       } catch (error) {
         if (cancelled) return;
@@ -111,9 +116,18 @@ export function EventRoles({
                     styles={(role.user as { styles?: string[] }).styles}
                     isSmall={true}
                     showRemoveButton={canRemove || false}
-                    onRemove={() =>
-                      roleUserId && handleRemoveRole(roleUserId, roleTitle)
-                    }
+                    onRemove={() => {
+                      if (!roleUserId) return;
+                      const displayName =
+                        role.user?.displayName ||
+                        role.user?.username ||
+                        "this role";
+                      setPendingRemoval({
+                        userId: roleUserId,
+                        roleTitle,
+                        displayName,
+                      });
+                    }}
                     isRemoving={isPending}
                   />
                 );
@@ -122,6 +136,20 @@ export function EventRoles({
           </div>
         </div>
       ))}
+      <ConfirmationDialog
+        open={Boolean(pendingRemoval)}
+        title="Remove role"
+        description={`Remove ${pendingRemoval?.displayName || "this role"}?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        loading={isPending}
+        onCancel={() => setPendingRemoval(null)}
+        onConfirm={() => {
+          if (!pendingRemoval) return;
+          handleRemoveRole(pendingRemoval.userId, pendingRemoval.roleTitle);
+          setPendingRemoval(null);
+        }}
+      />
     </div>
   );
 }

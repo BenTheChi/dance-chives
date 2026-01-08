@@ -93,12 +93,14 @@ export function EventFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All cities</SelectItem>
-              {cities.map((city) => (
-                <SelectItem key={city.id} value={city.id}>
-                  {city.name}
-                  {city.region ? `, ${city.region}` : ""}
-                </SelectItem>
-              ))}
+              {cities
+                .filter((city) => (city.id || "").trim() !== "")
+                .map((city) => (
+                  <SelectItem key={city.id} value={city.id}>
+                    {city.name}
+                    {city.region ? `, ${city.region}` : ""}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>

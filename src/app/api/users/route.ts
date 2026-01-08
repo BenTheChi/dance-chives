@@ -8,8 +8,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const res = await getUsers(keyWord);
 
   const data = res.map((record) => ({
+    id: record.id,
     username: record.username,
     displayName: record.displayName,
+    instagram: record.instagram || null,
+    claimed: record.claimed ?? true,
     avatar: record.avatar || null,
     image: record.image || null,
   }));

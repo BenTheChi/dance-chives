@@ -13,7 +13,7 @@ import {
   Video,
 } from "@/types/video";
 import { UserSearchItem } from "@/types/user";
-import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
+import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
 import { VIDEO_ROLE_DANCER, VIDEO_ROLE_WINNER } from "@/lib/utils/roles";
 import { extractYouTubeVideoId } from "@/lib/utils";
 import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
@@ -22,65 +22,7 @@ import { toast } from "sonner";
 import { useTransition } from "react";
 import Link from "next/link";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
-
-// Helper component for user avatar with remove button
-function UserAvatarWithRemove({
-  user,
-  eventId,
-  videoId,
-  currentUserId,
-  borderColor,
-  isSmall,
-}: {
-  user: UserSearchItem;
-  eventId: string;
-  videoId: string;
-  currentUserId?: string;
-  borderColor?: "black" | "white";
-  isSmall?: boolean;
-}) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const canRemove =
-    currentUserId &&
-    (currentUserId === user.id || currentUserId === user.username);
-
-  const handleRemove = () => {
-    if (!currentUserId || !canRemove) return;
-
-    startTransition(async () => {
-      try {
-        await removeTagFromVideo(eventId, videoId, user.id || user.username);
-        toast.success("Successfully removed tag");
-        router.refresh();
-      } catch (error) {
-        console.error("Error removing tag:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to remove tag. Please try again."
-        );
-      }
-    });
-  };
-
-  return (
-    <UserAvatar
-      username={user.username}
-      displayName={user.displayName}
-      avatar={(user as any).avatar}
-      image={(user as any).image}
-      showRemoveButton={canRemove || false}
-      onRemove={handleRemove}
-      isRemoving={isPending}
-      showHoverCard
-      city={(user as any).city || ""}
-      styles={(user as any).styles}
-      borderColor={borderColor}
-      isSmall={isSmall}
-    />
-  );
-}
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface VideoLightboxProps {
   video: Video;
@@ -101,6 +43,7 @@ interface VideoLightboxProps {
   sectionStyles?: string[];
   applyStylesToVideos?: boolean;
   currentUserId?: string;
+  canEdit?: boolean;
   enableUrlRouting?: boolean;
 }
 
@@ -123,8 +66,51 @@ export function VideoLightbox({
   sectionStyles,
   applyStylesToVideos,
   currentUserId,
+  canEdit = false,
   enableUrlRouting = false,
 }: VideoLightboxProps) {
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    user: UserSearchItem;
+    roleLabel: string;
+  } | null>(null);
+  const [isRemoving, startRemoval] = useTransition();
+  const router = useRouter();
+  const requestRemoval = (user: UserSearchItem, roleLabel: string) => {
+    setPendingRemoval({ user, roleLabel });
+  };
+  const confirmPendingRemoval = () => {
+    if (!pendingRemoval) return;
+    const targetUser = pendingRemoval.user;
+    startRemoval(async () => {
+      try {
+        await removeTagFromVideo(
+          eventId,
+          video.id,
+          targetUser.id || targetUser.username
+        );
+        toast.success("Successfully removed tag");
+        router.refresh();
+      } catch (error) {
+        console.error("Error removing tag:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to remove tag. Please try again."
+        );
+      }
+    });
+    setPendingRemoval(null);
+  };
+
+  const canRemoveUser = (user: UserSearchItem) => {
+    const userId = user.id || user.username;
+    if (!eventId || !currentUserId) return false;
+    const isSelf =
+      currentUserId === userId ||
+      currentUserId === user.id ||
+      currentUserId === user.username;
+    return isSelf || Boolean(canEdit && currentUserId);
+  };
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
@@ -340,14 +326,18 @@ export function VideoLightbox({
 
   // Get tagged users based on video type
   const winners =
-    ((videoType === "battle" || videoType === "other") && (video as BattleVideo)?.taggedWinners) || [];
+    ((videoType === "battle" || videoType === "other") &&
+      (video as BattleVideo)?.taggedWinners) ||
+    [];
   const dancers = (video as Video)?.taggedDancers || [];
   const choreographers =
     ((videoType === "choreography" || videoType === "other") &&
       (video as ChoreographyVideo)?.taggedChoreographers) ||
     [];
   const teachers =
-    ((videoType === "class" || videoType === "other") && (video as ClassVideo)?.taggedTeachers) || [];
+    ((videoType === "class" || videoType === "other") &&
+      (video as ClassVideo)?.taggedTeachers) ||
+    [];
 
   // For user comparisons, we need to check by username if currentUserId is a username
   // or by id if currentUserId is an id. Since currentUserId comes from session, it's likely an id.
@@ -416,7 +406,10 @@ export function VideoLightbox({
                   {currentIndex + 1} of {totalVideos}
                 </span>
                 <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-300">
-                  <MaintenanceLink href={eventLink} className="whitespace-nowrap">
+                  <MaintenanceLink
+                    href={eventLink}
+                    className="whitespace-nowrap"
+                  >
                     {eventTitle}
                   </MaintenanceLink>
 
@@ -515,12 +508,14 @@ export function VideoLightbox({
               {/* Tag Self Button */}
               {currentUserId && (
                 <div className="flex-shrink-0">
-                  <TagSelfCircleButton
+                  <TagUserCircleButton
                     eventId={eventId}
                     target="video"
                     targetId={video.id}
                     currentUserId={currentUserId}
-                    videoType={videoType as "battle" | "choreography" | "class" | "other"}
+                    videoType={
+                      videoType as "battle" | "choreography" | "class" | "other"
+                    }
                     currentVideoRoles={[
                       ...(isUserDancer ? [VIDEO_ROLE_DANCER] : []),
                       ...(isUserWinner ? [VIDEO_ROLE_WINNER] : []),
@@ -540,14 +535,20 @@ export function VideoLightbox({
                     </div>
                     <div className="flex flex-wrap gap-2 ml-2">
                       {dancers.map((dancer: UserSearchItem, index: number) => (
-                        <UserAvatarWithRemove
+                        <UserAvatar
                           key={dancer.username || index}
-                          user={dancer}
-                          eventId={eventId}
-                          videoId={video.id}
-                          currentUserId={currentUserId}
+                          username={dancer.username}
+                          displayName={dancer.displayName}
+                          avatar={(dancer as any).avatar}
+                          image={(dancer as any).image}
+                          showHoverCard
+                          city={(dancer as any).city || ""}
+                          styles={(dancer as any).styles}
                           borderColor="white"
                           isSmall={true}
+                          showRemoveButton={canRemoveUser(dancer)}
+                          onRemove={() => requestRemoval(dancer, "dancer")}
+                          isRemoving={isRemoving}
                         />
                       ))}
                     </div>
@@ -556,95 +557,140 @@ export function VideoLightbox({
               )}
 
               {/* Winners - Show for battle and other videos */}
-              {(videoType === "battle" || videoType === "other") && winners.length > 0 && (
-                <div className="flex-shrink-0">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm">
-                        Winners{" "}
-                        <Button
-                          variant="link"
-                          className="text-xs text-gray-400 hover:text-white p-0 h-auto"
-                          onClick={() => setShowWinners(!showWinners)}
-                        >
-                          ({showWinners ? "hide" : "show"})
-                        </Button>
-                      </h3>
-                    </div>
-                    {showWinners && (
-                      <div className="flex flex-wrap gap-2 ml-2">
-                        {winners.map((winner: UserSearchItem) => (
-                          <UserAvatarWithRemove
-                            key={winner.username}
-                            user={winner}
-                            eventId={eventId}
-                            videoId={video.id}
-                            currentUserId={currentUserId}
-                            borderColor="white"
-                            isSmall={true}
-                          />
-                        ))}
+              {(videoType === "battle" || videoType === "other") &&
+                winners.length > 0 && (
+                  <div className="flex-shrink-0">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-sm">
+                          Winners{" "}
+                          <Button
+                            variant="link"
+                            className="text-xs text-gray-400 hover:text-white p-0 h-auto"
+                            onClick={() => setShowWinners(!showWinners)}
+                          >
+                            ({showWinners ? "hide" : "show"})
+                          </Button>
+                        </h3>
                       </div>
-                    )}
+                      {showWinners && (
+                        <div className="flex flex-wrap gap-2 ml-2">
+                          {winners.map((winner: UserSearchItem) => (
+                            <UserAvatar
+                              key={winner.username}
+                              username={winner.username}
+                              displayName={winner.displayName}
+                              avatar={(winner as any).avatar}
+                              image={(winner as any).image}
+                              showHoverCard
+                              city={(winner as any).city || ""}
+                              styles={(winner as any).styles}
+                              borderColor="white"
+                              isSmall={true}
+                              showRemoveButton={canRemoveUser(winner)}
+                              onRemove={() =>
+                                requestRemoval(winner, "winner")
+                              }
+                              isRemoving={isRemoving}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Choreographers - Show for choreography and other videos */}
-              {(videoType === "choreography" || videoType === "other") && choreographers.length > 0 && (
-                <div className="flex-shrink-0">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm">Choreographers</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-2 ml-2">
-                      {choreographers.map(
-                        (choreographer: UserSearchItem, index: number) => (
-                          <UserAvatarWithRemove
-                            key={choreographer.username || index}
-                            user={choreographer}
-                            eventId={eventId}
-                            videoId={video.id}
-                            currentUserId={currentUserId}
-                            borderColor="white"
-                            isSmall={true}
-                          />
-                        )
-                      )}
+              {(videoType === "choreography" || videoType === "other") &&
+                choreographers.length > 0 && (
+                  <div className="flex-shrink-0">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-sm">
+                          Choreographers
+                        </h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2 ml-2">
+                        {choreographers.map(
+                          (choreographer: UserSearchItem, index: number) => (
+                            <UserAvatar
+                              key={choreographer.username || index}
+                              username={choreographer.username}
+                              displayName={choreographer.displayName}
+                              avatar={(choreographer as any).avatar}
+                              image={(choreographer as any).image}
+                              showHoverCard
+                              city={(choreographer as any).city || ""}
+                              styles={(choreographer as any).styles}
+                              borderColor="white"
+                              isSmall={true}
+                              showRemoveButton={canRemoveUser(choreographer)}
+                              onRemove={() =>
+                                requestRemoval(choreographer, "choreographer")
+                              }
+                              isRemoving={isRemoving}
+                            />
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Teachers - Show for class and other videos */}
-              {(videoType === "class" || videoType === "other") && teachers.length > 0 && (
-                <div className="flex-shrink-0">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm">Teachers</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-2 ml-2">
-                      {teachers.map(
-                        (teacher: UserSearchItem, index: number) => (
-                          <UserAvatarWithRemove
-                            key={teacher.username || index}
-                            user={teacher}
-                            eventId={eventId}
-                            videoId={video.id}
-                            currentUserId={currentUserId}
-                            borderColor="white"
-                            isSmall={true}
-                          />
-                        )
-                      )}
+              {(videoType === "class" || videoType === "other") &&
+                teachers.length > 0 && (
+                  <div className="flex-shrink-0">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-sm">Teachers</h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2 ml-2">
+                        {teachers.map(
+                          (teacher: UserSearchItem, index: number) => (
+                            <UserAvatar
+                              key={teacher.username || index}
+                              username={teacher.username}
+                              displayName={teacher.displayName}
+                              avatar={(teacher as any).avatar}
+                              image={(teacher as any).image}
+                              showHoverCard
+                              city={(teacher as any).city || ""}
+                              styles={(teacher as any).styles}
+                              borderColor="white"
+                              isSmall={true}
+                              showRemoveButton={canRemoveUser(teacher)}
+                              onRemove={() =>
+                                requestRemoval(teacher, "teacher")
+                              }
+                              isRemoving={isRemoving}
+                            />
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         </div>
       </DialogContent>
+      <ConfirmationDialog
+        open={Boolean(pendingRemoval)}
+        title={`Remove ${pendingRemoval?.roleLabel || "tag"}`}
+        description={`Remove ${
+          pendingRemoval
+            ? pendingRemoval.user.displayName ||
+              pendingRemoval.user.username ||
+              "this user"
+            : "this user"
+        } from the video?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        loading={isRemoving}
+        onCancel={() => setPendingRemoval(null)}
+        onConfirm={confirmPendingRemoval}
+      />
     </Dialog>
   );
 }

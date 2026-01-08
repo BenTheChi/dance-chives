@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Settings, Share2 } from "lucide-react";
 import Link from "next/link";
-import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
+import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
 import { getEventAuthData } from "@/lib/server_actions/event_actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -163,7 +163,7 @@ export function EventShareSaveButtonsWrapper({ eventId }: EventClientProps) {
   );
 }
 
-// Component for TagSelfCircleButton in Roles section
+// Component for TagUserCircleButton in Roles section
 export function EventTagSelfButton({ eventId }: EventClientProps) {
   const { authData, loading, status } = useEventAuthData(eventId);
 
@@ -176,7 +176,7 @@ export function EventTagSelfButton({ eventId }: EventClientProps) {
   }
 
   return (
-    <TagSelfCircleButton
+    <TagUserCircleButton
       eventId={eventId}
       currentUserRoles={authData.currentUserRoles}
       isTeamMember={authData.isTeamMember}
@@ -201,7 +201,12 @@ export function EventEditButtons({ eventId }: EventClientProps) {
   return (
     <div className="flex gap-2 mb-2 mt-4 sm:mt-2 w-full justify-center">
       {(authData.isCreator || authData.isModeratorOrAdmin) && (
-        <Button asChild size="xl" variant="destructive" className="!font-bold text-[18px]">
+        <Button
+          asChild
+          size="xl"
+          variant="destructive"
+          className="!font-bold text-[18px]"
+        >
           <Link href={`/events/${eventId}/settings`}>Settings</Link>
         </Button>
       )}

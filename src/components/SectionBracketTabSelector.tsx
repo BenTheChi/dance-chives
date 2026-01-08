@@ -11,10 +11,12 @@ export default function SectionBracketTabSelector({
   section,
   eventTitle,
   eventId,
+  canEdit,
 }: {
   section: Section;
   eventTitle: string;
   eventId: string;
+  canEdit?: boolean;
 }) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -169,6 +171,7 @@ export default function SectionBracketTabSelector({
           sectionStyles={section?.styles}
           applyStylesToVideos={section?.applyStylesToVideos}
           currentUserId={currentUserId}
+          canEdit={canEdit}
           enableUrlRouting={true}
         />
       </div>
@@ -232,6 +235,7 @@ export default function SectionBracketTabSelector({
                   sectionStyles={section?.styles}
                   applyStylesToVideos={section?.applyStylesToVideos}
                   currentUserId={currentUserId}
+                  canEdit={canEdit}
                   enableUrlRouting={true}
                 />
               </div>

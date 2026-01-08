@@ -11,11 +11,12 @@ import {
   normalizeYouTubeThumbnailUrl,
 } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
-import { TagSelfCircleButton } from "@/components/events/TagSelfCircleButton";
+import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 interface VideoCardProps {
   video: Video;
@@ -28,6 +29,7 @@ interface VideoCardProps {
   // Optional context for callers; not currently used by this component.
   currentUserId?: string;
   eventId?: string;
+  canEdit?: boolean;
 }
 
 export function VideoCard({
@@ -38,9 +40,14 @@ export function VideoCard({
   styles,
   currentUserId,
   eventId,
+  canEdit = false,
 }: VideoCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    dancerId: string;
+    displayName: string;
+  } | null>(null);
   // Parse youtube id from src and generate thumbnail URL
   const youtubeId = extractYouTubeVideoId(video.src);
   const thumbnailUrl = youtubeId
@@ -123,6 +130,12 @@ export function VideoCard({
     });
   };
 
+  const confirmPendingRemoval = () => {
+    if (!pendingRemoval) return;
+    handleRemoveTag(pendingRemoval.dancerId);
+    setPendingRemoval(null);
+  };
+
   // Show 1 style on mobile, 3 on desktop, then "+x more styles"
   const firstStyle = displayStyles?.[0];
   const desktopStyles = displayStyles?.slice(1, 3) || [];
@@ -154,12 +167,16 @@ export function VideoCard({
             <div className="flex flex-wrap gap-2 items-center pointer-events-auto">
               {taggedDancers.map((dancer) => {
                 const dancerId = dancer.id || dancer.username;
-                const canRemove =
+                const isSelf =
                   currentUserId &&
-                  eventId &&
                   (currentUserId === dancerId ||
                     currentUserId === dancer.id ||
                     currentUserId === dancer.username);
+                const hasEditAccess = canEdit && currentUserId;
+                const canRemove =
+                  !!eventId &&
+                  !!currentUserId &&
+                  (isSelf || Boolean(hasEditAccess));
                 return (
                   <UserAvatar
                     username={dancer.username}
@@ -171,8 +188,16 @@ export function VideoCard({
                     styles={dancer.styles}
                     borderColor="white"
                     isSmall={true}
-                    showRemoveButton={canRemove || false}
-                    onRemove={() => handleRemoveTag(dancerId)}
+                    showRemoveButton={canRemove}
+                    onRemove={() =>
+                      setPendingRemoval({
+                        dancerId,
+                        displayName:
+                          dancer.displayName ||
+                          dancer.username ||
+                          "this dancer",
+                      })
+                    }
                     isRemoving={isPending}
                     key={dancerId}
                   />
@@ -180,11 +205,10 @@ export function VideoCard({
               })}
               {/* Tag self button - only show if user is logged in and eventId is provided */}
               {currentUserId && eventId && (
-                <TagSelfCircleButton
+                <TagUserCircleButton
                   eventId={eventId}
                   target="video"
                   targetId={video.id}
-                  currentUserId={currentUserId}
                   videoType={
                     video.type as "battle" | "choreography" | "class" | "other"
                   }
@@ -198,11 +222,10 @@ export function VideoCard({
         {/* Tag self button when no dancers are tagged - only show if user is logged in and eventId is provided */}
         {taggedDancers.length === 0 && currentUserId && eventId && (
           <div className="absolute bottom-2 left-2 flex flex-wrap gap-1 items-center z-20 pointer-events-auto">
-            <TagSelfCircleButton
+            <TagUserCircleButton
               eventId={eventId}
               target="video"
               targetId={video.id}
-              currentUserId={currentUserId}
               videoType={video.type as "battle" | "choreography" | "class"}
               currentVideoRoles={currentVideoRoles}
               size="sm"
@@ -267,6 +290,18 @@ export function VideoCard({
           </div>
         </div>
       </div>
+      <ConfirmationDialog
+        open={Boolean(pendingRemoval)}
+        title="Remove dancer"
+        description={`Remove ${
+          pendingRemoval?.displayName || "this dancer"
+        } from the video?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        loading={isPending}
+        onCancel={() => setPendingRemoval(null)}
+        onConfirm={confirmPendingRemoval}
+      />
     </div>
   );
 }

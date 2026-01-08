@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 interface UserBadgeProps {
   username: string;
   displayName: string;
+  instagram?: string | null;
+  claimed?: boolean;
   avatar?: string | null;
   image?: string | null;
   className?: string;
@@ -15,13 +17,18 @@ interface UserBadgeProps {
 export function UserBadge({
   username,
   displayName,
+  instagram,
+  claimed = true,
   avatar,
   image,
   className,
   onRemove,
 }: UserBadgeProps) {
   const badgeClasses = cn(
-    "text-black bg-fog-white border border-black font-semibold text-xs px-1 py-1 rounded flex items-center justify-center leading-none gap-1.5",
+    "text-black border border-black font-semibold text-xs px-1 py-1 rounded flex items-center justify-center leading-none gap-1.5",
+    claimed
+      ? "bg-fog-white"
+      : "bg-neutral-200 italic",
     className
   );
 
@@ -54,7 +61,9 @@ export function UserBadge({
         )}
       </div>
       <span className="text-sm">{displayName}</span>
-      <span className="text-gray-600 text-sm">({username})</span>
+      <span className="text-gray-600 text-sm">
+        {instagram ? `@${instagram}` : `(${username})`}
+      </span>
       {onRemove && (
         <button
           type="button"

@@ -13,7 +13,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// Helper function to sync event to PostgreSQL EventCard
+// Helper function to sync event to PostgreSQL EventCard and Event
 async function syncEventToPostgreSQL(
   eventId: string,
   eventDetails: EventDetails,
@@ -38,6 +38,21 @@ async function syncEventToPostgreSQL(
     (eventDetails.dates?.length || 0) - 1
   );
 
+  // Create or update PostgreSQL Event record (links event to user)
+  await prisma.event.upsert({
+    where: { eventId },
+    update: {
+      userId: eventDetails.creatorId,
+      creator: true,
+    },
+    create: {
+      eventId,
+      userId: eventDetails.creatorId,
+      creator: true,
+    },
+  });
+
+  // Create or update EventCard (read model for fast queries)
   await prisma.eventCard.upsert({
     where: { eventId },
     update: {
@@ -551,17 +566,42 @@ async function seedNeo4j() {
       ],
     };
 
-    // Create all events
+    // Create all events (check if they already exist first)
     const events = [event1, event2, event3];
     for (const event of events) {
       try {
-        await insertEvent(event);
-        await syncEventToPostgreSQL(
-          event.id,
-          event.eventDetails,
-          event.sections
-        );
-        console.log(`✅ Created event: ${event.eventDetails.title}`);
+        // Check if event already exists in Neo4j
+        const session = driver.session();
+        let eventExists = false;
+        try {
+          const result = await session.run(
+            "MATCH (e:Event {id: $eventId}) RETURN e LIMIT 1",
+            { eventId: event.id }
+          );
+          eventExists = result.records.length > 0;
+        } finally {
+          await session.close();
+        }
+
+        if (eventExists) {
+          console.log(
+            `ℹ️  Event ${event.eventDetails.title} already exists, skipping creation`
+          );
+          // Still sync to PostgreSQL in case it's missing there
+          await syncEventToPostgreSQL(
+            event.id,
+            event.eventDetails,
+            event.sections
+          );
+        } else {
+          await insertEvent(event);
+          await syncEventToPostgreSQL(
+            event.id,
+            event.eventDetails,
+            event.sections
+          );
+          console.log(`✅ Created event: ${event.eventDetails.title}`);
+        }
       } catch (error) {
         console.error(
           `❌ Failed to create event ${event.eventDetails.title}:`,

@@ -14,6 +14,7 @@ export interface UpdateUserInput {
   website?: string | null;
   image?: string | null;
   avatar?: string | null;
+  claimed?: boolean;
   [key: string]: unknown; // Allow additional properties for flexibility
 }
 
@@ -91,7 +92,9 @@ export const getUsers = async (keyword: string | null) => {
       MATCH (u:User)
       WHERE toLower(u.username) CONTAINS toLower($keyword)
          OR toLower(u.displayName) CONTAINS toLower($keyword)
+         OR toLower(u.instagram) CONTAINS toLower($keyword)
       RETURN u
+      ORDER BY coalesce(u.claimed, true) DESC, u.displayName ASC
       `,
       { keyword }
     );
@@ -100,6 +103,7 @@ export const getUsers = async (keyword: string | null) => {
       `
       MATCH (u:User)
       RETURN u
+      ORDER BY coalesce(u.claimed, true) DESC, u.displayName ASC
       `
     );
   }
@@ -123,6 +127,7 @@ export const signupUser = async (
     website?: string | null;
     image?: string | null;
     avatar?: string | null;
+    claimed?: boolean;
   }
 ) => {
   const session = driver.session();
@@ -151,6 +156,7 @@ export const signupUser = async (
       "u.displayName = $user.displayName",
       "u.username = $user.username",
       "u.date = $user.date",
+      "u.claimed = coalesce($user.claimed, true)",
     ];
 
     if (user.bio !== undefined) {
@@ -168,7 +174,6 @@ export const signupUser = async (
     if (user.avatar !== undefined) {
       setClauses.push("u.avatar = $user.avatar");
     }
-
     const setClause = setClauses.join(", ");
 
     // Generate slug for city if not provided
@@ -211,6 +216,7 @@ export const signupUser = async (
           website: user.website,
           image: user.image,
           avatar: user.avatar,
+          claimed: user.claimed,
         },
         city: cityData,
         citySlug: citySlug,

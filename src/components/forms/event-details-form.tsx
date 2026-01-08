@@ -20,7 +20,7 @@ import {
   FormField,
   FormMessage,
 } from "../ui/form";
-import { Input } from "../ui/input";
+import { Input, InstagramInput } from "../ui/input";
 import { DebouncedSearchSelect } from "../DebouncedSearchSelect";
 import { PosterUpload } from "../ui/poster-upload";
 import { DatePicker } from "../ui/date-picker";
@@ -249,23 +249,41 @@ export function EventDetailsForm({
           <FormField
             control={control}
             name="eventDetails.instagram"
-            render={({ field }) => (
-              <FormItem className="flex-1 min-w-0 w-full">
-                <FormLabel className="flex items-center gap-2">
-                  <Instagram className="h-4 w-4" />
-                  Instagram
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    value={field.value ?? ""}
-                    className="bg-neutral-300 w-full"
-                    placeholder="@username or link"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              // Extract username from URL if it's a full URL, otherwise use as-is
+              const getUsernameFromValue = (val: string | undefined): string => {
+                if (!val) return "";
+                // If it's a URL, extract the username
+                if (val.includes("instagram.com/")) {
+                  const match = val.match(/instagram\.com\/([^/?]+)/);
+                  return match ? match[1] : val.replace(/^@/, "");
+                }
+                // Otherwise, remove @ if present
+                return val.replace(/^@/, "");
+              };
+
+              return (
+                <FormItem className="flex-1 min-w-0 w-full">
+                  <FormLabel className="flex items-center gap-2">
+                    <Instagram className="h-4 w-4" />
+                    Instagram
+                  </FormLabel>
+                  <FormControl>
+                    <InstagramInput
+                      {...field}
+                      value={getUsernameFromValue(field.value)}
+                      onChange={(e) => {
+                        // The normalizeInstagram function will handle converting username to URL
+                        field.onChange(e.target.value);
+                      }}
+                      className="bg-neutral-300 w-full"
+                      placeholder="username"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
           <FormField
             control={control}

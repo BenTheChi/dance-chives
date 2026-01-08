@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import type { Session } from "next-auth";
 import { prisma } from "@/lib/primsa";
 import {
   getTaggingRequestApprovers,
@@ -9,6 +10,7 @@ import {
   getAuthLevelChangeRequestApprovers,
   canUserApproveRequest,
   createNotification,
+  createTagNotification,
   REQUEST_TYPES,
   RequestType,
 } from "@/lib/utils/request-utils";
@@ -2300,9 +2302,11 @@ export async function tagSelfWithRole(eventId: string, role: string) {
   }
 
   // Regular role handling (non-Team Member roles)
-  // Check if user has permission to tag directly
+  // Verified users can tag directly
   const authLevel = session?.user?.auth || 0;
+  const isVerified = !!session?.user?.accountVerified;
   const canTagDirectly =
+    isVerified ||
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
     (await isEventCreator(eventId, userId));
@@ -2426,7 +2430,9 @@ export async function tagSelfInVideo(
 
   // Check if user has permission to tag directly
   const authLevel = session?.user?.auth || 0;
+  const isVerified = !!session?.user?.accountVerified;
   const canTagDirectly =
+    isVerified ||
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
     (await isEventCreator(eventId, userId));
@@ -2593,7 +2599,9 @@ export async function tagSelfInSection(
 
   // Check if user has permission to tag directly
   const authLevel = session?.user?.auth || 0;
+  const isVerified = !!session?.user?.accountVerified;
   const canTagDirectly =
+    isVerified ||
     authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
     (await isTeamMember(eventId, userId)) ||
     (await isEventCreator(eventId, userId));
@@ -3111,6 +3119,248 @@ export async function removeSectionWinnerTag(
   await setSectionWinner(eventId, sectionId, null);
 
   return { success: true };
+}
+
+// ============================================================================
+// Multi-user tagging helpers (verified users can tag anyone)
+// ============================================================================
+
+function ensureVerified(session: Session | null) {
+  if (!session?.user?.accountVerified) {
+    throw new Error("Only verified users can tag");
+  }
+}
+
+async function isUserClaimed(userId: string): Promise<boolean> {
+  const user = await getUser(userId).catch(() => null);
+  if (!user) {
+    return false;
+  }
+  return user.claimed !== false;
+}
+
+export async function tagUsersWithRole(
+  eventId: string,
+  userIds: string[],
+  role: string
+): Promise<{
+  success: boolean;
+  tagged: string[];
+  failed: Array<{ userId: string; error: string }>;
+}> {
+  const session = await auth();
+  ensureVerified(session);
+  if (!isValidRole(role)) {
+    throw new Error(
+      `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
+    );
+  }
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+  const eventTitle = (await getEventTitle(eventId)) || eventId;
+
+  const uniqueUserIds = Array.from(new Set(userIds || []));
+  const tagged: string[] = [];
+  const failed: Array<{ userId: string; error: string }> = [];
+
+  for (const uid of uniqueUserIds) {
+    try {
+      await setEventRoles(eventId, uid, role);
+      const shouldNotify = await isUserClaimed(uid);
+      if (shouldNotify) {
+        await createTagNotification(uid, {
+          eventId,
+          eventTitle,
+          role,
+        });
+      }
+      tagged.push(uid);
+    } catch (error) {
+      failed.push({
+        userId: uid,
+        error: error instanceof Error ? error.message : "Failed to tag user",
+      });
+    }
+  }
+
+  return { success: failed.length === 0, tagged, failed };
+}
+
+export async function tagUsersInVideo(
+  eventId: string,
+  videoId: string,
+  userIds: string[],
+  role: string
+): Promise<{
+  success: boolean;
+  tagged: string[];
+  failed: Array<{ userId: string; error: string }>;
+}> {
+  const session = await auth();
+  ensureVerified(session);
+  if (!role) {
+    throw new Error("Role is required for video tags");
+  }
+  const roleUpper = role.toUpperCase();
+  const isValid =
+    isValidVideoRole(role) ||
+    roleUpper === "CHOREOGRAPHER" ||
+    roleUpper === "TEACHER";
+  if (!isValid) {
+    throw new Error(`Invalid video role: ${role}`);
+  }
+
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+  const videoExists = await videoExistsInEvent(eventId, videoId);
+  if (!videoExists) {
+    throw new Error("Video not found in this event");
+  }
+  if (role === VIDEO_ROLE_WINNER) {
+    const videoType = await getVideoType(videoId);
+    if (videoType !== "battle" && videoType !== "other") {
+      throw new Error(
+        "Winner tags are only supported for battle and other videos"
+      );
+    }
+  }
+  const eventTitle = (await getEventTitle(eventId)) || eventId;
+  const videoTitle = (await getVideoTitle(videoId)) || videoId;
+
+  const uniqueUserIds = Array.from(new Set(userIds || []));
+  const tagged: string[] = [];
+  const failed: Array<{ userId: string; error: string }> = [];
+
+  for (const uid of uniqueUserIds) {
+    try {
+      const rolesToTag = [role];
+      if (role === VIDEO_ROLE_WINNER) {
+        const isDancer = await isUserTaggedInVideoWithRole(
+          eventId,
+          videoId,
+          uid,
+          VIDEO_ROLE_DANCER
+        );
+        if (!isDancer) {
+          rolesToTag.push(VIDEO_ROLE_DANCER);
+        }
+      }
+
+      const existingRoles: string[] = [];
+      for (const roleToCheck of [
+        VIDEO_ROLE_DANCER,
+        VIDEO_ROLE_WINNER,
+        "Choreographer",
+        "Teacher",
+      ]) {
+        const hasRole = await isUserTaggedInVideoWithRole(
+          eventId,
+          videoId,
+          uid,
+          roleToCheck
+        );
+        if (hasRole) existingRoles.push(roleToCheck);
+      }
+
+      const allRoles = Array.from(new Set([...existingRoles, ...rolesToTag]));
+      await setVideoRoles(eventId, videoId, uid, allRoles);
+
+      const shouldNotify = await isUserClaimed(uid);
+      if (shouldNotify) {
+        await createTagNotification(uid, {
+          eventId,
+          eventTitle,
+          videoId,
+          videoTitle,
+          role: fromNeo4jRoleFormat(role) || role,
+        });
+      }
+      tagged.push(uid);
+    } catch (error) {
+      failed.push({
+        userId: uid,
+        error: error instanceof Error ? error.message : "Failed to tag user",
+      });
+    }
+  }
+
+  return { success: failed.length === 0, tagged, failed };
+}
+
+export async function tagUsersInSection(
+  eventId: string,
+  sectionId: string,
+  userIds: string[],
+  role: string
+): Promise<{
+  success: boolean;
+  tagged: string[];
+  failed: Array<{ userId: string; error: string }>;
+}> {
+  const session = await auth();
+  ensureVerified(session);
+  if (!role) {
+    throw new Error("Role is required for section tags");
+  }
+  if (!isValidSectionRole(role)) {
+    throw new Error(
+      `Invalid section role: ${role}. Must be: ${SECTION_ROLE_WINNER} or ${SECTION_ROLE_JUDGE}`
+    );
+  }
+  const eventExistsInNeo4j = await eventExists(eventId);
+  if (!eventExistsInNeo4j) {
+    throw new Error("Event not found");
+  }
+  const sectionExists = await sectionExistsInEvent(eventId, sectionId);
+  if (!sectionExists) {
+    throw new Error("Section not found in this event");
+  }
+  const eventTitle = (await getEventTitle(eventId)) || eventId;
+
+  const uniqueUserIds = Array.from(new Set(userIds || []));
+  const tagged: string[] = [];
+  const failed: Array<{ userId: string; error: string }> = [];
+
+  for (const uid of uniqueUserIds) {
+    try {
+      if (role === SECTION_ROLE_WINNER) {
+        const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
+        if (!currentWinnerIds.includes(uid)) {
+          await setSectionWinners(eventId, sectionId, [
+            ...currentWinnerIds,
+            uid,
+          ]);
+        }
+      } else if (role === SECTION_ROLE_JUDGE) {
+        const currentJudgeIds = await getSectionJudgeIds(eventId, sectionId);
+        if (!currentJudgeIds.includes(uid)) {
+          await setSectionJudges(eventId, sectionId, [...currentJudgeIds, uid]);
+        }
+      }
+
+      const shouldNotify = await isUserClaimed(uid);
+      if (shouldNotify) {
+        await createTagNotification(uid, {
+          eventId,
+          eventTitle,
+          sectionId,
+          role: fromNeo4jRoleFormat(role) || role,
+        });
+      }
+      tagged.push(uid);
+    } catch (error) {
+      failed.push({
+        userId: uid,
+        error: error instanceof Error ? error.message : "Failed to tag user",
+      });
+    }
+  }
+
+  return { success: failed.length === 0, tagged, failed };
 }
 
 /**

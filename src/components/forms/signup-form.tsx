@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, InstagramInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
@@ -551,7 +551,7 @@ export default function SignUpForm({
                   <FormItem>
                     <FormLabel>Instagram Username</FormLabel>
                     <FormControl>
-                      <Input
+                      <InstagramInput
                         placeholder="username"
                         {...field}
                         value={field.value ?? ""}

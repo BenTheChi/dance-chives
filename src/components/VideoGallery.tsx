@@ -17,6 +17,7 @@ interface VideoGalleryProps {
   sectionStyles?: string[];
   applyStylesToVideos?: boolean;
   currentUserId?: string;
+  canEdit?: boolean;
   enableUrlRouting?: boolean;
 }
 
@@ -32,6 +33,7 @@ export default function VideoGallery({
   applyStylesToVideos,
   currentUserId,
   enableUrlRouting = false,
+  canEdit = false,
 }: VideoGalleryProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -193,6 +195,7 @@ export default function VideoGallery({
               styles={displayStyles}
               currentUserId={currentUserId}
               eventId={eventId}
+              canEdit={canEdit}
             />
           </div>
         ))}
@@ -218,6 +221,7 @@ export default function VideoGallery({
           sectionStyles={sectionStyles}
           applyStylesToVideos={applyStylesToVideos}
           currentUserId={currentUserId}
+          canEdit={canEdit}
           enableUrlRouting={enableUrlRouting}
         />
       )}

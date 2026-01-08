@@ -200,8 +200,10 @@ export function CalendarPageClient({
                 <SelectContent>
                   {cities.map((city) => {
                     const citySlug = city.slug || generateCitySlug(city);
+                    if (!citySlug || !citySlug.trim()) return null;
+                    const key = (city.id && city.id.trim()) ? city.id : citySlug;
                     return (
-                      <SelectItem key={city.id} value={citySlug}>
+                      <SelectItem key={key} value={citySlug}>
                         {city.name}
                         {city.region && `, ${city.region}`}
                       </SelectItem>

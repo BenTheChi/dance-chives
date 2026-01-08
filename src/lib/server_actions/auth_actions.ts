@@ -40,6 +40,7 @@ import { deleteUser } from "@/db/queries/user";
 import { getUserEvents } from "@/db/queries/user";
 import { deleteEvent, getEventImages } from "@/db/queries/event";
 import { addMailerLiteSubscriber } from "@/lib/mailerlite";
+import { randomUUID } from "crypto";
 
 export async function signInWithGoogle() {
   const { error } = await signIn("google");
@@ -60,6 +61,132 @@ export async function signInWithGoogle() {
 
 export async function signOutAccount() {
   await signOut({ redirectTo: "/" });
+}
+
+function normalizeInstagramHandle(handle: string): string {
+  return handle.trim().replace(/^@/, "").toLowerCase();
+}
+
+async function instagramExistsInNeo4j(instagram: string): Promise<boolean> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {instagram: $instagram})
+      RETURN count(u) as count
+      `,
+      { instagram }
+    );
+    const count = result.records[0]?.get("count")?.toNumber?.() || 0;
+    return count > 0;
+  } finally {
+    await session.close();
+  }
+}
+
+export async function createUnclaimedUser(
+  displayName: string,
+  instagram: string
+): Promise<{ success: boolean; user?: UserSearchItem; error?: string }> {
+  try {
+    const normalizedInstagram = normalizeInstagramHandle(instagram || "");
+    if (!displayName?.trim()) {
+      return { success: false, error: "Display name is required" };
+    }
+    if (!normalizedInstagram) {
+      return { success: false, error: "Instagram handle is required" };
+    }
+
+    const igExists = await instagramExistsInNeo4j(normalizedInstagram);
+    if (igExists) {
+      return { success: false, error: "Existing account" };
+    }
+
+    const username = `user-${randomUUID()}`;
+    const email = `${username}@unclaimed.com`;
+
+    const createdUser = await prisma.user.create({
+      data: {
+        name: displayName,
+        email,
+        claimed: false,
+        auth: null,
+      },
+    });
+
+    // Create the Neo4j User node WITHOUT creating a City node (unclaimed users don't have a city yet).
+    // This avoids creating Cities with empty ids/slugs which can break Radix Select dropdowns.
+    const neoSession = driver.session();
+    try {
+      await neoSession.run(
+        `
+        MERGE (u:User {id: $id})
+        SET
+          u.displayName = $displayName,
+          u.username = $username,
+          u.date = "",
+          u.bio = null,
+          u.instagram = $instagram,
+          u.website = null,
+          u.image = null,
+          u.avatar = null,
+          u.claimed = false
+        RETURN u
+        `,
+        {
+          id: createdUser.id,
+          displayName,
+          username,
+          instagram: normalizedInstagram,
+        }
+      );
+    } finally {
+      await neoSession.close();
+    }
+
+    await prisma.userCard.upsert({
+      where: { userId: createdUser.id },
+      update: {
+        username,
+        displayName,
+        imageUrl: null,
+        cityId: null,
+        cityName: null,
+        styles: [],
+      },
+      create: {
+        userId: createdUser.id,
+        username,
+        displayName,
+        imageUrl: null,
+        cityId: null,
+        cityName: null,
+        styles: [],
+      },
+    });
+
+    return {
+      success: true,
+      user: {
+        id: createdUser.id,
+        username,
+        displayName,
+        instagram: normalizedInstagram,
+        claimed: false,
+        avatar: null,
+        image: null,
+      },
+    };
+  } catch (error) {
+    console.error("Error creating unclaimed user:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to create unclaimed user",
+    };
+  }
 }
 
 export async function signup(
@@ -315,7 +442,8 @@ export async function signup(
     console.log("✅ Account marked as verified in PostgreSQL");
 
     // Handle newsletter subscription if user opted in
-    const newsletterSubscribed = formData.get("newsletterSubscribed") === "true";
+    const newsletterSubscribed =
+      formData.get("newsletterSubscribed") === "true";
     if (newsletterSubscribed && session.user.email) {
       try {
         const mailerLiteResult = await addMailerLiteSubscriber(
