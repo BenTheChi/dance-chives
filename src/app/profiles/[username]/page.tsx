@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getUserProfile } from "@/lib/server_actions/auth_actions";
 import { AppNavbar } from "@/components/AppNavbar";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { Event, Role } from "@/types/event";
@@ -339,9 +340,9 @@ export default async function ProfilePage({ params }: PageProps) {
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm hover:underline"
+                          className="text-lg hover:underline"
                         >
-                          @{profile.instagram.replace(/^@/, "")}
+                          {profile.instagram.replace(/^@/, "")}
                         </Link>
                       </div>
                     )}
@@ -352,6 +353,67 @@ export default async function ProfilePage({ params }: PageProps) {
                     )}
                   </div>
                 </section>
+                {/* Unclaimed Account Notice */}
+                {profile.claimed === false && (
+                  <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col gap-4">
+                    <p>
+                      This account is unclaimed and used for historical tracking
+                      purposes as a reference to the Instagram account. <br />{" "}
+                      <br />
+                      If this is your account sign up with Instagram as your
+                      auth to confirm ownership of this account.
+                    </p>
+                    <div className="flex justify-center">
+                      <Link href="/signup">
+                        <Button
+                          className="flex items-center justify-center gap-2"
+                          size="lg"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-instagram"
+                          >
+                            <rect
+                              width="20"
+                              height="20"
+                              x="2"
+                              y="2"
+                              rx="5"
+                              ry="5"
+                            />
+                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                          </svg>
+                          Sign Up with Instagram
+                        </Button>
+                      </Link>
+                    </div>
+
+                    <p>
+                      If you are the Instagram account owner and would like to
+                      remove the Dance Chives reference to your account please
+                      DM the{" "}
+                      <Link
+                        href="https://instagram.com/dancechives"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-light hover:text-white underline"
+                      >
+                        dancechives
+                      </Link>{" "}
+                      Instagram account with your request of removal and it will
+                      be removed within 24 hours.
+                    </p>
+                  </section>
+                )}
               </div>
             </div>
           </div>
