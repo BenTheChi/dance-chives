@@ -43,14 +43,41 @@ import { addMailerLiteSubscriber } from "@/lib/mailerlite";
 import { randomUUID } from "crypto";
 
 export async function signInWithGoogle() {
-  const { error } = await signIn("google");
+  const result = await signIn("google", { redirectTo: "/signup" });
 
-  if (error) {
-    console.error(error);
+  if (result?.error) {
+    console.error(result.error);
     return;
   }
 
-  // After successful sign in, check if user is registered
+  if (result?.redirect) {
+    // NextAuth returns the provider redirect URL; forward it to the client.
+    redirect(result.redirect);
+  }
+
+  // Fallback: if no redirect was provided, send user based on registration status.
+  const session = await auth();
+  if (session?.user?.accountVerified) {
+    redirect("/dashboard");
+  } else {
+    redirect("/signup");
+  }
+}
+
+export async function signInWithInstagram() {
+  const result = await signIn("instagram", { redirectTo: "/signup" });
+
+  if (result?.error) {
+    console.error(result.error);
+    return;
+  }
+
+  if (result?.redirect) {
+    // NextAuth returns the provider redirect URL; forward it to the client.
+    redirect(result.redirect);
+  }
+
+  // Fallback: if no redirect was provided, send user based on registration status.
   const session = await auth();
   if (session?.user?.accountVerified) {
     redirect("/dashboard");
@@ -65,6 +92,41 @@ export async function signOutAccount() {
 
 function normalizeInstagramHandle(handle: string): string {
   return handle.trim().replace(/^@/, "").toLowerCase();
+}
+
+async function findUnclaimedUserByInstagram(instagram: string) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {instagram: $instagram, claimed: false})
+      RETURN u
+      LIMIT 1
+      `,
+      { instagram }
+    );
+    if (result.records.length === 0) {
+      return null;
+    }
+    return result.records[0].get("u").properties as UserSearchItem;
+  } finally {
+    await session.close();
+  }
+}
+
+async function removeAllUserRelationships(userId: string) {
+  const session = driver.session();
+  try {
+    await session.run(
+      `
+      MATCH (u:User {id: $userId})-[r]-()
+      DELETE r
+      `,
+      { userId }
+    );
+  } finally {
+    await session.close();
+  }
 }
 
 async function instagramExistsInNeo4j(instagram: string): Promise<boolean> {
@@ -109,6 +171,8 @@ export async function createUnclaimedUser(
       data: {
         name: displayName,
         email,
+        // Prisma client types may lag migrations; claimed column exists in schema
+        // @ts-expect-error claimed is present in the database
         claimed: false,
         auth: null,
       },
@@ -283,6 +347,35 @@ export async function signup(
     const bio = (formData.get("bio") as string) || "";
     const instagram = (formData.get("instagram") as string) || "";
     const website = (formData.get("website") as string) || "";
+  const wipeRelationships = formData.get("wipeRelationships") === "true";
+
+  const normalizedInstagram = normalizeInstagramHandle(
+    instagram || session.user.instagram || ""
+  );
+
+  // If this Instagram matches an existing unclaimed profile, use it as the canonical user
+  let targetUserId = session.user.id;
+  let claimedFromUnclaimed = false;
+
+  if (normalizedInstagram) {
+    const unclaimedUser = await findUnclaimedUserByInstagram(normalizedInstagram);
+    if (unclaimedUser?.id) {
+      targetUserId = unclaimedUser.id;
+      claimedFromUnclaimed = true;
+
+      if (wipeRelationships) {
+        await removeAllUserRelationships(unclaimedUser.id);
+      }
+
+      // Move OAuth accounts created for the temporary user onto the unclaimed user
+      if (session.user.id !== unclaimedUser.id) {
+        await prisma.account.updateMany({
+          where: { userId: session.user.id },
+          data: { userId: unclaimedUser.id },
+        });
+      }
+    }
+  }
 
     // Handle profile and avatar picture uploads if provided
     let imageUrl: string | null = null;
@@ -367,20 +460,23 @@ export async function signup(
       date: formData.get("date") as string,
       styles,
       bio: bio || null,
-      instagram: instagram || null,
+      instagram: normalizedInstagram || null,
       website: website || null,
       image: imageUrl,
       avatar: avatarUrl,
     };
 
     // Update user in Neo4j with profile information
-    const userResult = await signupUser(session.user.id, profileData);
+    const userResult = await signupUser(targetUserId, {
+      ...profileData,
+      claimed: true,
+    });
 
     // Upsert Postgres user_cards projection (for fast user card feeds)
     const cityObj =
       typeof profileData.city === "object" ? profileData.city : null;
     await prisma.userCard.upsert({
-      where: { userId: session.user.id },
+      where: { userId: targetUserId },
       update: {
         username: profileData.username,
         displayName: profileData.displayName,
@@ -392,7 +488,7 @@ export async function signup(
         styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
       },
       create: {
-        userId: session.user.id,
+        userId: targetUserId,
         username: profileData.username,
         displayName: profileData.displayName,
         imageUrl: profileData.image ?? null,
@@ -419,13 +515,16 @@ export async function signup(
     // Store agreement dates when account is verified
     const verificationDate = new Date();
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: targetUserId },
       data: {
         accountVerified: verificationDate,
         termsAcceptedAt: verificationDate,
         contentUsageAcceptedAt: verificationDate,
         name: profileData.displayName || session.user.name,
         auth: authLevel,
+        // Prisma client types may lag migrations; claimed column exists in schema
+        // @ts-expect-error claimed is present in the database
+        claimed: true,
       },
     });
 
@@ -470,6 +569,18 @@ export async function signup(
     revalidatePath("/profiles");
     // Also revalidate the individual profile page
     revalidatePath(`/profiles/${profileData.username}`);
+
+    // If we merged into an unclaimed account, refresh the session using the magic-link provider
+    if (claimedFromUnclaimed && targetUserId !== session.user.id) {
+      try {
+        await signIn("magic-link", {
+          redirectTo: "/dashboard",
+          userId: targetUserId,
+        });
+      } catch (err) {
+        console.warn("Could not refresh session after claim:", err);
+      }
+    }
 
     return { success: true };
   } catch (error) {
