@@ -19,6 +19,7 @@ interface SearchItem {
   id?: string; // Optional - only present when coming from server data
   displayName: string;
   username: string;
+  instagram?: string | null;
 }
 
 interface DebouncedSearchMultiSelectProps<T extends SearchItem> {
@@ -47,7 +48,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     value,
     name,
     label,
-    labelColor = "text-white",
+    labelColor = "text-charcoal",
     className,
     disabled = false,
     required = false,
@@ -160,6 +161,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
                 }
                 image={"image" in item ? (item.image as string | null) : null}
                 onRemove={() => removeItem(itemId)}
+                instagram={item.instagram}
               />
             );
           }

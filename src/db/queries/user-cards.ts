@@ -8,12 +8,25 @@ export type UserCardRow = {
   image?: string | null;
   styles?: string[];
   city: string;
+  claimed: boolean;
 };
 
 export async function getUserCards(): Promise<UserCardRow[]> {
   const rows = await prisma.userCard.findMany({
     orderBy: [{ displayName: "asc" }, { username: "asc" }],
   });
+
+  // Get all user IDs to fetch claimed status
+  const userIds = rows.map((r) => r.userId);
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, claimed: true },
+  });
+
+  // Create a map for quick lookup
+  const userClaimedMap = new Map(
+    users.map((u) => [u.id, u.claimed ?? true])
+  );
 
   return rows.map((r) => ({
     id: r.userId,
@@ -22,6 +35,7 @@ export async function getUserCards(): Promise<UserCardRow[]> {
     image: r.imageUrl ?? null,
     styles: r.styles ?? [],
     city: r.cityName ?? "",
+    claimed: userClaimedMap.get(r.userId) ?? true,
   }));
 }
 
