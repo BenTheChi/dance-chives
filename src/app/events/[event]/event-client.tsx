@@ -179,8 +179,6 @@ export function EventTagSelfButton({ eventId }: EventClientProps) {
     <TagUserCircleButton
       eventId={eventId}
       currentUserRoles={authData.currentUserRoles}
-      isTeamMember={authData.isTeamMember}
-      canTagDirectly={authData.canTagDirectly}
       size="sm"
     />
   );

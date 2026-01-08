@@ -506,25 +506,22 @@ export function VideoLightbox({
           <div className="bg-black/90 text-white p-3 sm:p-4 border-t border-white/10">
             <div className="flex flex-nowrap items-start justify-start gap-10">
               {/* Tag Self Button */}
-              {currentUserId && (
-                <div className="flex-shrink-0">
-                  <TagUserCircleButton
-                    eventId={eventId}
-                    target="video"
-                    targetId={video.id}
-                    currentUserId={currentUserId}
-                    videoType={
-                      videoType as "battle" | "choreography" | "class" | "other"
-                    }
-                    currentVideoRoles={[
-                      ...(isUserDancer ? [VIDEO_ROLE_DANCER] : []),
-                      ...(isUserWinner ? [VIDEO_ROLE_WINNER] : []),
-                      ...(isUserChoreographer ? ["Choreographer"] : []),
-                      ...(isUserTeacher ? ["Teacher"] : []),
-                    ]}
-                  />
-                </div>
-              )}
+              <div className="flex-shrink-0">
+                <TagUserCircleButton
+                  eventId={eventId}
+                  target="video"
+                  targetId={video.id}
+                  videoType={
+                    videoType as "battle" | "choreography" | "class" | "other"
+                  }
+                  currentVideoRoles={[
+                    ...(isUserDancer ? [VIDEO_ROLE_DANCER] : []),
+                    ...(isUserWinner ? [VIDEO_ROLE_WINNER] : []),
+                    ...(isUserChoreographer ? ["Choreographer"] : []),
+                    ...(isUserTeacher ? ["Teacher"] : []),
+                  ]}
+                />
+              </div>
 
               {/* Dancers - Show for all video types */}
               {dancers.length > 0 && (

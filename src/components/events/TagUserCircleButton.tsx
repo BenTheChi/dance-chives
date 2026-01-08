@@ -41,7 +41,6 @@ interface TagUserCircleButtonProps {
   isUserTagged?: boolean;
   size?: "sm" | "md" | "lg";
   dialogTitle?: string;
-  dialogDescription?: string;
   defaultRole?: string;
   existingTaggedUsers?: UserSearchItem[];
   onUsersTagged?: (users: UserSearchItem[]) => void;
@@ -102,7 +101,6 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
     isUserTagged = false,
     size = "md",
     dialogTitle,
-    dialogDescription,
     defaultRole,
     existingTaggedUsers = [],
     onUsersTagged,
