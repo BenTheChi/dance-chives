@@ -107,27 +107,17 @@ export function EventDetailsForm({
   useEffect(() => {
     if (!hasInitialized.current) {
       if (fields.length === 0) {
-        // Initialize with one entry if empty
+        // Ensure at least one date entry exists
         append({
           date: "",
           isAllDay: true,
           startTime: undefined,
           endTime: undefined,
         });
-        hasInitialized.current = true;
-      } else if (fields.length > 1) {
-        // If there are more than one entries on mount, reduce to one
-        // Remove from the end, working backwards to avoid index issues
-        for (let i = fields.length - 1; i > 0; i--) {
-          remove(i);
-        }
-        hasInitialized.current = true;
-      } else if (fields.length === 1) {
-        // Already has exactly one entry, mark as initialized
-        hasInitialized.current = true;
       }
+      hasInitialized.current = true;
     }
-  }, [fields.length, append, remove]);
+  }, [fields.length, append]);
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
