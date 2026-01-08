@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { EventCard } from "@/components/EventCard";
@@ -54,7 +54,19 @@ export function RolesTabsSection({
   sortedRoles,
   savedEventIds,
 }: RolesTabsSectionProps) {
-  const [showFuture, setShowFuture] = useState(false);
+  // Check if there are any future events across all roles
+  const hasFutureEvents = useMemo(() => {
+    for (const role of sortedRoles) {
+      const events = eventsByRole.get(role) || [];
+      if (events.some((event) => isEventInFuture(event))) {
+        return true;
+      }
+    }
+    return false;
+  }, [eventsByRole, sortedRoles]);
+
+  // Default to future if there are future events, otherwise default to past
+  const [showFuture, setShowFuture] = useState(hasFutureEvents);
 
   // Filter and sort events based on past/future toggle
   const getFilteredAndSortedEvents = (role: string): Event[] => {

@@ -399,8 +399,7 @@ export default async function ProfilePage({ params }: PageProps) {
 
                     <p>
                       If you are the Instagram account owner and would like to
-                      remove the Dance Chives reference to your account please
-                      DM the{" "}
+                      remove this account please DM the{" "}
                       <Link
                         href="https://instagram.com/dancechives"
                         target="_blank"
@@ -409,8 +408,8 @@ export default async function ProfilePage({ params }: PageProps) {
                       >
                         dancechives
                       </Link>{" "}
-                      Instagram account with your request of removal and it will
-                      be removed within 24 hours.
+                      account on Instagram with your request and it will be
+                      removed within 24 hours.
                     </p>
                   </section>
                 )}
