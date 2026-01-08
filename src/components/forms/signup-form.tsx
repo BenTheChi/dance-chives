@@ -83,6 +83,7 @@ const signupSchema = z.object({
   instagram: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
   isCreator: z.boolean().optional(),
+  wipeRelationships: z.boolean().optional(),
   profilePicture: z.instanceof(File).nullable().optional(),
   avatarPicture: z.instanceof(File).nullable().optional(),
   termsAccepted: z.boolean().refine((val) => val === true, {
@@ -111,6 +112,7 @@ const editSchema = z.object({
   bio: z.string().max(500, "Bio must be under 500 characters").optional(),
   instagram: z.string().optional(),
   website: z.string().url().optional().or(z.literal("")),
+  wipeRelationships: z.boolean().optional(),
   profilePicture: z.instanceof(File).nullable().optional(),
   avatarPicture: z.instanceof(File).nullable().optional(),
 });
@@ -193,6 +195,7 @@ export default function SignUpForm({
           city: undefined as City | undefined, // Required field, will be validated on submit
           styles: [],
           isCreator: false,
+          wipeRelationships: false,
           profilePicture: null,
           avatarPicture: null,
           termsAccepted: false,
@@ -225,6 +228,12 @@ export default function SignUpForm({
     }
     if (data.instagram) {
       formData.set("instagram", data.instagram);
+    }
+    if (!isEditMode && "wipeRelationships" in data) {
+      formData.set(
+        "wipeRelationships",
+        (data.wipeRelationships || false).toString()
+      );
     }
     if (data.website) {
       formData.set("website", data.website);
@@ -561,6 +570,32 @@ export default function SignUpForm({
                   </FormItem>
                 )}
               />
+              {/* Wipe relationships checkbox - only show in signup */}
+              {!isEditMode && (
+                <FormField
+                  control={form.control}
+                  name="wipeRelationships"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-start gap-2">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                            className="mt-1"
+                          />
+                        </FormControl>
+                        <FormLabel className="!font-normal text-sm leading-relaxed flex-1 pointer-events-none !text-white data-[error=true]:!text-white">
+                          Remove all existing relationships (events, tags, links)
+                          for this Instagram account when claiming an unclaimed
+                          profile.
+                        </FormLabel>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <hr className="my-10 border-black" />
               {/* Profile Picture */}
               <FormField
