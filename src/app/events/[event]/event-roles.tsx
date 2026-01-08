@@ -86,56 +86,58 @@ export function EventRoles({
         <h2 className="text-center underline">Roles</h2>
         <EventTagSelfButton eventId={eventId} />
       </div>
-      {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
-        <div key={roleTitle} className="flex flex-col gap-1">
-          <div
-            key={roleTitle}
-            className="flex flex-row flex-wrap gap-2 items-center"
-          >
-            <h3>{fromNeo4jRoleFormat(roleTitle) || roleTitle}</h3>
+      <div className="flex flex-col gap-2">
+        {Array.from(rolesByTitle.entries()).map(([roleTitle, roles]) => (
+          <div key={roleTitle} className="flex flex-col gap-1">
+            <div
+              key={roleTitle}
+              className="flex flex-row flex-wrap gap-2 items-center"
+            >
+              <h3>{fromNeo4jRoleFormat(roleTitle) || roleTitle}</h3>
 
-            <div className="flex flex-row gap-2 items-center flex-wrap">
-              {roles.map((role, index) => {
-                const roleUserId = role.user?.id || role.user?.username;
-                const canRemove =
-                  !!currentUserId &&
-                  !!roleUserId &&
-                  (currentUserId === roleUserId || canManageRoles);
+              <div className="flex flex-row gap-1 items-center flex-wrap">
+                {roles.map((role, index) => {
+                  const roleUserId = role.user?.id || role.user?.username;
+                  const canRemove =
+                    !!currentUserId &&
+                    !!roleUserId &&
+                    (currentUserId === roleUserId || canManageRoles);
 
-                return (
-                  <UserAvatar
-                    key={`${role.id}-${index}`}
-                    username={role.user?.username ?? ""}
-                    displayName={
-                      role.user?.displayName ?? role.user?.username ?? ""
-                    }
-                    avatar={(role.user as { avatar?: string | null }).avatar}
-                    image={(role.user as { image?: string | null }).image}
-                    showHoverCard
-                    city={(role.user as { city?: string }).city || ""}
-                    styles={(role.user as { styles?: string[] }).styles}
-                    isSmall={true}
-                    showRemoveButton={canRemove || false}
-                    onRemove={() => {
-                      if (!roleUserId) return;
-                      const displayName =
-                        role.user?.displayName ||
-                        role.user?.username ||
-                        "this role";
-                      setPendingRemoval({
-                        userId: roleUserId,
-                        roleTitle,
-                        displayName,
-                      });
-                    }}
-                    isRemoving={isPending}
-                  />
-                );
-              })}
+                  return (
+                    <UserAvatar
+                      key={`${role.id}-${index}`}
+                      username={role.user?.username ?? ""}
+                      displayName={
+                        role.user?.displayName ?? role.user?.username ?? ""
+                      }
+                      avatar={(role.user as { avatar?: string | null }).avatar}
+                      image={(role.user as { image?: string | null }).image}
+                      showHoverCard
+                      city={(role.user as { city?: string }).city || ""}
+                      styles={(role.user as { styles?: string[] }).styles}
+                      isSmall={true}
+                      showRemoveButton={canRemove || false}
+                      onRemove={() => {
+                        if (!roleUserId) return;
+                        const displayName =
+                          role.user?.displayName ||
+                          role.user?.username ||
+                          "this role";
+                        setPendingRemoval({
+                          userId: roleUserId,
+                          roleTitle,
+                          displayName,
+                        });
+                      }}
+                      isRemoving={isPending}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
       <ConfirmationDialog
         open={Boolean(pendingRemoval)}
         title="Remove role"
