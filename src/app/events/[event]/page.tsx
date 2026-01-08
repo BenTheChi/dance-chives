@@ -764,7 +764,7 @@ export default async function EventPage({ params }: PageProps) {
                 {event.eventDetails.description && (
                   <LinkifiedText
                     text={event.eventDetails.description}
-                    className="text-sm whitespace-pre-wrap"
+                    className="whitespace-pre-wrap"
                   />
                 )}
               </div>
@@ -774,7 +774,7 @@ export default async function EventPage({ params }: PageProps) {
                 {event.eventDetails.schedule && (
                   <LinkifiedText
                     text={event.eventDetails.schedule}
-                    className="text-sm whitespace-pre-wrap"
+                    className="whitespace-pre-wrap"
                   />
                 )}
               </div>

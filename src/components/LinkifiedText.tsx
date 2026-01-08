@@ -21,7 +21,8 @@ export function LinkifiedText({ text, className }: LinkifiedTextProps) {
   // Combined regex to split by URLs, email addresses, and Instagram handles
   // Email regex must come before Instagram regex to match emails first
   // Match emails with leading @ first, then regular emails, then Instagram handles
-  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|@[a-zA-Z0-9_.]+)/g;
+  const combinedRegex =
+    /(https?:\/\/[^\s]+|www\.[^\s]+|@[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|@[a-zA-Z0-9_.]+)/g;
 
   // Split text by URLs, email addresses, and Instagram handles
   const parts = text.split(combinedRegex);
@@ -40,7 +41,7 @@ export function LinkifiedText({ text, className }: LinkifiedTextProps) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent-blue hover:underline break-all"
+              className="text-accent-blue hover:underline break-all text-[18px]"
             >
               {part}
             </a>
@@ -50,7 +51,10 @@ export function LinkifiedText({ text, className }: LinkifiedTextProps) {
         // Check if this part is an email address (must check before Instagram)
         // Email addresses contain @ followed by domain with TLD (e.g., user@domain.com or @user@domain.com)
         // Check if part contains @ and looks like an email (has domain with TLD)
-        if (part.includes("@") && /[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(part)) {
+        if (
+          part.includes("@") &&
+          /[a-zA-Z0-9_.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(part)
+        ) {
           // Extract email (remove leading @ symbol if present)
           const email = part.startsWith("@") ? part.substring(1) : part;
           const href = `mailto:${email}`;
