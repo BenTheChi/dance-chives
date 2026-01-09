@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
-import { FormContext } from "@/lib/groq-llm";
+import { FormContext } from "@/lib/llm";
 import { Section } from "@/types/event";
 
 interface PlaylistParserProps {

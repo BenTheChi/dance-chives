@@ -1,9 +1,17 @@
 /**
- * Helper function to call Groq API.
+ * OpenRouter LLM client for JSON-only responses
+ * Uses model: xiaomi/mimo-v2-flash:free
  */
-async function callGroqAPI(prompt: string, apiKey: string): Promise<any> {
+
+/**
+ * Call OpenRouter's OpenAI-compatible chat completions endpoint.
+ */
+export async function callOpenRouterAPI(
+  prompt: string,
+  apiKey: string
+): Promise<any> {
   const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
+    "https://openrouter.ai/api/v1/chat/completions",
     {
       method: "POST",
       headers: {
@@ -11,7 +19,7 @@ async function callGroqAPI(prompt: string, apiKey: string): Promise<any> {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "xiaomi/mimo-v2-flash:free",
         messages: [
           {
             role: "system",
@@ -32,31 +40,32 @@ async function callGroqAPI(prompt: string, apiKey: string): Promise<any> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      throw new Error("Invalid Groq API key. Please check your credentials.");
+      throw new Error(
+        "Invalid OpenRouter API key. Please check your credentials."
+      );
     }
     if (response.status === 429) {
       throw new Error(
-        "Groq API rate limit exceeded. Please try again in a moment."
+        "OpenRouter API rate limit exceeded. Please try again in a moment."
       );
     }
     throw new Error(
-      `Groq API error: ${errorData.error?.message || response.statusText}`
+      `OpenRouter API error: ${errorData.error?.message || response.statusText}`
     );
   }
 
   const data = await response.json();
 
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-    throw new Error("Invalid response format from Groq API");
+    throw new Error("Invalid response format from OpenRouter API");
   }
 
   const content = data.choices[0].message.content;
 
   if (!content) {
-    throw new Error("Empty response from Groq API");
+    throw new Error("Empty response from OpenRouter API");
   }
 
-  // Parse JSON response
   try {
     const cleanedContent = content
       .replace(/```json\n?/g, "")
@@ -65,12 +74,11 @@ async function callGroqAPI(prompt: string, apiKey: string): Promise<any> {
 
     return JSON.parse(cleanedContent);
   } catch (parseError) {
-    console.error("Failed to parse Groq response:", content);
+    console.error("Failed to parse OpenRouter response:", content);
     throw new Error(
-      `Invalid JSON response from LLM: ${
+      `Invalid JSON response from OpenRouter: ${
         parseError instanceof Error ? parseError.message : "Unknown error"
       }`
     );
   }
 }
-export { callGroqAPI };
