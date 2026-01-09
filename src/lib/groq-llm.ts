@@ -1,4 +1,47 @@
 /**
+ * Type definitions for parsed playlist data
+ */
+export interface ParsedSection {
+  id?: string;
+  title: string;
+  description: string;
+  sectionType:
+    | "Battle"
+    | "Competition"
+    | "Performance"
+    | "Showcase"
+    | "Class"
+    | "Session"
+    | "Party"
+    | "Other";
+  hasBrackets: boolean;
+  videos: Array<{
+    id?: string;
+    title: string;
+    src: string;
+    type: "battle" | "freestyle" | "choreography" | "class" | "other";
+    styles?: string[];
+  }>;
+  brackets: Array<{
+    id?: string;
+    title: string;
+    videos: Array<{
+      id?: string;
+      title: string;
+      src: string;
+      type: "battle" | "freestyle" | "choreography" | "class" | "other";
+      styles?: string[];
+    }>;
+  }>;
+  styles?: string[];
+  applyStylesToVideos?: boolean;
+}
+
+export interface ParsedPlaylistResponse {
+  sections: ParsedSection[];
+}
+
+/**
  * Helper function to call Groq API.
  */
 async function callGroqAPI(prompt: string, apiKey: string): Promise<any> {
