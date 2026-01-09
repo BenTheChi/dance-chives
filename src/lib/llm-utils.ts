@@ -107,8 +107,7 @@ export function buildCategorizationPrompt(
   const videoList = videos
     .map((v) => {
       const videoId = extractVideoId(v.url);
-      const cleanedTitle = cleanVideoTitle(v.title, eventTitle);
-      return `${cleanedTitle}|${videoId}`;
+      return `${v.title}|${videoId}`;
     })
     .join("\n");
 
@@ -126,7 +125,7 @@ ${existingSections
 
 ${sectionsInfo}
 
-Videos (format: CleanedTitle|VideoID):
+Videos (format: Title|VideoID):
 ${videoList}
 
 STEP-BY-STEP ALGORITHM (follow exactly):
@@ -146,7 +145,7 @@ OUTPUT FORMAT (JSON only):
       "hasBrackets": boolean,
       "videos": [
         {
-          "title": "cleaned title from input",
+          "title": "full title from input",
           "src": "videoId (11 chars, copy exactly from input)",
           "type": "battle|freestyle|choreography|class|other"
         }
@@ -195,9 +194,9 @@ STEP-BY-STEP ALGORITHM (follow exactly):
 
 BRACKET NAMES (extract from titles):
 - "Prelims"/"Pre-Selection"/"Preselection" → "Prelims"
-- "Top 32"/"Top 16"/"Top 8"/"Top 4"
+- "Top 32"/"Top 16"/"Top 8" -> "Top 32"/"Top 16"/"Top 8"
 - "Quarterfinals"/"Quarter Finals" → "Quarterfinals"
-- "Semifinals"/"Semi Finals" → "Semifinals"
+- "Semifinals"/"Semi Finals"/ "Top 4" → "Semifinals"
 - "Finals"/"Final" → "Finals"
 - "7 to Smoke"/"7-to-Smoke" → "7 to Smoke"
 

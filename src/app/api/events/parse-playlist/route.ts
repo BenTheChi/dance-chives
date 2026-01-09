@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withApiAuth } from "@/lib/utils/api-auth";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { extractPlaylistId, fetchPlaylistVideos } from "@/lib/youtube-api";
-import { parsePlaylistWithGroq, FormContext } from "@/lib/groq-llm";
+import { parsePlaylistWithGroq, FormContext } from "@/lib/llm";
 import {
   sanitizeParsedPlaylist,
   mergeSections,
