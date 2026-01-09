@@ -233,7 +233,7 @@ export function buildTitleSanitizationPrompt(
 ): string {
   const jsonInput = JSON.stringify(parsedResponse, null, 2);
 
-  return `TASK: Sanitize all video titles to "X vs Y" format.
+  return `TASK: Sanitize all video titles by removing redundant information.
 
 Input JSON:
 ${jsonInput}
@@ -241,24 +241,41 @@ ${jsonInput}
 STEP-BY-STEP ALGORITHM:
 1. For each section, process all videos in the "videos" array
 2. For each bracket in each section, process all videos in the bracket's "videos" array
-3. For each video title:
+3. For each video title, apply sanitization based on section type:
+   
+   FOR BATTLE SECTIONS (sectionType === "Battle"):
    - Find "vs" in the title (case insensitive)
    - Extract only the names before and after "vs"
    - Remove ALL other text: event names, dates, volumes, bracket names, round indicators, dance styles, emojis, separators
    - Keep ONLY: "Name1 vs Name2" or "Name1 vs Name2 vs Name3" (for crew battles)
    - Preserve exact name spelling and capitalization
+   
+   FOR OTHER SECTIONS (Competition, Performance, Showcase, Class, Session, Party, Other):
+   - Remove redundant information: event title, section name, dates, emojis, separators
+   - Keep the meaningful content: dancer/performer names, performance descriptions
+   - Preserve exact name spelling and capitalization
+
 4. Keep all other fields unchanged (src, type, styles, etc.)
 5. Keep all structure unchanged (sections, brackets, etc.)
 
 TITLE PARSING EXAMPLES:
+
+BATTLE SECTIONS:
 - "Event 2024 - John vs Sarah - Top 8" → "John vs Sarah"
 - "🔥 Prelims: Mike vs Alex (Hip Hop)" → "Mike vs Alex"
 - "Team A vs Team B | Finals | Breaking" → "Team A vs Team B"
 - "Semifinals - Dancer1 vs Dancer2 vs Dancer3" → "Dancer1 vs Dancer2 vs Dancer3"
 - "Battle Vol.1: Crew A vs Crew B (Prelims)" → "Crew A vs Crew B"
 
+NON-BATTLE SECTIONS (Performance, Showcase, etc.):
+- "Event 2024 - Showcase - Sarah's Solo" → "Sarah's Solo"
+- "🔥 Performance: Mike's Choreography (Hip Hop)" → "Mike's Choreography"
+- "Festival 2023 | Finals Performance | Team A" → "Team A"
+- "Class Demo - John Teaching Popping" → "John Teaching Popping"
+- "Event Vol.1: Crew B Performance (Opening)" → "Crew B Performance"
+
 OUTPUT FORMAT:
-Return the EXACT same JSON structure with ONLY titles changed to "X vs Y" format.
+Return the EXACT same JSON structure with ONLY titles sanitized as specified.
 - All other fields remain unchanged
 - All structure remains unchanged
 - All videoIds remain unchanged
@@ -268,8 +285,9 @@ CRITICAL RULES:
 - Do NOT add, remove, or modify any videos
 - Do NOT change any videoIds
 - Do NOT change structure (sections, brackets, etc.)
-- ONLY modify the "title" field to "X vs Y" format
-- If a title doesn't contain "vs", keep it as-is or extract the main content
+- ONLY modify the "title" field according to the section type rules above
+- For Battle sections: extract "X vs Y" format
+- For other sections: remove redundant info but keep meaningful content
 
 Return ONLY valid JSON.`;
 }
