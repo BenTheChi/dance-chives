@@ -10,6 +10,7 @@ model User {
   id               String          @id @default(cuid())
   name             String?
   email            String          @unique
+  username         String?         @unique
   emailVerified    DateTime? // Keep for NextAuth compatibility
   accountVerified  DateTime? // User completed registration after OAuth
   claimed          Boolean         @default(true) // Profile claimed status
@@ -34,6 +35,8 @@ model User {
   sentOwnershipRequests         OwnershipRequest[]       @relation("OwnershipRequestSender")
   sentAuthLevelChangeRequests   AuthLevelChangeRequest[] @relation("AuthLevelChangeRequestSender")
   targetAuthLevelChangeRequests AuthLevelChangeRequest[] @relation("AuthLevelChangeRequestTarget")
+  sentAccountClaimRequests      AccountClaimRequest[]    @relation("AccountClaimRequestSender")
+  targetAccountClaimRequests    AccountClaimRequest[]    @relation("AccountClaimRequestTarget")
 
   // Notification relationships
   notifications Notification[]
@@ -310,9 +313,29 @@ model AuthLevelChangeRequest {
   @@index([status])
 }
 
+model AccountClaimRequest {
+  id                String        @id @default(cuid())
+  senderId          String        // User requesting to claim the account
+  targetUserId      String        // Unclaimed user being claimed
+  instagramHandle   String        // Instagram handle being claimed
+  tagCount          Int           @default(0) // Number of tags/relationships on unclaimed account
+  wipeRelationships Boolean       @default(false) // Whether to remove existing tags/relationships on merge
+  status            RequestStatus @default(PENDING)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  sender     User @relation("AccountClaimRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  targetUser User @relation("AccountClaimRequestTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([targetUserId])
+  @@index([instagramHandle])
+  @@index([status])
+}
+
 model RequestApproval {
   id          String   @id @default(cuid())
-  requestType String // "TAGGING" | "TEAM_MEMBER" | "OWNERSHIP" | "GLOBAL_ACCESS" | "AUTH_LEVEL_CHANGE"
+  requestType String // "TAGGING" | "TEAM_MEMBER" | "OWNERSHIP" | "GLOBAL_ACCESS" | "AUTH_LEVEL_CHANGE" | "ACCOUNT_CLAIM"
   requestId   String // ID of the specific request (polymorphic reference)
   approverId  String // User who approved/denied
   approved    Boolean // true for approval, false for denial

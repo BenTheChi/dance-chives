@@ -5,10 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import {
-  signInWithGoogle,
-  signInWithInstagram,
-} from "@/lib/server_actions/auth_actions";
+import { signInWithGoogle } from "@/lib/server_actions/auth_actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -126,22 +123,6 @@ export function SignupContent() {
               />
               Sign up with Google
             </Button>
-            <div className="space-y-2">
-              <p className="text-center">Sign up with Instagram.</p>
-              <Button
-                onClick={signInWithInstagram}
-                className="w-full flex items-center justify-center"
-              >
-                <Image
-                  src="/InstagramLogo.svg"
-                  alt="Instagram"
-                  width={20}
-                  height={20}
-                  className="mr-2"
-                />
-                Sign up with Instagram
-              </Button>
-            </div>
           </div>
 
           <hr className="my-4 border-primary-light" />

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getUserProfile } from "@/lib/server_actions/auth_actions";
+import { getUserPendingAccountClaimRequest } from "@/lib/server_actions/account_claim_actions";
 import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 import SignUpForm from "@/components/forms/signup-form";
@@ -27,6 +28,8 @@ export default async function EditProfilePage({ params }: PageProps) {
   }
 
   const profile = profileResult.profile;
+
+  const pendingClaim = await getUserPendingAccountClaimRequest(session.user.id);
 
   // Users can only edit their own profile (unless admin)
   const userAuthLevel = session.user.auth || 0;
@@ -71,6 +74,7 @@ export default async function EditProfilePage({ params }: PageProps) {
             avatar: (profile as { avatar?: string }).avatar,
           }}
           userId={session.user.id}
+          pendingAccountClaimRequest={pendingClaim || undefined}
         />
       </main>
     </AccountVerificationGuard>

@@ -3,7 +3,6 @@ import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./lib/primsa";
-import Instagram from "next-auth/providers/instagram";
 
 declare module "next-auth" {
   interface Session {
@@ -43,26 +42,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     Google,
-    Instagram({
-      clientId: process.env.AUTH_INSTAGRAM_ID || "",
-      clientSecret: process.env.AUTH_INSTAGRAM_SECRET || "",
-      profile(profile) {
-        const rawUsername =
-          (profile as { username?: string; name?: string }).username ||
-          (profile as { name?: string }).name ||
-          `instagram-${profile.id}`;
-        const normalizedInstagram = rawUsername.replace(/^@/, "").toLowerCase();
-        const fallbackEmail = `${normalizedInstagram || profile.id}@instagram.local`;
-
-        return {
-          id: profile.id,
-          name: rawUsername,
-          email: (profile as { email?: string }).email || fallbackEmail,
-          image: (profile as { picture?: string }).picture || null,
-          instagram: normalizedInstagram,
-        };
-      },
-    }),
     // Magic link credentials provider (used internally after token verification)
     Credentials({
       id: "magic-link",
@@ -172,7 +151,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     jwt: async ({ token, user, account, profile }) => {
       // Get user ID from either the new user object (initial login) or existing token
       const userId = user?.id ?? token.id ?? token.sub;
-      
+
       if (!userId || typeof userId !== "string") {
         return token;
       }
@@ -184,18 +163,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.email = user.email ?? undefined;
         token.name = user.name ?? undefined;
         token.image = user.image ?? undefined;
-
-        // Capture Instagram handle on OAuth login
-        if (account?.provider === "instagram") {
-          const rawUsername =
-            (profile as { username?: string; name?: string } | undefined)
-              ?.username ||
-            (profile as { name?: string } | undefined)?.name ||
-            (user.name as string | undefined) ||
-            "";
-          const normalizedInstagram = rawUsername.replace(/^@/, "").toLowerCase();
-          token.instagram = normalizedInstagram || undefined;
-        }
       }
 
       // Always fetch fresh user data from PostgreSQL (ensures latest data after signup/updates)

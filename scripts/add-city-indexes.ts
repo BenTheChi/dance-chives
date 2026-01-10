@@ -1,6 +1,6 @@
 /**
  * Script to add Neo4j indexes for City nodes
- * Run with: npx dotenv-cli -e .env.development -- tsx scripts/add-city-indexes.ts
+ * Run with: npx dotenv-cli -e .env.local -- tsx scripts/add-city-indexes.ts
  */
 
 import driver from "../src/db/driver";
@@ -57,4 +57,3 @@ addCityIndexes()
     console.error("Failed:", error);
     process.exit(1);
   });
-

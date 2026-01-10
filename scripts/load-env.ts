@@ -23,12 +23,12 @@ const getEnvFile = (): string => {
 
   // Map environment to .env file
   const envFileMap: Record<string, string> = {
-    development: ".env.development",
+    development: ".env.local",
     staging: ".env.staging",
     production: ".env.production",
   };
 
-  const envFile = envFileMap[env] || ".env.development";
+  const envFile = envFileMap[env] || ".env.local";
   return resolve(process.cwd(), envFile);
 };
 

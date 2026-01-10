@@ -67,6 +67,8 @@ interface DashboardRequest {
   requestedLevel?: number;
   currentLevel?: number;
   message?: string;
+  instagramHandle?: string;
+  tagCount?: number;
 }
 
 // UserEvent is now TEventCard - keeping for backwards compatibility but will be removed
@@ -88,6 +90,7 @@ interface DashboardRequests {
   teamMember: DashboardRequest[];
   ownership?: DashboardRequest[];
   authLevelChange: DashboardRequest[];
+  accountClaim?: DashboardRequest[];
 }
 
 export interface DashboardData {
@@ -227,6 +230,9 @@ export function DashboardClient({
       authLevelChange: updateRequestInArray(
         dashboardData.incomingRequests?.authLevelChange || []
       ),
+      accountClaim: updateRequestInArray(
+        dashboardData.incomingRequests?.accountClaim || []
+      ),
     };
 
     const updatedOutgoingRequests = {
@@ -242,6 +248,9 @@ export function DashboardClient({
       ),
       authLevelChange: updateRequestInArray(
         dashboardData.outgoingRequests?.authLevelChange || []
+      ),
+      accountClaim: updateRequestInArray(
+        dashboardData.outgoingRequests?.accountClaim || []
       ),
     };
 
@@ -259,6 +268,7 @@ export function DashboardClient({
       teamMember: [],
       ownership: [],
       authLevelChange: [],
+      accountClaim: [],
     };
   const outgoingRequests: DashboardRequests =
     dashboardData?.outgoingRequests || {
@@ -266,6 +276,7 @@ export function DashboardClient({
       teamMember: [],
       ownership: [],
       authLevelChange: [],
+      accountClaim: [],
     };
   const userEvents = dashboardData?.userEvents || [];
   const teamMemberships = dashboardData?.teamMemberships || [];
@@ -275,6 +286,7 @@ export function DashboardClient({
     ...(incomingRequests.teamMember || []),
     ...(incomingRequests.ownership || []),
     ...(incomingRequests.authLevelChange || []),
+    ...(incomingRequests.accountClaim || []),
   ];
 
   const allOutgoing: DashboardRequest[] = [
@@ -282,6 +294,7 @@ export function DashboardClient({
     ...(outgoingRequests.teamMember || []),
     ...(outgoingRequests.ownership || []),
     ...(outgoingRequests.authLevelChange || []),
+    ...(outgoingRequests.accountClaim || []),
   ];
 
   const canCreateEvents = (user?.auth ?? 0) >= AUTH_LEVELS.CREATOR;
@@ -351,7 +364,7 @@ export function DashboardClient({
           Dashboard
         </h1>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-          <div className="flex flex-col gap-20 py-10 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1500px] w-full">
+          <div className="flex flex-col gap-20 py-10 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1100px] lg:max-w-[1500px] w-full">
             <div className="flex flex-col gap-8">
               {/* Welcome Section */}
               <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
@@ -411,7 +424,7 @@ export function DashboardClient({
                     </div> */}
                     </div>
                   </section>
-                  <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6 justify-center">
                     {canCreateEvents && (
                       <div className="flex justify-center">
                         <Button asChild size="xl">
@@ -431,6 +444,20 @@ export function DashboardClient({
                           className="!font-bold text-[18px]"
                         >
                           My Profile
+                        </Link>
+                      </Button>
+                    </div>
+                    <div className="flex justify-center">
+                      <Button asChild size="xl" variant="outline">
+                        <Link
+                          href={
+                            user?.username
+                              ? `/profiles/${user.username}/edit`
+                              : `/settings`
+                          }
+                          className="!font-bold text-[18px]"
+                        >
+                          Edit Profile
                         </Link>
                       </Button>
                     </div>

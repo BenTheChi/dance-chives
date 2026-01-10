@@ -23,7 +23,7 @@ import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CitySearchInput } from "@/components/CitySearchInput";
 import { City } from "@/types/city";
@@ -35,6 +35,9 @@ import {
   isReservedUsername,
   canUseReservedUsername,
 } from "@/lib/utils/admin-user-constants";
+import { useDebounce } from "@/hooks/use-debounce";
+import { ReportLink } from "@/components/report/ReportLink";
+import { cancelAccountClaimRequest } from "@/lib/server_actions/account_claim_actions";
 
 //Implement a zod validator for all the fields on this form except for the date input
 //I need to search the DB for uniqueness for username in the validation
@@ -132,6 +135,13 @@ interface SignUpFormProps {
     avatar?: string;
   };
   userId?: string;
+  pendingAccountClaimRequest?: {
+    id: string;
+    status: string;
+    instagramHandle: string;
+    tagCount?: number | null;
+    wipeRelationships?: boolean | null;
+  };
 }
 
 //The fields on this form may need to be conditional based on the user's OAuth provider
@@ -141,6 +151,7 @@ export default function SignUpForm({
   isEditMode = false,
   currentUser,
   userId,
+  pendingAccountClaimRequest,
 }: SignUpFormProps = {}) {
   const { data: session, update: updateSession } = useSession();
   const router = useRouter();
@@ -153,6 +164,22 @@ export default function SignUpForm({
     null
   );
   const [avatarPictureFile, setAvatarPictureFile] = useState<File | null>(null);
+  const [cancelPendingLoading, setCancelPendingLoading] = useState(false);
+  const [igStatus, setIgStatus] = useState<{
+    state:
+      | "idle"
+      | "checking"
+      | "available"
+      | "claimed"
+      | "unclaimed"
+      | "error";
+    targetUserId?: string | null;
+    tagCount?: number | null;
+    claimedUsername?: string | null;
+    claimedDisplayName?: string | null;
+  }>({ state: "idle" });
+  const [claimTargetId, setClaimTargetId] = useState<string | null>(null);
+  const [claimTagCount, setClaimTagCount] = useState<number | null>(null);
 
   const schema = isEditMode ? editSchema : signupSchema;
 
@@ -206,6 +233,114 @@ export default function SignUpForm({
 
   const { handleSubmit } = form;
 
+  const instagramValue = form.watch("instagram") || "";
+  const debouncedInstagram = useDebounce(instagramValue, 400);
+  const instagramLocked =
+    isEditMode &&
+    pendingAccountClaimRequest?.status === "PENDING" &&
+    !!pendingAccountClaimRequest.instagramHandle;
+
+  useEffect(() => {
+    const resetStatus = () => {
+      setIgStatus({ state: "idle" });
+      setClaimTargetId(null);
+      setClaimTagCount(null);
+      form.clearErrors("instagram");
+    };
+
+    if (instagramLocked) {
+      setIgStatus({
+        state: "unclaimed",
+        targetUserId: null,
+        tagCount: pendingAccountClaimRequest?.tagCount ?? null,
+      });
+      setClaimTargetId(null);
+      setClaimTagCount(null);
+      return;
+    }
+
+    if (!debouncedInstagram) {
+      resetStatus();
+      return;
+    }
+
+    let isCancelled = false;
+    setIgStatus({ state: "checking" });
+
+    const validateHandle = async () => {
+      try {
+        const res = await fetch(
+          `/api/instagram/validate?handle=${encodeURIComponent(
+            debouncedInstagram
+          )}`
+        );
+        if (!res.ok) {
+          throw new Error("Validation failed");
+        }
+        const data = await res.json();
+        if (isCancelled) return;
+
+        if (!data.exists) {
+          setIgStatus({ state: "available" });
+          setClaimTargetId(null);
+          setClaimTagCount(null);
+          form.clearErrors("instagram");
+          return;
+        }
+
+        // If the user owns this handle, treat it as available (it's their own account)
+        if (data.ownedByCurrentUser) {
+          setIgStatus({ state: "available" });
+          setClaimTargetId(null);
+          setClaimTagCount(null);
+          form.clearErrors("instagram");
+          return;
+        }
+
+        if (data.claimed) {
+          setIgStatus({
+            state: "claimed",
+            claimedUsername: data.username || null,
+            claimedDisplayName: data.displayName || null,
+            targetUserId: data.userId || null,
+          });
+          setClaimTargetId(null);
+          setClaimTagCount(null);
+          form.setError("instagram", {
+            type: "manual",
+          });
+          return;
+        }
+
+        // Unclaimed account
+        setIgStatus({
+          state: "unclaimed",
+          targetUserId: data.userId || null,
+          tagCount: data.tagCount ?? null,
+        });
+        setClaimTargetId(data.userId || null);
+        setClaimTagCount(data.tagCount ?? null);
+        form.clearErrors("instagram");
+      } catch (error) {
+        if (isCancelled) return;
+        setIgStatus({ state: "error" });
+      }
+    };
+
+    validateHandle();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    debouncedInstagram,
+    form,
+    instagramLocked,
+    pendingAccountClaimRequest?.id,
+    pendingAccountClaimRequest?.tagCount,
+    pendingAccountClaimRequest?.instagramHandle,
+  ]);
+
   // Convert form data to FormData in the same format as before
   const convertToFormData = (data: z.infer<typeof schema>): FormData => {
     const formData = new FormData();
@@ -229,7 +364,14 @@ export default function SignUpForm({
     if (data.instagram) {
       formData.set("instagram", data.instagram);
     }
-    if (!isEditMode && "wipeRelationships" in data) {
+    if (claimTargetId) {
+      formData.set("accountClaimTargetId", claimTargetId);
+    }
+    if (claimTagCount !== null && claimTagCount !== undefined) {
+      formData.set("accountClaimTagCount", claimTagCount.toString());
+    }
+    // Send wipeRelationships only when claiming an unclaimed account
+    if (claimTargetId && "wipeRelationships" in data) {
       formData.set(
         "wipeRelationships",
         (data.wipeRelationships || false).toString()
@@ -283,6 +425,13 @@ export default function SignUpForm({
   const onSubmit = async (data: z.infer<typeof schema>) => {
     setIsSubmitting(true);
     try {
+      if (igStatus.state === "claimed") {
+        toast.error(
+          "This Instagram handle is already taken. Please choose another or file a report."
+        );
+        return;
+      }
+
       const formData = convertToFormData(data);
 
       if (isEditMode) {
@@ -325,6 +474,24 @@ export default function SignUpForm({
   const onError = (errors: FieldErrors<z.infer<typeof schema>>) => {
     console.error("Form validation errors:", errors);
     toast.error("Please fix the errors in the form");
+  };
+
+  const handleCancelPendingClaim = async () => {
+    if (!pendingAccountClaimRequest) return;
+    setCancelPendingLoading(true);
+    try {
+      await cancelAccountClaimRequest(pendingAccountClaimRequest.id);
+      toast.success("Account claim request cancelled");
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel account claim request"
+      );
+    } finally {
+      setCancelPendingLoading(false);
+    }
   };
 
   return (
@@ -564,38 +731,111 @@ export default function SignUpForm({
                         placeholder="username"
                         {...field}
                         value={field.value ?? ""}
+                        disabled={instagramLocked}
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
+                    {instagramLocked && pendingAccountClaimRequest && (
+                      <div className="mt-1 text-sm text-yellow-200 space-y-2">
+                        <p>
+                          Account claim request pending for
+                          {" @"}
+                          {pendingAccountClaimRequest.instagramHandle} (
+                          {pendingAccountClaimRequest.wipeRelationships
+                            ? "remove tags"
+                            : "keep tags"}
+                          ). To change, cancel the existing request.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={cancelPendingLoading}
+                          onClick={handleCancelPendingClaim}
+                        >
+                          {cancelPendingLoading
+                            ? "Cancelling..."
+                            : "Cancel request"}
+                        </Button>
+                      </div>
+                    )}
+                    {!instagramLocked && igStatus.state === "claimed" && (
+                      <div className="mt-1 text-sm text-red-200 space-y-1">
+                        <p>
+                          This IG handle is already taken by{" "}
+                          <Link
+                            href={
+                              igStatus.claimedUsername
+                                ? `/profiles/${igStatus.claimedUsername}`
+                                : igStatus.targetUserId
+                                ? `/profiles/${igStatus.targetUserId}`
+                                : "#"
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            {igStatus.claimedDisplayName ||
+                              igStatus.claimedUsername ||
+                              "this account"}
+                          </Link>
+                          . If you'd like to dispute the usage of this handle,
+                          submit a{" "}
+                          <ReportLink className="underline text-primary-light">
+                            report
+                          </ReportLink>
+                          .
+                        </p>
+                      </div>
+                    )}
+                    {!instagramLocked && igStatus.state === "unclaimed" && (
+                      <div className="mt-1 text-sm text-yellow-100">
+                        This IG handle is associated with an unclaimed account
+                        with {igStatus.tagCount ?? 0} tags. By entering this IG
+                        username an account merge request will be made upon sign
+                        up completion. Please send a DM of your Dance Chives
+                        username or Display Name to the @dancechives IG account
+                        through your IG account to verify your identity.
+                      </div>
+                    )}
+                    {!instagramLocked && igStatus.state === "available" && (
+                      <div className="mt-1 text-sm text-green-200">
+                        This IG handle appears available.
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
-              {/* Wipe relationships checkbox - only show in signup */}
-              {!isEditMode && (
-                <FormField
-                  control={form.control}
-                  name="wipeRelationships"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-start gap-2">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value || false}
-                            onCheckedChange={field.onChange}
-                            className="mt-1"
-                          />
-                        </FormControl>
-                        <FormLabel className="!font-normal text-sm leading-relaxed flex-1 pointer-events-none !text-white data-[error=true]:!text-white">
-                          Remove all existing relationships (events, tags, links)
-                          for this Instagram account when claiming an unclaimed
-                          profile.
-                        </FormLabel>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+              {/* Wipe relationships checkbox - only show when claiming unclaimed account */}
+              {igStatus.state === "unclaimed" &&
+                !pendingAccountClaimRequest && (
+                  <FormField
+                    control={form.control}
+                    name="wipeRelationships"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-start gap-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value || false}
+                              onCheckedChange={field.onChange}
+                              className="mt-1"
+                            />
+                          </FormControl>
+                          <FormLabel className="!font-normal text-sm leading-relaxed flex-1 pointer-events-none !text-white data-[error=true]:!text-white">
+                            Remove all existing relationships (events, tags,
+                            links) for this Instagram account when claiming an
+                            unclaimed profile.
+                          </FormLabel>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               <hr className="my-10 border-black" />
               {/* Profile Picture */}
               <FormField
@@ -716,7 +956,7 @@ export default function SignUpForm({
                           />
                         </FormControl>
                         <FormLabel className="!font-normal leading-relaxed text-sm pointer-events-none !text-white data-[error=true]:!text-white">
-                            By checking this box, you agree to the:
+                          By checking this box, you agree to the:
                           <Link
                             href="/content-usage"
                             target="_blank"

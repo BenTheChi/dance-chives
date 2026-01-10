@@ -41,31 +41,10 @@ import { getUserEvents } from "@/db/queries/user";
 import { deleteEvent, getEventImages } from "@/db/queries/event";
 import { addMailerLiteSubscriber } from "@/lib/mailerlite";
 import { randomUUID } from "crypto";
+import { normalizeInstagramHandle } from "@/lib/utils/instagram";
 
 export async function signInWithGoogle() {
-  const result = await signIn("google", { redirectTo: "/signup" });
-
-  if (result?.error) {
-    console.error(result.error);
-    return;
-  }
-
-  if (result?.redirect) {
-    // NextAuth returns the provider redirect URL; forward it to the client.
-    redirect(result.redirect);
-  }
-
-  // Fallback: if no redirect was provided, send user based on registration status.
-  const session = await auth();
-  if (session?.user?.accountVerified) {
-    redirect("/dashboard");
-  } else {
-    redirect("/signup");
-  }
-}
-
-export async function signInWithInstagram() {
-  const result = await signIn("instagram", { redirectTo: "/signup" });
+  const result = (await signIn("google", { redirectTo: "/signup" })) as any;
 
   if (result?.error) {
     console.error(result.error);
@@ -88,10 +67,6 @@ export async function signInWithInstagram() {
 
 export async function signOutAccount() {
   await signOut({ redirectTo: "/" });
-}
-
-function normalizeInstagramHandle(handle: string): string {
-  return handle.trim().replace(/^@/, "").toLowerCase();
 }
 
 async function findUnclaimedUserByInstagram(instagram: string) {
@@ -129,6 +104,83 @@ async function removeAllUserRelationships(userId: string) {
   }
 }
 
+async function transferUserRelationships(
+  sourceUserId: string,
+  targetUserId: string
+) {
+  const session = driver.session();
+  try {
+    // Get all relationships from source
+    const relsResult = await session.run(
+      `
+      MATCH (source:User {id: $sourceUserId})-[r]-(other)
+      RETURN 
+        type(r) as relType, 
+        startNode(r).id as startId,
+        endNode(r).id as endId,
+        properties(r) as props
+      `,
+      { sourceUserId }
+    );
+
+    console.log(
+      `[transferUserRelationships] Found ${relsResult.records.length} relationships to transfer`
+    );
+
+    // Process each relationship
+    for (const record of relsResult.records) {
+      const relType = record.get("relType");
+      const startId = record.get("startId");
+      const endId = record.get("endId");
+      const props = record.get("props");
+
+      const isOutgoing = startId === sourceUserId;
+      const otherNodeId = isOutgoing ? endId : startId;
+
+      // Skip user-to-user relationships to avoid duplicates
+      if (otherNodeId === targetUserId) continue;
+
+      // Create new relationship from/to target user using APOC
+      if (isOutgoing) {
+        await session.run(
+          `
+          MATCH (target:User {id: $targetUserId})
+          MATCH (other {id: $otherNodeId})
+          CALL apoc.create.relationship(target, $relType, $props, other) YIELD rel
+          RETURN rel
+          `,
+          { targetUserId, otherNodeId, relType, props }
+        );
+      } else {
+        await session.run(
+          `
+          MATCH (target:User {id: $targetUserId})
+          MATCH (other {id: $otherNodeId})
+          CALL apoc.create.relationship(other, $relType, $props, target) YIELD rel
+          RETURN rel
+          `,
+          { targetUserId, otherNodeId, relType, props }
+        );
+      }
+    }
+
+    // Delete old relationships from source
+    await session.run(
+      `
+      MATCH (source:User {id: $sourceUserId})-[r]-()
+      DELETE r
+      `,
+      { sourceUserId }
+    );
+
+    console.log(
+      `[transferUserRelationships] Transferred ${relsResult.records.length} relationships from ${sourceUserId} to ${targetUserId}`
+    );
+  } finally {
+    await session.close();
+  }
+}
+
 async function instagramExistsInNeo4j(instagram: string): Promise<boolean> {
   const session = driver.session();
   try {
@@ -144,6 +196,214 @@ async function instagramExistsInNeo4j(instagram: string): Promise<boolean> {
   } finally {
     await session.close();
   }
+}
+
+export async function getUnclaimedUserTagCount(
+  userId: string
+): Promise<number> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (u:User {id: $userId})
+      OPTIONAL MATCH (u)-[r]-()
+      RETURN count(r) as relCount
+      `,
+      { userId }
+    );
+    return result.records[0]?.get("relCount")?.toNumber?.() || 0;
+  } finally {
+    await session.close();
+  }
+}
+
+export async function executeAccountMerge(params: {
+  sourceUserId: string;
+  targetUserId: string;
+  wipeRelationships?: boolean;
+  targetInstagram?: string | null;
+}) {
+  const { sourceUserId, targetUserId, wipeRelationships, targetInstagram } =
+    params;
+
+  if (sourceUserId === targetUserId) {
+    return { success: true };
+  }
+
+  const [sourceUser, targetUser] = await Promise.all([
+    prisma.user.findUnique({ where: { id: sourceUserId } }),
+    prisma.user.findUnique({ where: { id: targetUserId } }),
+  ]);
+
+  if (!sourceUser || !targetUser) {
+    throw new Error("Source or target user not found");
+  }
+
+  const sourceProfile = await getUser(sourceUserId);
+  const targetProfile = await getUser(targetUserId);
+
+  console.log(
+    "[executeAccountMerge] wipeRelationships:",
+    wipeRelationships,
+    "for target user:",
+    targetUserId
+  );
+
+  // Only allow wiping relationships when the target is an unclaimed account.
+  // If the target is already a claimed account (i.e., a real user switching IG),
+  // we should preserve their existing tags/relationships.
+  const allowWipe = wipeRelationships && !targetUser.claimed;
+
+  if (allowWipe) {
+    console.log(
+      "[executeAccountMerge] Removing all relationships for target user:",
+      targetUserId
+    );
+    await removeAllUserRelationships(targetUserId);
+  }
+
+  // Move OAuth accounts from source onto target
+  await prisma.account.updateMany({
+    where: { userId: sourceUserId },
+    data: { userId: targetUserId },
+  });
+
+  // Transfer relationships from source to target (unless we wiped them above)
+  if (!allowWipe) {
+    console.log(
+      "[executeAccountMerge] Transferring relationships from source to target"
+    );
+    await transferUserRelationships(sourceUserId, targetUserId);
+  } else {
+    console.log(
+      "[executeAccountMerge] Skipping relationship transfer due to wipeRelationships=true"
+    );
+  }
+
+  // Determine the Instagram to use:
+  // 1. Use targetInstagram if provided (from the claim request)
+  // 2. Otherwise use target's existing Instagram (preserve it)
+  // 3. Fall back to source's Instagram if target doesn't have one
+  const instagramToUse =
+    targetInstagram ||
+    targetProfile?.instagram ||
+    sourceProfile?.instagram ||
+    null;
+
+  console.log("[executeAccountMerge] Instagram to use:", instagramToUse, {
+    targetInstagram,
+    targetProfileInstagram: targetProfile?.instagram,
+    sourceProfileInstagram: sourceProfile?.instagram,
+  });
+
+  // Build profile data from source profile to apply to target
+  const profileData = sourceProfile
+    ? {
+        displayName: sourceProfile.displayName || sourceUser.name || "",
+        username: sourceProfile.username || targetUser.email.split("@")[0],
+        city: sourceProfile.city || "",
+        date: (sourceProfile.date as string) || "",
+        styles: sourceProfile.styles || [],
+        bio: sourceProfile.bio || null,
+        instagram: instagramToUse,
+        website: sourceProfile.website || null,
+        image: sourceProfile.image || sourceUser.image || null,
+        avatar: (sourceProfile as { avatar?: string | null }).avatar || null,
+      }
+    : null;
+
+  if (profileData) {
+    await prisma.userCard.deleteMany({
+      where: { userId: sourceUserId },
+    });
+
+    await signupUser(targetUserId, {
+      ...profileData,
+      claimed: true,
+    });
+
+    await prisma.userCard.upsert({
+      where: { userId: targetUserId },
+      update: {
+        username: profileData.username,
+        displayName: profileData.displayName,
+        imageUrl: profileData.image ?? null,
+        cityId:
+          typeof profileData.city === "object"
+            ? profileData.city?.id ?? null
+            : null,
+        cityName:
+          typeof profileData.city === "object"
+            ? profileData.city?.name ?? null
+            : (profileData.city as string) ?? null,
+        styles: (profileData.styles || []).map((s: string) =>
+          s.toUpperCase().trim()
+        ),
+      },
+      create: {
+        userId: targetUserId,
+        username: profileData.username,
+        displayName: profileData.displayName,
+        imageUrl: profileData.image ?? null,
+        cityId:
+          typeof profileData.city === "object"
+            ? profileData.city?.id ?? null
+            : null,
+        cityName:
+          typeof profileData.city === "object"
+            ? profileData.city?.name ?? null
+            : (profileData.city as string) ?? null,
+        styles: (profileData.styles || []).map((s: string) =>
+          s.toUpperCase().trim()
+        ),
+      },
+    });
+  }
+
+  // Clear the source user's username first to avoid unique constraint violation,
+  // then update target user's verification and claimed status
+  const usernameToApply = profileData?.username;
+  if (usernameToApply && usernameToApply !== targetUser.username) {
+    // Clear the source user's username so we can assign it to the target
+    await prisma.user.update({
+      where: { id: sourceUserId },
+      data: { username: `deleted-${sourceUserId}` } as any,
+    });
+  }
+
+  await prisma.user.update({
+    where: { id: targetUserId },
+    data: {
+      accountVerified: targetUser.accountVerified ?? new Date(),
+      name: sourceUser.name ?? targetUser.name,
+      username: usernameToApply ?? undefined,
+      claimed: true,
+    } as any,
+  });
+
+  // Delete the source user after merge is complete (from both PostgreSQL and Neo4j)
+  await prisma.user.delete({
+    where: { id: sourceUserId },
+  });
+
+  // Delete the source user node from Neo4j
+  const neoSession = driver.session();
+  try {
+    await neoSession.run(
+      `
+      MATCH (source:User {id: $sourceUserId})
+      DETACH DELETE source
+      `,
+      { sourceUserId }
+    );
+    console.log(
+      `[executeAccountMerge] Deleted source user node from Neo4j: ${sourceUserId}`
+    );
+  } finally {
+    await neoSession.close();
+  }
+
+  return { success: true };
 }
 
 export async function createUnclaimedUser(
@@ -171,11 +431,11 @@ export async function createUnclaimedUser(
       data: {
         name: displayName,
         email,
+        username,
         // Prisma client types may lag migrations; claimed column exists in schema
-        // @ts-expect-error claimed is present in the database
         claimed: false,
         auth: null,
-      },
+      } as any,
     });
 
     // Create the Neo4j User node WITHOUT creating a City node (unclaimed users don't have a city yet).
@@ -347,35 +607,53 @@ export async function signup(
     const bio = (formData.get("bio") as string) || "";
     const instagram = (formData.get("instagram") as string) || "";
     const website = (formData.get("website") as string) || "";
-  const wipeRelationships = formData.get("wipeRelationships") === "true";
+    const accountClaimTargetId =
+      (formData.get("accountClaimTargetId") as string) || null;
+    const accountClaimTagCountRaw = formData.get("accountClaimTagCount");
+    const accountClaimTagCount =
+      typeof accountClaimTagCountRaw === "string"
+        ? parseInt(accountClaimTagCountRaw, 10)
+        : null;
+    const wipeRelationships = formData.get("wipeRelationships") === "true";
 
-  const normalizedInstagram = normalizeInstagramHandle(
-    instagram || session.user.instagram || ""
-  );
+    const normalizedInstagram = normalizeInstagramHandle(
+      instagram || session.user.instagram || ""
+    );
 
-  // If this Instagram matches an existing unclaimed profile, use it as the canonical user
-  let targetUserId = session.user.id;
-  let claimedFromUnclaimed = false;
+    let targetUserId = session.user.id;
+    let resolvedAccountClaimTargetId = accountClaimTargetId;
+    let resolvedAccountClaimTagCount = accountClaimTagCount;
 
-  if (normalizedInstagram) {
-    const unclaimedUser = await findUnclaimedUserByInstagram(normalizedInstagram);
-    if (unclaimedUser?.id) {
-      targetUserId = unclaimedUser.id;
-      claimedFromUnclaimed = true;
-
-      if (wipeRelationships) {
-        await removeAllUserRelationships(unclaimedUser.id);
-      }
-
-      // Move OAuth accounts created for the temporary user onto the unclaimed user
-      if (session.user.id !== unclaimedUser.id) {
-        await prisma.account.updateMany({
-          where: { userId: session.user.id },
-          data: { userId: unclaimedUser.id },
-        });
+    if (normalizedInstagram) {
+      const sessionNeo = driver.session();
+      try {
+        const result = await sessionNeo.run(
+          `
+        MATCH (u:User {instagram: $instagram})
+        RETURN u.id as id, u.claimed as claimed
+        LIMIT 1
+        `,
+          { instagram: normalizedInstagram }
+        );
+        if (result.records.length > 0) {
+          const record = result.records[0];
+          const claimed = record.get("claimed") === true;
+          const foundId = record.get("id") as string;
+          if (claimed) {
+            return {
+              success: false,
+              error: "Instagram handle is already taken",
+            };
+          }
+          resolvedAccountClaimTargetId = foundId;
+          resolvedAccountClaimTagCount =
+            resolvedAccountClaimTagCount ??
+            (await getUnclaimedUserTagCount(foundId));
+        }
+      } finally {
+        await sessionNeo.close();
       }
     }
-  }
 
     // Handle profile and avatar picture uploads if provided
     let imageUrl: string | null = null;
@@ -452,6 +730,13 @@ export async function signup(
       ? SUPER_ADMIN_USERNAME
       : requestedUsername;
 
+    // Determine if we should set the Instagram handle
+    // Don't set if we're claiming an unclaimed profile (wait for approval)
+    const shouldSetInstagram = !resolvedAccountClaimTargetId;
+    const instagramToSet = shouldSetInstagram
+      ? normalizedInstagram || null
+      : null;
+
     // Use form data for profile
     const profileData: ProfileData = {
       displayName: formData.get("displayName") as string,
@@ -460,7 +745,7 @@ export async function signup(
       date: formData.get("date") as string,
       styles,
       bio: bio || null,
-      instagram: normalizedInstagram || null,
+      instagram: instagramToSet,
       website: website || null,
       image: imageUrl,
       avatar: avatarUrl,
@@ -521,11 +806,11 @@ export async function signup(
         termsAcceptedAt: verificationDate,
         contentUsageAcceptedAt: verificationDate,
         name: profileData.displayName || session.user.name,
+        username: profileData.username,
         auth: authLevel,
         // Prisma client types may lag migrations; claimed column exists in schema
-        // @ts-expect-error claimed is present in the database
         claimed: true,
-      },
+      } as any,
     });
 
     if (isSuperAdminUser) {
@@ -565,22 +850,35 @@ export async function signup(
       }
     }
 
+    // Create account claim request if applicable
+    if (resolvedAccountClaimTargetId && normalizedInstagram) {
+      const existingClaim = await prisma.accountClaimRequest.findFirst({
+        where: {
+          senderId: targetUserId,
+          targetUserId: resolvedAccountClaimTargetId,
+          status: "PENDING",
+        },
+      });
+
+      if (!existingClaim) {
+        await prisma.accountClaimRequest.create({
+          data: {
+            senderId: targetUserId,
+            targetUserId: resolvedAccountClaimTargetId,
+            instagramHandle: normalizedInstagram,
+            tagCount:
+              resolvedAccountClaimTagCount ??
+              (await getUnclaimedUserTagCount(resolvedAccountClaimTargetId)),
+            wipeRelationships,
+          },
+        });
+      }
+    }
+
     // Revalidate profiles list page to show new profile
     revalidatePath("/profiles");
     // Also revalidate the individual profile page
     revalidatePath(`/profiles/${profileData.username}`);
-
-    // If we merged into an unclaimed account, refresh the session using the magic-link provider
-    if (claimedFromUnclaimed && targetUserId !== session.user.id) {
-      try {
-        await signIn("magic-link", {
-          redirectTo: "/dashboard",
-          userId: targetUserId,
-        });
-      } catch (err) {
-        console.warn("Could not refresh session after claim:", err);
-      }
-    }
 
     return { success: true };
   } catch (error) {
@@ -1157,6 +1455,51 @@ export async function updateUserProfile(userId: string, formData: FormData) {
     const instagram = (formData.get("instagram") as string) || "";
     const website = (formData.get("website") as string) || "";
     const date = (formData.get("date") as string) || currentUser.date || "";
+    const accountClaimTargetId =
+      (formData.get("accountClaimTargetId") as string) || null;
+    const accountClaimTagCountRaw = formData.get("accountClaimTagCount");
+    const accountClaimTagCount =
+      typeof accountClaimTagCountRaw === "string"
+        ? parseInt(accountClaimTagCountRaw, 10)
+        : null;
+    const wipeRelationships = formData.get("wipeRelationships") === "true";
+
+    const normalizedInstagram = normalizeInstagramHandle(instagram || "");
+    let resolvedAccountClaimTargetId = accountClaimTargetId;
+    let resolvedAccountClaimTagCount = accountClaimTagCount;
+
+    if (normalizedInstagram) {
+      const sessionNeo = driver.session();
+      try {
+        const result = await sessionNeo.run(
+          `
+          MATCH (u:User {instagram: $instagram})
+          RETURN u.id as id, u.claimed as claimed
+          LIMIT 1
+          `,
+          { instagram: normalizedInstagram }
+        );
+        if (result.records.length > 0) {
+          const record = result.records[0];
+          const claimed = record.get("claimed") === true;
+          const foundId = record.get("id") as string;
+          if (claimed && foundId !== userId) {
+            return {
+              success: false,
+              error: "Instagram handle is already taken",
+            };
+          }
+          if (foundId !== userId && !claimed) {
+            resolvedAccountClaimTargetId = foundId;
+            resolvedAccountClaimTagCount =
+              resolvedAccountClaimTagCount ??
+              (await getUnclaimedUserTagCount(foundId));
+          }
+        }
+      } finally {
+        await sessionNeo.close();
+      }
+    }
 
     // Extract styles
     const stylesJson = formData.get("Dance Styles") as string | null;
@@ -1224,6 +1567,13 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       }
     }
 
+    // Determine if we should update the Instagram handle
+    // Don't update if we're claiming an unclaimed profile (wait for approval)
+    const shouldUpdateInstagram = !resolvedAccountClaimTargetId;
+    const instagramToSet = shouldUpdateInstagram
+      ? normalizedInstagram || null
+      : currentUser.instagram || null;
+
     // Build user update object (preserve username, don't update it)
     const userUpdate: UpdateUserInput = {
       id: userId,
@@ -1232,7 +1582,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       city: cityData,
       date,
       bio: bio || null,
-      instagram: instagram || null,
+      instagram: instagramToSet,
       website: website || null,
       image: imageUrl || null,
       avatar: avatarUrl || null,
@@ -1262,6 +1612,29 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         styles: (styles || []).map((s) => s.toUpperCase().trim()),
       },
     });
+
+    if (resolvedAccountClaimTargetId && normalizedInstagram) {
+      const existingClaim = await prisma.accountClaimRequest.findFirst({
+        where: {
+          senderId: userId,
+          targetUserId: resolvedAccountClaimTargetId,
+          status: "PENDING",
+        },
+      });
+      if (!existingClaim) {
+        await prisma.accountClaimRequest.create({
+          data: {
+            senderId: userId,
+            targetUserId: resolvedAccountClaimTargetId,
+            instagramHandle: normalizedInstagram,
+            tagCount:
+              resolvedAccountClaimTagCount ??
+              (await getUnclaimedUserTagCount(resolvedAccountClaimTargetId)),
+            wipeRelationships,
+          },
+        });
+      }
+    }
 
     // Revalidate profiles list page to show updated profile
     revalidatePath("/profiles");

@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
 import { getUserProfile } from "@/lib/server_actions/auth_actions";
+import {
+  getPendingAccountClaimRequestCount,
+  getPendingAccountClaimRequestByUsername,
+} from "@/lib/server_actions/account_claim_actions";
 import { AppNavbar } from "@/components/AppNavbar";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Button } from "@/components/ui/button";
@@ -224,7 +228,15 @@ export default async function ProfilePage({ params }: PageProps) {
   }
 
   const profile = profileResult.profile;
+  console.log("profile", profile);
+  const pendingClaimCount = profile.username
+    ? await getPendingAccountClaimRequestCount(profile.username)
+    : 0;
+  const pendingClaimRequest = profile.username
+    ? await getPendingAccountClaimRequestByUsername(profile.username)
+    : null;
 
+  console.log("pendingClaimCount", pendingClaimCount);
   // Group events with roles by role type
   const eventsByRole = new Map<string, Event[]>();
   if (profile.eventsWithRoles) {
@@ -308,7 +320,8 @@ export default async function ProfilePage({ params }: PageProps) {
                     )}
 
                     {/* Instagram link */}
-                    {profile.instagram && (
+                    {(profile.instagram ||
+                      pendingClaimRequest?.instagramHandle) && (
                       <div className="flex items-center justify-center gap-2">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -333,17 +346,29 @@ export default async function ProfilePage({ params }: PageProps) {
                           <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                           <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
                         </svg>
-                        <Link
-                          href={`https://instagram.com/${profile.instagram.replace(
-                            /^@/,
-                            ""
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-lg hover:underline"
-                        >
-                          {profile.instagram.replace(/^@/, "")}
-                        </Link>
+                        {pendingClaimCount > 0 && pendingClaimRequest ? (
+                          <span className="text-lg text-muted-foreground">
+                            {pendingClaimRequest.instagramHandle.replace(
+                              /^@/,
+                              ""
+                            )}{" "}
+                            <span className="text-xs text-yellow-200">
+                              (under review)
+                            </span>
+                          </span>
+                        ) : profile.instagram ? (
+                          <Link
+                            href={`https://instagram.com/${profile.instagram.replace(
+                              /^@/,
+                              ""
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-lg hover:underline"
+                          >
+                            {profile.instagram.replace(/^@/, "")}
+                          </Link>
+                        ) : null}
                       </div>
                     )}
 
@@ -360,46 +385,15 @@ export default async function ProfilePage({ params }: PageProps) {
                       This account is unclaimed and used for historical tracking
                       purposes as a reference to the Instagram account. <br />{" "}
                       <br />
-                      If this is your account sign up with Instagram as your
-                      auth to confirm ownership of this account.
-                    </p>
-                    <div className="flex justify-center">
-                      <Link href="/signup">
-                        <Button
-                          className="flex items-center justify-center gap-2"
-                          size="lg"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-instagram"
-                          >
-                            <rect
-                              width="20"
-                              height="20"
-                              x="2"
-                              y="2"
-                              rx="5"
-                              ry="5"
-                            />
-                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-                          </svg>
-                          Sign Up with Instagram
-                        </Button>
-                      </Link>
-                    </div>
-
-                    <p>
-                      If you are the Instagram account owner and would like to
-                      remove this account please DM the{" "}
+                      If this is your account{" "}
+                      <Link
+                        href="/signup"
+                        className="text-primary-light hover:text-white underline"
+                      >
+                        sign up
+                      </Link>{" "}
+                      and add your Instagram handle during registration. It must
+                      also be verified by sending a DM to{" "}
                       <Link
                         href="https://instagram.com/dancechives"
                         target="_blank"
@@ -408,8 +402,21 @@ export default async function ProfilePage({ params }: PageProps) {
                       >
                         dancechives
                       </Link>{" "}
-                      account on Instagram with your request and it will be
-                      removed within 24 hours.
+                    </p>
+
+                    <p>
+                      If you are the Instagram account owner and would like to
+                      remove this account please DM{" "}
+                      <Link
+                        href="https://instagram.com/dancechives"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-light hover:text-white underline"
+                      >
+                        dancechives
+                      </Link>{" "}
+                      on Instagram with your request and it will be removed
+                      within 24 hours.
                     </p>
                   </section>
                 )}
