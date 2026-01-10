@@ -884,7 +884,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       for (const role of props.roles) {
         if (role.user) {
           try {
-            const userId = await getUserId(role.user);
+            const userId = await getUserIdFromUser(role.user);
             const user = await prisma.user.findUnique({
               where: { id: userId },
               select: { username: true },
@@ -1679,11 +1679,16 @@ export async function editEvent(
       for (const userIdOrUsername of allAffectedUserIds) {
         if (userIdOrUsername) {
           try {
-            const userId = await getUserId({ id: userIdOrUsername as string });
-            const user = await prisma.user.findUnique({
-              where: { id: userId },
-              select: { username: true },
-            });
+            const user =
+              (await prisma.user.findUnique({
+                where: { id: userIdOrUsername as string },
+                select: { username: true },
+              })) ||
+              (await prisma.user.findUnique({
+                where: { username: userIdOrUsername as string },
+                select: { username: true },
+              }));
+
             if (user?.username) {
               revalidatePath(`/profiles/${user.username}`);
             }
