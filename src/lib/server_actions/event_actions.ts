@@ -879,6 +879,29 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Also revalidate the individual event page
     revalidatePath(`/events/${result.id}`);
 
+    // Revalidate profiles for all users with roles
+    if (props.roles && props.roles.length > 0) {
+      for (const role of props.roles) {
+        if (role.user) {
+          try {
+            const userId = await getUserId(role.user);
+            const user = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { username: true },
+            });
+            if (user?.username) {
+              revalidatePath(`/profiles/${user.username}`);
+            }
+          } catch (error) {
+            console.error(
+              `Failed to revalidate profile for role user:`,
+              error
+            );
+          }
+        }
+      }
+    }
+
     return {
       status: 200,
       event: result,
@@ -1647,6 +1670,31 @@ export async function editEvent(
       revalidatePath("/events");
       // Also revalidate the individual event page
       revalidatePath(`/events/${eventId}`);
+
+      // Revalidate profiles for all users involved in role changes
+      const allAffectedUserIds = new Set([
+        ...oldRoleUserIds,
+        ...newRoleUserIds,
+      ]);
+      for (const userIdOrUsername of allAffectedUserIds) {
+        if (userIdOrUsername) {
+          try {
+            const userId = await getUserId({ id: userIdOrUsername as string });
+            const user = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { username: true },
+            });
+            if (user?.username) {
+              revalidatePath(`/profiles/${user.username}`);
+            }
+          } catch (error) {
+            console.error(
+              `Failed to revalidate profile for user ${userIdOrUsername}:`,
+              error
+            );
+          }
+        }
+      }
 
       return {
         status: 200,

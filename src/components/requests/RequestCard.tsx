@@ -15,6 +15,11 @@ import {
   cancelOwnershipRequest,
   cancelAuthLevelChangeRequest,
 } from "@/lib/server_actions/request_actions";
+import {
+  approveAccountClaimRequest,
+  denyAccountClaimRequest,
+  cancelAccountClaimRequest,
+} from "@/lib/server_actions/account_claim_actions";
 import { toast } from "sonner";
 import { useState } from "react";
 import { formatRelativeDate } from "@/lib/utils/relative-date";
@@ -64,6 +69,9 @@ interface RequestCardProps {
     requestedLevel?: number;
     currentLevel?: number;
     message?: string;
+    instagramHandle?: string;
+    tagCount?: number;
+    wipeRelationships?: boolean;
   };
   onRequestUpdated?: (requestId: string, newStatus: string) => void;
 }
@@ -77,6 +85,7 @@ const APPROVE_HANDLERS: Record<
   TEAM_MEMBER: approveTeamMemberRequest,
   OWNERSHIP: approveOwnershipRequest,
   AUTH_LEVEL_CHANGE: approveAuthLevelChangeRequest,
+  ACCOUNT_CLAIM: approveAccountClaimRequest,
 };
 
 const DENY_HANDLERS: Record<
@@ -87,6 +96,7 @@ const DENY_HANDLERS: Record<
   TEAM_MEMBER: denyTeamMemberRequest,
   OWNERSHIP: denyOwnershipRequest,
   AUTH_LEVEL_CHANGE: denyAuthLevelChangeRequest,
+  ACCOUNT_CLAIM: denyAccountClaimRequest,
 };
 
 const CANCEL_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
@@ -94,6 +104,7 @@ const CANCEL_HANDLERS: Record<string, (id: string) => Promise<unknown>> = {
   TEAM_MEMBER: cancelTeamMemberRequest,
   OWNERSHIP: cancelOwnershipRequest,
   AUTH_LEVEL_CHANGE: cancelAuthLevelChangeRequest,
+  ACCOUNT_CLAIM: cancelAccountClaimRequest,
 };
 
 /**
@@ -118,6 +129,9 @@ function getStatusColor(status: string): string {
  * Gets the resource name for the request (Event/Section/Video)
  */
 function getResourceName(request: RequestCardProps["request"]): string {
+  if (request.type === "ACCOUNT_CLAIM") {
+    return `@${request.instagramHandle ?? "instagram"}`;
+  }
   if (request.videoTitle) return request.videoTitle;
   if (request.sectionTitle) return request.sectionTitle;
   if (request.eventTitle) return request.eventTitle;
@@ -128,6 +142,13 @@ function getResourceName(request: RequestCardProps["request"]): string {
  * Gets the resource link for the request
  */
 function getResourceLink(request: RequestCardProps["request"]): string {
+  if (request.type === "ACCOUNT_CLAIM") {
+    return request.sender?.username
+      ? `/profiles/${request.sender.username}`
+      : request.sender?.id
+      ? `/profiles/${request.sender.id}`
+      : "#";
+  }
   if (request.videoId && request.sectionId && request.eventId) {
     return `/events/${request.eventId}/sections/${request.sectionId}?video=${request.videoId}`;
   }
@@ -233,26 +254,35 @@ export function IncomingRequestCard({
               showHoverCard={true}
             />
           )}
-          <p>
-            <strong>{senderName}</strong> requested{" "}
-            {request.type === "OWNERSHIP" ? (
-              <>
-                <strong>ownership</strong> of{" "}
-              </>
-            ) : request.type === "TEAM_MEMBER" ? (
-              <>
-                <strong>team membership</strong> for{" "}
-              </>
-            ) : (
-              <>{request.role && <strong>{request.role}</strong>} from </>
-            )}
-            <Link
-              href={resourceLink}
-              className="text-primary-light hover:text-primary-light hover:underline"
-            >
-              {resourceName}
-            </Link>
-          </p>
+          {request.type === "ACCOUNT_CLAIM" ? (
+            <p>
+              <strong>{senderName}</strong> requested to claim Instagram{" "}
+              <strong>@{request.instagramHandle}</strong>{" "}
+              {request.wipeRelationships ? "(remove tags: " : "(keep tags: "}
+              {request.tagCount ?? 0})
+            </p>
+          ) : (
+            <p>
+              <strong>{senderName}</strong> requested{" "}
+              {request.type === "OWNERSHIP" ? (
+                <>
+                  <strong>ownership</strong> of{" "}
+                </>
+              ) : request.type === "TEAM_MEMBER" ? (
+                <>
+                  <strong>team membership</strong> for{" "}
+                </>
+              ) : (
+                <>{request.role && <strong>{request.role}</strong>} from </>
+              )}
+              <Link
+                href={resourceLink}
+                className="text-primary-light hover:text-primary-light hover:underline"
+              >
+                {resourceName}
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* Breadcrumb trail */}
@@ -369,24 +399,33 @@ export function OutgoingRequestCard({
 
         {/* Message: You requested Role Name for Link */}
         <p className="text-sm">
-          You requested{" "}
-          {request.type === "OWNERSHIP" ? (
+          {request.type === "ACCOUNT_CLAIM" ? (
             <>
-              <strong>ownership</strong> of{" "}
-            </>
-          ) : request.type === "TEAM_MEMBER" ? (
-            <>
-              <strong>team membership</strong> for{" "}
+              You submitted an account claim for <strong>@{request.instagramHandle}</strong>.{" "}
+              Please DM @dancechives on Instagram with your Dance Chives username or Display Name to verify your identity.
             </>
           ) : (
-            <>{request.role && <strong>{request.role}</strong>} for </>
+            <>
+              You requested{" "}
+              {request.type === "OWNERSHIP" ? (
+                <>
+                  <strong>ownership</strong> of{" "}
+                </>
+              ) : request.type === "TEAM_MEMBER" ? (
+                <>
+                  <strong>team membership</strong> for{" "}
+                </>
+              ) : (
+                <>{request.role && <strong>{request.role}</strong>} for </>
+              )}
+              <Link
+                href={resourceLink}
+                className="text-primary-light hover:text-primary-light hover:underline"
+              >
+                {resourceName}
+              </Link>
+            </>
           )}
-          <Link
-            href={resourceLink}
-            className="text-primary-light hover:text-primary-light hover:underline"
-          >
-            {resourceName}
-          </Link>
         </p>
 
         {/* Breadcrumb trail */}

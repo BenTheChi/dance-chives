@@ -151,6 +151,12 @@ async function updateRequestStatus(
         data: updateData,
       });
       break;
+    case REQUEST_TYPES.ACCOUNT_CLAIM:
+      await prisma.accountClaimRequest.update({
+        where: { id: requestId },
+        data: updateData,
+      });
+      break;
   }
 }
 
@@ -1651,6 +1657,15 @@ export async function getIncomingRequests() {
     },
   });
 
+  const accountClaimRequests = await prisma.accountClaimRequest.findMany({
+    where: { status: "PENDING" },
+    include: {
+      sender: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
   // Filter requests user can approve and enrich with event/video info (all requests now use eventId)
   const canApproveTagging = await Promise.all(
     taggingRequests
@@ -1792,6 +1807,25 @@ export async function getIncomingRequests() {
     })
   );
 
+  const canApproveAccountClaim = await Promise.all(
+    accountClaimRequests.map(async (req) => {
+      const enrichedSender = req.sender
+        ? await enrichUserData(req.sender)
+        : null;
+
+      return {
+        request: {
+          ...req,
+          sender: enrichedSender || req.sender,
+        },
+        canApprove: await canUserApproveRequest(
+          userId,
+          REQUEST_TYPES.ACCOUNT_CLAIM
+        ),
+      };
+    })
+  );
+
   return {
     tagging: canApproveTagging
       .filter((item) => item.canApprove)
@@ -1805,6 +1839,9 @@ export async function getIncomingRequests() {
     authLevelChange: canApproveAuthLevel
       .filter((item) => item.canApprove)
       .map((item) => ({ ...item.request, type: "AUTH_LEVEL_CHANGE" })),
+    accountClaim: canApproveAccountClaim
+      .filter((item) => item.canApprove)
+      .map((item) => ({ ...item.request, type: "ACCOUNT_CLAIM" })),
   };
 }
 
@@ -1816,6 +1853,7 @@ export async function getOutgoingRequests() {
     teamMemberRequests,
     ownershipRequests,
     authLevelChangeRequests,
+    accountClaimRequests,
   ] = await Promise.all([
     prisma.taggingRequest.findMany({
       where: { senderId: userId },
@@ -1841,6 +1879,10 @@ export async function getOutgoingRequests() {
           select: { id: true, name: true, email: true },
         },
       },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.accountClaimRequest.findMany({
+      where: { senderId: userId },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -1948,11 +1990,17 @@ export async function getOutgoingRequests() {
     })
   );
 
+  const enrichedAccountClaimRequests = accountClaimRequests.map((req) => ({
+    ...req,
+    type: "ACCOUNT_CLAIM",
+  }));
+
   return {
     tagging: enrichedTaggingRequests,
     teamMember: enrichedTeamMemberRequests,
     ownership: enrichedOwnershipRequests,
     authLevelChange: enrichedAuthLevelChangeRequests,
+    accountClaim: enrichedAccountClaimRequests,
   };
 }
 

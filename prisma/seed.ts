@@ -83,6 +83,7 @@ async function main() {
     {
       id: "test-user-0",
       name: "Base User",
+      username: "baseuser",
       email: "baseuser@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
@@ -94,6 +95,7 @@ async function main() {
     {
       id: "test-user-1",
       name: "Creator",
+      username: "creator",
       email: "creator@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
@@ -105,6 +107,7 @@ async function main() {
     {
       id: "test-user-2",
       name: "Moderator",
+      username: "moderator",
       email: "moderator@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
@@ -116,6 +119,7 @@ async function main() {
     {
       id: "test-user-3",
       name: "Admin",
+      username: "admin",
       email: "admin@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),
@@ -127,6 +131,7 @@ async function main() {
     {
       id: "test-user-4",
       name: "Super Admin",
+      username: "superadmin",
       email: "superadmin@example.com",
       emailVerified: new Date(),
       accountVerified: new Date(),

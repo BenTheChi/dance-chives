@@ -1,6 +1,6 @@
 /**
  * Script to add Neo4j constraints and indexes for User nodes
- * Run with: npx dotenv-cli -e .env.development -- tsx scripts/add-user-constraints.ts
+ * Run with: npx dotenv-cli -e .env.local -- tsx scripts/add-user-constraints.ts
  */
 
 import driver from "../src/db/driver";

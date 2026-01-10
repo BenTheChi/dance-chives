@@ -183,7 +183,7 @@ export const signupUser = async (
     const result = await session.run(
       `
       MERGE (u:User {id: $id})
-      ON CREATE SET ${setClause}
+      SET ${setClause}
       WITH u
       MERGE (c:City {id: $city.id})
       ON CREATE SET 

@@ -8,6 +8,7 @@ export const REQUEST_TYPES = {
   OWNERSHIP: "OWNERSHIP",
   GLOBAL_ACCESS: "GLOBAL_ACCESS",
   AUTH_LEVEL_CHANGE: "AUTH_LEVEL_CHANGE",
+  ACCOUNT_CLAIM: "ACCOUNT_CLAIM",
 } as const;
 
 export type RequestType = (typeof REQUEST_TYPES)[keyof typeof REQUEST_TYPES];
@@ -177,6 +178,9 @@ export async function canUserApproveRequest(
       return false;
 
     case REQUEST_TYPES.AUTH_LEVEL_CHANGE:
+      return authLevel >= AUTH_LEVELS.ADMIN;
+
+    case REQUEST_TYPES.ACCOUNT_CLAIM:
       return authLevel >= AUTH_LEVELS.ADMIN;
 
     default:

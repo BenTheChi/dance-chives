@@ -39,6 +39,7 @@ export function NotificationCard({
   const [isMarking, setIsMarking] = useState(false);
 
   const handleMarkAsOld = async () => {
+    if (isMarking) return;
     setIsMarking(true);
     try {
       await markNotificationAsOld(notification.id);
@@ -54,7 +55,18 @@ export function NotificationCard({
   };
 
   return (
-    <Card className="bg-gray-300/10 dark:bg-gray-300/5 border-primary/20">
+    <Card
+      className="bg-gray-300/10 dark:bg-gray-300/5 border-primary/20 cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={() => void handleMarkAsOld()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          void handleMarkAsOld();
+        }
+      }}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -74,7 +86,10 @@ export function NotificationCard({
             variant="ghost"
             size="icon"
             className="h-6 w-6 shrink-0"
-            onClick={handleMarkAsOld}
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleMarkAsOld();
+            }}
             disabled={isMarking}
           >
             <X className="h-4 w-4" />

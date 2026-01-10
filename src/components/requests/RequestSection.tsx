@@ -44,6 +44,8 @@ interface DashboardRequest {
   requestedLevel?: number;
   currentLevel?: number;
   message?: string;
+  instagramHandle?: string;
+  tagCount?: number;
 }
 
 interface RequestSectionProps {

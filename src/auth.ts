@@ -17,6 +17,7 @@ declare module "next-auth" {
       aboutme?: string;
       auth?: number; // Add auth level to session
       accountVerified?: Date; // Add account verification status to session
+      instagram?: string;
     } & DefaultSession["user"];
   }
 }
@@ -33,6 +34,7 @@ declare module "next-auth" {
     aboutme?: string;
     auth?: number;
     accountVerified?: Date;
+    instagram?: string;
   }
 }
 
@@ -141,14 +143,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           session.user.accountVerified = token.accountVerified as
             | Date
             | undefined;
+          session.user.instagram = token.instagram as string | undefined;
         }
       }
       return session;
     },
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, account, profile }) => {
       // Get user ID from either the new user object (initial login) or existing token
       const userId = user?.id ?? token.id ?? token.sub;
-      
+
       if (!userId || typeof userId !== "string") {
         return token;
       }
