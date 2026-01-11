@@ -290,7 +290,8 @@ export default function FAQPage() {
                     </li>
                     <li>
                       <strong>Roles:</strong> Events where you've been tagged
-                      with roles like Organizer, DJ, MC, Photographer, etc.
+                      with roles like Organizer, DJ, MC, Photographer, Teacher,
+                      etc.
                     </li>
                     <li>
                       <strong>Sections Won:</strong> Sections where you've been

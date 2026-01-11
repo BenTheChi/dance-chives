@@ -126,7 +126,7 @@ export default function AddEditEventsPage() {
               Event roles recognize people who were involved in organizing and
               running the event. These are event-level roles that apply to the
               entire event, separate from section-specific roles. Common roles
-              include Organizer, DJ, MC, Videographer, and Photographer.
+              include Organizer, DJ, MC, Videographer, Photographer, and Teacher.
             </p>
           </div>
 
@@ -139,10 +139,10 @@ export default function AddEditEventsPage() {
                 To add a role, click the plus button (+) in the Roles tab. Then:
               </p>
               <ol className="list-decimal list-inside space-y-2 ml-4">
-                <li>
-                  Select the role title from the dropdown (e.g., Organizer, DJ,
-                  MC, etc.)
-                </li>
+                  <li>
+                    Select the role title from the dropdown (e.g., Organizer, DJ,
+                    MC, Teacher, etc.)
+                  </li>
                 <li>
                   Search for and select the user who held that role. Start
                   typing their username or display name to find them.
@@ -171,8 +171,8 @@ export default function AddEditEventsPage() {
             </h3>
             <p className="text-base leading-relaxed text-white ml-4">
               The available role types include: Organizer, DJ, MC, Videographer,
-              Photographer, Host, Sponsor, and more. These roles help give
-              proper credit to everyone who contributed to making the event
+              Photographer, Teacher, Host, Sponsor, and more. These roles help
+              give proper credit to everyone who contributed to making the event
               happen.
             </p>
           </div>

@@ -42,6 +42,11 @@ export function UserBadge({
         .slice(0, 2)
     : username[0]?.toUpperCase() || "U";
 
+  const showInstagramAsPrimary = !claimed && !!instagram;
+  const primaryLabel = showInstagramAsPrimary ? `@${instagram}` : displayName;
+  const secondaryLabel = instagram ? `@${instagram}` : `(${username})`;
+  const showSecondary = claimed || !showInstagramAsPrimary;
+
   return (
     <span className={badgeClasses}>
       <div className="relative w-[30px] h-[30px] rounded-full overflow-hidden border border-black">
@@ -60,10 +65,10 @@ export function UserBadge({
           </div>
         )}
       </div>
-      <span className="text-sm">{displayName}</span>
-      <span className="text-gray-600 text-sm">
-        {instagram ? `@${instagram}` : `(${username})`}
-      </span>
+      <span className="text-sm">{primaryLabel}</span>
+      {showSecondary && (
+        <span className="text-gray-600 text-sm">{secondaryLabel}</span>
+      )}
       {onRemove && (
         <button
           type="button"

@@ -47,7 +47,7 @@ export default function RoleTaggingPage() {
             <ul className="list-disc list-inside space-y-2 text-base leading-relaxed text-white ml-4">
               <li>
                 <strong>Event-level roles</strong> (e.g., Organizer, DJ,
-                Videographer) apply to the entire event
+                Videographer, Teacher) apply to the entire event
               </li>
               <li>
                 <strong>Section-level roles</strong> (e.g., Winner, Judge) apply

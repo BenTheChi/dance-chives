@@ -82,10 +82,6 @@ export default function RolesForm({ setValue, roles = [] }: RolesFormProps) {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full border-2 rounded-sm border-black bg-primary p-5">
-      <div className="text-sm text-center">
-        Assign event-level roles using the search field below. Tag multiple
-        users per role and update assignments anytime.
-      </div>
       <div className="space-y-4">
         {AVAILABLE_ROLES.map((roleTitle) => (
           <div

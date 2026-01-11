@@ -67,11 +67,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [
-      { url: "/icon.svg", sizes: "any" },
-      { url: "/icon.svg", sizes: "512x512", type: "image/svg+xml" },
-    ],
-    apple: [{ url: "/icon.svg", sizes: "180x180", type: "image/svg+xml" }],
+    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    shortcut: [{ url: "/favicon.ico" }],
   },
   openGraph: {
     title: "Dance Chives",
