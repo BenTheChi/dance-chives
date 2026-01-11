@@ -134,7 +134,7 @@ export function PlaylistParser({
   return (
     <div className="border-2 border-primary-light rounded-sm p-4 bg-primary-dark mb-6">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-w-[500px]">
           <h3>YouTube Playlist Parser (Super Admin Only)</h3>
         </div>
         <p className="text-xs text-muted-foreground">

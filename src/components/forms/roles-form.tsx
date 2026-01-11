@@ -4,7 +4,7 @@ import { UseFormSetValue } from "react-hook-form";
 import { FormValues } from "./event-form";
 import { Role } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
-import { DebouncedSearchMultiSelect } from "../ui/debounced-search-multi-select";
+import { DebouncedSearchMultiUserSelect } from "../ui/debounced-search-multi-user-select";
 import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 
 interface RolesFormProps {
@@ -92,20 +92,14 @@ export default function RolesForm({ setValue, roles = [] }: RolesFormProps) {
             key={roleTitle}
             className="rounded-sm border border-black bg-neutral-200 p-4 space-y-2"
           >
-            <h3 className="text-lg font-semibold">{roleTitle}</h3>
-            <DebouncedSearchMultiSelect<UserSearchItem>
-              label="Users"
+            <DebouncedSearchMultiUserSelect
+              label={roleTitle}
+              labelColor="text-charcoal"
               name={`roles-${roleTitle}`}
               onSearch={getUserSearchItems}
               placeholder={`Search for ${roleTitle.toLowerCase()}s...`}
               value={getUsersForRole(roleTitle)}
               onChange={(value) => handleRoleUsersChange(roleTitle, value)}
-              getDisplayValue={(item) =>
-                item.displayName && item.username
-                  ? `${item.displayName} (${item.username})`
-                  : item.username
-              }
-              getItemId={(item) => item.username}
             />
           </div>
         ))}

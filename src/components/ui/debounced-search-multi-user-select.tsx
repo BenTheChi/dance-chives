@@ -319,7 +319,7 @@ export function DebouncedSearchMultiUserSelect({
                                 )}
                               />
                               {item.displayName} @
-                              {item.instagram || item.username}
+                              {item.instagram ?? item.username}
                             </CommandItem>
                           );
                         })}

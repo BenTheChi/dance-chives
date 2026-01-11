@@ -4,6 +4,7 @@ export const DANCE_STYLES = [
   "Dancehall",
   "Hip Hop",
   "House",
+  "Chicago Footwork",
   "Hustle",
   "Jazz",
   "Jookin",
