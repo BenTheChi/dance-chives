@@ -1,6 +1,4 @@
-"use server";
-
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { City } from "@/types/city";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 
@@ -23,25 +21,12 @@ export function getCitySlug(city?: City | null): string | null {
   return null;
 }
 
-export function revalidateCalendarForSlugs(
+export async function revalidateCalendarForSlugs(
   citySlugs: Array<string | null | undefined>
-) {
-  const normalizedSlugs = Array.from(
-    new Set(
-      citySlugs
-        .map((slug) => slug?.trim())
-        .filter((slug): slug is string => Boolean(slug))
-    )
-  );
-
-  if (normalizedSlugs.length === 0) {
-    return;
-  }
-
+): Promise<void> {
+  // Revalidate the calendar page - this will invalidate the page cache
+  // The unstable_cache in calendar_actions.ts will naturally expire based on its revalidate time (5 minutes)
   revalidatePath(CALENDAR_PATH);
-  for (const slug of normalizedSlugs) {
-    revalidateTag(`calendar-events-${slug}`);
-  }
 }
 
 
