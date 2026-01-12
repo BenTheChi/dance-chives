@@ -1,15 +1,15 @@
 "use server";
-import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
-import sharp from "sharp";
-import {
+"import { auth } from "@/auth";
+"import { revalidatePath } from "next/cache";
+"import sharp from "sharp";
+"import {
   deleteFromR2,
   uploadEventPosterToR2,
   uploadEventGalleryToR2,
   uploadSectionPosterToR2,
   uploadToR2,
 } from "../R2";
-import {
+"import {
   insertEvent,
   editEvent as editEventQuery,
   getEvent as getEventQuery,
@@ -18,14 +18,14 @@ import {
   getCityFromNeo4j,
   storeCityData,
 } from "@/db/queries/event";
-import { Event, EventDetails, Section, Video } from "@/types/event";
-import { Image } from "@/types/image";
-import { generateSlugId } from "@/lib/utils";
-import { prisma } from "@/lib/primsa";
-import driver from "@/db/driver";
-import { canUpdateEvent } from "@/lib/utils/auth-utils";
-import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
-import {
+"import { Event, EventDetails, Section, Video } from "@/types/event";
+"import { Image } from "@/types/image";
+"import { generateSlugId } from "@/lib/utils";
+"import { prisma } from "@/lib/primsa";
+"import driver from "@/db/driver";
+"import { canUpdateEvent } from "@/lib/utils/auth-utils";
+"import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
+"import {
   setVideoRoles,
   setSectionWinners,
   setSectionJudges,
@@ -33,25 +33,29 @@ import {
   addTeamMember,
   isEventCreator,
 } from "@/db/queries/team-member";
-import { getUserByUsername } from "@/db/queries/user";
-import { UserSearchItem } from "@/types/user";
-import {
+"import { getUserByUsername } from "@/db/queries/user";
+"import { UserSearchItem } from "@/types/user";
+"import {
   VIDEO_ROLE_WINNER,
   VIDEO_ROLE_DANCER,
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
-import { createTagNotification, createNotification } from "@/lib/utils/request-utils";
-import { getEventTitle, getVideoTitle } from "@/db/queries/team-member";
-import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
-import { normalizeStyleNames } from "@/lib/utils/style-utils";
-import {
+"import { createTagNotification, createNotification } from "@/lib/utils/request-utils";
+"import { getEventTitle, getVideoTitle } from "@/db/queries/team-member";
+"import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
+"import { normalizeStyleNames } from "@/lib/utils/style-utils";
+"import {
   parseMmddyyyy,
   zonedDateTimeToUtc,
   zonedStartOfDayToUtc,
   localIsoDateInTimeZone,
 } from "@/lib/utils/timezone-utils";
-import { getPlaceDetails, getTimezone } from "@/lib/google-places";
-import { City } from "@/types/city";
+"import { getPlaceDetails, getTimezone } from "@/lib/google-places";
+"import { City } from "@/types/city";
+import {
+  getCitySlug,
+  revalidateCalendarForSlugs,
+} from "@/lib/server_actions/calendar_revalidation";
 
 const DEFAULT_POSTER_BG_COLOR = "#ffffff";
 
@@ -879,6 +883,9 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Also revalidate the individual event page
     revalidatePath(`/events/${result.id}`);
 
+    const newCitySlug = getCitySlug(props.eventDetails.city as City);
+    revalidateCalendarForSlugs([newCitySlug]);
+
     // Revalidate profiles for all users with roles
     if (props.roles && props.roles.length > 0) {
       for (const role of props.roles) {
@@ -1700,6 +1707,25 @@ export async function editEvent(
           }
         }
       }
+
+      const sectionIds = Array.from(
+        new Set(
+          processedSections
+            .map((section) => section.id)
+            .filter((id): id is string => !!id)
+        )
+      );
+      for (const sectionId of sectionIds) {
+        revalidatePath(`/events/${eventId}/sections/${sectionId}`);
+      }
+
+      const oldCitySlug = getCitySlug(
+        oldEvent.eventDetails.city as City | undefined
+      );
+      const newCitySlug = getCitySlug(
+        editedEvent.eventDetails.city as City | undefined
+      );
+      revalidateCalendarForSlugs([oldCitySlug, newCitySlug]);
 
       return {
         status: 200,
@@ -2610,6 +2636,18 @@ export async function updateEventStatus(
       };
     }
 
+    const event = await getEventQuery(
+      eventId,
+      session.user.id,
+      session.user.auth ?? 0
+    );
+    if (!event) {
+      return {
+        error: "Event not found",
+        status: 404,
+      };
+    }
+
     // Update status in Neo4j
     const neo4jSession = driver.session();
     try {
@@ -2638,6 +2676,8 @@ export async function updateEventStatus(
     revalidatePath("/events");
     // Also revalidate the individual event page
     revalidatePath(`/events/${eventId}`);
+    const citySlug = getCitySlug(event.eventDetails.city as City | undefined);
+    revalidateCalendarForSlugs([citySlug]);
 
     return {
       status: 200,

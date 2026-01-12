@@ -20,6 +20,10 @@ import driver from "@/db/driver";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
+import {
+  getCitySlug,
+  revalidateCalendarForSlugs,
+} from "@/lib/server_actions/calendar_revalidation";
 import { City } from "@/types/city";
 import { signIn, signOut } from "@/auth";
 import { EventDate, EventType, Event, EventDetails } from "@/types/event";
@@ -38,7 +42,7 @@ import {
 } from "@/lib/utils/admin-user";
 import { deleteUser } from "@/db/queries/user";
 import { getUserEvents } from "@/db/queries/user";
-import { deleteEvent, getEventImages } from "@/db/queries/event";
+import { deleteEvent, getEvent, getEventImages } from "@/db/queries/event";
 import { addMailerLiteSubscriber } from "@/lib/mailerlite";
 import { randomUUID } from "crypto";
 import { normalizeInstagramHandle } from "@/lib/utils/instagram";
@@ -488,6 +492,9 @@ export async function createUnclaimedUser(
         styles: [],
       },
     });
+
+    // Make sure the profiles list picks up the new unclaimed account immediately.
+    revalidatePath("/profiles");
 
     return {
       success: true,
@@ -1808,7 +1815,17 @@ export async function deleteUserAccount(
     if (deleteEvents) {
       // Delete all events created by the user
       for (const eventId of eventIds) {
+        let citySlug: string | null = null;
         try {
+          const eventData = await getEvent(
+            eventId,
+            session.user.id,
+            session.user.auth ?? 0
+          );
+          citySlug = getCitySlug(
+            eventData?.eventDetails.city as City | undefined
+          );
+
           // Delete event images from R2
           const pictures = await getEventImages(eventId);
           await Promise.all(
@@ -1824,6 +1841,8 @@ export async function deleteUserAccount(
           await prisma.event.deleteMany({
             where: { eventId },
           });
+
+          revalidateCalendarForSlugs([citySlug]);
         } catch (error) {
           console.error(`Failed to delete event ${eventId}:`, error);
           // Continue with other events even if one fails
@@ -1860,6 +1879,8 @@ export async function deleteUserAccount(
     await prisma.user.delete({
       where: { id: targetUserId },
     });
+
+    revalidatePath("/profiles");
 
     // Note: If user deleted their own account, the client will handle sign out and redirect
     // We return success and let the client component handle the redirect

@@ -4,7 +4,8 @@ import { getAllCities, getAllStyles } from "@/db/queries/event";
 import { EventsClient } from "./events-client";
 
 // Enable static generation with revalidation
-export const revalidate = 3600; // Revalidate every hour
+// 12 hours - comprehensive on-demand revalidation covers most updates
+export const revalidate = 43200; // Revalidate every 12 hours
 
 export default async function EventsPage() {
   // Fetch events and filter data without auth (static generation)

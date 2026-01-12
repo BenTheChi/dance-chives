@@ -170,6 +170,7 @@ export async function approveAccountClaimRequest(
   });
 
   await revalidateProfileForUser(request.targetUserId);
+  revalidatePath("/profiles");
 
   // Notify the target user (who now has the sender's auth credentials after merge)
   await prisma.notification.create({

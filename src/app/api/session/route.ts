@@ -7,6 +7,11 @@ import { isTeamMember } from "@/db/queries/team-member";
 import { prisma } from "@/lib/primsa";
 import { searchEvents, searchAccessibleEvents } from "@/db/queries/event";
 import { revalidatePath } from "next/cache";
+import { City } from "@/types/city";
+import {
+  getCitySlug,
+  revalidateCalendarForSlugs,
+} from "@/lib/server_actions/calendar_revalidation";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -87,6 +92,11 @@ export async function DELETE(request: NextRequest) {
     revalidatePath("/events");
     // Also revalidate the individual event page (in case it was cached)
     revalidatePath(`/events/${id}`);
+
+    const citySlug = getCitySlug(
+      eventData.eventDetails.city as City | undefined
+    );
+    revalidateCalendarForSlugs([citySlug]);
 
     return NextResponse.json({ message: "Event deleted" }, { status: 200 });
   } catch (error) {

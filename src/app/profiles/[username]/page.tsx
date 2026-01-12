@@ -21,7 +21,8 @@ interface PageProps {
 }
 
 // Enable static generation with revalidation (ISR)
-export const revalidate = 3600; // Revalidate every hour
+// 12 hours - comprehensive on-demand revalidation covers most updates
+export const revalidate = 43200; // Revalidate every 12 hours
 
 // Generate metadata for the profile page
 export async function generateMetadata({

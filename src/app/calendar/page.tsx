@@ -13,7 +13,8 @@ import { generateCitySlug } from "@/lib/utils/city-slug";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 
 // Enable static generation with revalidation (ISR)
-export const revalidate = 3600; // Revalidate every hour
+// 12 hours - comprehensive on-demand revalidation covers most updates
+export const revalidate = 43200; // Revalidate every 12 hours
 
 type PageProps = {
   searchParams: Promise<{ city?: string; style?: string }>;

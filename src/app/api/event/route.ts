@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteEvent, getEventImages } from "@/db/queries/event";
-import { getEvent } from "@/db/queries/event";
+import { deleteEvent, getEvent, getEventImages } from "@/db/queries/event";
 import { auth } from "@/auth";
 import { deleteFromR2 } from "@/lib/R2";
 import { prisma } from "@/lib/primsa";
 import { canDeleteEvent } from "@/lib/utils/auth-utils";
 import { revalidatePath } from "next/cache";
+import { City } from "@/types/city";
+import {
+  getCitySlug,
+  revalidateCalendarForSlugs,
+} from "@/lib/server_actions/calendar_revalidation";
 
 export async function DELETE(request: NextRequest) {
   const session = await auth();
@@ -87,6 +91,11 @@ export async function DELETE(request: NextRequest) {
     revalidatePath("/events");
     // Also revalidate the individual event page (in case it was cached)
     revalidatePath(`/events/${id}`);
+
+    const citySlug = getCitySlug(
+      event.eventDetails.city as City | undefined
+    );
+    revalidateCalendarForSlugs([citySlug]);
 
     return NextResponse.json({ message: "Event deleted" }, { status: 200 });
   } catch (error) {

@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import type { Session } from "next-auth";
 import { prisma } from "@/lib/primsa";
+import { revalidatePath } from "next/cache";
 import {
   getTaggingRequestApprovers,
   getTeamMemberRequestApprovers,
@@ -41,6 +42,7 @@ import {
   removeTag,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
+import { getLatestEventVideos } from "@/db/queries/event";
 import {
   getUser,
   getUserByUsername,
@@ -75,6 +77,59 @@ async function requireAuth(): Promise<string> {
     throw new Error("Not authenticated");
   }
   return session.user.id;
+}
+
+async function revalidateProfilesForUserIds(userIds: string[]) {
+  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
+  for (const userId of uniqueIds) {
+    const user = await getUser(userId);
+    if (user?.username) {
+      revalidatePath(`/profiles/${user.username}`);
+    }
+  }
+}
+
+async function shouldRevalidateHomeForVideo(videoId: string): Promise<boolean> {
+  const latestVideos = await getLatestEventVideos();
+  return latestVideos.some(({ video }) => video.id === videoId);
+}
+
+async function getSectionIdsForVideo(videoId: string): Promise<string[]> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `
+      MATCH (s:Section)<-[:IN]-(v:Video {id: $videoId})
+      RETURN DISTINCT s.id AS sectionId
+      UNION
+      MATCH (s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video {id: $videoId})
+      RETURN DISTINCT s.id AS sectionId
+      `,
+      { videoId }
+    );
+
+    return result.records
+      .map((record) => record.get("sectionId") as string | null)
+      .filter((id): id is string => Boolean(id));
+  } finally {
+    await session.close();
+  }
+}
+
+async function revalidateVideoDependentPages(
+  eventId: string,
+  videoId: string
+): Promise<void> {
+  if (await shouldRevalidateHomeForVideo(videoId)) {
+    revalidatePath("/");
+  }
+
+  revalidatePath(`/events/${eventId}`);
+
+  const sectionIds = await getSectionIdsForVideo(videoId);
+  for (const sectionId of sectionIds) {
+    revalidatePath(`/events/${eventId}/sections/${sectionId}`);
+  }
 }
 
 /**
@@ -2757,6 +2812,8 @@ export async function removeTagFromVideo(
     // User has permission - remove directly by setting empty roles
     try {
       await setVideoRoles(eventId, videoId, userId, []);
+      await revalidateProfilesForUserIds([userId]);
+      await revalidateVideoDependentPages(eventId, videoId);
       return { success: true, directRemove: true };
     } catch (error) {
       console.error("Error removing tag from video:", error);
@@ -3233,6 +3290,7 @@ export async function tagUsersWithRole(
     }
   }
 
+  await revalidateProfilesForUserIds(uniqueUserIds);
   return { success: failed.length === 0, tagged, failed };
 }
 
