@@ -1,31 +1,6 @@
-"use client";
-
-import { AppNavbar } from "@/components/AppNavbar";
-import Image from "next/image";
-import { useState, useEffect } from "react";
-
+// Loading state is now handled by the unified LoadingOverlay
+// This file is kept for Next.js compatibility but renders nothing
+// since the overlay provides immediate feedback on navigation
 export default function Loading() {
-  const [imageSize, setImageSize] = useState(300); // Default to mobile size
-
-  useEffect(() => {
-    // Only access screen on client side
-    if (typeof window !== "undefined") {
-      setImageSize(window.innerWidth > 768 ? 500 : 300);
-    }
-  }, []);
-
-  return (
-    <>
-      <AppNavbar />
-      <div className="flex flex-col justify-center items-center gap-4 py-20 px-4">
-        <Image
-          src="/mascot/Mascot3_Color_onDark.svg"
-          alt="Loading"
-          width={imageSize}
-          height={imageSize}
-          className="animate-rotate-medium"
-        />
-      </div>
-    </>
-  );
+  return null;
 }
