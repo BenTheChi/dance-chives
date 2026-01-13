@@ -329,14 +329,7 @@ export async function createTaggingRequest(
   sectionId?: string,
   role?: string
 ) {
-  console.log("🔵 [createTaggingRequest] Starting", {
-    eventId,
-    videoId,
-    sectionId,
-    role,
-  });
   const senderId = await requireAuth();
-  console.log("🔵 [createTaggingRequest] Authenticated user:", senderId);
 
   // Validate parameter combinations:
   // - videoId + role: video tagging with role (e.g., "Dancer", "Winner")
@@ -362,13 +355,11 @@ export async function createTaggingRequest(
   const targetUserId = senderId;
 
   // Validate event exists in Neo4j and get event type
-  console.log("🔵 [createTaggingRequest] Checking if event exists...");
   const eventExistsInNeo4j = await eventExists(eventId);
   if (!eventExistsInNeo4j) {
     console.error("❌ [createTaggingRequest] Event not found:", eventId);
     throw new Error("Event not found");
   }
-  console.log("✅ [createTaggingRequest] Event exists");
 
   // Fetch event type and title for better notification messages
   const [eventType, eventTitle] = await Promise.all([
@@ -381,13 +372,11 @@ export async function createTaggingRequest(
 
   // Validate video exists if provided
   if (videoId) {
-    console.log("🔵 [createTaggingRequest] Checking if video exists...");
     const videoExists = await videoExistsInEvent(eventId, videoId);
     if (!videoExists) {
       console.error("❌ [createTaggingRequest] Video not found:", videoId);
       throw new Error("Video not found in this event");
     }
-    console.log("✅ [createTaggingRequest] Video exists");
 
     // Role is required for video tags
     if (!role) {
@@ -402,9 +391,6 @@ export async function createTaggingRequest(
     }
 
     // Check if user already has this specific role in the video
-    console.log(
-      "🔵 [createTaggingRequest] Checking if user already has this role..."
-    );
     const alreadyHasRole = await isUserTaggedInVideoWithRole(
       eventId,
       videoId,
@@ -415,18 +401,15 @@ export async function createTaggingRequest(
       console.error("❌ [createTaggingRequest] User already has this role");
       throw new Error(`You are already tagged as ${role} in this video`);
     }
-    console.log("✅ [createTaggingRequest] User does not have this role yet");
   }
 
   // Validate section exists if provided
   if (sectionId) {
-    console.log("🔵 [createTaggingRequest] Checking if section exists...");
     const sectionExists = await sectionExistsInEvent(eventId, sectionId);
     if (!sectionExists) {
       console.error("❌ [createTaggingRequest] Section not found:", sectionId);
       throw new Error("Section not found in this event");
     }
-    console.log("✅ [createTaggingRequest] Section exists");
 
     // Role is required for section tags
     if (!role) {
@@ -455,7 +438,6 @@ export async function createTaggingRequest(
 
   // Check if a pending request already exists for this specific combination
   // Note: We check for the exact role to allow multiple requests with different roles
-  console.log("🔵 [createTaggingRequest] Checking for existing requests...");
   const existingRequest = await prisma.taggingRequest.findFirst({
     where: {
       eventId,
@@ -469,18 +451,12 @@ export async function createTaggingRequest(
   });
 
   if (existingRequest) {
-    console.log(
-      "⚠️ [createTaggingRequest] Pending request already exists for this role:",
-      existingRequest.id
-    );
     // Return the existing request without creating notifications
     // This prevents duplicate requests and notifications
     return { success: true, request: existingRequest, isExisting: true };
   }
-  console.log("✅ [createTaggingRequest] No existing request found");
 
   // Create the request
-  console.log("🔵 [createTaggingRequest] Creating request in database...");
   let request;
   try {
     request = await prisma.taggingRequest.create({
@@ -502,18 +478,15 @@ export async function createTaggingRequest(
         },
       },
     });
-    console.log("✅ [createTaggingRequest] Request created:", request.id);
   } catch (error) {
     console.error("❌ [createTaggingRequest] Failed to create request:", error);
     throw error;
   }
 
   // Get approvers and create notifications (only for new requests, not existing ones)
-  console.log("🔵 [createTaggingRequest] Getting approvers...");
   let approvers: string[] = [];
   try {
     approvers = await getTaggingRequestApprovers(eventId);
-    console.log("✅ [createTaggingRequest] Approvers found:", approvers.length);
   } catch (error) {
     console.error("❌ [createTaggingRequest] Error getting approvers:", error);
     // Don't fail the request creation if approvers can't be found
@@ -521,7 +494,6 @@ export async function createTaggingRequest(
   }
 
   // Create notifications for approvers
-  console.log("🔵 [createTaggingRequest] Creating notifications...");
   try {
     const username = request.sender.name || request.sender.email;
 
@@ -578,10 +550,6 @@ export async function createTaggingRequest(
           REQUEST_TYPES.TAGGING,
           request.id
         );
-        console.log(
-          "✅ [createTaggingRequest] Notification created for:",
-          approverId
-        );
       } catch (error) {
         console.error(
           `⚠️ [createTaggingRequest] Failed to create notification for ${approverId}:`,
@@ -590,7 +558,6 @@ export async function createTaggingRequest(
         // Continue with other approvers even if one fails
       }
     }
-    console.log("✅ [createTaggingRequest] Notifications completed");
   } catch (error) {
     console.error(
       "⚠️ [createTaggingRequest] Error creating notifications (request still created):",
@@ -603,7 +570,6 @@ export async function createTaggingRequest(
   // because tagSelfInVideo already handles creating both requests when needed.
   // This prevents duplicate request creation.
 
-  console.log("✅ [createTaggingRequest] Successfully completed");
   return { success: true, request, isExisting: false };
 }
 
@@ -2425,19 +2391,12 @@ export async function tagSelfWithRole(eventId: string, role: string) {
     }
   } else {
     // User doesn't have permission - create a tagging request
-    console.log(
-      "🔵 [tagSelfWithRole] User doesn't have permission, creating request..."
-    );
     try {
       const result = await createTaggingRequest(
         eventId,
         undefined,
         undefined,
         role
-      );
-      console.log(
-        "✅ [tagSelfWithRole] Request created successfully:",
-        result.request.id
       );
       return { success: true, directTag: false, request: result.request };
     } catch (error) {
@@ -2525,9 +2484,6 @@ export async function tagSelfInVideo(
     );
     if (!isDancer) {
       rolesToTag.push(VIDEO_ROLE_DANCER);
-      console.log(
-        "🔵 [tagSelfInVideo] User not tagged as Dancer, will also tag as Dancer"
-      );
     }
   }
 
@@ -2541,8 +2497,6 @@ export async function tagSelfInVideo(
     (await isEventCreator(eventId, userId));
 
   if (canTagDirectly) {
-    console.log("Applying tag in Neo4j");
-
     // User has permission - tag directly with specified role(s)
     try {
       // Get existing roles for this user in this video
@@ -2615,10 +2569,6 @@ export async function tagSelfInVideo(
       const requestIds = requests
         .map((r) => r?.request?.id)
         .filter((id): id is string => id !== undefined);
-      console.log(
-        "✅ [tagSelfInVideo] Request(s) created successfully:",
-        requestIds
-      );
 
       // If multiple requests were created (Winner + Dancer), update notifications
       // to indicate both requests were sent

@@ -21,6 +21,7 @@ export function UserCard({
   return (
     <Link
       href={`/profiles/${username}`}
+      prefetch={false}
       className="card flex flex-col items-center w-[250px] justify-between pb-2 bg-secondary-dark"
     >
       <div className="flex flex-col text-center py-3 w-full border-b-4 border-primary-light bg-primary-dark">

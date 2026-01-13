@@ -118,7 +118,11 @@ export function CalendarEventPopover({
         <div className="space-y-3">
           {/* Poster */}
           {poster?.url ? (
-            <Link href={getLinkUrl()} onClick={() => onOpenChange(false)}>
+            <Link
+              href={getLinkUrl()}
+              prefetch={false}
+              onClick={() => onOpenChange(false)}
+            >
               <div className="relative w-full aspect-square card">
                 <Image
                   src={poster.url}
@@ -131,6 +135,7 @@ export function CalendarEventPopover({
           ) : (
             <Link
               href={getLinkUrl()}
+              prefetch={false}
               onClick={() => onOpenChange(false)}
               className="w-full aspect-square bg-neutral-400 rounded-sm flex flex-col"
             >

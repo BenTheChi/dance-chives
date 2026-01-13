@@ -140,6 +140,7 @@ export function SectionCard({
     >
       <Link
         href={`/events/${eventId}/sections/${sectionId}`}
+        prefetch={false}
         className="block h-full"
       >
         <div className="flex flex-col h-full p-4">

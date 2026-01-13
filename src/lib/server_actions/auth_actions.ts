@@ -127,10 +127,6 @@ async function transferUserRelationships(
       { sourceUserId }
     );
 
-    console.log(
-      `[transferUserRelationships] Found ${relsResult.records.length} relationships to transfer`
-    );
-
     // Process each relationship
     for (const record of relsResult.records) {
       const relType = record.get("relType");
@@ -175,10 +171,6 @@ async function transferUserRelationships(
       DELETE r
       `,
       { sourceUserId }
-    );
-
-    console.log(
-      `[transferUserRelationships] Transferred ${relsResult.records.length} relationships from ${sourceUserId} to ${targetUserId}`
     );
   } finally {
     await session.close();
@@ -246,23 +238,12 @@ export async function executeAccountMerge(params: {
   const sourceProfile = await getUser(sourceUserId);
   const targetProfile = await getUser(targetUserId);
 
-  console.log(
-    "[executeAccountMerge] wipeRelationships:",
-    wipeRelationships,
-    "for target user:",
-    targetUserId
-  );
-
   // Only allow wiping relationships when the target is an unclaimed account.
   // If the target is already a claimed account (i.e., a real user switching IG),
   // we should preserve their existing tags/relationships.
   const allowWipe = wipeRelationships && !targetUser.claimed;
 
   if (allowWipe) {
-    console.log(
-      "[executeAccountMerge] Removing all relationships for target user:",
-      targetUserId
-    );
     await removeAllUserRelationships(targetUserId);
   }
 
@@ -274,14 +255,7 @@ export async function executeAccountMerge(params: {
 
   // Transfer relationships from source to target (unless we wiped them above)
   if (!allowWipe) {
-    console.log(
-      "[executeAccountMerge] Transferring relationships from source to target"
-    );
     await transferUserRelationships(sourceUserId, targetUserId);
-  } else {
-    console.log(
-      "[executeAccountMerge] Skipping relationship transfer due to wipeRelationships=true"
-    );
   }
 
   // Determine the Instagram to use:
@@ -293,12 +267,6 @@ export async function executeAccountMerge(params: {
     targetProfile?.instagram ||
     sourceProfile?.instagram ||
     null;
-
-  console.log("[executeAccountMerge] Instagram to use:", instagramToUse, {
-    targetInstagram,
-    targetProfileInstagram: targetProfile?.instagram,
-    sourceProfileInstagram: sourceProfile?.instagram,
-  });
 
   // Build profile data from source profile to apply to target
   const profileData = sourceProfile
@@ -399,9 +367,6 @@ export async function executeAccountMerge(params: {
       DETACH DELETE source
       `,
       { sourceUserId }
-    );
-    console.log(
-      `[executeAccountMerge] Deleted source user node from Neo4j: ${sourceUserId}`
     );
   } finally {
     await neoSession.close();
@@ -828,9 +793,6 @@ export async function signup(
         `📝 Super admin user created with username: ${SUPER_ADMIN_USERNAME}`
       );
     }
-
-    console.log("✅ User registration completed:", userResult);
-    console.log("✅ Account marked as verified in PostgreSQL");
 
     // Handle newsletter subscription if user opted in
     const newsletterSubscribed =

@@ -83,6 +83,7 @@ export function UserAvatar({
       <HoverCardTrigger asChild>
         <Link
           href={`/profiles/${username}`}
+          prefetch={false}
           className="inline-block"
           onClick={(e) => e.stopPropagation()}
         >
@@ -107,6 +108,7 @@ export function UserAvatar({
   ) : (
     <Link
       href={`/profiles/${username}`}
+      prefetch={false}
       className="block"
       onClick={(e) => e.stopPropagation()}
     >

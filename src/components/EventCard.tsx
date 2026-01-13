@@ -55,6 +55,7 @@ export function EventCard({
       {/* Poster square - clickable */}
       <Link
         href={titleHref}
+        prefetch={false}
         className="block relative w-full aspect-square bg-neutral-400"
       >
         {imageUrl ? (

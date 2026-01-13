@@ -693,8 +693,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   const onSubmit = async (data: FormValues) => {
-    console.log("Submitting Edit Event Form");
-    console.log(data);
     setIsSubmitting(true);
     startSubmission();
     let navigating = false;
@@ -786,11 +784,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
     // ADD THIS: Get all current form values
     const currentValues = getValues();
-    console.log("Current form values:", currentValues);
 
     // ADD THIS: Log the specific error paths and their values
     const invalidFields = getFieldNamesFromErrors(errors);
-    console.log("Invalid field paths:", invalidFields);
 
     const tabMap: { [key: string]: string } = {
       eventDetails: "Details",
