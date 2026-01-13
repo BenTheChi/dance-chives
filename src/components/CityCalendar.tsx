@@ -303,6 +303,7 @@ export function CityCalendar({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState<View>("month");
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [overlayOpen, setOverlayOpen] = useState(false);
 
   // Convert all items to calendar events
   const calendarEvents = useMemo(() => {
@@ -412,6 +413,53 @@ export function CityCalendar({
     };
   }, [popoverOpen]);
 
+  // Monitor for react-big-calendar overlay and prevent calendar interactions when it's open
+  useEffect(() => {
+    const checkOverlay = () => {
+      const overlay = document.querySelector(".rbc-overlay");
+      const calendarElement =
+        calendarRef.current?.querySelector(".rbc-calendar");
+      const isOpen = overlay !== null;
+
+      setOverlayOpen(isOpen);
+
+      // Add/remove class to disable calendar interactions
+      if (calendarElement) {
+        if (isOpen) {
+          calendarElement.classList.add("rbc-calendar-overlay-open");
+        } else {
+          calendarElement.classList.remove("rbc-calendar-overlay-open");
+        }
+      }
+    };
+
+    // Check initially
+    checkOverlay();
+
+    // Use MutationObserver to watch for overlay appearance/disappearance
+    const observer = new MutationObserver(checkOverlay);
+
+    // Observe the calendar container for changes
+    if (calendarRef.current) {
+      observer.observe(calendarRef.current, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    // Also check periodically as a fallback
+    const interval = setInterval(checkOverlay, 100);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Prevent calendar interactions when overlay is open
+  // The CSS will handle disabling pointer events on calendar cells/events
+  // react-big-calendar will handle closing the overlay when clicking outside
+
   return (
     <div
       ref={calendarRef}
@@ -439,7 +487,12 @@ export function CityCalendar({
           ))}
       </div>
       <div className="w-full min-w-0 mx-0 sm:mx-0 overflow-x-auto">
-        <div className="px-0 sm:px-0 min-w-0 w-full">
+        <div
+          className={`px-0 sm:px-0 min-w-0 w-full ${
+            overlayOpen ? "pointer-events-none" : ""
+          }`}
+          style={overlayOpen ? { position: "relative" } : undefined}
+        >
           <Calendar
             localizer={localizer}
             events={calendarEvents}

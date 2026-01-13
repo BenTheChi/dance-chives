@@ -517,7 +517,7 @@ span {
 
   .rbc-today {
     border-color: #000000 !important;
-    background-color: var(--accent-color-purple) !important;
+    background-color: rgba(157, 126, 255, 0.5) !important;
   }
 
   .rbc-row {
@@ -552,22 +552,65 @@ span {
     z-index: 10 !important;
     touch-action: manipulation !important;
     user-select: none !important;
+    font-size: 10px !important;
+    background-color: neutral-300 !important;
   }
 
   .rbc-overlay {
     z-index: 1000 !important;
     pointer-events: auto !important;
+    position: absolute !important;
+    background-color: var(--charcoal) !important;
+    border: 2px solid var(--fog-white) !important;
+    padding: 1rem !important;
+    max-width: 90vw !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
   }
 
   .rbc-overlay-header {
     z-index: 1001 !important;
     pointer-events: auto !important;
+    padding: 0.5rem !important;
+    border-bottom: 1px solid var(--fog-white) !important;
+    margin-bottom: 0.5rem !important;
   }
 
   /* Ensure overlay events are clickable */
   .rbc-overlay-event {
     cursor: pointer !important;
     pointer-events: auto !important;
+    padding: 0.5rem !important;
+    margin-bottom: 0.25rem !important;
+    border-radius: 2px !important;
+  }
+
+  /* Prevent calendar cell/event interactions when overlay is open */
+  /* Note: Using a class-based approach instead of :has() for better browser support */
+  /* We disable pointer events on interactive elements but keep the calendar container enabled
+     so react-big-calendar can detect clicks to close the overlay */
+  .rbc-calendar-overlay-open .rbc-month-view .rbc-date-cell > *,
+  .rbc-calendar-overlay-open .rbc-month-view .rbc-event:not(.rbc-overlay-event),
+  .rbc-calendar-overlay-open .rbc-day-slot .rbc-time-slot,
+  .rbc-calendar-overlay-open .rbc-day-slot .rbc-event:not(.rbc-overlay-event) {
+    pointer-events: none !important;
+  }
+
+  /* Keep overlay itself and its contents clickable */
+  .rbc-calendar-overlay-open .rbc-overlay,
+  .rbc-calendar-overlay-open .rbc-overlay * {
+    pointer-events: auto !important;
+  }
+
+  /* Make sure overlay is visible on mobile */
+  @media (max-width: 640px) {
+    .rbc-overlay {
+      left: 5vw !important;
+      right: 5vw !important;
+      width: auto !important;
+      max-width: 90vw !important;
+    }
   }
 
   /* Loading spinner animations */
