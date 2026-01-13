@@ -305,7 +305,7 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
                 name="tag-users"
                 placeholder="Search by name, username, or Instagram..."
                 context={{
-                  role: selectedRole || availableRoles[0],
+                  role: selectedRole,
                   eventId,
                   sectionId: target === "section" ? targetId : undefined,
                   videoId: target === "video" ? targetId : undefined,

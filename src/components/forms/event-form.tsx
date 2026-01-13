@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
@@ -17,6 +17,7 @@ import RolesForm from "./roles-form";
 import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 import UploadFile from "../ui/uploadfile";
 import { addEvent, editEvent } from "@/lib/server_actions/event_actions";
+import { useSubmissionOverlay } from "@/components/SubmissionOverlay";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
@@ -406,6 +407,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const [sectionsSelection, setSectionsSelection] =
     useState<SectionsSelection | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { startSubmission, endSubmission } = useSubmissionOverlay();
   //TODO: set up logic for next buttons to use the active tab index
 
   // Initialize form with default values or initial data
@@ -694,6 +696,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     console.log("Submitting Edit Event Form");
     console.log(data);
     setIsSubmitting(true);
+    startSubmission();
+    let navigating = false;
 
     try {
       // Ensure creatorId is a string (will be overridden by session in server action, but needed for type safety)
@@ -738,6 +742,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             clearDraft();
             if (eventId) {
               router.push(`/events/${eventId}`);
+              navigating = true;
+              return; // allow overlay to stay until route change
             }
           } else {
             toast.error("Failed to update event", {
@@ -752,6 +758,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           if (response.event) {
             clearDraft();
             router.push(`/events/${response.event.id}`);
+            navigating = true;
+            return; // allow overlay to stay until route change
           } else {
             toast.error("Failed to submit event", {
               description: "Please try again.",
@@ -766,7 +774,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         description: "Please try again.",
       });
     } finally {
-      setIsSubmitting(false);
+      if (!navigating) {
+        endSubmission();
+        setIsSubmitting(false);
+      }
     }
   };
 

@@ -1,77 +1,17 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Settings, Share2 } from "lucide-react";
 import Link from "next/link";
 import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
-import { getEventAuthData } from "@/lib/server_actions/event_actions";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useToggleSave } from "@/hooks/use-toggle-save";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface EventAuthData {
-  isSaved: boolean;
-  isCreator: boolean;
-  isTeamMember: boolean;
-  canEdit: boolean;
-  canTagDirectly: boolean;
-  currentUserRoles: string[];
-  isModeratorOrAdmin: boolean;
-}
-
 interface EventClientProps {
   eventId: string;
-}
-
-// Hook to fetch and manage event auth data
-function useEventAuthData(eventId: string) {
-  const { status } = useSession();
-  const [authData, setAuthData] = useState<EventAuthData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    const fetchAuthData = async () => {
-      try {
-        const result = await getEventAuthData(eventId);
-        if (result.status === 200 && result.data) {
-          setAuthData(result.data);
-        } else {
-          setAuthData({
-            isSaved: false,
-            isCreator: false,
-            isTeamMember: false,
-            canEdit: false,
-            canTagDirectly: false,
-            currentUserRoles: [],
-            isModeratorOrAdmin: false,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch event auth data:", error);
-        setAuthData({
-          isSaved: false,
-          isCreator: false,
-          isTeamMember: false,
-          canEdit: false,
-          canTagDirectly: false,
-          currentUserRoles: [],
-          isModeratorOrAdmin: false,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAuthData();
-  }, [eventId, status]);
-
-  return { authData, loading, status };
 }
 
 // Save button component that uses the toggle hook
@@ -114,8 +54,14 @@ function SaveButton({
 }
 
 // Component for Share and Save buttons
-export function EventShareSaveButtonsWrapper({ eventId }: EventClientProps) {
-  const { authData, loading, status } = useEventAuthData(eventId);
+export function EventShareSaveButtonsWrapper({
+  eventId,
+  initialSaved,
+  isAuthenticated,
+}: EventClientProps & {
+  initialSaved: boolean;
+  isAuthenticated: boolean;
+}) {
   const [shareCopied, setShareCopied] = useState(false);
 
   const handleShareClick = async (e: React.MouseEvent) => {
@@ -150,55 +96,55 @@ export function EventShareSaveButtonsWrapper({ eventId }: EventClientProps) {
           {shareCopied ? "Copied!" : "Share"}
         </span>
       </Button>
-      {loading && status === "authenticated" ? (
-        <Skeleton className="h-10 w-24 rounded-full" aria-hidden="true" />
-      ) : status === "authenticated" && authData ? (
+      {isAuthenticated && (
         <SaveButton
-          key={authData.isSaved ? "saved" : "unsaved"}
+          key={initialSaved ? "saved" : "unsaved"}
           eventId={eventId}
-          initialSaved={authData.isSaved}
+          initialSaved={initialSaved}
         />
-      ) : null}
+      )}
     </div>
   );
 }
 
 // Component for TagUserCircleButton in Roles section
-export function EventTagSelfButton({ eventId }: EventClientProps) {
-  const { authData, loading, status } = useEventAuthData(eventId);
-
-  if (loading && status === "authenticated") {
-    return <Skeleton className="h-8 w-8 rounded-full" aria-hidden="true" />;
-  }
-
-  if (!authData) {
+export function EventTagSelfButton({
+  eventId,
+  currentUserRoles,
+}: EventClientProps & {
+  currentUserRoles: string[];
+}) {
+  if (currentUserRoles.length === 0) {
     return null;
   }
 
   return (
     <TagUserCircleButton
       eventId={eventId}
-      currentUserRoles={authData.currentUserRoles}
+      currentUserRoles={currentUserRoles}
       size="sm"
     />
   );
 }
 
 // Component for Edit and Settings buttons
-export function EventEditButtons({ eventId }: EventClientProps) {
-  const { authData, loading } = useEventAuthData(eventId);
-
-  if (loading || !authData) {
-    return null;
-  }
-
-  if (!authData.canEdit && !authData.isCreator) {
+export function EventEditButtons({
+  eventId,
+  canEdit,
+  isCreator,
+  isModeratorOrAdmin,
+}: EventClientProps & {
+  canEdit: boolean;
+  isCreator: boolean;
+  isModeratorOrAdmin: boolean;
+}) {
+  if (!canEdit && !isCreator) {
     return null;
   }
 
   return (
     <div className="flex gap-2 mb-2 mt-4 sm:mt-2 w-full justify-center">
-      {(authData.isCreator || authData.isModeratorOrAdmin) && (
+      {(isCreator || isModeratorOrAdmin) && (
         <Button
           asChild
           size="xl"
@@ -208,7 +154,7 @@ export function EventEditButtons({ eventId }: EventClientProps) {
           <Link href={`/events/${eventId}/settings`}>Settings</Link>
         </Button>
       )}
-      {(authData.canEdit || authData.isCreator) && (
+      {(canEdit || isCreator) && (
         <Button asChild size="xl" className="!font-bold text-[18px]">
           <Link href={`/events/${eventId}/edit`}>Edit</Link>
         </Button>

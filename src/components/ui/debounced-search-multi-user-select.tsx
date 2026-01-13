@@ -207,19 +207,36 @@ export function DebouncedSearchMultiUserSelect({
       admin support or until the profile is claimed.
       <br />
       <br />
-      Are you sure the instagram handle{" "}
-      <span className="text-secondary-light">{newIg}</span> is the same person
-      as the{" "}
-      <span className="text-secondary-light">{context?.role || "role"}</span> in
-      this{" "}
-      {context?.videoId
-        ? "video"
-        : context?.sectionId
-        ? "section"
-        : context?.eventId
-        ? "event"
-        : "context"}
-      ?
+      {context?.role ? (
+        <>
+          Are you sure the instagram handle{" "}
+          <span className="text-secondary-light">{newIg}</span> is the same person
+          as the{" "}
+          <span className="text-secondary-light">{context.role}</span> in
+          this{" "}
+          {context?.videoId
+            ? "video"
+            : context?.sectionId
+            ? "section"
+            : context?.eventId
+            ? "event"
+            : "context"}
+          ?
+        </>
+      ) : (
+        <>
+          Does this Instagram person{" "}
+          <span className="text-secondary-light">{newIg}</span> appear in this{" "}
+          {context?.videoId
+            ? "video"
+            : context?.sectionId
+            ? "section"
+            : context?.eventId
+            ? "event"
+            : "context"}
+          ?
+        </>
+      )}
     </>
   );
 

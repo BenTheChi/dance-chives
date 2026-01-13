@@ -8,6 +8,7 @@ import { Footer } from "@/components/Footer";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AccountVerificationRedirector } from "@/components/account-verification-redirector";
+import { SubmissionOverlayProvider } from "@/components/SubmissionOverlay";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -141,14 +142,16 @@ export default function RootLayout({
           }}
         />
         <SessionProvider>
-          <AccountVerificationRedirector />
-          <SidebarProvider>
-            <AppSidebar />
-            <div className="flex flex-col min-h-screen w-full relative z-10">
-              <main className="flex flex-col flex-1">{children}</main>
-              <Footer />
-            </div>
-          </SidebarProvider>
+          <SubmissionOverlayProvider>
+            <AccountVerificationRedirector />
+            <SidebarProvider>
+              <AppSidebar />
+              <div className="flex flex-col min-h-screen w-full relative z-10">
+                <main className="flex flex-col flex-1">{children}</main>
+                <Footer />
+              </div>
+            </SidebarProvider>
+          </SubmissionOverlayProvider>
         </SessionProvider>
         <Toaster />
       </body>

@@ -391,6 +391,24 @@ export default async function EventPage({ params }: PageProps) {
     ? await isTeamMember(event.id, currentUserId)
     : false;
 
+  // Fetch all auth data on server to avoid client-side loading states
+  const { getEventAuthData } = await import(
+    "@/lib/server_actions/event_actions"
+  );
+  const authDataResult = await getEventAuthData(event.id);
+  const authData =
+    authDataResult.status === 200 && authDataResult.data
+      ? authDataResult.data
+      : {
+          isSaved: false,
+          isCreator: false,
+          isTeamMember: false,
+          canEdit: false,
+          canTagDirectly: false,
+          currentUserRoles: [],
+          isModeratorOrAdmin: false,
+        };
+
   // Helper to parse date string (MM/DD/YYYY or YYYY-MM-DD format)
   const parseEventDate = (dateStr: string): Date => {
     if (dateStr.includes("-")) {
@@ -448,7 +466,12 @@ export default async function EventPage({ params }: PageProps) {
           )}
         </div>
         {/* Settings and Edit buttons - handled by client component */}
-        <EventEditButtons eventId={event.id} />
+        <EventEditButtons
+          eventId={event.id}
+          canEdit={authData.canEdit}
+          isCreator={authData.isCreator}
+          isModeratorOrAdmin={authData.isModeratorOrAdmin}
+        />
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col py-10 pt-5 px-3 gap-5 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}
@@ -746,7 +769,11 @@ export default async function EventPage({ params }: PageProps) {
                       </div>
                     )}
                     {/* Share and Save buttons - handled by client component */}
-                    <EventShareSaveButtonsWrapper eventId={event.id} />
+                    <EventShareSaveButtonsWrapper
+                      eventId={event.id}
+                      initialSaved={authData.isSaved}
+                      isAuthenticated={!!currentUserId}
+                    />
                   </div>
                 </section>
               </div>
@@ -754,6 +781,13 @@ export default async function EventPage({ params }: PageProps) {
                 eventId={event.id}
                 rolesByTitle={rolesByTitle}
                 currentUserId={currentUserId}
+                canManageRoles={
+                  authData.canEdit ||
+                  authData.isModeratorOrAdmin ||
+                  authData.isTeamMember ||
+                  authData.isCreator
+                }
+                currentUserRoles={authData.currentUserRoles}
               />
             </div>
 

@@ -29,6 +29,7 @@ import { CitySearchInput } from "@/components/CitySearchInput";
 import { City } from "@/types/city";
 import { FieldErrors } from "react-hook-form";
 import { UploadProfilePicture } from "@/components/UploadProfilePicture";
+import { useSubmissionOverlay } from "@/components/SubmissionOverlay";
 import {
   SUPER_ADMIN_EMAIL,
   SUPER_ADMIN_USERNAME,
@@ -422,8 +423,19 @@ export default function SignUpForm({
     return formData;
   };
 
+  const { startSubmission, endSubmission } = useSubmissionOverlay();
+
   const onSubmit = async (data: z.infer<typeof schema>) => {
     setIsSubmitting(true);
+    let submissionStarted = false;
+    let navigating = false;
+    const ensureSubmissionStarted = () => {
+      if (!submissionStarted) {
+        startSubmission();
+        submissionStarted = true;
+      }
+    };
+
     try {
       if (igStatus.state === "claimed") {
         toast.error(
@@ -435,31 +447,33 @@ export default function SignUpForm({
       const formData = convertToFormData(data);
 
       if (isEditMode) {
-        // Edit mode - use updateUserProfile
         if (!userId) {
           toast.error("User ID is required");
           return;
         }
 
+        ensureSubmissionStarted();
         const result = await updateUserProfile(userId, formData);
 
         if (result.success) {
-          // Update session to refresh avatar in navbar
           await updateSession();
           toast.success("Profile updated successfully!");
           router.replace("/dashboard");
+          navigating = true;
+          return; // overlay will clear on route change
         } else {
           toast.error(result.error || "Failed to update profile");
         }
       } else {
-        // Signup mode - use signup
+        ensureSubmissionStarted();
         const result = await signup(formData);
         if (result.success) {
-          // Update session to reflect account verification status
           await updateSession();
           toast.success("Account created successfully!");
           setIsNavigating(true);
           router.push("/dashboard");
+          navigating = true;
+          return; // overlay will clear on route change
         } else {
           toast.error(result.error || "Failed to create account");
         }
@@ -467,7 +481,10 @@ export default function SignUpForm({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "An error occurred");
     } finally {
-      setIsSubmitting(false);
+      if (!navigating && submissionStarted) {
+        endSubmission();
+        setIsSubmitting(false);
+      }
     }
   };
 
