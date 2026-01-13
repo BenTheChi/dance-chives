@@ -67,7 +67,7 @@ const EVENT_COLORS: Record<EventType, string> = {
   Session: "#8b5cf6", // Purple
   Party: "#ec4899", // Pink
   Festival: "#f97316", // Orange-red
-  Performance: "#6366f1", // Indigo
+  Performance: "#3b82f6", // Blue
   Other: "#ffffff", // White
 };
 

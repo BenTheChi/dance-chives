@@ -534,7 +534,7 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "dates",
                           content: (
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center gap-2">
                               {pastDates.length > 0 && (
                                 <div className="flex flex-col justify-center gap-2">
                                   <h3 className="text-center underline">
