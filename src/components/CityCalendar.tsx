@@ -304,6 +304,7 @@ export function CityCalendar({
   const [currentView, setCurrentView] = useState<View>("month");
   const calendarRef = useRef<HTMLDivElement>(null);
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const overlayIntentionallyHiddenRef = useRef(false);
 
   // Convert all items to calendar events
   const calendarEvents = useMemo(() => {
@@ -380,11 +381,15 @@ export function CityCalendar({
   const closeOverlay = useCallback(() => {
     const overlay = document.querySelector(".rbc-overlay") as HTMLElement;
     if (overlay) {
+      // Mark that we're intentionally hiding it
+      overlayIntentionallyHiddenRef.current = true;
+
       // Hide it visually immediately so it doesn't block the event card
       // Don't remove it from DOM - let react-big-calendar handle cleanup
       // This prevents React errors about removing nodes that are already removed
       overlay.style.display = "none";
       overlay.style.pointerEvents = "none";
+      overlay.style.visibility = "hidden";
 
       // Update our state
       setOverlayOpen(false);
@@ -438,11 +443,38 @@ export function CityCalendar({
 
   // Monitor for react-big-calendar overlay and prevent calendar interactions when it's open
   useEffect(() => {
+    let previousOverlay: HTMLElement | null = null;
+
     const checkOverlay = () => {
       const overlay = document.querySelector(".rbc-overlay") as HTMLElement;
       const calendarElement =
         calendarRef.current?.querySelector(".rbc-calendar");
       const isOpen = overlay !== null;
+
+      // If this is a new overlay (different element), reset the flag
+      if (overlay && overlay !== previousOverlay) {
+        overlayIntentionallyHiddenRef.current = false;
+        previousOverlay = overlay;
+      }
+
+      // If overlay was removed, reset the flag and previous reference
+      if (!isOpen) {
+        overlayIntentionallyHiddenRef.current = false;
+        previousOverlay = null;
+      }
+
+      // If overlay was intentionally hidden, keep it hidden
+      if (overlayIntentionallyHiddenRef.current && overlay) {
+        // Keep it hidden
+        overlay.style.display = "none";
+        overlay.style.pointerEvents = "none";
+        overlay.style.visibility = "hidden";
+        setOverlayOpen(false);
+        if (calendarElement) {
+          calendarElement.classList.remove("rbc-calendar-overlay-open");
+        }
+        return;
+      }
 
       setOverlayOpen(isOpen);
 
@@ -450,10 +482,11 @@ export function CityCalendar({
       if (calendarElement) {
         if (isOpen) {
           calendarElement.classList.add("rbc-calendar-overlay-open");
-          // Reset any inline styles if overlay was hidden
-          if (overlay) {
+          // Reset any inline styles for new overlays
+          if (overlay && !overlayIntentionallyHiddenRef.current) {
             overlay.style.display = "";
             overlay.style.pointerEvents = "";
+            overlay.style.visibility = "";
           }
         } else {
           calendarElement.classList.remove("rbc-calendar-overlay-open");
@@ -493,22 +526,20 @@ export function CityCalendar({
       const overlayEvent = target.closest(".rbc-overlay-event");
       if (overlayEvent) {
         // Close the overlay immediately so it doesn't block the event card
-        // Don't prevent default - let the event selection proceed
-        // Use a small delay to ensure the click event propagates to react-big-calendar
-        // but close the overlay quickly so it doesn't block
-        setTimeout(() => {
-          closeOverlay();
-        }, 10);
+        // Close synchronously to ensure it happens before event card opens
+        closeOverlay();
       }
     };
 
     // Listen for clicks on overlay events (use capture phase to catch early)
     document.addEventListener("mousedown", handleOverlayEventClick, true);
     document.addEventListener("touchstart", handleOverlayEventClick, true);
+    document.addEventListener("click", handleOverlayEventClick, true);
 
     return () => {
       document.removeEventListener("mousedown", handleOverlayEventClick, true);
       document.removeEventListener("touchstart", handleOverlayEventClick, true);
+      document.removeEventListener("click", handleOverlayEventClick, true);
     };
   }, [closeOverlay]);
 
