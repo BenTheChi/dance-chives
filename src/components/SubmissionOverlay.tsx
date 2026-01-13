@@ -14,6 +14,15 @@ import { usePathname } from "next/navigation";
 
 const OVERLAY_IMAGE = "/mascot/Mascot3_Color_onDark.svg";
 
+const NAVIGATION_LOADING_MESSAGES = [
+  "Loading...",
+  "Any second now",
+  "Any several seconds now",
+  "Might be a good time for a little dance break",
+  "We apologize for the delay. We promise it won't be much longer",
+  "This is awkward. Um... how was your day?",
+];
+
 type LoadingOverlayContextValue = {
   isActive: boolean;
   startSubmission: () => void;
@@ -35,11 +44,13 @@ export function SubmissionOverlayProvider({
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const [imageSize, setImageSize] = useState(250);
   const [loadingText, setLoadingText] = useState("Loading...");
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const pathname = usePathname();
   const prevPath = useRef<string | null>(null);
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const showDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animateDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadingMessageIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const submissionCountRef = useRef(0);
 
   // Keep ref in sync with state
@@ -81,7 +92,8 @@ export function SubmissionOverlayProvider({
           const currentPath = window.location.pathname;
           if (href !== currentPath) {
             setIsNavigating(true);
-            setLoadingText("Loading...");
+            setLoadingText(NAVIGATION_LOADING_MESSAGES[0]);
+            setLoadingMessageIndex(0);
             setShouldAnimate(false);
 
             // Clear any existing delays
@@ -143,6 +155,10 @@ export function SubmissionOverlayProvider({
       if (navigationTimeoutRef.current) {
         clearTimeout(navigationTimeoutRef.current);
       }
+      if (loadingMessageIntervalRef.current) {
+        clearInterval(loadingMessageIntervalRef.current);
+        loadingMessageIntervalRef.current = null;
+      }
 
       // If navigation was triggered by form submission, ensure navigation state is set
       // and clear submission count immediately
@@ -150,6 +166,8 @@ export function SubmissionOverlayProvider({
         setSubmissionCount(0);
         setIsNavigating(true);
         setShouldShowOverlay(true);
+        setLoadingText(NAVIGATION_LOADING_MESSAGES[0]);
+        setLoadingMessageIndex(0);
         // Keep animation going during transition
         setShouldAnimate(true);
       }
@@ -160,6 +178,12 @@ export function SubmissionOverlayProvider({
         setIsNavigating(false);
         setShouldShowOverlay(false);
         setShouldAnimate(false);
+        // Clear loading message interval
+        if (loadingMessageIntervalRef.current) {
+          clearInterval(loadingMessageIntervalRef.current);
+          loadingMessageIntervalRef.current = null;
+        }
+        setLoadingMessageIndex(0);
       }, 300);
     }
 
@@ -192,10 +216,47 @@ export function SubmissionOverlayProvider({
   useEffect(() => {
     if (submissionCount > 0) {
       setLoadingText("Submitting...");
+      // Clear loading message interval when form submission starts
+      if (loadingMessageIntervalRef.current) {
+        clearInterval(loadingMessageIntervalRef.current);
+        loadingMessageIntervalRef.current = null;
+      }
     } else if (isNavigating) {
-      setLoadingText("Loading...");
+      // Don't set text here - it's managed by the rotating messages effect
     }
   }, [submissionCount, isNavigating]);
+
+  // Rotate through humorous loading messages during navigation
+  useEffect(() => {
+    if (isNavigating && shouldShowOverlay && submissionCount === 0) {
+      // Start with first message
+      setLoadingText(NAVIGATION_LOADING_MESSAGES[0]);
+      setLoadingMessageIndex(0);
+
+      // Rotate messages every 4 seconds
+      loadingMessageIntervalRef.current = setInterval(() => {
+        setLoadingMessageIndex((prevIndex) => {
+          const nextIndex =
+            (prevIndex + 1) % NAVIGATION_LOADING_MESSAGES.length;
+          setLoadingText(NAVIGATION_LOADING_MESSAGES[nextIndex]);
+          return nextIndex;
+        });
+      }, 4000);
+
+      return () => {
+        if (loadingMessageIntervalRef.current) {
+          clearInterval(loadingMessageIntervalRef.current);
+          loadingMessageIntervalRef.current = null;
+        }
+      };
+    } else {
+      // Clear interval when not navigating or when form submission is active
+      if (loadingMessageIntervalRef.current) {
+        clearInterval(loadingMessageIntervalRef.current);
+        loadingMessageIntervalRef.current = null;
+      }
+    }
+  }, [isNavigating, shouldShowOverlay, submissionCount]);
 
   // Handle form submission animation delay
   useEffect(() => {
