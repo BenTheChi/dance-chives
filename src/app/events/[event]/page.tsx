@@ -534,11 +534,11 @@ export default async function EventPage({ params }: PageProps) {
                         items.push({
                           key: "dates",
                           content: (
-                            <div className="flex flex-col items-center gap-2">
+                            <div className="flex flex-col items-center gap-3">
                               {pastDates.length > 0 && (
                                 <div className="flex flex-col justify-center gap-2">
                                   <h3 className="text-center underline">
-                                    {hasBothTypes ? "Past Date" : "Date"}
+                                    {hasBothTypes ? "Past" : "Date"}
                                   </h3>
                                   <div className="flex flex-col text-center gap-2">
                                     {pastDates.map((d, idx) => {
@@ -569,7 +569,7 @@ export default async function EventPage({ params }: PageProps) {
                               {upcomingDates.length > 0 && (
                                 <div className="flex flex-col justify-center gap-2">
                                   <h3 className="text-center underline">
-                                    {hasBothTypes ? "Future Date(s)" : "Date"}
+                                    {hasBothTypes ? "Upcoming" : "Date"}
                                   </h3>
                                   <div className="flex flex-col gap-2 text-center">
                                     {upcomingDates.map((d, idx) => {

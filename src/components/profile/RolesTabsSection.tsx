@@ -22,15 +22,19 @@ function parseEventDate(dateStr: string): Date {
 }
 
 // Check if event is in the future
+// Returns true if the event has at least one future date
 function isEventInFuture(event: Event): boolean {
   if (!event.eventDetails.dates || event.eventDetails.dates.length === 0) {
     return false;
   }
-  const firstDate = event.eventDetails.dates[0].date;
-  const eventDate = parseEventDate(firstDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return eventDate >= today;
+  
+  // Check if any date is in the future
+  return event.eventDetails.dates.some((dateEntry) => {
+    const eventDate = parseEventDate(dateEntry.date);
+    return eventDate && eventDate >= today;
+  });
 }
 
 // Count videos in an event
