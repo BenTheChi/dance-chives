@@ -14,8 +14,17 @@ import { usePathname } from "next/navigation";
 
 const OVERLAY_IMAGE = "/mascot/Mascot3_Color_onDark.svg";
 
-const NAVIGATION_LOADING_MESSAGES = [
+const LOADING_MESSAGES = [
   "Loading...",
+  "Any second now",
+  "Any several seconds now",
+  "Might be a good time for a little dance break",
+  "We apologize for the delay. We promise it won't be much longer",
+  "This is awkward. Um... how was your day?",
+];
+
+const SUBMISSION_MESSAGES = [
+  "Submitting...",
   "Any second now",
   "Any several seconds now",
   "Might be a good time for a little dance break",
@@ -92,7 +101,7 @@ export function SubmissionOverlayProvider({
           const currentPath = window.location.pathname;
           if (href !== currentPath) {
             setIsNavigating(true);
-            setLoadingText(NAVIGATION_LOADING_MESSAGES[0]);
+            setLoadingText(LOADING_MESSAGES[0]);
             setLoadingMessageIndex(0);
             setShouldAnimate(false);
 
@@ -166,7 +175,7 @@ export function SubmissionOverlayProvider({
         setSubmissionCount(0);
         setIsNavigating(true);
         setShouldShowOverlay(true);
-        setLoadingText(NAVIGATION_LOADING_MESSAGES[0]);
+        setLoadingText(LOADING_MESSAGES[0]);
         setLoadingMessageIndex(0);
         // Keep animation going during transition
         setShouldAnimate(true);
@@ -212,33 +221,22 @@ export function SubmissionOverlayProvider({
   // For navigation, only show if the delay has passed
   const isActive = (isNavigating && shouldShowOverlay) || submissionCount > 0;
 
-  // Update loading text based on state
+  // Rotate through humorous loading messages for all loading overlays
   useEffect(() => {
-    if (submissionCount > 0) {
-      setLoadingText("Submitting...");
-      // Clear loading message interval when form submission starts
-      if (loadingMessageIntervalRef.current) {
-        clearInterval(loadingMessageIntervalRef.current);
-        loadingMessageIntervalRef.current = null;
-      }
-    } else if (isNavigating) {
-      // Don't set text here - it's managed by the rotating messages effect
-    }
-  }, [submissionCount, isNavigating]);
+    if (isActive) {
+      // Determine which message array to use based on whether we're submitting or navigating
+      const messages =
+        submissionCount > 0 ? SUBMISSION_MESSAGES : LOADING_MESSAGES;
 
-  // Rotate through humorous loading messages during navigation
-  useEffect(() => {
-    if (isNavigating && shouldShowOverlay && submissionCount === 0) {
       // Start with first message
-      setLoadingText(NAVIGATION_LOADING_MESSAGES[0]);
+      setLoadingText(messages[0]);
       setLoadingMessageIndex(0);
 
       // Rotate messages every 4 seconds
       loadingMessageIntervalRef.current = setInterval(() => {
         setLoadingMessageIndex((prevIndex) => {
-          const nextIndex =
-            (prevIndex + 1) % NAVIGATION_LOADING_MESSAGES.length;
-          setLoadingText(NAVIGATION_LOADING_MESSAGES[nextIndex]);
+          const nextIndex = (prevIndex + 1) % messages.length;
+          setLoadingText(messages[nextIndex]);
           return nextIndex;
         });
       }, 4000);
@@ -250,13 +248,13 @@ export function SubmissionOverlayProvider({
         }
       };
     } else {
-      // Clear interval when not navigating or when form submission is active
+      // Clear interval when overlay is not active
       if (loadingMessageIntervalRef.current) {
         clearInterval(loadingMessageIntervalRef.current);
         loadingMessageIntervalRef.current = null;
       }
     }
-  }, [isNavigating, shouldShowOverlay, submissionCount]);
+  }, [isActive, submissionCount]);
 
   // Handle form submission animation delay
   useEffect(() => {
@@ -292,13 +290,11 @@ export function SubmissionOverlayProvider({
       isActive,
       startSubmission: () => {
         setSubmissionCount((count) => count + 1);
-        setLoadingText("Submitting...");
+        // Loading text will be set by the rotation effect
       },
       endSubmission: () => {
         setSubmissionCount((count) => Math.max(0, count - 1));
-        if (submissionCount <= 1) {
-          setLoadingText("Loading...");
-        }
+        // Loading text will be managed by the rotation effect
       },
     }),
     [isActive, submissionCount]
