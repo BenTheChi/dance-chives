@@ -26,26 +26,48 @@ export async function getEventCards(): Promise<TEventCard[]> {
 
 /**
  * Get upcoming events ordered by start date
+ * Only returns battle events
  * @param limit - Maximum number of events to return (default: 3)
  */
 export async function getUpcomingEventCards(limit: number = 3): Promise<TEventCard[]> {
   const now = new Date();
   
-  // Get event IDs with upcoming dates
+  // First, get all battle events that are visible
+  const battleEvents = await prisma.eventCard.findMany({
+    where: {
+      eventType: "Battle",
+      status: "visible",
+    } as any,
+    select: {
+      eventId: true,
+    },
+  });
+
+  const battleEventIds = new Set(battleEvents.map((e) => e.eventId));
+
+  if (battleEventIds.size === 0) {
+    return [];
+  }
+
+  // Get upcoming event dates for battle events only
+  // Fetch more to ensure we get enough results after filtering
   const upcomingEventDates = await prisma.eventDate.findMany({
     where: {
       startUtc: {
         gte: now,
+      },
+      eventId: {
+        in: Array.from(battleEventIds),
       },
     },
     orderBy: {
       startUtc: "asc",
     },
     distinct: ["eventId"],
-    take: limit,
+    take: limit * 10, // Fetch more to ensure we have enough battles
   });
 
-  const eventIds = upcomingEventDates.map((ed) => ed.eventId);
+  const eventIds = upcomingEventDates.map((ed) => ed.eventId).slice(0, limit);
 
   if (eventIds.length === 0) {
     return [];

@@ -18,6 +18,7 @@ interface SectionCardProps {
   eventId: string;
   eventTitle?: string;
   showEventTitle?: boolean;
+  city?: string;
 }
 
 // Section type color palette with opacity values for background tint
@@ -62,6 +63,7 @@ export function SectionCard({
   eventId,
   eventTitle,
   showEventTitle = false,
+  city,
 }: SectionCardProps) {
   const sectionId = section.id;
   const sectionTitle = section.title;
@@ -171,7 +173,7 @@ export function SectionCard({
             </>
           )}
 
-          <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="flex-1 flex flex-col items-center ">
             {/* Section title - smaller when event title is shown */}
             <h3
               className={`line-clamp-2  ${
@@ -180,6 +182,13 @@ export function SectionCard({
             >
               {sectionTitle}
             </h3>
+
+            {/* City name - shown under section title */}
+            {city && (
+              <p className="text-center !text-sm text-muted-foreground mb-2">
+                {city}
+              </p>
+            )}
 
             {!showEventTitle && dateTimeText && (
               <p className="text-center !text-[12px] uppercase tracking-[0.08em] mb-1">

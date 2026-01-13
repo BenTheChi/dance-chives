@@ -4552,6 +4552,7 @@ export async function getLatestBattleSections(): Promise<
     section: Section;
     eventId: string;
     eventTitle: string;
+    city?: string;
   }>
 > {
   const session = driver.session();
@@ -4563,15 +4564,16 @@ export async function getLatestBattleSections(): Promise<
       MATCH (e:Event)
       WHERE (e.status = 'visible' OR e.status IS NULL)
       MATCH (e)<-[:IN]-(s:BattleSection)
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
       WHERE EXISTS {
         MATCH (s)<-[:IN]-(v:Video)
       } OR EXISTS {
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
       }
-      WITH e, s
+      WITH e, s, c
       ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
-      WITH e, collect(s)[0] as firstSection
-      RETURN e.id as eventId, e.title as eventTitle, firstSection.id as sectionId, firstSection.title as sectionTitle
+      WITH e, collect(s)[0] as firstSection, c
+      RETURN e.id as eventId, e.title as eventTitle, firstSection.id as sectionId, firstSection.title as sectionTitle, c.name as cityName
       LIMIT 6
       `
     );
@@ -4580,6 +4582,7 @@ export async function getLatestBattleSections(): Promise<
       section: Section;
       eventId: string;
       eventTitle: string;
+      city?: string;
     }> = [];
 
     for (const record of eventsResult.records) {
@@ -4587,6 +4590,7 @@ export async function getLatestBattleSections(): Promise<
       const eventTitle = record.get("eventTitle");
       const sectionId = record.get("sectionId");
       const sectionTitle = record.get("sectionTitle");
+      const cityName = record.get("cityName") as string | null;
 
       // Get section details with video and bracket counts
       const sectionResult = await session.run(
@@ -4687,6 +4691,7 @@ export async function getLatestBattleSections(): Promise<
         section,
         eventId,
         eventTitle,
+        city: cityName || undefined,
       });
     }
 

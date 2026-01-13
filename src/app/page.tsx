@@ -26,7 +26,7 @@ export default async function Home() {
   const latestVideos = await getLatestEventVideos();
 
   // Fetch upcoming events
-  const upcomingEvents = await getUpcomingEventCards(3);
+  const upcomingEvents = await getUpcomingEventCards(4);
 
   return (
     <div className="flex flex-col">
@@ -231,13 +231,14 @@ export default async function Home() {
               {latestBattleSections.length > 0 ? (
                 <div className="sections-grid">
                   {latestBattleSections.map(
-                    ({ section, eventId, eventTitle }) => (
+                    ({ section, eventId, eventTitle, city }) => (
                       <SectionCard
                         key={section.id}
                         section={section}
                         eventId={eventId}
                         eventTitle={eventTitle}
                         showEventTitle={true}
+                        city={city}
                       />
                     )
                   )}
