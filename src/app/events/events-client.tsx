@@ -28,6 +28,7 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
   const [endDate, setEndDate] = useState("");
 
   // Check if there are any future events to determine default state
+  // This will be updated once dates are fetched for events with additional dates
   const hasFutureEvents = useMemo(() => {
     if (!events || events.length === 0) return false;
 
@@ -39,6 +40,10 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
       try {
         const eventDate = new Date(event.date);
         eventDate.setHours(0, 0, 0, 0);
+        // If event has additional dates, assume it might have future dates
+        if (event.additionalDatesCount && event.additionalDatesCount > 0) {
+          return true; // Be lenient - assume it might have future dates
+        }
         return eventDate >= today;
       } catch {
         return false;
@@ -91,6 +96,84 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
     return parsed;
   };
 
+  // Helper to check if an event has any future dates
+  // For events with multiple dates, we need to check all dates
+  const [eventDatesCache, setEventDatesCache] = useState<
+    Map<string, { hasFuture: boolean; earliestFutureDate?: Date; latestPastDate?: Date }>
+  >(new Map());
+
+  // Fetch dates for events that have additional dates
+  useEffect(() => {
+    const fetchDatesForEvents = async () => {
+      const eventsToFetch = events.filter(
+        (event) =>
+          event.additionalDatesCount &&
+          event.additionalDatesCount > 0 &&
+          !eventDatesCache.has(event.id)
+      );
+
+      if (eventsToFetch.length === 0) return;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const newCache = new Map(eventDatesCache);
+
+      await Promise.all(
+        eventsToFetch.map(async (event) => {
+          try {
+            const response = await fetch(`/api/events/${event.id}/dates`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            const items = data.items || [];
+
+            // Extract all dates from the API response and check if any is in the future
+            
+            const parsedDates: Date[] = [];
+            items.forEach((item: any) => {
+              let date: Date | null = null;
+              
+              if (item.localDate) {
+                // localDate is in YYYY-MM-DD format
+                date = new Date(item.localDate + "T00:00:00");
+              } else if (item.startUtc) {
+                date = new Date(item.startUtc);
+              }
+              
+              if (date && !Number.isNaN(date.getTime())) {
+                date.setHours(0, 0, 0, 0);
+                parsedDates.push(date);
+              }
+            });
+            
+            const futureDates = parsedDates.filter((d) => d >= today);
+            const pastDates = parsedDates.filter((d) => d < today);
+            const hasFuture = futureDates.length > 0;
+            
+            const earliestFutureDate = futureDates.length > 0
+              ? futureDates.sort((a, b) => a.getTime() - b.getTime())[0]
+              : undefined;
+            const latestPastDate = pastDates.length > 0
+              ? pastDates.sort((a, b) => b.getTime() - a.getTime())[0]
+              : undefined;
+
+            newCache.set(event.id, { hasFuture, earliestFutureDate, latestPastDate });
+          } catch (error) {
+            console.error(`Failed to fetch dates for event ${event.id}:`, error);
+          }
+        })
+      );
+
+      if (newCache.size > eventDatesCache.size) {
+        setEventDatesCache(newCache);
+      }
+    };
+
+    fetchDatesForEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
     if (!events || events.length === 0) return [];
 
@@ -121,6 +204,27 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
       const eventDate = parseEventDate(event.date);
 
       const matchesFutureFilter = (() => {
+        // If event has additional dates, check the cache
+        if (event.additionalDatesCount && event.additionalDatesCount > 0) {
+          const cached = eventDatesCache.get(event.id);
+          if (cached) {
+            // Use cached result
+            return showFutureEvents ? cached.hasFuture : !cached.hasFuture;
+          }
+          // If not cached yet, fall back to primary date
+          // But be lenient: if primary date is past but has additional dates,
+          // show in future filter (might have future dates)
+          if (!eventDate) return true;
+          if (showFutureEvents) {
+            // Show in future if primary date is future OR if it has additional dates (might have future)
+            return eventDate >= today || true; // Be lenient for events with additional dates
+          } else {
+            // Only show in past if primary date is past AND we know it has no future dates
+            return eventDate < today;
+          }
+        }
+
+        // For events with single date, use primary date
         if (!eventDate) return true;
         if (showFutureEvents) {
           return eventDate >= today;
@@ -161,8 +265,23 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
 
     // Sort events based on whether showing future or past
     return filtered.sort((a, b) => {
-      const dateA = parseEventDate(a.date);
-      const dateB = parseEventDate(b.date);
+      // For events with multiple dates, use the earliest future date or latest past date
+      const getSortDate = (event: TEventCard): Date | null => {
+        if (event.additionalDatesCount && event.additionalDatesCount > 0) {
+          const cached = eventDatesCache.get(event.id);
+          if (cached) {
+            if (showFutureEvents && cached.earliestFutureDate) {
+              return cached.earliestFutureDate;
+            } else if (!showFutureEvents && cached.latestPastDate) {
+              return cached.latestPastDate;
+            }
+          }
+        }
+        return parseEventDate(event.date);
+      };
+
+      const dateA = getSortDate(a);
+      const dateB = getSortDate(b);
 
       if (!dateA && !dateB) return 0;
       if (!dateA) return 1;
@@ -183,6 +302,7 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
     selectedStyles,
     startDate,
     endDate,
+    eventDatesCache,
   ]);
 
   return (
