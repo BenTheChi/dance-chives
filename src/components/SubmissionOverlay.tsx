@@ -31,11 +31,15 @@ export function SubmissionOverlayProvider({
 }) {
   const [submissionCount, setSubmissionCount] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [shouldShowOverlay, setShouldShowOverlay] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
   const [imageSize, setImageSize] = useState(250);
   const [loadingText, setLoadingText] = useState("Loading...");
   const pathname = usePathname();
   const prevPath = useRef<string | null>(null);
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const showDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animateDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -53,7 +57,7 @@ export function SubmissionOverlayProvider({
     };
   }, []);
 
-  // Intercept Link clicks to show overlay immediately
+  // Intercept Link clicks to show overlay with delay
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -72,18 +76,24 @@ export function SubmissionOverlayProvider({
           if (href !== currentPath) {
             setIsNavigating(true);
             setLoadingText("Loading...");
+            setShouldAnimate(false);
 
-            // Set a timeout to hide if navigation doesn't actually happen
-            // (e.g., same page link, prevented navigation, etc.)
-            if (navigationTimeoutRef.current) {
-              clearTimeout(navigationTimeoutRef.current);
+            // Clear any existing delays
+            if (showDelayTimeoutRef.current) {
+              clearTimeout(showDelayTimeoutRef.current);
             }
-            navigationTimeoutRef.current = setTimeout(() => {
-              // Only hide if pathname hasn't changed (navigation didn't occur)
-              if (window.location.pathname === currentPath) {
-                setIsNavigating(false);
-              }
-            }, 300);
+            if (animateDelayTimeoutRef.current) {
+              clearTimeout(animateDelayTimeoutRef.current);
+            }
+
+            // Show overlay after 100ms delay
+            showDelayTimeoutRef.current = setTimeout(() => {
+              setShouldShowOverlay(true);
+              // Start animation after another 100ms (200ms total from click)
+              animateDelayTimeoutRef.current = setTimeout(() => {
+                setShouldAnimate(true);
+              }, 100);
+            }, 100);
           }
         }
       }
@@ -94,6 +104,12 @@ export function SubmissionOverlayProvider({
 
     return () => {
       document.removeEventListener("click", handleLinkClick, true);
+      if (showDelayTimeoutRef.current) {
+        clearTimeout(showDelayTimeoutRef.current);
+      }
+      if (animateDelayTimeoutRef.current) {
+        clearTimeout(animateDelayTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -106,20 +122,27 @@ export function SubmissionOverlayProvider({
     }
 
     if (prevPath.current !== pathname) {
-      // Pathname changed - navigation is in progress
-      // Keep overlay visible (it was already shown on click)
+      // Pathname changed - navigation completed
       prevPath.current = pathname;
 
-      // Clear any pending navigation timeout
+      // Clear any pending delays
+      if (showDelayTimeoutRef.current) {
+        clearTimeout(showDelayTimeoutRef.current);
+      }
+      if (animateDelayTimeoutRef.current) {
+        clearTimeout(animateDelayTimeoutRef.current);
+      }
       if (navigationTimeoutRef.current) {
         clearTimeout(navigationTimeoutRef.current);
       }
 
-      // Hide overlay after navigation completes (page has loaded)
-      // Use a small delay to ensure the new page is rendered
+      // Hide overlay after navigation completes
+      // Use a longer delay to ensure the new page is fully rendered
       navigationTimeoutRef.current = setTimeout(() => {
         setIsNavigating(false);
-      }, 100);
+        setShouldShowOverlay(false);
+        setShouldAnimate(false);
+      }, 300);
     }
 
     return () => {
@@ -138,7 +161,8 @@ export function SubmissionOverlayProvider({
   }, [pathname]);
 
   // Show overlay if either navigating or submitting
-  const isActive = isNavigating || submissionCount > 0;
+  // For navigation, only show if the delay has passed
+  const isActive = (isNavigating && shouldShowOverlay) || submissionCount > 0;
 
   // Update loading text based on state
   useEffect(() => {
@@ -148,6 +172,32 @@ export function SubmissionOverlayProvider({
       setLoadingText("Loading...");
     }
   }, [submissionCount, isNavigating]);
+
+  // Handle form submission animation delay
+  useEffect(() => {
+    if (submissionCount > 0) {
+      // Show immediately for form submissions, but delay animation
+      setShouldAnimate(false);
+      if (animateDelayTimeoutRef.current) {
+        clearTimeout(animateDelayTimeoutRef.current);
+      }
+      animateDelayTimeoutRef.current = setTimeout(() => {
+        setShouldAnimate(true);
+      }, 100);
+    } else {
+      // Reset animation when submissions complete
+      setShouldAnimate(false);
+      if (animateDelayTimeoutRef.current) {
+        clearTimeout(animateDelayTimeoutRef.current);
+      }
+    }
+
+    return () => {
+      if (animateDelayTimeoutRef.current) {
+        clearTimeout(animateDelayTimeoutRef.current);
+      }
+    };
+  }, [submissionCount]);
 
   const value = useMemo(
     () => ({
@@ -177,7 +227,7 @@ export function SubmissionOverlayProvider({
               alt={loadingText}
               width={imageSize}
               height={imageSize}
-              className="animate-rotate-medium"
+              className={shouldAnimate ? "animate-rotate-medium" : ""}
               priority
             />
             <p className="text-sm tracking-widest uppercase text-white">
