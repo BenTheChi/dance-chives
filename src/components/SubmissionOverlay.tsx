@@ -40,6 +40,12 @@ export function SubmissionOverlayProvider({
   const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const showDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const animateDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const submissionCountRef = useRef(0);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    submissionCountRef.current = submissionCount;
+  }, [submissionCount]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -123,6 +129,8 @@ export function SubmissionOverlayProvider({
 
     if (prevPath.current !== pathname) {
       // Pathname changed - navigation completed
+      // Use ref to get submissionCount at the moment of pathname change (before state updates)
+      const hadActiveSubmission = submissionCountRef.current > 0;
       prevPath.current = pathname;
 
       // Clear any pending delays
@@ -136,6 +144,16 @@ export function SubmissionOverlayProvider({
         clearTimeout(navigationTimeoutRef.current);
       }
 
+      // If navigation was triggered by form submission, ensure navigation state is set
+      // and clear submission count immediately
+      if (hadActiveSubmission) {
+        setSubmissionCount(0);
+        setIsNavigating(true);
+        setShouldShowOverlay(true);
+        // Keep animation going during transition
+        setShouldAnimate(true);
+      }
+
       // Hide overlay after navigation completes
       // Use a longer delay to ensure the new page is fully rendered
       navigationTimeoutRef.current = setTimeout(() => {
@@ -146,19 +164,25 @@ export function SubmissionOverlayProvider({
     }
 
     return () => {
-      if (navigationTimeoutRef.current) {
+      // Only clear timeout if pathname is actually changing (not just re-render)
+      // This prevents clearing the timeout when submissionCount changes
+      if (navigationTimeoutRef.current && prevPath.current !== pathname) {
         clearTimeout(navigationTimeoutRef.current);
       }
     };
-  }, [pathname]);
+  }, [pathname]); // Removed submissionCount from dependencies - it causes effect to re-run and clear timeout
 
   // When route changes, clear any pending submissions so the overlay
   // doesn't linger after navigation.
   useEffect(() => {
     if (prevPath.current !== null && prevPath.current !== pathname) {
-      setSubmissionCount(0);
+      // Clear submission count when navigation starts
+      // (This is handled in the navigation completion effect above, but keeping for safety)
+      if (submissionCount > 0) {
+        setSubmissionCount(0);
+      }
     }
-  }, [pathname]);
+  }, [pathname, submissionCount]);
 
   // Show overlay if either navigating or submitting
   // For navigation, only show if the delay has passed
@@ -185,10 +209,13 @@ export function SubmissionOverlayProvider({
         setShouldAnimate(true);
       }, 100);
     } else {
-      // Reset animation when submissions complete
-      setShouldAnimate(false);
-      if (animateDelayTimeoutRef.current) {
-        clearTimeout(animateDelayTimeoutRef.current);
+      // Only reset animation when submissions complete AND not navigating
+      // If we're navigating, keep the animation state as-is (it will be managed by navigation timeout)
+      if (!isNavigating) {
+        setShouldAnimate(false);
+        if (animateDelayTimeoutRef.current) {
+          clearTimeout(animateDelayTimeoutRef.current);
+        }
       }
     }
 
@@ -197,7 +224,7 @@ export function SubmissionOverlayProvider({
         clearTimeout(animateDelayTimeoutRef.current);
       }
     };
-  }, [submissionCount]);
+  }, [submissionCount, isNavigating]);
 
   const value = useMemo(
     () => ({
