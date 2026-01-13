@@ -342,6 +342,7 @@ span {
   .rbc-calendar {
     width: 100%;
     min-width: 0;
+    min-height: 500px !important;
   }
 
   /* Responsive toolbar and calendar sizing */
@@ -390,9 +391,12 @@ span {
 
   @media (min-width: 641px) and (max-width: 1024px) {
     .rbc-calendar-responsive {
-      height: calc(100vh - 250px) !important;
       min-height: 400px !important;
     }
+  }
+
+  .rbc-event {
+    border-radius: 0px !important;
   }
 
   /* Ensure calendar doesn't overflow on small screens */
@@ -433,20 +437,6 @@ span {
       font-size: 0.65rem;
     }
 
-    /* Make "+x more events" clickable on mobile */
-    .rbc-more {
-      cursor: pointer !important;
-      pointer-events: auto !important;
-      z-index: 10 !important;
-      min-height: 20px !important;
-      min-width: 40px !important;
-      padding: 2px 4px !important;
-      touch-action: manipulation !important;
-      font-size: 11px !important;
-      text-align: center !important;
-      background-color: var();
-    }
-
     .rbc-overlay {
       z-index: 1000 !important;
       pointer-events: auto !important;
@@ -460,6 +450,13 @@ span {
 
   /* Additional constraints for very small screens */
   @media (max-width: 540px) {
+    .rbc-show-more {
+      font-size: 11px !important;
+      color: var(--primary-color-light) !important;
+      width: 100% !important;
+      min-height: 20px !important;
+    }
+
     .rbc-calendar,
     .rbc-month-view,
     .rbc-time-view,
@@ -523,8 +520,13 @@ span {
     background-color: rgba(157, 126, 255, 0.5) !important;
   }
 
+  .rbc-month-row {
+    min-height: 65px !important;
+  }
+
   .rbc-row {
     border-color: var(--fog-white) !important;
+    margin-bottom: 2px !important;
   }
 
   .rbc-row-segment {
@@ -546,17 +548,6 @@ span {
 
   .rbc-day-view {
     background-color: var(--charcoal) !important;
-  }
-
-  /* Make "+x more events" clickable on all screen sizes */
-  .rbc-more {
-    cursor: pointer !important;
-    pointer-events: auto !important;
-    z-index: 10 !important;
-    touch-action: manipulation !important;
-    user-select: none !important;
-    font-size: 10px !important;
-    background-color: neutral-300 !important;
   }
 
   .rbc-overlay {

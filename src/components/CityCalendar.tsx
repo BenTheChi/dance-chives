@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import {
   Calendar,
   dateFnsLocalizer,
@@ -376,13 +376,17 @@ export function CityCalendar({
     };
   };
 
-  // Handle event click
-  const handleSelectEvent = (event: CalendarEvent) => {
-    // Close overlay if it's open so it doesn't block the event card
-    // Check DOM directly since state might not be up-to-date
-    const overlay = document.querySelector(".rbc-overlay");
+  // Helper function to safely close overlay
+  const closeOverlay = useCallback(() => {
+    const overlay = document.querySelector(".rbc-overlay") as HTMLElement;
     if (overlay) {
-      overlay.remove();
+      // Hide it visually immediately so it doesn't block the event card
+      // Don't remove it from DOM - let react-big-calendar handle cleanup
+      // This prevents React errors about removing nodes that are already removed
+      overlay.style.display = "none";
+      overlay.style.pointerEvents = "none";
+
+      // Update our state
       setOverlayOpen(false);
       const calendarElement =
         calendarRef.current?.querySelector(".rbc-calendar");
@@ -390,6 +394,12 @@ export function CityCalendar({
         calendarElement.classList.remove("rbc-calendar-overlay-open");
       }
     }
+  }, []);
+
+  // Handle event click
+  const handleSelectEvent = (event: CalendarEvent) => {
+    // Close overlay if it's open so it doesn't block the event card
+    closeOverlay();
 
     setSelectedEvent(event);
     setPopoverOpen(true);
@@ -429,7 +439,7 @@ export function CityCalendar({
   // Monitor for react-big-calendar overlay and prevent calendar interactions when it's open
   useEffect(() => {
     const checkOverlay = () => {
-      const overlay = document.querySelector(".rbc-overlay");
+      const overlay = document.querySelector(".rbc-overlay") as HTMLElement;
       const calendarElement =
         calendarRef.current?.querySelector(".rbc-calendar");
       const isOpen = overlay !== null;
@@ -440,6 +450,11 @@ export function CityCalendar({
       if (calendarElement) {
         if (isOpen) {
           calendarElement.classList.add("rbc-calendar-overlay-open");
+          // Reset any inline styles if overlay was hidden
+          if (overlay) {
+            overlay.style.display = "";
+            overlay.style.pointerEvents = "";
+          }
         } else {
           calendarElement.classList.remove("rbc-calendar-overlay-open");
         }
@@ -479,20 +494,11 @@ export function CityCalendar({
       if (overlayEvent) {
         // Close the overlay immediately so it doesn't block the event card
         // Don't prevent default - let the event selection proceed
-        const overlay = document.querySelector(".rbc-overlay");
-        if (overlay) {
-          // Use a small delay to ensure the click event propagates to react-big-calendar
-          // but close the overlay quickly so it doesn't block
-          setTimeout(() => {
-            overlay.remove();
-            setOverlayOpen(false);
-            const calendarElement =
-              calendarRef.current?.querySelector(".rbc-calendar");
-            if (calendarElement) {
-              calendarElement.classList.remove("rbc-calendar-overlay-open");
-            }
-          }, 10);
-        }
+        // Use a small delay to ensure the click event propagates to react-big-calendar
+        // but close the overlay quickly so it doesn't block
+        setTimeout(() => {
+          closeOverlay();
+        }, 10);
       }
     };
 
@@ -504,7 +510,7 @@ export function CityCalendar({
       document.removeEventListener("mousedown", handleOverlayEventClick, true);
       document.removeEventListener("touchstart", handleOverlayEventClick, true);
     };
-  }, []);
+  }, [closeOverlay]);
 
   return (
     <div
