@@ -368,6 +368,18 @@ span {
 
     .rbc-date-cell {
       font-size: 0.75rem;
+      min-height: 60px !important;
+      height: 60px !important;
+    }
+
+    /* Make calendar day cells taller on mobile */
+    .rbc-month-view table tbody tr {
+      height: 60px !important;
+    }
+
+    .rbc-month-view table tbody td {
+      height: 60px !important;
+      min-height: 60px !important;
     }
 
     .rbc-event {
@@ -442,6 +454,9 @@ span {
       min-width: 40px !important;
       padding: 2px 4px !important;
       touch-action: manipulation !important;
+      font-size: 11px !important;
+      text-align: center !important;
+      background-color: var();
     }
 
     .rbc-overlay {

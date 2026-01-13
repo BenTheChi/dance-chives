@@ -378,6 +378,19 @@ export function CityCalendar({
 
   // Handle event click
   const handleSelectEvent = (event: CalendarEvent) => {
+    // Close overlay if it's open so it doesn't block the event card
+    // Check DOM directly since state might not be up-to-date
+    const overlay = document.querySelector(".rbc-overlay");
+    if (overlay) {
+      overlay.remove();
+      setOverlayOpen(false);
+      const calendarElement =
+        calendarRef.current?.querySelector(".rbc-calendar");
+      if (calendarElement) {
+        calendarElement.classList.remove("rbc-calendar-overlay-open");
+      }
+    }
+
     setSelectedEvent(event);
     setPopoverOpen(true);
   };
@@ -456,9 +469,42 @@ export function CityCalendar({
     };
   }, []);
 
-  // Prevent calendar interactions when overlay is open
-  // The CSS will handle disabling pointer events on calendar cells/events
-  // react-big-calendar will handle closing the overlay when clicking outside
+  // Close overlay when an event is selected from it
+  useEffect(() => {
+    const handleOverlayEventClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Check if clicking on an overlay event
+      const overlayEvent = target.closest(".rbc-overlay-event");
+      if (overlayEvent) {
+        // Close the overlay immediately so it doesn't block the event card
+        // Don't prevent default - let the event selection proceed
+        const overlay = document.querySelector(".rbc-overlay");
+        if (overlay) {
+          // Use a small delay to ensure the click event propagates to react-big-calendar
+          // but close the overlay quickly so it doesn't block
+          setTimeout(() => {
+            overlay.remove();
+            setOverlayOpen(false);
+            const calendarElement =
+              calendarRef.current?.querySelector(".rbc-calendar");
+            if (calendarElement) {
+              calendarElement.classList.remove("rbc-calendar-overlay-open");
+            }
+          }, 10);
+        }
+      }
+    };
+
+    // Listen for clicks on overlay events (use capture phase to catch early)
+    document.addEventListener("mousedown", handleOverlayEventClick, true);
+    document.addEventListener("touchstart", handleOverlayEventClick, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOverlayEventClick, true);
+      document.removeEventListener("touchstart", handleOverlayEventClick, true);
+    };
+  }, []);
 
   return (
     <div
