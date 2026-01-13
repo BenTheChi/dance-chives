@@ -114,10 +114,6 @@ export function EventTagSelfButton({
 }: EventClientProps & {
   currentUserRoles: string[];
 }) {
-  if (currentUserRoles.length === 0) {
-    return null;
-  }
-
   return (
     <TagUserCircleButton
       eventId={eventId}
