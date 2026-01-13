@@ -178,7 +178,7 @@ export function CalendarPageClient({
         Calendar
       </h1>
       <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
-        <div className="flex flex-col px-5 gap-4 sm:gap-8 py-3 sm:py-5 px-0 sm:px-10 lg:px-15 max-w-full sm:max-w-[1000px] lg:max-w-[1200px] w-full">
+        <div className="flex flex-col gap-4 sm:gap-8 py-3 sm:py-5 px-0 sm:px-10 lg:px-15 max-w-full sm:max-w-[1000px] lg:max-w-[1200px] w-full">
           {/* Filters */}
           <div className="flex flex-col justify-center items-center sm:flex-row gap-3 sm:gap-4 w-full">
             {/* City Dropdown */}
@@ -201,7 +201,7 @@ export function CalendarPageClient({
                   {cities.map((city) => {
                     const citySlug = city.slug || generateCitySlug(city);
                     if (!citySlug || !citySlug.trim()) return null;
-                    const key = (city.id && city.id.trim()) ? city.id : citySlug;
+                    const key = city.id && city.id.trim() ? city.id : citySlug;
                     return (
                       <SelectItem key={key} value={citySlug}>
                         {city.name}

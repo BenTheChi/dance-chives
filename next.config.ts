@@ -20,11 +20,6 @@ const nextConfig: NextConfig = {
         hostname: "lh3.googleusercontent.com",
         pathname: "/a/**",
       },
-      {
-        protocol: "https",
-        hostname: "storage.googleapis.com",
-        pathname: "/dance-chives-profile-pics/**",
-      },
       // Add R2 pattern
       ...(process.env.CLOUDFLARE_R2_PUBLIC_URL
         ? [

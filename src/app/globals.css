@@ -432,6 +432,27 @@ span {
     .rbc-event-label {
       font-size: 0.65rem;
     }
+
+    /* Make "+x more events" clickable on mobile */
+    .rbc-more {
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      z-index: 10 !important;
+      min-height: 20px !important;
+      min-width: 40px !important;
+      padding: 2px 4px !important;
+      touch-action: manipulation !important;
+    }
+
+    .rbc-overlay {
+      z-index: 1000 !important;
+      pointer-events: auto !important;
+    }
+
+    .rbc-overlay-header {
+      z-index: 1001 !important;
+      pointer-events: auto !important;
+    }
   }
 
   /* Additional constraints for very small screens */
@@ -522,6 +543,31 @@ span {
 
   .rbc-day-view {
     background-color: var(--charcoal) !important;
+  }
+
+  /* Make "+x more events" clickable on all screen sizes */
+  .rbc-more {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    z-index: 10 !important;
+    touch-action: manipulation !important;
+    user-select: none !important;
+  }
+
+  .rbc-overlay {
+    z-index: 1000 !important;
+    pointer-events: auto !important;
+  }
+
+  .rbc-overlay-header {
+    z-index: 1001 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Ensure overlay events are clickable */
+  .rbc-overlay-event {
+    cursor: pointer !important;
+    pointer-events: auto !important;
   }
 
   /* Loading spinner animations */
