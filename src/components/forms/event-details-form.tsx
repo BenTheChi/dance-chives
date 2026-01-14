@@ -42,11 +42,20 @@ import {
 } from "lucide-react";
 import { StyleMultiSelect } from "../ui/style-multi-select";
 import { Switch } from "../ui/switch";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Textarea } from "../ui/textarea";
+import { Wand2 } from "lucide-react";
 
 interface EventDetailsFormProps {
   control: Control<FormValues>;
   setValue: UseFormSetValue<FormValues>;
   eventDetails: EventDetails;
+  onAutofill?: (data: any, posterFile: File | null) => void;
+  // Props for managing autofill job state from parent
+  parentAutofillJobId?: string | null;
+  parentIsAutofilling?: boolean;
+  onAutofillJobStart?: (jobId: string, posterFile: File | null) => void;
 }
 
 interface CitySearchResponse {
@@ -95,6 +104,10 @@ export function EventDetailsForm({
   control,
   setValue,
   eventDetails,
+  onAutofill,
+  parentAutofillJobId,
+  parentIsAutofilling,
+  onAutofillJobStart,
 }: EventDetailsFormProps) {
   const { fields, append, remove } = useFieldArray({
     control,
@@ -102,6 +115,65 @@ export function EventDetailsForm({
   });
   const hasInitialized = useRef(false);
   const dates = useWatch({ control, name: "eventDetails.dates" });
+
+  // Autofill state
+  const [autofillPoster, setAutofillPoster] = useState<File | null>(null);
+  const [autofillText, setAutofillText] = useState("");
+  const [autofillError, setAutofillError] = useState<string | null>(null);
+
+  // Use parent's loading state if available, otherwise use local state
+  const isAutofilling = parentIsAutofilling ?? false;
+
+  const handleAutofill = async () => {
+    if (!autofillPoster && !autofillText.trim()) {
+      toast.error("Please upload a poster image or enter text");
+      return;
+    }
+
+    setAutofillError(null);
+
+    try {
+      const formData = new FormData();
+      if (autofillPoster) {
+        formData.append("poster", autofillPoster);
+      }
+      if (autofillText.trim()) {
+        formData.append("text", autofillText);
+      }
+
+      const response = await fetch("/api/events/autofill/start", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to start autofill");
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.jobId) {
+        // Notify parent to start polling (polling happens at parent level)
+        if (onAutofillJobStart) {
+          onAutofillJobStart(result.jobId, autofillPoster);
+        }
+        toast.info("Autofill started! Processing in the background...");
+        // Clear the autofill inputs after starting
+        setAutofillPoster(null);
+        setAutofillText("");
+      } else {
+        throw new Error("Invalid response from autofill API");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to start autofill";
+      setAutofillError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
 
   // Always initialize with one date entry if empty
   useEffect(() => {
@@ -121,6 +193,89 @@ export function EventDetailsForm({
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
+      {/* AI Autofill Section */}
+      {onAutofill && (
+        <div className="bg-primary space-y-5 border-2 border-black rounded-sm p-5">
+          <div className="flex items-center gap-2">
+            <Wand2 className="h-5 w-5" />
+            <h3 className="mb-0">AI Autofill</h3>
+          </div>
+          <p className="text-sm">
+            Upload a poster image and/or paste text from the event post
+            (Instagram/Facebook) to automatically fill in event details. You can
+            use text-only mode if you don't have a poster image.
+          </p>
+
+          <div className="space-y-4">
+            {/* Poster Upload */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Poster Image (Optional)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setAutofillPoster(file);
+                  setAutofillError(null);
+                }}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-accent-blue file:text-black hover:file:bg-accent-blue/90 file:cursor-pointer bg-neutral-300 p-2 rounded-sm border border-charcoal"
+              />
+              {autofillPoster && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Selected: {autofillPoster.name}
+                </p>
+              )}
+            </div>
+
+            {/* Text Input */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Post Text{" "}
+                {!autofillPoster && <span className="text-red-500">*</span>}
+              </label>
+              <Textarea
+                value={autofillText}
+                onChange={(e) => {
+                  setAutofillText(e.target.value);
+                  setAutofillError(null);
+                }}
+                placeholder="Paste text from Instagram/Facebook post here..."
+                className="bg-neutral-300 min-h-[100px] resize-y"
+              />
+            </div>
+
+            {/* Error Message */}
+            {autofillError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm text-sm">
+                {autofillError}
+              </div>
+            )}
+
+            {/* Autofill Button */}
+            <Button
+              onClick={handleAutofill}
+              disabled={(!autofillPoster && !autofillText.trim()) || isAutofilling}
+              className="w-full sm:w-auto"
+              type="button"
+            >
+              {isAutofilling ? (
+                <>
+                  <span className="mr-2">Processing...</span>
+                  <span className="animate-spin">⏳</span>
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Autofill with AI
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Basic Information Section */}
       <div className="bg-primary space-y-5 border-2 border-black rounded-sm p-5">
         <div>
@@ -241,7 +396,9 @@ export function EventDetailsForm({
             name="eventDetails.instagram"
             render={({ field }) => {
               // Extract username from URL if it's a full URL, otherwise use as-is
-              const getUsernameFromValue = (val: string | undefined): string => {
+              const getUsernameFromValue = (
+                val: string | undefined
+              ): string => {
                 if (!val) return "";
                 // If it's a URL, extract the username
                 if (val.includes("instagram.com/")) {

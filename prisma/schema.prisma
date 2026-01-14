@@ -380,3 +380,25 @@ model MagicLinkToken {
   @@index([email])
   @@index([expiresAt])
 }
+
+enum JobStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  status      JobStatus @default(pending)
+  result      Json?     // Store result as JSON
+  error       String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  expiresAt   DateTime  // When the job should be cleaned up
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@map("jobs")
+}

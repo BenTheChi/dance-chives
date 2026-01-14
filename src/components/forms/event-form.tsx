@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
@@ -24,7 +24,9 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { isTimeEmpty } from "@/lib/utils/event-utils";
 import { cn } from "@/lib/utils";
 import { PlaylistParser } from "./playlist-parser";
+import { useJobPolling } from "@/hooks/useJobPolling";
 import { mergeSections } from "@/lib/playlist-parser-utils";
+import { validateDanceStyles } from "@/lib/utils/dance-styles";
 
 const CREATE_DRAFT_STORAGE_KEY = "event-form-draft";
 const getEditDraftStorageKey = (eventId: string) =>
@@ -408,6 +410,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     useState<SectionsSelection | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { startSubmission, endSubmission } = useSubmissionOverlay();
+  // Store pending autofill sections data
+  const pendingAutofillSectionsRef = useRef<Section[] | null>(null);
+  // Playlist parser job state - managed at parent level to persist across tab navigation
+  const [playlistJobId, setPlaylistJobId] = useState<string | null>(null);
+  const [isParsingPlaylist, setIsParsingPlaylist] = useState(false);
+  // Autofill job state - managed at parent level to persist across tab navigation
+  const [autofillJobId, setAutofillJobId] = useState<string | null>(null);
+  const [isAutofilling, setIsAutofilling] = useState(false);
+  // Store poster file reference for autofill (needed when job completes)
+  const autofillPosterFileRef = useRef<File | null>(null);
   //TODO: set up logic for next buttons to use the active tab index
 
   // Initialize form with default values or initial data
@@ -529,6 +541,165 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     sessionStorage.removeItem(CREATE_DRAFT_STORAGE_KEY);
   };
 
+  // Autofill handler
+  const handleAutofill = (data: any, posterFile: File | null) => {
+    try {
+      // Disable validation during autofill to avoid premature validation errors
+      // Validation will happen when user interacts with fields or submits form
+      const autofillOptions = {
+        shouldValidate: false,
+        shouldDirty: true,
+        shouldTouch: false,
+      };
+
+      // Set poster if provided
+      if (posterFile && posterFile instanceof File) {
+        // Validate the File object is still valid
+        if (posterFile.size === 0 || !posterFile.type?.startsWith("image/")) {
+          console.warn("Invalid poster file from autofill:", {
+            name: posterFile.name,
+            size: posterFile.size,
+            type: posterFile.type,
+          });
+          // Don't set the poster if the file is invalid
+        } else {
+          const posterImage: Image = {
+            id: crypto.randomUUID(),
+            title: posterFile.name,
+            url: "", // Will be set when uploaded
+            type: "poster",
+            file: posterFile,
+          };
+
+          setValue("eventDetails.poster", posterImage, autofillOptions);
+        }
+
+        // Set default background color if not already set
+        const currentBgColor = getValues("eventDetails.bgColor");
+        if (!currentBgColor || currentBgColor === "#ffffff") {
+          setValue("eventDetails.bgColor", "#ffffff", autofillOptions);
+        }
+      }
+
+      // Validate and normalize styles
+      const validStyles = data.styles
+        ? validateDanceStyles(Array.isArray(data.styles) ? data.styles : [])
+        : [];
+
+      // Show warning if invalid styles were filtered out
+      if (
+        data.styles &&
+        Array.isArray(data.styles) &&
+        data.styles.length > validStyles.length
+      ) {
+        const invalidStyles = data.styles.filter(
+          (style: string) => !validStyles.includes(style as any)
+        );
+        toast.warning(
+          `Some dance styles were not recognized and were removed: ${invalidStyles.join(
+            ", "
+          )}`
+        );
+      }
+
+      // Replace all form values
+      setValue("eventDetails.title", data.title || "", autofillOptions);
+
+      setValue(
+        "eventDetails.eventType",
+        data.eventType || "Battle",
+        autofillOptions
+      );
+
+      // Set dates - ensure at least one date entry
+      if (data.dates && Array.isArray(data.dates) && data.dates.length > 0) {
+        setValue("eventDetails.dates", data.dates, autofillOptions);
+      } else {
+        // If no dates, set a default empty date
+        setValue(
+          "eventDetails.dates",
+          [
+            {
+              date: "",
+              isAllDay: true,
+              startTime: undefined,
+              endTime: undefined,
+            },
+          ],
+          autofillOptions
+        );
+      }
+
+      // Set string fields - convert null/undefined to empty strings
+      setValue("eventDetails.location", data.location ?? "", autofillOptions);
+
+      setValue(
+        "eventDetails.description",
+        data.description ?? "",
+        autofillOptions
+      );
+
+      setValue("eventDetails.schedule", data.schedule ?? "", autofillOptions);
+
+      setValue("eventDetails.cost", data.cost ?? "", autofillOptions);
+
+      setValue("eventDetails.prize", data.prize ?? "", autofillOptions);
+
+      // Set styles
+      setValue("eventDetails.styles", validStyles, autofillOptions);
+
+      // Set social media links - convert null/undefined to empty strings
+      setValue("eventDetails.website", data.website ?? "", autofillOptions);
+
+      setValue("eventDetails.instagram", data.instagram ?? "", autofillOptions);
+
+      setValue("eventDetails.youtube", data.youtube ?? "", autofillOptions);
+
+      setValue("eventDetails.facebook", data.facebook ?? "", autofillOptions);
+
+      // Handle sections data if present
+      if (
+        data.sections &&
+        Array.isArray(data.sections) &&
+        data.sections.length > 0
+      ) {
+        // Normalize sections for form
+        const normalizedSections = normalizeSectionsForForm(data.sections);
+
+        // Get current sections
+        const currentSections = getValues("sections") || [];
+
+        // Merge with existing sections (don't overwrite if sections already exist)
+        if (currentSections.length === 0) {
+          // Only set sections if there are no existing sections
+          setValue("sections", normalizedSections, {
+            shouldValidate: false,
+            shouldDirty: true,
+            shouldTouch: false,
+          });
+
+          // If we're on the Sections tab, activate the first section
+          if (activeMainTab === "Sections" && normalizedSections.length > 0) {
+            setActiveSectionId(normalizedSections[0].id);
+            setSectionsSelection({
+              type: "sectionOverview",
+              sectionId: normalizedSections[0].id,
+            });
+          }
+        } else {
+          // Store sections for later application when user navigates to Sections tab
+          pendingAutofillSectionsRef.current = normalizedSections;
+        }
+      }
+
+      // Note: City is left blank for manual selection as per plan
+      // Note: Poster is not set from autofill - user uploads separately
+    } catch (error) {
+      console.error("Error applying autofill data:", error);
+      toast.error("Failed to apply autofill data to form");
+    }
+  };
+
   // Ensure eventType is always set to a valid value
   useEffect(() => {
     const currentEventType = getValues("eventDetails.eventType");
@@ -564,6 +735,32 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   useEffect(() => {
     if (activeMainTab !== "Sections") return;
 
+    // Check if there are pending autofill sections to apply
+    if (pendingAutofillSectionsRef.current && sectionsMemo.length === 0) {
+      const pendingSections = pendingAutofillSectionsRef.current;
+      // Ensure sections are properly normalized
+      const normalizedPendingSections =
+        normalizeSectionsForForm(pendingSections);
+      setValue("sections", normalizedPendingSections, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+
+      // Activate the first section
+      if (normalizedPendingSections.length > 0) {
+        setActiveSectionId(normalizedPendingSections[0].id);
+        setSectionsSelection({
+          type: "sectionOverview",
+          sectionId: normalizedPendingSections[0].id,
+        });
+      }
+
+      // Clear pending sections
+      pendingAutofillSectionsRef.current = null;
+      return;
+    }
+
     if (sectionsMemo.length === 0) {
       setActiveSectionId("0");
       setSectionsSelection(null);
@@ -590,7 +787,13 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         sectionId: targetSectionId,
       });
     }
-  }, [activeMainTab, sectionsMemo, activeSectionId, sectionsSelection]);
+  }, [
+    activeMainTab,
+    sectionsMemo,
+    activeSectionId,
+    sectionsSelection,
+    setValue,
+  ]);
 
   const mainTabs = ["Details", "Roles", "Sections", "Photo Gallery"];
 
@@ -648,24 +851,157 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   };
 
   const handlePlaylistParseSuccess = (parsedSections: Section[]) => {
+    // Calculate detailed statistics for toast message
+    const totalBrackets = parsedSections.reduce(
+      (sum, section) => sum + (section.brackets?.length || 0),
+      0
+    );
+    const totalVideosInBrackets = parsedSections.reduce(
+      (sum, section) =>
+        sum +
+        (section.brackets?.reduce(
+          (bracketSum, bracket) => bracketSum + (bracket.videos?.length || 0),
+          0
+        ) || 0),
+      0
+    );
+    const totalDirectVideos = parsedSections.reduce(
+      (sum, section) => sum + (section.videos?.length || 0),
+      0
+    );
+    const totalVideos = totalVideosInBrackets + totalDirectVideos;
+
+    // Build detailed toast message
+    let message = `Successfully parsed ${totalVideos} video${
+      totalVideos !== 1 ? "s" : ""
+    } into ${parsedSections.length} section${
+      parsedSections.length !== 1 ? "s" : ""
+    }`;
+
+    if (totalBrackets > 0) {
+      message += ` with ${totalBrackets} bracket${
+        totalBrackets !== 1 ? "s" : ""
+      }`;
+      if (totalVideosInBrackets > 0) {
+        message += ` (${totalVideosInBrackets} video${
+          totalVideosInBrackets !== 1 ? "s" : ""
+        } in brackets)`;
+      }
+    }
+
+    if (totalDirectVideos > 0) {
+      message += ` and ${totalDirectVideos} direct video${
+        totalDirectVideos !== 1 ? "s" : ""
+      }`;
+    }
+
+    toast.success(message);
+
     // Merge parsed sections with existing sections using the merge utility
     const currentSections = sections;
     const mergedSections = mergeSections(currentSections, parsedSections);
 
+    // Normalize sections for form
+    const normalizedMergedSections = normalizeSectionsForForm(mergedSections);
+
     // Update form state
-    setValue("sections", normalizeSectionsForForm(mergedSections), {
+    setValue("sections", normalizedMergedSections, {
       shouldValidate: true,
       shouldDirty: true,
     });
 
-    // If no sections were active, activate the first new section
-    if (currentSections.length === 0 && mergedSections.length > 0) {
-      setActiveSectionId(mergedSections[0].id);
-      setSectionsSelection({
-        type: "sectionOverview",
-        sectionId: mergedSections[0].id,
-      });
+    // If we're on the Sections tab, activate the first section
+    if (activeMainTab === "Sections" && normalizedMergedSections.length > 0) {
+      // If no sections were active before, activate the first new section
+      if (currentSections.length === 0) {
+        setActiveSectionId(normalizedMergedSections[0].id);
+        setSectionsSelection({
+          type: "sectionOverview",
+          sectionId: normalizedMergedSections[0].id,
+        });
+      } else {
+        // If sections already existed, ensure active section is still valid
+        const isValidSection = normalizedMergedSections.some(
+          (s) => s.id === activeSectionId
+        );
+        if (!isValidSection || activeSectionId === "0") {
+          setActiveSectionId(normalizedMergedSections[0].id);
+          setSectionsSelection({
+            type: "sectionOverview",
+            sectionId: normalizedMergedSections[0].id,
+          });
+        }
+      }
+    } else if (normalizedMergedSections.length > 0) {
+      // If we're not on the Sections tab, ensure the first section will be active when we navigate there
+      // The useEffect for Sections tab will handle this, but we can also set it proactively
+      if (currentSections.length === 0) {
+        // Store the first section ID to activate when navigating to Sections tab
+        // The useEffect will handle this, but setting it here ensures it's ready
+        setActiveSectionId(normalizedMergedSections[0].id);
+      }
     }
+  };
+
+  // Poll for playlist parsing job status at parent level to persist across tab navigation
+  useJobPolling<{ sections: Section[] }>({
+    jobId: playlistJobId,
+    statusEndpoint: "/api/events/parse-playlist/status",
+    onComplete: (result) => {
+      setIsParsingPlaylist(false);
+      setPlaylistJobId(null);
+
+      if (result?.sections) {
+        handlePlaylistParseSuccess(result.sections);
+      }
+    },
+    onError: (errorMessage) => {
+      setIsParsingPlaylist(false);
+      setPlaylistJobId(null);
+      toast.error(`Failed to parse playlist: ${errorMessage}`);
+    },
+    enabled: !!playlistJobId,
+  });
+
+  const handlePlaylistJobStart = (jobId: string) => {
+    setPlaylistJobId(jobId);
+    setIsParsingPlaylist(true);
+  };
+
+  // Poll for autofill job status at parent level to persist across tab navigation
+  useJobPolling<any>({
+    jobId: autofillJobId,
+    statusEndpoint: "/api/events/autofill/status",
+    onComplete: (result) => {
+      setIsAutofilling(false);
+      setAutofillJobId(null);
+
+      if (result && handleAutofill) {
+        // Pass both the data and the poster file
+        handleAutofill(result, autofillPosterFileRef.current);
+        toast.success("Event details autofilled successfully!");
+        // Clear poster file reference
+        autofillPosterFileRef.current = null;
+      } else {
+        const errorMessage = "Invalid response from autofill API";
+        toast.error(errorMessage);
+        autofillPosterFileRef.current = null;
+      }
+    },
+    onError: (errorMessage) => {
+      setIsAutofilling(false);
+      setAutofillJobId(null);
+      toast.error(errorMessage);
+      autofillPosterFileRef.current = null;
+    },
+    enabled: !!autofillJobId,
+  });
+
+  const handleAutofillJobStart = (jobId: string, posterFile: File | null) => {
+    setAutofillJobId(jobId);
+    setIsAutofilling(true);
+    // Store poster file reference for when job completes
+    autofillPosterFileRef.current = posterFile;
   };
 
   // extract field names from validation errors
@@ -963,6 +1299,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     existingSections: sections,
                   }}
                   onParseSuccess={handlePlaylistParseSuccess}
+                  parentPlaylistJobId={playlistJobId}
+                  parentIsParsingPlaylist={isParsingPlaylist}
+                  onPlaylistJobStart={handlePlaylistJobStart}
                 />
               )}
               <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2 mb-6">
@@ -1047,6 +1386,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               control={control}
               setValue={setValue}
               eventDetails={eventDetails as EventDetails}
+              onAutofill={handleAutofill}
+              parentAutofillJobId={autofillJobId}
+              parentIsAutofilling={isAutofilling}
+              onAutofillJobStart={handleAutofillJobStart}
             />
           )}
 

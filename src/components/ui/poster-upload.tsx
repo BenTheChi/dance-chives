@@ -40,6 +40,7 @@ export function PosterUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const prevInitialPosterFileRef = useRef<File | null | undefined>(
     initialPosterFile
   );
@@ -158,27 +159,88 @@ export function PosterUpload({
       image.src = src;
     };
 
-    if (posterFile) {
+    if (posterFile && posterFile instanceof File) {
+      // Validate that the File object is valid
+      if (!posterFile.size || posterFile.size === 0) {
+        console.warn("Invalid file: file size is 0");
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+        }
+        previewImageRef.current = null;
+        return;
+      }
+
+      // Revoke any existing object URL before creating a new one
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+
       // Load the selected file and apply preview with background color
       const image = new Image();
-      const url = URL.createObjectURL(posterFile);
+      let url: string;
+      
+      try {
+        url = URL.createObjectURL(posterFile);
+        objectUrlRef.current = url;
+      } catch (error) {
+        console.error("Failed to create object URL for file:", error);
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+        }
+        previewImageRef.current = null;
+        return;
+      }
 
       image.onload = () => {
         updateCanvasPreview(image, canvas);
-        URL.revokeObjectURL(url);
+        if (objectUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          objectUrlRef.current = null;
+        }
         previewImageRef.current = image;
       };
 
       image.onerror = () => {
-        URL.revokeObjectURL(url);
-        toast.error("Failed to load image for preview");
+        if (objectUrlRef.current === url) {
+          URL.revokeObjectURL(url);
+          objectUrlRef.current = null;
+        }
+        console.error("Failed to load image for preview. File:", {
+          name: posterFile.name,
+          size: posterFile.size,
+          type: posterFile.type,
+        });
+        // Clear canvas on error
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+        }
+        previewImageRef.current = null;
+        // Only show error toast if the file appears to be valid (user-initiated action)
+        // If file size is 0 or invalid, it's likely a stale/invalidated file reference
+        if (posterFile.size > 0 && posterFile.type?.startsWith("image/")) {
+          toast.error("Failed to load image for preview");
+        }
       };
 
       image.src = url;
     } else if (initialPoster) {
+      // Revoke any existing object URL when switching to initial poster
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
       // Load the initial poster (existing thumbnail - already has background baked in)
       loadInitialPoster(initialPoster);
     } else {
+      // Revoke any existing object URL when clearing
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
       // Clear canvas
       const ctx = canvas.getContext("2d");
       if (ctx) {
@@ -186,6 +248,14 @@ export function PosterUpload({
       }
       previewImageRef.current = null;
     }
+
+    // Cleanup: revoke object URL on unmount or when dependencies change
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
   }, [posterFile, initialPoster, bgColor]);
 
   // Re-render canvas when bgColor changes (only if we have a file selected)
