@@ -458,7 +458,7 @@ export default async function EventPage({ params }: PageProps) {
       <AppNavbar />
       <div className="flex flex-col">
         <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
-          {event.eventDetails.title}
+          <div className="max-w-3xl mx-auto">{event.eventDetails.title}</div>
         </h1>
         <div className="mt-0 sm:mt-4">
           {event.eventDetails.status === "hidden" && (

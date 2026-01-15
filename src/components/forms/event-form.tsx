@@ -1287,22 +1287,24 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             <>
               {/* Playlist Parser - Super Admin Only */}
               {isSuperAdmin && (
-                <PlaylistParser
-                  formContext={{
-                    title: eventDetails.title,
-                    eventType: eventDetails.eventType,
-                    socialLinks: {
-                      instagram: eventDetails.instagram ?? undefined,
-                      youtube: eventDetails.youtube ?? undefined,
-                      facebook: eventDetails.facebook ?? undefined,
-                    },
-                    existingSections: sections,
-                  }}
-                  onParseSuccess={handlePlaylistParseSuccess}
-                  parentPlaylistJobId={playlistJobId}
-                  parentIsParsingPlaylist={isParsingPlaylist}
-                  onPlaylistJobStart={handlePlaylistJobStart}
-                />
+                <div className="flex justify-center">
+                  <PlaylistParser
+                    formContext={{
+                      title: eventDetails.title,
+                      eventType: eventDetails.eventType,
+                      socialLinks: {
+                        instagram: eventDetails.instagram ?? undefined,
+                        youtube: eventDetails.youtube ?? undefined,
+                        facebook: eventDetails.facebook ?? undefined,
+                      },
+                      existingSections: sections,
+                    }}
+                    onParseSuccess={handlePlaylistParseSuccess}
+                    parentPlaylistJobId={playlistJobId}
+                    parentIsParsingPlaylist={isParsingPlaylist}
+                    onPlaylistJobStart={handlePlaylistJobStart}
+                  />
+                </div>
               )}
               <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2 mb-6">
                 {sections.length === 0 ? (
