@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -93,7 +93,13 @@ export function PlaylistParser({
     return null;
   }
 
-  const handleParse = async () => {
+  const handleParse = async (
+    e?: MouseEvent<HTMLButtonElement> | KeyboardEvent<HTMLInputElement>
+  ) => {
+    // This component is rendered inside a larger <form>; avoid triggering submit.
+    e?.preventDefault();
+    e?.stopPropagation();
+
     if (!playlistUrl.trim()) {
       toast.error("Please enter a YouTube playlist URL");
       return;
@@ -134,9 +140,9 @@ export function PlaylistParser({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isLoading) {
-      handleParse();
+      handleParse(e);
     }
   };
 
@@ -162,6 +168,7 @@ export function PlaylistParser({
               className="flex-1 bg-neutral-300"
             />
             <Button
+              type="button"
               onClick={handleParse}
               disabled={isLoading || !playlistUrl.trim()}
               className="bg-periwinkle text-black border-black hover:bg-periwinkle/90"
