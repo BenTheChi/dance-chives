@@ -32,8 +32,6 @@ import { UserSearchItem } from "@/types/user";
 import { Image } from "@/types/image";
 import {
   getDefaultVideoType,
-  sectionTypeDisallowsBrackets,
-  sectionTypeRequiresBrackets,
   sectionTypeSupportsWinners,
   sectionTypeSupportsJudges,
   updateVideoTypeForId,
@@ -249,40 +247,6 @@ export function SectionForm({
   // Ensure hasBrackets is set correctly based on section type when editing
   useEffect(() => {
     if (!activeSection) return;
-
-    const requiresBrackets = sectionTypeRequiresBrackets(
-      activeSection.sectionType
-    );
-    const disallowsBrackets = sectionTypeDisallowsBrackets(
-      activeSection.sectionType
-    );
-
-    // If section type requires brackets but hasBrackets is false, set it to true
-    if (requiresBrackets && !activeSection.hasBrackets) {
-      const currentSections = getValues("sections");
-      const updatedSections = currentSections.map((section) => {
-        if (section.id !== activeSectionId) return section;
-        return {
-          ...section,
-          hasBrackets: true,
-        };
-      });
-      setValue(`sections.${activeSectionIndex}.hasBrackets`, true);
-      setValue("sections", normalizeSectionsForForm(updatedSections));
-    }
-    // If section type disallows brackets but hasBrackets is true, set it to false
-    else if (disallowsBrackets && activeSection.hasBrackets) {
-      const currentSections = getValues("sections");
-      const updatedSections = currentSections.map((section) => {
-        if (section.id !== activeSectionId) return section;
-        return {
-          ...section,
-          hasBrackets: false,
-        };
-      });
-      setValue(`sections.${activeSectionIndex}.hasBrackets`, false);
-      setValue("sections", normalizeSectionsForForm(updatedSections));
-    }
   }, [
     activeSectionId,
     activeSection,
@@ -295,11 +259,6 @@ export function SectionForm({
 
   const addBracket = (title?: string) => {
     if (!activeSection) return;
-
-    // Prevent adding brackets if section type disallows them
-    if (sectionTypeDisallowsBrackets(activeSection.sectionType)) {
-      return;
-    }
 
     // Validate bracket title is not blank
     const titleToValidate = title?.trim() || newBracketTitle.trim();
@@ -567,6 +526,53 @@ export function SectionForm({
 
   return (
     <section className="bg-primary space-y-4 p-6 border-2 border-primary-light rounded-sm">
+      {/* Apply same style tags to all videos (available for all sections) */}
+      <FormField
+        key={`applyStylesToVideos-${activeSectionId}`}
+        control={control}
+        name={`sections.${activeSectionIndex}.applyStylesToVideos`}
+        render={({ field }) => (
+          <FormItem>
+            <div className="flex items-center space-x-2">
+              <FormControl>
+                <Switch
+                  checked={field.value || false}
+                  onCheckedChange={(checked) => {
+                    field.onChange(checked);
+                    handleApplyStylesToVideosChange(checked);
+                  }}
+                />
+              </FormControl>
+              <FormLabel>Apply same style tags to all videos</FormLabel>
+            </div>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {activeSection.applyStylesToVideos && (
+        <FormField
+          key={`styles-${activeSectionId}`}
+          control={control}
+          name={`sections.${activeSectionIndex}.styles`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Section Dance Styles</FormLabel>
+              <FormControl>
+                <StyleMultiSelect
+                  value={field.value || []}
+                  onChange={(styles) => {
+                    field.onChange(styles);
+                    handleStylesChange(styles);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
       {resolvedMode === "overview" && (
         <>
           {/* Section Title */}
@@ -601,18 +607,6 @@ export function SectionForm({
               render={({ field }) => {
                 // Preserve existing section type when editing instead of forcing "Battle"
                 const value = field.value ?? activeSection.sectionType ?? "";
-                const requiresBrackets = sectionTypeRequiresBrackets(
-                  value as SectionType
-                );
-                const disallowsBrackets = sectionTypeDisallowsBrackets(
-                  value as SectionType
-                );
-                const switchDisabled = requiresBrackets || disallowsBrackets;
-                const switchChecked = requiresBrackets
-                  ? true
-                  : disallowsBrackets
-                  ? false
-                  : Boolean(activeSection.hasBrackets);
 
                 return (
                   <>
@@ -649,6 +643,7 @@ export function SectionForm({
                             Competition
                           </SelectItem>
                           <SelectItem value="Class">Class</SelectItem>
+                          <SelectItem value="Exhibition">Exhibition</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
                           <SelectItem value="Party">Party</SelectItem>
                           <SelectItem value="Performance">
@@ -672,10 +667,8 @@ export function SectionForm({
                           </FormLabel>
                           <FormControl>
                             <Switch
-                              checked={switchChecked}
-                              disabled={switchDisabled}
+                              checked={Boolean(field.value)}
                               onCheckedChange={(checked) => {
-                                if (switchDisabled) return;
                                 field.onChange(checked);
                                 const currentSections =
                                   getValues("sections") ?? [];
@@ -930,53 +923,6 @@ export function SectionForm({
 
       {resolvedMode === "brackets" && (
         <div className="space-y-4">
-          {/* Apply same style tags to all videos */}
-          <FormField
-            key={`applyStylesToVideos-${activeSectionId}`}
-            control={control}
-            name={`sections.${activeSectionIndex}.applyStylesToVideos`}
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center space-x-2">
-                  <FormControl>
-                    <Switch
-                      checked={field.value || false}
-                      onCheckedChange={(checked) => {
-                        field.onChange(checked);
-                        handleApplyStylesToVideosChange(checked);
-                      }}
-                    />
-                  </FormControl>
-                  <FormLabel>Apply same style tags to all videos</FormLabel>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {activeSection.applyStylesToVideos && (
-            <FormField
-              key={`styles-${activeSectionId}`}
-              control={control}
-              name={`sections.${activeSectionIndex}.styles`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Section Dance Styles</FormLabel>
-                  <FormControl>
-                    <StyleMultiSelect
-                      value={field.value || []}
-                      onChange={(styles) => {
-                        field.onChange(styles);
-                        handleStylesChange(styles);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-
           {/* Bracket Title Input - In its own container */}
           <section>
             <FormLabel>New Bracket</FormLabel>

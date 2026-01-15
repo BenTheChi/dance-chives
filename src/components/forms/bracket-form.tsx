@@ -21,6 +21,7 @@ import {
 import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getDefaultVideoType } from "@/lib/utils/section-helpers";
 
 // Helper function to normalize sections for form (ensures description is always string)
 function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
@@ -55,24 +56,6 @@ export function BracketForm({
   activeBracketId,
   eventId,
 }: BracketFormProps) {
-  // Get default video type based on section type
-  const getDefaultVideoType = (sectionType?: string): Video["type"] => {
-    switch (sectionType) {
-      case "Battle":
-        return "battle";
-      case "Competition":
-      case "Performance":
-        return "choreography";
-      case "Showcase":
-      case "Session":
-        return "freestyle";
-      case "Class":
-        return "class";
-      default:
-        return "battle"; // Default for undefined
-    }
-  };
-
   const removeVideoFromBracket = (videoId: string) => {
     const updatedVideos = bracket.videos.filter(
       (video) => video.id !== videoId

@@ -14,7 +14,7 @@ export const sectionTypeRequiresBrackets = (sectionType?: string): boolean =>
   false; // No section types require brackets anymore
 
 export const sectionTypeDisallowsBrackets = (sectionType?: string): boolean =>
-  ["Showcase", "Class", "Session", "Performance", "Party"].includes(sectionType || "");
+  false;
 
 export const getDefaultVideoType = (sectionType?: string): VideoType => {
   switch (sectionType) {
@@ -23,13 +23,15 @@ export const getDefaultVideoType = (sectionType?: string): VideoType => {
     case "Competition":
     case "Performance":
       return "choreography";
+    case "Exhibition":
+      return "freestyle";
     case "Showcase":
     case "Session":
       return "freestyle";
     case "Class":
       return "class";
     default:
-      return "battle";
+      return "freestyle";
   }
 };
 
@@ -50,13 +52,16 @@ export function updateSectionType(
     const winners = supportsWinners ? section.winners || [] : [];
     const judges = supportsJudges ? section.judges || [] : [];
 
-    const hasBrackets = requiresBrackets
-      ? true
-      : disallowsBrackets
-      ? false
-      : newType === "Battle"
-      ? true
-      : section.hasBrackets;
+    const hasBrackets =
+      newType === "Exhibition"
+        ? false
+        : requiresBrackets
+          ? true
+          : disallowsBrackets
+            ? false
+            : newType === "Battle"
+              ? true
+              : section.hasBrackets;
 
     const shouldKeepBrackets =
       requiresBrackets || (hasBrackets && !disallowsBrackets);
@@ -93,6 +98,8 @@ export function updateSectionType(
       ...section,
       sectionType: (newType || "Battle") as Section["sectionType"],
       hasBrackets,
+      applyStylesToVideos: newType === "Exhibition" ? false : section.applyStylesToVideos,
+      styles: newType === "Exhibition" ? [] : section.styles,
       winners,
       judges,
       videos: updatedVideos,

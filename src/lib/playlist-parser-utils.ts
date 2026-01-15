@@ -11,6 +11,7 @@ const VALID_SECTION_TYPES = [
   "Battle",
   "Competition",
   "Performance",
+  "Exhibition",
   "Showcase",
   "Class",
   "Session",
@@ -74,12 +75,12 @@ function sanitizeVideo(video: any, index: number, sectionIndex: number): Video {
   }
 
   // Validate and sanitize video type
-  const videoType = String(video.type || "battle").toLowerCase();
+  const videoType = String(video.type || "freestyle").toLowerCase();
   const validType = VALID_VIDEO_TYPES.includes(
     videoType as (typeof VALID_VIDEO_TYPES)[number]
   )
     ? (videoType as (typeof VALID_VIDEO_TYPES)[number])
-    : "battle";
+    : "freestyle";
 
   // Sanitize and validate styles if present - only allow styles from DANCE_STYLES constant
   const rawStyles =

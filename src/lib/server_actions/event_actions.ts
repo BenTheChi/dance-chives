@@ -145,15 +145,7 @@ interface addEventProps {
     id: string;
     title: string;
     description?: string;
-    sectionType:
-      | "Battle"
-      | "Competition"
-      | "Performance"
-      | "Showcase"
-      | "Class"
-      | "Session"
-      | "Party"
-      | "Other";
+    sectionType: string;
     hasBrackets: boolean;
     styles?: string[];
     applyStylesToVideos?: boolean;

@@ -79,6 +79,7 @@ export function getSectionTypeLabel(
     | "Battle"
     | "Competition"
     | "Performance"
+    | "Exhibition"
     | "Showcase"
     | "Class"
     | "Session"
@@ -90,6 +91,7 @@ export function getSectionTypeLabel(
     Battle: "BattleSection",
     Competition: "CompetitionSection",
     Performance: "PerformanceSection",
+    Exhibition: "ExhibitionSection",
     Showcase: "ShowcaseSection",
     Class: "ClassSection",
     Session: "SessionSection",
@@ -104,6 +106,7 @@ export function getSectionTypeFromLabel(label: string): string | null {
     BattleSection: "Battle",
     CompetitionSection: "Competition",
     PerformanceSection: "Performance",
+    ExhibitionSection: "Exhibition",
     ShowcaseSection: "Showcase",
     ClassSection: "Class",
     SessionSection: "Session",
@@ -149,6 +152,7 @@ export function getAllSectionTypeLabels(): string[] {
     "BattleSection",
     "CompetitionSection",
     "PerformanceSection",
+    "ExhibitionSection",
     "ShowcaseSection",
     "ClassSection",
     "SessionSection",
@@ -425,7 +429,7 @@ export const getEvent = async (
     OPTIONAL MATCH (s)<-[:POSTER_OF]-(poster:Image)
     
     WITH s, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets, poster,
-         [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection', 'OtherSection']] as sectionTypeLabels
+         [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ExhibitionSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection', 'OtherSection']] as sectionTypeLabels
     
     RETURN collect({
       id: s.id,
@@ -437,6 +441,7 @@ export const getEvent = async (
             WHEN 'BattleSection' THEN 'Battle'
             WHEN 'CompetitionSection' THEN 'Competition'
             WHEN 'PerformanceSection' THEN 'Performance'
+            WHEN 'ExhibitionSection' THEN 'Exhibition'
             WHEN 'ShowcaseSection' THEN 'Showcase'
             WHEN 'ClassSection' THEN 'Class'
             WHEN 'SessionSection' THEN 'Session'

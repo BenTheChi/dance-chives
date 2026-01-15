@@ -157,6 +157,7 @@ const sectionSchema = z
       "Battle",
       "Competition",
       "Performance",
+      "Exhibition",
       "Showcase",
       "Class",
       "Session",
@@ -1051,9 +1052,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           });
           return;
         }
-        response = await editEvent(eventId, normalizedData);
+        response = await editEvent(eventId, normalizedData as any);
       } else {
-        response = await addEvent(normalizedData);
+        response = await addEvent(normalizedData as any);
       }
 
       if (response.error) {

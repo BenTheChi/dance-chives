@@ -25,6 +25,7 @@ export interface ParsedSection {
     | "Battle"
     | "Competition"
     | "Performance"
+    | "Exhibition"
     | "Showcase"
     | "Class"
     | "Session"

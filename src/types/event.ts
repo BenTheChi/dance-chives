@@ -75,6 +75,7 @@ export interface Section {
     | "Battle"
     | "Competition"
     | "Performance"
+    | "Exhibition"
     | "Showcase"
     | "Class"
     | "Session"
