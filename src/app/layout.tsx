@@ -106,17 +106,6 @@ export default function RootLayout({
           name="viewport"
           content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
         />
-        <meta property="og:title" content="Dance Chives" />
-        <meta
-          property="og:description"
-          content="The free community archive for street dance events and battle videos"
-        />
-        <meta property="og:url" content="https://www.dancechives.com/" />
-        <meta property="og:type" content="website" />
-        <meta
-          property="og:image"
-          content={`${baseUrl}/mascot/Dancechives_MainLogo_Color_onLight.png`}
-        />
         {/* MailerLite Universal */}
         <script
           dangerouslySetInnerHTML={{

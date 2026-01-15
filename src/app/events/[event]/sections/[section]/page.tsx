@@ -79,6 +79,8 @@ export async function generateMetadata({
   const paramResult = await params;
   const searchParamsResult = await searchParams;
   const videoId = searchParamsResult.video;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
 
   // Get event and section data
   const event = await getEvent(paramResult.event, undefined, 0);
@@ -129,11 +131,7 @@ export async function generateMetadata({
           images: thumbnailUrl ? [thumbnailUrl] : undefined,
           type: "video.other",
           videos: [video.src],
-          url: `${
-            process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com"
-          }/events/${paramResult.event}/sections/${
-            paramResult.section
-          }?video=${videoId}`,
+          url: `${baseUrl}/events/${paramResult.event}/sections/${paramResult.section}?video=${videoId}`,
         },
         twitter: {
           card: "player",
@@ -146,11 +144,43 @@ export async function generateMetadata({
   }
 
   // Default section metadata
+  const title = `${section.title} - ${event.eventDetails.title}`;
+  const description =
+    section.description ||
+    `View videos from ${section.title} at ${event.eventDetails.title}`;
+
+  const sectionPosterUrl = section.poster?.url
+    ? section.poster.url.startsWith("http")
+      ? section.poster.url
+      : `${baseUrl}${section.poster.url}`
+    : undefined;
+
+  // Fallback to event poster if section poster isn't set
+  const eventPosterUrl = event.eventDetails.poster?.url
+    ? event.eventDetails.poster.url.startsWith("http")
+      ? event.eventDetails.poster.url
+      : `${baseUrl}${event.eventDetails.poster.url}`
+    : undefined;
+
+  const shareImageUrl = sectionPosterUrl || eventPosterUrl;
+
   return {
-    title: `${section.title} - ${event.eventDetails.title}`,
-    description:
-      section.description ||
-      `View videos from ${section.title} at ${event.eventDetails.title}`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `${baseUrl}/events/${paramResult.event}/sections/${paramResult.section}`,
+      siteName: "Dance Chives",
+      images: shareImageUrl ? [shareImageUrl] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: shareImageUrl ? [shareImageUrl] : undefined,
+    },
   };
 }
 
