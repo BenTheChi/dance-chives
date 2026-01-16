@@ -33,7 +33,7 @@ import { getOrCreateSuperAdminUser } from "@/lib/utils/admin-user";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
-import { type Record as Neo4jRecord } from "neo4j-driver";
+import { type Record as Neo4jRecord, int } from "neo4j-driver";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { prisma } from "@/lib/primsa";
 
@@ -4698,6 +4698,386 @@ export async function getLatestBattleSections(): Promise<
         eventTitle,
         city: cityName || undefined,
       });
+    }
+
+    return result;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Get all battle sections from all visible events with full video/bracket data
+ * Supports pagination for lazy loading
+ */
+export async function getAllBattleSections(
+  limit: number = 10,
+  offset: number = 0
+): Promise<
+  Array<{
+    section: Section;
+    eventId: string;
+    eventTitle: string;
+    bracket?: Bracket;
+  }>
+> {
+  const session = driver.session();
+
+  try {
+    // Ensure limit and offset are integers (Neo4j requires integers for SKIP and LIMIT)
+    // Use Neo4j's int() function to create proper integer types
+    const limitInt = int(Math.floor(limit));
+    const offsetInt = int(Math.floor(offset));
+
+    // Get battle sections with pagination
+    const sectionsResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE (e.status = 'visible' OR e.status IS NULL)
+      MATCH (e)<-[:IN]-(s:BattleSection)
+      WHERE EXISTS {
+        MATCH (s)<-[:IN]-(v:Video)
+      } OR EXISTS {
+        MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+      }
+      WITH e, s
+      ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
+      SKIP $offset
+      LIMIT $limit
+      RETURN e.id as eventId, e.title as eventTitle, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription
+      `,
+      { limit: limitInt, offset: offsetInt }
+    );
+
+    const result: Array<{
+      section: Section;
+      eventId: string;
+      eventTitle: string;
+      bracket?: Bracket;
+    }> = [];
+
+    for (const record of sectionsResult.records) {
+      const eventId = record.get("eventId");
+      const eventTitle = record.get("eventTitle");
+      const sectionId = record.get("sectionId");
+      const sectionTitle = record.get("sectionTitle");
+      const sectionDescription = record.get("sectionDescription");
+
+      // Get section with videos and brackets
+      const sectionDataResult = await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})
+        OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+        OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+        OPTIONAL MATCH (b)<-[:IN]-(v2:Video)
+        WITH s, 
+             collect(DISTINCT v) as directVideos,
+             collect(DISTINCT b) as brackets,
+             collect(DISTINCT v2) as bracketVideos
+        RETURN s.id as id, s.title as title, s.description as description,
+               s.applyStylesToVideos as applyStylesToVideos,
+               directVideos, brackets, bracketVideos
+        `,
+        { sectionId }
+      );
+
+      if (sectionDataResult.records.length === 0) continue;
+
+      const sectionRecord = sectionDataResult.records[0];
+      const directVideos = sectionRecord.get("directVideos") as any[];
+      const brackets = sectionRecord.get("brackets") as any[];
+      const bracketVideos = sectionRecord.get("bracketVideos") as any[];
+      const hasBrackets = brackets.length > 0;
+
+      // Get section styles
+      const stylesResult = await session.run(
+        `
+        MATCH (s:Section {id: $sectionId})-[:STYLE]->(style:Style)
+        RETURN collect(style.name) as styles
+        `,
+        { sectionId }
+      );
+
+      const styles =
+        stylesResult.records.length > 0
+          ? (stylesResult.records[0].get("styles") as string[])
+          : [];
+
+      // Get direct section videos with full data
+      const sectionVideos: Video[] = [];
+      if (directVideos.length > 0) {
+        const videoIds = directVideos.map((v) => v.properties.id);
+        const videoDataResult = await session.run(
+          `
+          MATCH (v:Video)
+          WHERE v.id IN $videoIds
+          OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
+          WITH v, collect(style.name) as videoStyles
+          RETURN v.id as id, v.title as title, v.src as src,
+                 [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
+                 videoStyles
+          `,
+          { videoIds }
+        );
+
+        // Get tagged users for direct videos
+        const taggedUsersResult = await session.run(
+          `
+          MATCH (v:Video)
+          WHERE v.id IN $videoIds
+          OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+          OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+          OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
+          OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
+          WITH v,
+               collect(DISTINCT {
+                 id: winner.id,
+                 displayName: winner.displayName,
+                 username: winner.username,
+                 avatar: winner.avatar,
+                 image: winner.image
+               }) as allWinners,
+               collect(DISTINCT {
+                 id: dancer.id,
+                 displayName: dancer.displayName,
+                 username: dancer.username,
+                 avatar: dancer.avatar,
+                 image: dancer.image
+               }) as allDancers,
+               collect(DISTINCT {
+                 id: choreographer.id,
+                 displayName: choreographer.displayName,
+                 username: choreographer.username,
+                 avatar: choreographer.avatar,
+                 image: choreographer.image
+               }) as allChoreographers,
+               collect(DISTINCT {
+                 id: teacher.id,
+                 displayName: teacher.displayName,
+                 username: teacher.username,
+                 avatar: teacher.avatar,
+                 image: teacher.image
+               }) as allTeachers
+          RETURN v.id as videoId,
+                 [w in allWinners WHERE w.id IS NOT NULL] as taggedWinners,
+                 [d in allDancers WHERE d.id IS NOT NULL] as taggedDancers,
+                 [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
+                 [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
+          `,
+          { videoIds }
+        );
+
+        const taggedUsersMap = new Map<string, any>();
+        for (const tagRecord of taggedUsersResult.records) {
+          const videoId = tagRecord.get("videoId");
+          taggedUsersMap.set(videoId, {
+            taggedWinners: tagRecord.get("taggedWinners"),
+            taggedDancers: tagRecord.get("taggedDancers"),
+            taggedChoreographers: tagRecord.get("taggedChoreographers"),
+            taggedTeachers: tagRecord.get("taggedTeachers"),
+          });
+        }
+
+        for (const videoRecord of videoDataResult.records) {
+          const videoId = videoRecord.get("id");
+          const videoLabels = videoRecord.get("videoLabels") as string[];
+          let videoType: Video["type"] = "battle";
+          if (videoLabels.includes("FreestyleVideo")) {
+            videoType = "freestyle";
+          } else if (videoLabels.includes("ChoreographyVideo")) {
+            videoType = "choreography";
+          } else if (videoLabels.includes("ClassVideo")) {
+            videoType = "class";
+          } else if (videoLabels.includes("OtherVideo")) {
+            videoType = "other";
+          }
+
+          const videoStyles = videoRecord.get("videoStyles") as string[];
+          const taggedUsers = taggedUsersMap.get(videoId) || {};
+
+          sectionVideos.push({
+            id: videoId,
+            title: videoRecord.get("title"),
+            src: videoRecord.get("src"),
+            type: videoType,
+            styles: videoStyles.length > 0 ? videoStyles : undefined,
+            taggedWinners: taggedUsers.taggedWinners || undefined,
+            taggedDancers: taggedUsers.taggedDancers || undefined,
+            taggedChoreographers: taggedUsers.taggedChoreographers || undefined,
+            taggedTeachers: taggedUsers.taggedTeachers || undefined,
+          });
+        }
+      }
+
+      // Get bracket videos with full data
+      const bracketList: Bracket[] = [];
+      if (hasBrackets && brackets.length > 0) {
+        const bracketIds = brackets.map((b) => b.properties.id);
+        const bracketDataResult = await session.run(
+          `
+          MATCH (b:Bracket)
+          WHERE b.id IN $bracketIds
+          RETURN b.id as id, b.title as title
+          `,
+          { bracketIds }
+        );
+
+        // Get videos for each bracket
+        for (const bracketRecord of bracketDataResult.records) {
+          const bracketId = bracketRecord.get("id");
+          const bracketTitle = bracketRecord.get("title");
+
+          const bracketVideosResult = await session.run(
+            `
+            MATCH (b:Bracket {id: $bracketId})<-[:IN]-(v:Video)
+            OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
+            WITH v, collect(style.name) as videoStyles
+            RETURN v.id as id, v.title as title, v.src as src,
+                   [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
+                   videoStyles
+            ORDER BY v.title
+            `,
+            { bracketId }
+          );
+
+          // Get tagged users for bracket videos
+          const bracketVideoIds = bracketVideosResult.records.map(
+            (r) => r.get("id")
+          );
+          const bracketTaggedUsersResult = await session.run(
+            `
+            MATCH (v:Video)
+            WHERE v.id IN $videoIds
+            OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+            OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+            OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
+            OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
+            WITH v,
+                 collect(DISTINCT {
+                   id: winner.id,
+                   displayName: winner.displayName,
+                   username: winner.username,
+                   avatar: winner.avatar,
+                   image: winner.image
+                 }) as allWinners,
+                 collect(DISTINCT {
+                   id: dancer.id,
+                   displayName: dancer.displayName,
+                   username: dancer.username,
+                   avatar: dancer.avatar,
+                   image: dancer.image
+                 }) as allDancers,
+                 collect(DISTINCT {
+                   id: choreographer.id,
+                   displayName: choreographer.displayName,
+                   username: choreographer.username,
+                   avatar: choreographer.avatar,
+                   image: choreographer.image
+                 }) as allChoreographers,
+                 collect(DISTINCT {
+                   id: teacher.id,
+                   displayName: teacher.displayName,
+                   username: teacher.username,
+                   avatar: teacher.avatar,
+                   image: teacher.image
+                 }) as allTeachers
+            RETURN v.id as videoId,
+                   [w in allWinners WHERE w.id IS NOT NULL] as taggedWinners,
+                   [d in allDancers WHERE d.id IS NOT NULL] as taggedDancers,
+                   [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
+                   [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
+            `,
+            { videoIds: bracketVideoIds }
+          );
+
+          const bracketTaggedUsersMap = new Map<string, any>();
+          for (const tagRecord of bracketTaggedUsersResult.records) {
+            const videoId = tagRecord.get("videoId");
+            bracketTaggedUsersMap.set(videoId, {
+              taggedWinners: tagRecord.get("taggedWinners"),
+              taggedDancers: tagRecord.get("taggedDancers"),
+              taggedChoreographers: tagRecord.get("taggedChoreographers"),
+              taggedTeachers: tagRecord.get("taggedTeachers"),
+            });
+          }
+
+          const bracketVideos: Video[] = [];
+          for (const videoRecord of bracketVideosResult.records) {
+            const videoId = videoRecord.get("id");
+            const videoLabels = videoRecord.get("videoLabels") as string[];
+            let videoType: Video["type"] = "battle";
+            if (videoLabels.includes("FreestyleVideo")) {
+              videoType = "freestyle";
+            } else if (videoLabels.includes("ChoreographyVideo")) {
+              videoType = "choreography";
+            } else if (videoLabels.includes("ClassVideo")) {
+              videoType = "class";
+            } else if (videoLabels.includes("OtherVideo")) {
+              videoType = "other";
+            }
+
+            const videoStyles = videoRecord.get("videoStyles") as string[];
+            const taggedUsers = bracketTaggedUsersMap.get(videoId) || {};
+
+            bracketVideos.push({
+              id: videoId,
+              title: videoRecord.get("title"),
+              src: videoRecord.get("src"),
+              type: videoType,
+              styles: videoStyles.length > 0 ? videoStyles : undefined,
+              taggedWinners: taggedUsers.taggedWinners || undefined,
+              taggedDancers: taggedUsers.taggedDancers || undefined,
+              taggedChoreographers: taggedUsers.taggedChoreographers || undefined,
+              taggedTeachers: taggedUsers.taggedTeachers || undefined,
+            });
+          }
+
+          bracketList.push({
+            id: bracketId,
+            title: bracketTitle,
+            videos: bracketVideos,
+          });
+        }
+      }
+
+      // Build section object
+      const section: Section = {
+        id: sectionId,
+        title: sectionTitle,
+        description: sectionDescription as string | undefined,
+        sectionType: "Battle",
+        hasBrackets,
+        videos: sectionVideos,
+        brackets: bracketList,
+        styles: styles.length > 0 ? styles : undefined,
+        applyStylesToVideos: sectionRecord.get("applyStylesToVideos") || false,
+      };
+
+      // For TV, we want to flatten sections with brackets into individual entries
+      // Each bracket becomes a separate "section" entry
+      if (hasBrackets && bracketList.length > 0) {
+        for (const bracket of bracketList) {
+          result.push({
+            section: {
+              ...section,
+              id: `${sectionId}-${bracket.id}`,
+              title: `${sectionTitle} - ${bracket.title}`,
+              hasBrackets: false,
+              videos: bracket.videos,
+              brackets: [],
+            },
+            eventId,
+            eventTitle,
+            bracket,
+          });
+        }
+      } else {
+        result.push({
+          section,
+          eventId,
+          eventTitle,
+        });
+      }
     }
 
     return result;
