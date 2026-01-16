@@ -532,7 +532,7 @@ export function TVClient({ initialSections }: TVClientProps) {
             enabled: true,
             onlyInViewport: false,
           }}
-          className="w-full h-full"
+          className="w-full aspect-video"
           speed={300}
         >
           {sections.map((sectionData, sectionIdx) => {
@@ -569,11 +569,7 @@ export function TVClient({ initialSections }: TVClientProps) {
                     const isCurrentVideo =
                       currentVideo && currentVideo.video.id === video.id;
                     return (
-                      <SwiperSlide
-                        key={video.id}
-                        className="flex items-center justify-center"
-                      >
-                        <p className="text-white text-sm">{videoIdx}</p>
+                      <SwiperSlide key={video.id}>
                         {isCurrentVideo ? (
                           <VideoPlayer
                             ref={playerRef}

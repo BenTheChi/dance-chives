@@ -8,6 +8,7 @@ import {
   forwardRef,
 } from "react";
 import { extractYouTubeVideoId } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 // YouTube Player API types
 declare global {
@@ -59,6 +60,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       videoId
     );
     const [isVisible, setIsVisible] = useState(false);
+    const [playerState, setPlayerState] = useState<number>(-1); // -1 = unstarted
     const currentTimeRef = useRef<number>(0);
 
     // Intersection Observer for lazy loading
@@ -144,6 +146,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       }
 
       setIsPlayerReady(false);
+      setPlayerState(-1); // Reset to unstarted state
 
       // Create new player
       playerRef.current = new window.YT.Player(containerRef.current, {
@@ -166,7 +169,9 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             onReady?.();
           },
           onStateChange: (event: any) => {
-            onStateChange?.(event.data);
+            const state = event.data;
+            setPlayerState(state);
+            onStateChange?.(state);
           },
           onError: (event: any) => {
             onError?.(event.data);
@@ -315,6 +320,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
               });
               setCurrentVideoId(newVideoId);
               setIsPlayerReady(false); // Reset ready state when loading new video
+              setPlayerState(-1); // Reset to unstarted state
             } catch (e) {
               console.error("Error loading video:", e);
             }
@@ -366,9 +372,23 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       );
     }
 
+    // Determine if we should show loading spinner
+    // Show spinner when: player not ready, unstarted, buffering, or cued
+    const isLoading =
+      !isPlayerReady || // Player not ready yet
+      playerState === -1 || // Unstarted
+      playerState === 3 || // Buffering
+      playerState === 5; // Cued
+
     return (
       <div className={`relative w-full h-full ${className || ""}`}>
         <div ref={containerRef} className="w-full h-full" />
+        {/* Loading Spinner Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+            <Loader2 className="w-12 h-12 text-white animate-spin" />
+          </div>
+        )}
       </div>
     );
   }
