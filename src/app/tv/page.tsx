@@ -1,17 +1,46 @@
-import { getAllBattleSections } from "@/db/queries/event";
+"use client";
+
 import { TVClient } from "./tv-client";
 import { HideFooterOnMobile } from "./hide-footer";
 import { AppNavbar } from "@/components/AppNavbar";
-import type { Metadata } from "next";
+import { useEffect, useState } from "react";
 
-export const metadata: Metadata = {
-  title: "Chives TV | Dance Chives",
-  description: "Watch battle videos in an infinite scroll interface",
-};
+export default function TVPage() {
+  const [initialSections, setInitialSections] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-export default async function TVPage() {
-  // Fetch initial battle sections
-  const initialSections = await getAllBattleSections(10, 0);
+  useEffect(() => {
+    // Fetch initial sections on client side
+    const fetchInitialSections = async () => {
+      try {
+        const response = await fetch("/api/tv/sections?offset=0&limit=10");
+        if (response.ok) {
+          const sections = await response.json();
+          setInitialSections(sections);
+        }
+      } catch (error) {
+        console.error("Error fetching initial sections:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialSections();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <>
+        <HideFooterOnMobile />
+        <div className="flex flex-col">
+          <AppNavbar />
+          <div className="relative w-full tv-container-height flex items-center justify-center">
+            <div>Loading...</div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -19,7 +48,6 @@ export default async function TVPage() {
       <div className="flex flex-col">
         <AppNavbar />
         <div className="relative w-full tv-container-height">
-          {/* TV Client takes full available height (viewport minus navbar h-18 = 4.5rem) */}
           <TVClient initialSections={initialSections} />
         </div>
       </div>
