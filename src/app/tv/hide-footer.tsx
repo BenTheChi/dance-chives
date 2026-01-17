@@ -4,28 +4,15 @@ import { useEffect } from "react";
 
 export function HideFooterOnMobile() {
   useEffect(() => {
-    // Hide footer on mobile
+    // Hide footer on mobile and in landscape using Tailwind classes
     const footer = document.querySelector("footer");
     if (footer) {
-      const mediaQuery = window.matchMedia("(max-width: 768px)");
-      
-      const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
-        if (e.matches) {
-          footer.style.display = "none";
-        } else {
-          footer.style.display = "";
-        }
-      };
-
-      // Set initial state
-      handleMediaChange(mediaQuery);
-
-      // Listen for changes
-      mediaQuery.addEventListener("change", handleMediaChange);
+      // Add Tailwind classes: hidden on mobile (default), visible on md and up, but hidden in landscape
+      footer.classList.add("hidden", "md:block", "landscape:hidden");
 
       return () => {
-        mediaQuery.removeEventListener("change", handleMediaChange);
-        footer.style.display = "";
+        // Cleanup: remove the classes when component unmounts
+        footer.classList.remove("hidden", "md:block", "landscape:hidden");
       };
     }
   }, []);

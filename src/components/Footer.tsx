@@ -2,9 +2,13 @@ import Link from "next/link";
 import { ReportLink } from "./report/ReportLink";
 import { MaintenanceLink } from "./MaintenanceLink";
 
-export function Footer() {
+export function Footer({ className }: { className?: string }) {
   return (
-    <footer className="bg-primary border-t-4 border-primary-light relative z-10 mt-6">
+    <footer
+      className={`bg-primary border-t-4 border-primary-light relative z-10 mt-6 ${
+        className || ""
+      }`}
+    >
       <div>
         <div className="flex flex-col-reverse md:flex-row justify-between gap-6 flex-1">
           {/* Links Section - Left Side */}

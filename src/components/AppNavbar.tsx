@@ -58,7 +58,7 @@ export function AppNavbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex relative">
+    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex relative landscape:hidden">
       {/* Left section: Logo */}
       <div className="flex items-center gap-2 flex-shrink-0 z-10">
         <Link
