@@ -650,15 +650,4 @@ span {
     animation: rock 2s ease-in-out infinite;
     transform-origin: center center;
   }
-
-  /* TV page height - only apply in portrait mode */
-  .tv-container-height {
-    height: calc(100vh - 4.5rem);
-  }
-
-  @media (orientation: landscape) {
-    .tv-container-height {
-      height: auto;
-    }
-  }
 }
