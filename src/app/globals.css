@@ -658,7 +658,7 @@ span {
 
   @media (orientation: landscape) {
     .tv-container-height {
-      height: 90vh;
+      height: 100vh;
     }
   }
 }
