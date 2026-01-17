@@ -17,11 +17,9 @@ export default async function TVPage() {
     <>
       <HideFooterOnMobile />
       <div className="flex flex-col">
-        <div className=" landscape:hidden">
-          <AppNavbar />
-        </div>
+        <AppNavbar />
         <div
-          className="relative w-full landscape:!h-full"
+          className="relative w-full"
           style={{ height: "calc(100vh - 4.5rem)" }}
         >
           {/* TV Client takes full available height (viewport minus navbar h-18 = 4.5rem) */}
