@@ -11,7 +11,7 @@ import { VideoControls } from "@/components/tv/VideoControls";
 import { VideoInfoDialog } from "@/components/tv/VideoInfoDialog";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
-import { Info } from "lucide-react";
+import { Info, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 
@@ -655,7 +655,7 @@ export function TVClient({ initialSections }: TVClientProps) {
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden bg-black">
       {/* Header */}
-      <div className="flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 shrink-0">
+      <div className="flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 shrink-0 landscape:hidden">
         <div className="flex justify-between items-center mb-2">
           <h2 className="!text-lg">{currentVideo?.eventTitle}</h2>
           <Button
@@ -786,7 +786,7 @@ export function TVClient({ initialSections }: TVClientProps) {
 
                             {/* Timeline Slider - Overlay on video */}
                             <div
-                              className={`absolute bottom-0 left-0 right-0 px-4 pb-4 flex items-center gap-3 pointer-events-none transition-opacity duration-700 z-20 ${
+                              className={`absolute bottom-0 left-0 right-0 px-4 pb-4 flex items-center gap-3 pointer-events-none transition-opacity duration-700 z-20 landscape:mx-10 ${
                                 isSliderVisible ? "opacity-100" : "opacity-0"
                               }`}
                             >
@@ -825,7 +825,7 @@ export function TVClient({ initialSections }: TVClientProps) {
         </Swiper>
 
         {/* Controls */}
-        <div className="w-full pb-4 flex flex-col gap-2">
+        <div className="w-full pb-4 flex flex-col gap-2 landscape:hidden">
           <VideoControls
             onUp={() => navigateVideo(-1)}
             onDown={() => navigateVideo(1)}
@@ -842,8 +842,36 @@ export function TVClient({ initialSections }: TVClientProps) {
         </div>
       </div>
 
+      {/* Info Button - Top right on landscape only */}
+      <div className="absolute top-3 right-3 z-40 hidden landscape:block">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsInfoDialogOpen(true)}
+          className="text-white hover:bg-white/20"
+          aria-label="Video information"
+        >
+          <Info className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Mute Link - Bottom right on landscape only */}
+      <div className="absolute bottom-3 right-3 z-40 hidden landscape:block">
+        <button
+          onClick={toggleMute}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          aria-label={isMuted ? "Unmute" : "Mute"}
+        >
+          {isMuted ? (
+            <VolumeX className="h-6 w-6 text-red-400 hover:text-red-300 transition-colors" />
+          ) : (
+            <Volume2 className="h-6 w-6 text-purple-400 hover:text-purple-300 transition-colors" />
+          )}
+        </button>
+      </div>
+
       {/* Filters Link - Bottom Right */}
-      <div className="absolute bottom-4 right-4 z-40">
+      <div className="absolute bottom-4 right-4 z-40 landscape:hidden">
         <Link
           href="#"
           className="text-white/70 hover:text-white underline text-sm"
