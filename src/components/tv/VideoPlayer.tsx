@@ -8,7 +8,7 @@ import {
   forwardRef,
 } from "react";
 import { extractYouTubeVideoId } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import Image from "next/image";
 
 // YouTube Player API types
 declare global {
@@ -25,8 +25,11 @@ export interface VideoPlayerRef {
   unmute: () => void;
   isMuted: () => boolean;
   getCurrentTime: () => number;
+  getDuration: () => number;
+  seekTo: (seconds: number) => void;
   loadVideoById: (videoId: string) => void;
   getPlayerState: () => number;
+  isLoading: () => boolean;
 }
 
 interface VideoPlayerProps {
@@ -62,6 +65,22 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const [isVisible, setIsVisible] = useState(false);
     const [playerState, setPlayerState] = useState<number>(-1); // -1 = unstarted
     const currentTimeRef = useRef<number>(0);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Check if mobile device
+    useEffect(() => {
+      const checkMobile = () => {
+        setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+      };
+
+      checkMobile();
+      const mediaQuery = window.matchMedia("(max-width: 768px)");
+      mediaQuery.addEventListener("change", checkMobile);
+
+      return () => {
+        mediaQuery.removeEventListener("change", checkMobile);
+      };
+    }, []);
 
     // Intersection Observer for lazy loading
     useEffect(() => {
@@ -158,6 +177,9 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           mute: muted ? 1 : 0,
           playsinline: 1,
           enablejsapi: 1,
+          controls: 0,
+          fs: 0,
+          rel: 0,
           origin: typeof window !== "undefined" ? window.location.origin : "",
         },
         events: {
@@ -215,22 +237,29 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       }
     }, [videoId, currentVideoId]);
 
-    // Track current time periodically
+    // Track current time periodically - this keeps the ref updated
     useEffect(() => {
-      if (!playerRef.current) return;
+      if (!isPlayerReady) return;
 
       const interval = setInterval(() => {
         try {
-          if (playerRef.current && playerRef.current.getCurrentTime) {
-            currentTimeRef.current = playerRef.current.getCurrentTime();
+          if (
+            playerRef.current &&
+            isPlayerReady &&
+            typeof playerRef.current.getCurrentTime === "function"
+          ) {
+            const time = playerRef.current.getCurrentTime();
+            if (time >= 0 && isFinite(time) && !isNaN(time)) {
+              currentTimeRef.current = time;
+            }
           }
         } catch (e) {
           // Ignore errors
         }
-      }, 1000); // Update every second
+      }, 250); // Update 4 times per second for smooth tracking
 
       return () => clearInterval(interval);
-    }, [playerRef.current]);
+    }, [isPlayerReady]);
 
     // Expose player methods via ref
     useImperativeHandle(
@@ -303,7 +332,50 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           return true;
         },
         getCurrentTime: () => {
+          if (
+            playerRef.current &&
+            isPlayerReady &&
+            typeof playerRef.current.getCurrentTime === "function"
+          ) {
+            try {
+              const time = playerRef.current.getCurrentTime();
+              if (time >= 0 && isFinite(time)) {
+                currentTimeRef.current = time;
+                return time;
+              }
+            } catch (e) {
+              // Fall back to ref value
+            }
+          }
           return currentTimeRef.current;
+        },
+        getDuration: () => {
+          if (
+            playerRef.current &&
+            isPlayerReady &&
+            typeof playerRef.current.getDuration === "function"
+          ) {
+            try {
+              return playerRef.current.getDuration();
+            } catch (e) {
+              return 0;
+            }
+          }
+          return 0;
+        },
+        seekTo: (seconds: number) => {
+          if (
+            playerRef.current &&
+            isPlayerReady &&
+            typeof playerRef.current.seekTo === "function"
+          ) {
+            try {
+              playerRef.current.seekTo(seconds, true);
+              currentTimeRef.current = seconds;
+            } catch (e) {
+              console.error("Error seeking video:", e);
+            }
+          }
         },
         loadVideoById: (newVideoId: string) => {
           const youtubeId = extractYouTubeVideoId(newVideoId);
@@ -343,8 +415,16 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           }
           return -1;
         },
+        isLoading: () => {
+          // Player not ready yet, unstarted, or cued
+          return (
+            !isPlayerReady ||
+            playerState === -1 || // Unstarted
+            playerState === 5 // Cued
+          );
+        },
       }),
-      [isPlayerReady]
+      [isPlayerReady, playerState]
     );
 
     if (!currentVideoId) {
@@ -377,18 +457,30 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const isLoading =
       !isPlayerReady || // Player not ready yet
       playerState === -1 || // Unstarted
-      playerState === 3 || // Buffering
       playerState === 5; // Cued
 
     return (
-      <div className={`relative w-full h-full ${className || ""}`}>
-        <div ref={containerRef} className="w-full h-full" />
+      <div className={`relative w-full h-full ${className || ""} `}>
+        <div
+          ref={containerRef}
+          className={`w-full h-full ${
+            isMobile ? "pointer-events-none" : "pointer-events-auto"
+          } `}
+        />
         {/* Loading Spinner Overlay */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
-            <Loader2 className="w-12 h-12 text-white animate-spin" />
-          </div>
-        )}
+        <div
+          className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-secondary-dark transition-opacity duration-700 ${
+            isLoading ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <Image
+            src="/Dancechives_Icon_Color_onDark.svg"
+            alt="Loading"
+            width={100}
+            height={100}
+            className="animate-rock mt-5"
+          />
+        </div>
       </div>
     );
   }
