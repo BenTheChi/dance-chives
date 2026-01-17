@@ -647,6 +647,6 @@ span {
 
   .animate-rock {
     animation: rock 2s ease-in-out infinite;
-    transform-origin: center bottom;
+    transform-origin: center center;
   }
 }
