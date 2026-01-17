@@ -32,6 +32,7 @@ const SECTION_TYPE_COLORS: Record<
   },
   Competition: { bg: "rgba(255, 232, 29, 0.8)", text: "white" },
   Performance: { bg: "rgba(74, 144, 226, 0.85)", text: "white" },
+  Exhibition: { bg: "rgba(255, 140, 0, 0.85)", text: "white" },
   Showcase: { bg: "rgba(123, 104, 238, 0.85)", text: "white" },
   Class: { bg: "rgba(80, 200, 120, 0.85)", text: "white" },
   Session: { bg: "rgba(0, 206, 209, 0.85)", text: "white" },

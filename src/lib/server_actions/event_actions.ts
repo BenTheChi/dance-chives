@@ -434,6 +434,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       if (hasBrackets) {
         return {
           ...sectionWithoutBrackets,
+          sectionType: section.sectionType as Section["sectionType"],
           description: section.description ?? "",
           hasBrackets: true,
           brackets: section.brackets,
@@ -444,6 +445,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       } else {
         return {
           ...sectionWithoutBrackets,
+          sectionType: section.sectionType as Section["sectionType"],
           description: section.description ?? "",
           hasBrackets: false,
           brackets: [],
@@ -1190,6 +1192,7 @@ export async function editEvent(
       if (hasBrackets) {
         return {
           ...sectionWithoutBrackets,
+          sectionType: section.sectionType as Section["sectionType"],
           description: section.description ?? "",
           hasBrackets: true,
           brackets: section.brackets,
@@ -1200,6 +1203,7 @@ export async function editEvent(
       } else {
         return {
           ...sectionWithoutBrackets,
+          sectionType: section.sectionType as Section["sectionType"],
           description: section.description ?? "",
           hasBrackets: false,
           brackets: [],

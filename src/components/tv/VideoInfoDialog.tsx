@@ -10,8 +10,8 @@ import {
 import { StyleBadge } from "@/components/ui/style-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { Button } from "@/components/ui/button";
-import { Video, Bracket } from "@/types/video";
-import { Section } from "@/types/event";
+import { Video } from "@/types/video";
+import { Section, Bracket } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
 import Link from "next/link";
 import { Tag } from "lucide-react";
