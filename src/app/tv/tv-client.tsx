@@ -697,7 +697,7 @@ export function TVClient({ initialSections }: TVClientProps) {
           simulateTouch={true}
           touchStartPreventDefault={false}
           touchReleaseOnEdges={true}
-          className="w-full aspect-video mb-5"
+          className="w-full aspect-video"
           speed={300}
         >
           {sections.map((sectionData, sectionIdx) => {
@@ -757,7 +757,10 @@ export function TVClient({ initialSections }: TVClientProps) {
                               className="absolute inset-0 z-10"
                               onTouchStart={showSlider}
                               onMouseDown={showSlider}
-                              onClick={showSlider}
+                              onClick={(e) => {
+                                showSlider();
+                                togglePlayPause();
+                              }}
                             />
 
                             {/* Video Title - Overlay on top */}

@@ -638,16 +638,15 @@ span {
   @keyframes rock {
     0%,
     100% {
-      transform: rotate(-10deg);
+      transform: rotate(-8deg);
     }
     50% {
-      transform: rotate(10deg);
+      transform: rotate(8deg);
     }
   }
 
   .animate-rock {
     animation: rock 2s ease-in-out infinite;
     transform-origin: center bottom;
-    transform: rotate(-10deg);
   }
 }
