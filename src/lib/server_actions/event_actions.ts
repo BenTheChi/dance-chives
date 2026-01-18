@@ -878,7 +878,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
     revalidatePath(`/events/${result.id}`);
     // Revalidate TV page
     revalidatePath("/tv");
-    revalidateTag("tv-sections");
+    revalidateTag("tv-sections", "");
 
     const newCitySlug = getCitySlug(props.eventDetails.city as City);
     revalidateCalendarForSlugs([newCitySlug]);
@@ -1678,7 +1678,7 @@ export async function editEvent(
       revalidatePath(`/events/${eventId}`);
       // Revalidate TV page
       revalidatePath("/tv");
-      revalidateTag("tv-sections");
+      revalidateTag("tv-sections", "");
 
       // Revalidate profiles for all users involved in role changes
       const allAffectedUserIds = new Set([
@@ -2602,7 +2602,7 @@ export async function updateEventCreator(
     revalidatePath(`/events/${eventId}`);
     // Revalidate TV page
     revalidatePath("/tv");
-    revalidateTag("tv-sections");
+    revalidateTag("tv-sections", "");
 
     return {
       status: 200,
@@ -2683,7 +2683,7 @@ export async function updateEventStatus(
     revalidatePath(`/events/${eventId}`);
     // Revalidate TV page
     revalidatePath("/tv");
-    revalidateTag("tv-sections");
+    revalidateTag("tv-sections", "");
     const citySlug = getCitySlug(event.eventDetails.city as City | undefined);
     revalidateCalendarForSlugs([citySlug]);
 

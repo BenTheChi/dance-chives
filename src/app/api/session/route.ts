@@ -94,7 +94,7 @@ export async function DELETE(request: NextRequest) {
     revalidatePath(`/events/${id}`);
     // Revalidate TV page
     revalidatePath("/tv");
-    revalidateTag("tv-sections");
+    revalidateTag("tv-sections", "");
 
     const citySlug = getCitySlug(
       eventData.eventDetails.city as City | undefined

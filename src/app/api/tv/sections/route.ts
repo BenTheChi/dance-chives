@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAllBattleSections } from "@/db/queries/event";
 import { unstable_cache } from "next/cache";
 
+// Force dynamic rendering since we use searchParams
+export const dynamic = 'force-dynamic';
+
 // Revalidation time: 1 hour
 export const revalidate = 3600;
 
