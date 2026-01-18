@@ -4730,6 +4730,7 @@ export async function getAllBattleSections(
     const offsetInt = int(Math.floor(offset));
 
     // Get battle sections with pagination
+    // Convert MM/DD/YYYY to YYYY-MM-DD for proper date sorting
     const sectionsResult = await session.run(
       `
       MATCH (e:Event)
@@ -4740,8 +4741,15 @@ export async function getAllBattleSections(
       } OR EXISTS {
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
       }
-      WITH e, s
-      ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
+      WITH e, s,
+           CASE 
+             WHEN e.startDate IS NOT NULL AND e.startDate CONTAINS '/' THEN
+               split(e.startDate, '/')[2] + '-' + 
+               CASE WHEN size(split(e.startDate, '/')[0]) = 1 THEN '0' + split(e.startDate, '/')[0] ELSE split(e.startDate, '/')[0] END + '-' + 
+               CASE WHEN size(split(e.startDate, '/')[1]) = 1 THEN '0' + split(e.startDate, '/')[1] ELSE split(e.startDate, '/')[1] END
+             ELSE null
+           END as sortableDate
+      ORDER BY sortableDate DESC, e.updatedAt DESC, e.createdAt DESC, s.title
       SKIP $offset
       LIMIT $limit
       RETURN e.id as eventId, e.title as eventTitle, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription
