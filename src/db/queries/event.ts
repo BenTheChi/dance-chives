@@ -4729,8 +4729,9 @@ export async function getAllBattleSections(
     const limitInt = int(Math.floor(limit));
     const offsetInt = int(Math.floor(offset));
 
-    // Get battle sections with pagination
-    // Convert MM/DD/YYYY to YYYY-MM-DD for proper date sorting
+    // Get battle sections - we'll sort by event date in JS
+    // Fetch more than needed since we'll sort and paginate in JS
+    const fetchLimit = Math.max(limit + offset, 100); // Fetch at least 100 or enough for pagination
     const sectionsResult = await session.run(
       `
       MATCH (e:Event)
@@ -4741,32 +4742,34 @@ export async function getAllBattleSections(
       } OR EXISTS {
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
       }
-      WITH e, s,
-           CASE 
-             WHEN e.startDate IS NOT NULL AND e.startDate CONTAINS '/' THEN
-               split(e.startDate, '/')[2] + '-' + 
-               CASE WHEN size(split(e.startDate, '/')[0]) = 1 THEN '0' + split(e.startDate, '/')[0] ELSE split(e.startDate, '/')[0] END + '-' + 
-               CASE WHEN size(split(e.startDate, '/')[1]) = 1 THEN '0' + split(e.startDate, '/')[1] ELSE split(e.startDate, '/')[1] END
-             ELSE null
-           END as sortableDate
-      ORDER BY sortableDate DESC, e.updatedAt DESC, e.createdAt DESC, s.title
-      SKIP $offset
+      WITH e, s
+      ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
       LIMIT $limit
-      RETURN e.id as eventId, e.title as eventTitle, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription
+      RETURN e.id as eventId, e.title as eventTitle, e.startDate as eventStartDate, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription
       `,
-      { limit: limitInt, offset: offsetInt }
+      { limit: int(fetchLimit) }
     );
 
-    const result: Array<{
+    type ResultItem = {
       section: Section;
       eventId: string;
       eventTitle: string;
       bracket?: Bracket;
-    }> = [];
+      _sortKey?: {
+        eventStartDate: string | null;
+        eventUpdatedAt: string | null;
+        eventCreatedAt: string | null;
+      };
+    };
+
+    const result: ResultItem[] = [];
 
     for (const record of sectionsResult.records) {
       const eventId = record.get("eventId");
       const eventTitle = record.get("eventTitle");
+      const eventStartDate = record.get("eventStartDate") as string | null;
+      const eventUpdatedAt = record.get("eventUpdatedAt") as string | null;
+      const eventCreatedAt = record.get("eventCreatedAt") as string | null;
       const sectionId = record.get("sectionId");
       const sectionTitle = record.get("sectionTitle");
       const sectionDescription = record.get("sectionDescription");
@@ -5077,6 +5080,11 @@ export async function getAllBattleSections(
             eventId,
             eventTitle,
             bracket,
+            _sortKey: {
+              eventStartDate,
+              eventUpdatedAt,
+              eventCreatedAt,
+            },
           });
         }
       } else {
@@ -5084,11 +5092,58 @@ export async function getAllBattleSections(
           section,
           eventId,
           eventTitle,
+          _sortKey: {
+            eventStartDate,
+            eventUpdatedAt,
+            eventCreatedAt,
+          },
         });
       }
     }
 
-    return result;
+    // Helper function to convert MM/DD/YYYY to YYYY-MM-DD for sorting
+    const convertDateForSorting = (dateStr: string | null): string => {
+      if (!dateStr || !dateStr.includes('/')) return '';
+      const parts = dateStr.split('/');
+      if (parts.length !== 3) return '';
+      const [month, day, year] = parts;
+      const paddedMonth = month.padStart(2, '0');
+      const paddedDay = day.padStart(2, '0');
+      return `${year}-${paddedMonth}-${paddedDay}`;
+    };
+
+    // Sort by event date (most recent first), then by updatedAt, createdAt
+    result.sort((a, b) => {
+      if (!a._sortKey || !b._sortKey) return 0;
+      
+      const dateA = convertDateForSorting(a._sortKey.eventStartDate);
+      const dateB = convertDateForSorting(b._sortKey.eventStartDate);
+      
+      // Compare by date first (most recent first)
+      if (dateA && dateB) {
+        const comparison = dateB.localeCompare(dateA); // DESC order
+        if (comparison !== 0) return comparison;
+      } else if (dateA) return -1; // A has date, B doesn't - A comes first
+      else if (dateB) return 1; // B has date, A doesn't - B comes first
+      
+      // Fallback to updatedAt
+      if (a._sortKey.eventUpdatedAt && b._sortKey.eventUpdatedAt) {
+        const updatedComparison = (b._sortKey.eventUpdatedAt as string).localeCompare(a._sortKey.eventUpdatedAt as string);
+        if (updatedComparison !== 0) return updatedComparison;
+      }
+      
+      // Fallback to createdAt
+      if (a._sortKey.eventCreatedAt && b._sortKey.eventCreatedAt) {
+        return (b._sortKey.eventCreatedAt as string).localeCompare(a._sortKey.eventCreatedAt as string);
+      }
+      
+      return 0;
+    });
+
+    // Remove sort keys before returning and apply pagination
+    return result
+      .map(({ _sortKey, ...rest }) => rest)
+      .slice(offset, offset + limit);
   } finally {
     await session.close();
   }

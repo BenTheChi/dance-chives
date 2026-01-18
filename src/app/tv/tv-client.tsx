@@ -193,6 +193,10 @@ export function TVClient({ initialSections }: TVClientProps) {
   const sliderValue = duration > 0 ? [clampedTime] : [0];
   const maxValue = duration > 0 ? duration : 100;
 
+  useEffect(() => {
+    console.log("sections", sections);
+  }, [sections]);
+
   // Show slider and reset fade-out timer
   const showSlider = useCallback(() => {
     setIsSliderVisible(true);
