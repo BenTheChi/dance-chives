@@ -449,14 +449,16 @@ span {
     }
   }
 
+  /* Style for "x more" display - same on all screen sizes */
+  .rbc-show-more {
+    font-size: 11px !important;
+    color: var(--primary-color-light) !important;
+    width: 100% !important;
+    min-height: 20px !important;
+  }
+
   /* Additional constraints for very small screens */
   @media (max-width: 540px) {
-    .rbc-show-more {
-      font-size: 11px !important;
-      color: var(--primary-color-light) !important;
-      width: 100% !important;
-      min-height: 20px !important;
-    }
 
     .rbc-calendar,
     .rbc-month-view,
