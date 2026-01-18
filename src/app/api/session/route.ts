@@ -6,7 +6,7 @@ import { canDeleteEvent } from "@/lib/utils/auth-utils";
 import { isTeamMember } from "@/db/queries/team-member";
 import { prisma } from "@/lib/primsa";
 import { searchEvents, searchAccessibleEvents } from "@/db/queries/event";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { City } from "@/types/city";
 import {
   getCitySlug,
@@ -92,6 +92,9 @@ export async function DELETE(request: NextRequest) {
     revalidatePath("/events");
     // Also revalidate the individual event page (in case it was cached)
     revalidatePath(`/events/${id}`);
+    // Revalidate TV page
+    revalidatePath("/tv");
+    revalidateTag("tv-sections");
 
     const citySlug = getCitySlug(
       eventData.eventDetails.city as City | undefined

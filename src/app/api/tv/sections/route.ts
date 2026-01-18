@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllBattleSections } from "@/db/queries/event";
+import { unstable_cache } from "next/cache";
 
-// Disable caching for this route
-export const dynamic = 'force-dynamic';
+// Revalidation time: 1 hour
+export const revalidate = 3600;
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,13 +11,23 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
 
-    const sections = await getAllBattleSections(limit, offset);
+    // Use unstable_cache with tag for ISR
+    const getCachedSections = unstable_cache(
+      async (limit: number, offset: number) => {
+        return await getAllBattleSections(limit, offset);
+      },
+      [`tv-sections-${limit}-${offset}`],
+      {
+        revalidate: 3600, // 1 hour
+        tags: ["tv-sections"],
+      }
+    );
+
+    const sections = await getCachedSections(limit, offset);
 
     return NextResponse.json(sections, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
       },
     });
   } catch (error) {

@@ -5,16 +5,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { Button } from "@/components/ui/button";
 import { Video } from "@/types/video";
 import { Section, Bracket } from "@/types/event";
 import { UserSearchItem } from "@/types/user";
+import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
 import Link from "next/link";
-import { Tag } from "lucide-react";
 
 interface VideoInfoDialogProps {
   isOpen: boolean;
@@ -46,49 +44,30 @@ export function VideoInfoDialog({
   // Get styles (from video or section)
   const styles = video.styles || section.styles || [];
 
-  // Build tag URL - link to the event section page with video context
-  const tagUrl = `/events/${eventId}/sections/${section.id}${bracket ? `?bracket=${bracket.id}` : ""}#video-${video.id}`;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{video.title}</DialogTitle>
-          <DialogDescription className="space-y-2">
-            <div>
-              <p className="font-semibold text-foreground">Event</p>
-              <p className="text-sm">{eventTitle}</p>
-            </div>
-            <div>
-              <p className="font-semibold text-foreground">Section</p>
-              <p className="text-sm">{section.title}</p>
-            </div>
-            {bracket && (
-              <div>
-                <p className="font-semibold text-foreground">Bracket</p>
-                <p className="text-sm">{bracket.title}</p>
-              </div>
-            )}
-          </DialogDescription>
+          <div className="flex flex-col items-start">
+          <h2 className="!text-lg font-bold">{video.title}</h2>
+              <Link href={`/events/${eventId}`} className="text-primary-light hover:text-primary-light/80 underline">  {eventTitle}</Link>
+              <div className="flex flex-row gap-1 items-center">
+              <Link href={`/events/${eventId}/sections/${section.id}`} className="text-primary-light hover:text-primary-light/80 underline"> {section.title}</Link>
+              {bracket && (
+               <p>- {bracket.title}</p>
+            )}</div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {/* Style Badges */}
-          {styles.length > 0 && (
-            <div>
-              <p className="font-semibold text-sm mb-2">Styles</p>
-              <div className="flex flex-wrap gap-2">
-                {styles.map((style) => (
-                  <StyleBadge key={style} style={style} asLink />
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Tagged Dancers */}
           {allTaggedDancers.length > 0 && (
-            <div>
-              <p className="font-semibold text-sm mb-2">Tagged Dancers</p>
+            <div className="flex flex-col justify-center items-center">
+              <div className="flex flex-wrap gap-2">
+                <p className="font-semibold text-sm mb-2">Dancers</p>          
+                <TagUserCircleButton eventId={eventId} target="video" targetId={video.id} size="sm" />
+              </div>
+
               <div className="flex flex-wrap gap-3">
                 {allTaggedDancers.map((dancer) => (
                   <div key={dancer.id || dancer.username} className="flex flex-col items-center gap-1">
@@ -100,9 +79,10 @@ export function VideoInfoDialog({
                       showHoverCard
                       city="" // Will be populated from hover card
                       styles={[]}
+                      isSmall={true}
                     />
-                    <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">
-                      {dancer.displayName || dancer.username}
+                    <span className="!text-xs text-muted-foreground text-center max-w-[60px] truncate">
+                      {dancer.displayName}
                     </span>
                   </div>
                 ))}
@@ -110,15 +90,27 @@ export function VideoInfoDialog({
             </div>
           )}
 
-          {/* Tag Button */}
-          <div className="pt-4 border-t">
-            <Link href={tagUrl} onClick={onClose}>
-              <Button variant="outline" className="w-full">
-                <Tag className="w-4 h-4 mr-2" />
-                Tag Dancers
-              </Button>
-            </Link>
-          </div>
+          {/* Tagged Winners */}
+          {video.taggedWinners && video.taggedWinners.length > 0 && (
+            <div className="flex flex-col justify-center items-center">
+              <div className="flex flex-wrap gap-2">
+                <p className="font-semibold text-sm mb-2">Winners</p>
+                {video.taggedWinners.map((winner) => (
+                  <div key={winner.id || winner.username} className="flex flex-col items-center gap-1">
+                    <UserAvatar
+                      username={winner.username}
+                      displayName={winner.displayName}
+                      avatar={winner.avatar}
+                      image={winner.image}
+                      city=""
+                      styles={[]}
+                      isSmall={true}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

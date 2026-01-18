@@ -1,6 +1,6 @@
 "use server";
 import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import sharp from "sharp";
 import {
   deleteFromR2,
@@ -876,6 +876,9 @@ export async function addEvent(props: addEventProps): Promise<response> {
     revalidatePath("/events");
     // Also revalidate the individual event page
     revalidatePath(`/events/${result.id}`);
+    // Revalidate TV page
+    revalidatePath("/tv");
+    revalidateTag("tv-sections");
 
     const newCitySlug = getCitySlug(props.eventDetails.city as City);
     revalidateCalendarForSlugs([newCitySlug]);
@@ -1673,6 +1676,9 @@ export async function editEvent(
       revalidatePath("/events");
       // Also revalidate the individual event page
       revalidatePath(`/events/${eventId}`);
+      // Revalidate TV page
+      revalidatePath("/tv");
+      revalidateTag("tv-sections");
 
       // Revalidate profiles for all users involved in role changes
       const allAffectedUserIds = new Set([
@@ -2594,6 +2600,9 @@ export async function updateEventCreator(
     // Revalidate events list page and individual event page
     revalidatePath("/events");
     revalidatePath(`/events/${eventId}`);
+    // Revalidate TV page
+    revalidatePath("/tv");
+    revalidateTag("tv-sections");
 
     return {
       status: 200,
@@ -2672,6 +2681,9 @@ export async function updateEventStatus(
     revalidatePath("/events");
     // Also revalidate the individual event page
     revalidatePath(`/events/${eventId}`);
+    // Revalidate TV page
+    revalidatePath("/tv");
+    revalidateTag("tv-sections");
     const citySlug = getCitySlug(event.eventDetails.city as City | undefined);
     revalidateCalendarForSlugs([citySlug]);
 

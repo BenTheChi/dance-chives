@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import {
   signupUser,
   getUser,
@@ -1813,6 +1813,9 @@ export async function deleteUserAccount(
       }
       // Revalidate events list page after deleting all events
       revalidatePath("/events");
+      // Revalidate TV page
+      revalidatePath("/tv");
+      revalidateTag("tv-sections");
     } else {
       // Transfer events to admin user
       await transferUserEventsToAdmin(targetUserId);
