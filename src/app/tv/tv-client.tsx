@@ -876,7 +876,7 @@ export function TVClient({ initialSections }: TVClientProps) {
   );
 
   return (
-    <div className="relative w-full max-w-5xl flex flex-col justify-center overflow-hidden bg-black tv-container-height pt-10">
+    <div className="relative w-full max-w-5xl flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0 pt-10">
       {/* Header */}
       <div className="flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 shrink-0 landscape:hidden">
         <div className="flex justify-between items-baseline mb-2">
@@ -928,7 +928,7 @@ export function TVClient({ initialSections }: TVClientProps) {
 
       {/* Main Content Area - Flex layout */}
       <div className="flex-1 flex flex-col items-center min-h-0 relative z-30">
-        <div className="my-5 w-full">
+        <div className="w-full">
           <Swiper
             direction="horizontal"
             modules={[Navigation, Keyboard]}

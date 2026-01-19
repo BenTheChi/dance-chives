@@ -68,7 +68,7 @@ export function VideoControls({
       className={cn("flex flex-col items-center gap-3 w-full px-4", className)}
     >
       {/* Control Buttons */}
-      <div className="flex flex-col sm:flex-row sm:justify-between items-center sm:items-start gap-3 w-full px-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between items-center sm:items-start gap-3 w-full px-6 pt-3">
         {/* Video Reacts - Visible on sm screens and above */}
         {videoId && onReact && onReset && (
           <div className="hidden sm:block">
