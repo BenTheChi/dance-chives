@@ -104,7 +104,7 @@ export default function RootLayout({
       <head>
         <meta
           name="viewport"
-          content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
+          content="minimum-scale=1, maximum-scale=1, initial-scale=1, width=device-width, user-scalable=no, viewport-fit=cover"
         />
         {/* MailerLite Universal */}
         <script
