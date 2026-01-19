@@ -261,7 +261,7 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
   if (shouldHideButton) return null;
 
   return (
-    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+    <div className="flex flex-col gap-2">
       <CirclePlusButton
         size={size}
         onClick={(e) => {

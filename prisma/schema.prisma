@@ -46,6 +46,9 @@ model User {
 
   // Magic link tokens
   magicLinkTokens MagicLinkToken[]
+
+  // Video reacts
+  reacts React[]
 }
 
 model Account {
@@ -401,4 +404,19 @@ model Job {
   @@index([createdAt])
   @@index([expiresAt])
   @@map("jobs")
+}
+
+model React {
+  userId  String
+  videoId String
+  fire    Int @default(0) // timestamp in seconds, 0 means not used
+  clap    Int @default(0) // timestamp in seconds, 0 means not used
+  wow     Int @default(0) // timestamp in seconds, 0 means not used
+  heart   Int @default(0) // timestamp in seconds, 0 means not used
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])
+  @@index([videoId])
+  @@map("reacts")
 }

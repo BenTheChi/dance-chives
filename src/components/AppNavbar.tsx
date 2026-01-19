@@ -58,7 +58,7 @@ export function AppNavbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 border-primary-light border-b-3 bg-primary flex relative landscape:hidden">
+    <nav className="sticky top-0 z-100 border-primary-light border-b-3 bg-primary flex relative landscape:hidden">
       {/* Left section: Logo */}
       <div className="flex items-center gap-2 flex-shrink-0 z-10">
         <Link
@@ -98,7 +98,7 @@ export function AppNavbar() {
                 isActive &&
                   "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-primary-light text-primary",
                 !isActive &&
-                  "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark"
+                  "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark",
               )}
             >
               {item.title}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ReportDialog } from "./ReportDialog";
 import { useCurrentUrl } from "@/hooks/useCurrentUrl";
 
@@ -35,6 +35,7 @@ export function ReportLink({
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="bg-primary-dark">
+          <DialogTitle className="sr-only">Send Report</DialogTitle>
           <ReportDialog
             open={isOpen}
             onOpenChange={setIsOpen}

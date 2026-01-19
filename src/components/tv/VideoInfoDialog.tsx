@@ -22,6 +22,8 @@ interface VideoInfoDialogProps {
   section: Section;
   bracket?: Bracket;
   video: Video;
+  city?: string;
+  eventDate?: string; // Formatted as "Mar 2026"
 }
 
 export function VideoInfoDialog({
@@ -32,6 +34,8 @@ export function VideoInfoDialog({
   section,
   bracket,
   video,
+  city,
+  eventDate,
 }: VideoInfoDialogProps) {
   // Get all tagged dancers (combine all tag types)
   const allTaggedDancers: UserSearchItem[] = [
@@ -48,14 +52,31 @@ export function VideoInfoDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex flex-col items-start">
-          <h2 className="!text-lg font-bold">{video.title}</h2>
-              <Link href={`/events/${eventId}`} className="text-primary-light hover:text-primary-light/80 underline">  {eventTitle}</Link>
-              <div className="flex flex-row gap-1 items-center">
-              <Link href={`/events/${eventId}/sections/${section.id}`} className="text-primary-light hover:text-primary-light/80 underline"> {section.title}</Link>
-              {bracket && (
-               <p>- {bracket.title}</p>
-            )}</div>
+          <DialogTitle className="sr-only">{video.title}</DialogTitle>
+          <div className="flex flex-col items-center">
+            <Link
+              href={`/events/${eventId}`}
+              className="text-primary-light hover:text-primary-light/80 underline"
+            >
+              {" "}
+              <h2 className="!text-lg font-bold">{eventTitle}</h2>
+            </Link>
+            <div className="flex flex-row gap-2 items-baseline">
+              {city && <p>{city}</p>}
+              {eventDate && <p>- {eventDate}</p>}
+            </div>
+            <br />
+            <Link
+              href={`/events/${eventId}/sections/${section.id}`}
+              className="text-primary-light hover:text-primary-light/80 underline"
+            >
+              {" "}
+              <h3 className="!text-lg font-bold">{section.title}</h3>
+            </Link>
+            <div className="flex flex-row gap-1 items-baseline">
+              {bracket && <p> {bracket.title}</p>}
+              <p>- {video.title}</p>
+            </div>
           </div>
         </DialogHeader>
 
@@ -64,13 +85,21 @@ export function VideoInfoDialog({
           {allTaggedDancers.length > 0 && (
             <div className="flex flex-col justify-center items-center">
               <div className="flex flex-wrap gap-2">
-                <p className="font-semibold text-sm mb-2">Dancers</p>          
-                <TagUserCircleButton eventId={eventId} target="video" targetId={video.id} size="sm" />
+                <p className="font-semibold text-sm mb-2">Dancers</p>
+                <TagUserCircleButton
+                  eventId={eventId}
+                  target="video"
+                  targetId={video.id}
+                  size="sm"
+                />
               </div>
 
               <div className="flex flex-wrap gap-3">
                 {allTaggedDancers.map((dancer) => (
-                  <div key={dancer.id || dancer.username} className="flex flex-col items-center gap-1">
+                  <div
+                    key={dancer.id || dancer.username}
+                    className="flex flex-col items-center gap-1 rounded-full"
+                  >
                     <UserAvatar
                       username={dancer.username}
                       displayName={dancer.displayName}
@@ -96,7 +125,10 @@ export function VideoInfoDialog({
               <div className="flex flex-wrap gap-2">
                 <p className="font-semibold text-sm mb-2">Winners</p>
                 {video.taggedWinners.map((winner) => (
-                  <div key={winner.id || winner.username} className="flex flex-col items-center gap-1">
+                  <div
+                    key={winner.id || winner.username}
+                    className="flex flex-col items-center gap-1"
+                  >
                     <UserAvatar
                       username={winner.username}
                       displayName={winner.displayName}

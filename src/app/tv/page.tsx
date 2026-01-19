@@ -17,7 +17,7 @@ async function getCachedSections(limit: number, offset: number) {
     {
       revalidate: 3600,
       tags: ["tv-sections"],
-    }
+    },
   )();
 }
 
@@ -30,7 +30,7 @@ export default async function TVPage() {
       <HideFooterOnMobile />
       <div className="flex flex-col">
         <AppNavbar />
-        <div className="relative w-full tv-container-height">
+        <div className="relative w-full flex flex-col items-center justify-center bg-black">
           <TVClient initialSections={initialSections} />
         </div>
       </div>

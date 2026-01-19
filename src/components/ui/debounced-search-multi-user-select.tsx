@@ -115,14 +115,21 @@ export function DebouncedSearchMultiUserSelect({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest(".debounced-search-multi-user-select")) {
+      // Check if click is outside the component
+      // Don't close if clicking on Radix UI Select dropdown (it uses a portal)
+      const isWithinComponent = target.closest(".debounced-search-multi-user-select");
+      const isSelectContent = target.closest("[data-slot='select-content']");
+      
+      // Only close if click is truly outside both this component and any Select dropdowns
+      if (!isWithinComponent && !isSelectContent) {
         setOpen(false);
         setSelectedValue("");
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // Use capture phase to catch events before they're stopped by stopPropagation
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () => document.removeEventListener("mousedown", handleClickOutside, true);
   }, []);
 
   useEffect(() => {

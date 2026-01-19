@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AuthorizationChanger } from "@/components/admin/AuthorizationChanger";
 import { AuthorizationRequestForm } from "@/components/admin/AuthorizationRequestForm";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Image from "next/image";
 
 interface DashboardUser {
@@ -483,6 +483,9 @@ export function DashboardClient({
                     onOpenChange={setIsUpgradeDialogOpen}
                   >
                     <DialogContent>
+                      <DialogTitle className="sr-only">
+                        Request Authorization Upgrade
+                      </DialogTitle>
                       <AuthorizationRequestForm
                         currentUserAuthLevel={user.auth ?? 0}
                         onRequestSubmitted={async () => {

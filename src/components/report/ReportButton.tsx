@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ReportDialog } from "./ReportDialog";
 import { useCurrentUrl } from "@/hooks/useCurrentUrl";
 
@@ -40,6 +40,7 @@ export function ReportButton({
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="bg-primary-dark">
+          <DialogTitle className="sr-only">Send Report</DialogTitle>
           <ReportDialog
             open={isOpen}
             onOpenChange={setIsOpen}

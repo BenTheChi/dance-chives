@@ -217,7 +217,9 @@
     border: 4px solid var(--secondary-color-light);
     border-radius: 2px;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
   }
   .section-card:hover {
     transform: scale(1.05);
@@ -459,7 +461,6 @@ span {
 
   /* Additional constraints for very small screens */
   @media (max-width: 540px) {
-
     .rbc-calendar,
     .rbc-month-view,
     .rbc-time-view,
@@ -655,7 +656,7 @@ span {
 
   /* TV page height - only apply in portrait mode */
   .tv-container-height {
-    height: calc(100vh - 4.5rem);
+    height: calc(100vh - 4rem);
   }
 
   @media (orientation: landscape) {

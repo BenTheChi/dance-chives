@@ -14,6 +14,14 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VideoReacts } from "./VideoReacts";
+
+interface UserReacts {
+  fire: number;
+  clap: number;
+  wow: number;
+  heart: number;
+}
 
 interface VideoControlsProps {
   onUp: () => void;
@@ -28,6 +36,12 @@ interface VideoControlsProps {
   isPlaying: boolean;
   isMuted: boolean;
   className?: string;
+  // Video Reacts props
+  videoId?: string;
+  currentTime?: number;
+  onReact?: (type: string, timestamp: number) => void;
+  userReacts?: UserReacts | null;
+  onReset?: () => void;
 }
 
 export function VideoControls({
@@ -43,13 +57,31 @@ export function VideoControls({
   isPlaying,
   isMuted,
   className,
+  videoId,
+  currentTime = 0,
+  onReact,
+  userReacts,
+  onReset,
 }: VideoControlsProps) {
   return (
     <div
       className={cn("flex flex-col items-center gap-3 w-full px-4", className)}
     >
       {/* Control Buttons */}
-      <div className="flex flex-col items-center gap-3 w-full">
+      <div className="flex flex-col sm:flex-row sm:justify-between items-center sm:items-start gap-3 w-full px-6">
+        {/* Video Reacts - Visible on sm screens and above */}
+        {videoId && onReact && onReset && (
+          <div className="hidden sm:block">
+            <VideoReacts
+              videoId={videoId}
+              currentTime={currentTime}
+              onReact={onReact}
+              userReacts={userReacts || null}
+              onReset={onReset}
+            />
+          </div>
+        )}
+
         {/* Playback Controls - Visible on All Devices */}
         <div className="flex items-center justify-center gap-4">
           <button

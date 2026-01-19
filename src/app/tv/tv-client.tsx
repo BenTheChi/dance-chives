@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Keyboard } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
@@ -9,11 +9,14 @@ import "swiper/css/navigation";
 import { VideoPlayer, VideoPlayerRef } from "@/components/tv/VideoPlayer";
 import { VideoControls } from "@/components/tv/VideoControls";
 import { VideoInfoDialog } from "@/components/tv/VideoInfoDialog";
+import { VideoReacts } from "@/components/tv/VideoReacts";
+import { ReactAnimation } from "@/components/tv/ReactAnimation";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
 import { Info, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useSession } from "next-auth/react";
 
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -24,6 +27,8 @@ interface TVClientProps {
     eventId: string;
     eventTitle: string;
     bracket?: Bracket;
+    city?: string;
+    eventDate?: string; // Formatted as "Mar 2026"
   }>;
 }
 
@@ -33,16 +38,9 @@ interface CombinedSectionData {
   eventId: string;
   eventTitle: string;
   bracket?: Bracket;
+  city?: string;
+  eventDate?: string; // Formatted as "Mar 2026"
   videoToBracketMap: Map<string, Bracket>; // Map video ID to bracket
-}
-
-// Flattened video with metadata
-interface VideoWithMetadata {
-  video: Video;
-  eventId: string;
-  eventTitle: string;
-  section: Section;
-  bracket?: Bracket;
 }
 
 // Combine brackets within the same section
@@ -53,7 +51,9 @@ function combineBracketSections(
     eventId: string;
     eventTitle: string;
     bracket?: Bracket;
-  }>
+    city?: string;
+    eventDate?: string; // Formatted as "Mar 2026"
+  }>,
 ): CombinedSectionData[] {
   const result: CombinedSectionData[] = [];
   // Group by original section (eventId + original section ID)
@@ -65,6 +65,8 @@ function combineBracketSections(
       eventId: string;
       eventTitle: string;
       bracket?: Bracket;
+      city?: string;
+      eventDate?: string; // Formatted as "Mar 2026"
     }>
   >();
 
@@ -141,6 +143,8 @@ function combineBracketSections(
       eventId: firstSection.eventId,
       eventTitle: firstSection.eventTitle,
       bracket: undefined, // Section-level bracket is undefined since we have multiple brackets
+      city: firstSection.city,
+      eventDate: firstSection.eventDate, // Pass through eventDate
       videoToBracketMap,
     });
   }
@@ -159,7 +163,7 @@ function formatTime(seconds: number): string {
 export function TVClient({ initialSections }: TVClientProps) {
   // Combine bracket sections on initialization and when new sections are loaded
   const [sections, setSections] = useState<CombinedSectionData[]>(() =>
-    combineBracketSections(initialSections)
+    combineBracketSections(initialSections),
   );
   // Track all loaded sections (before combining) for pagination
   const [allLoadedSections, setAllLoadedSections] = useState(initialSections);
@@ -177,6 +181,11 @@ export function TVClient({ initialSections }: TVClientProps) {
   const [duration, setDuration] = useState(0);
   const [isSliderVisible, setIsSliderVisible] = useState(true);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 0,
+  );
   const lastAutoplayedVideoRef = useRef<string | null>(null);
   const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPlayingRef = useRef(isPlaying);
@@ -184,18 +193,34 @@ export function TVClient({ initialSections }: TVClientProps) {
   const mainSwiperRef = useRef<SwiperType | null>(null);
   const videoSwipersRef = useRef<Map<number, SwiperType>>(new Map());
   const playerRef = useRef<VideoPlayerRef>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // React state management
+  const { data: session } = useSession();
+  const [videoReacts, setVideoReacts] = useState<
+    Map<
+      string,
+      Array<{
+        userId: string;
+        fire: number;
+        clap: number;
+        wow: number;
+        heart: number;
+      }>
+    >
+  >(new Map());
+  const triggeredReacts = useRef<Map<string, Set<string>>>(new Map());
+
+  const MAX_CACHED_VIDEOS = 10;
 
   // Clamp currentTime to valid range and ensure slider value is always valid
   const clampedTime = Math.max(
     0,
-    Math.min(currentTime, duration > 0 ? duration : currentTime)
+    Math.min(currentTime, duration > 0 ? duration : currentTime),
   );
   const sliderValue = duration > 0 ? [clampedTime] : [0];
   const maxValue = duration > 0 ? duration : 100;
-
-  useEffect(() => {
-    console.log("sections", sections);
-  }, [sections]);
 
   // Show slider and reset fade-out timer
   const showSlider = useCallback(() => {
@@ -219,6 +244,8 @@ export function TVClient({ initialSections }: TVClientProps) {
     eventTitle: string;
     section: Section;
     bracket?: Bracket;
+    city?: string;
+    eventDate?: string; // Formatted as "Mar 2026"
   } | null => {
     if (sections.length === 0) return null;
     const section = sections[currentSectionIndex];
@@ -240,10 +267,188 @@ export function TVClient({ initialSections }: TVClientProps) {
       eventTitle: section.eventTitle,
       section: section.section,
       bracket,
+      city: section.city,
+      eventDate: section.eventDate,
     };
   }, [sections, currentSectionIndex, currentVideoIndex]);
 
   const currentVideo = getCurrentVideo();
+
+  // Memoize user reacts for current video
+  const userReacts = useMemo(() => {
+    if (!currentVideo || !session?.user?.id) return null;
+    const allReacts = videoReacts.get(currentVideo.video.id) || [];
+    const userReact = allReacts.find((r) => r.userId === session.user.id);
+    if (!userReact) return null;
+    return {
+      fire: userReact.fire,
+      clap: userReact.clap,
+      wow: userReact.wow,
+      heart: userReact.heart,
+    };
+  }, [videoReacts, currentVideo?.video.id, session?.user?.id]);
+
+  // Memoize sorted reacts for current video (for animation triggering)
+  const sortedReacts = useMemo(() => {
+    if (!currentVideo) return [];
+    const allReacts = videoReacts.get(currentVideo.video.id) || [];
+    const reactItems: Array<{ type: string; timestamp: number; id: string }> =
+      [];
+
+    for (const react of allReacts) {
+      if (react.fire > 0) {
+        reactItems.push({
+          type: "fire",
+          timestamp: react.fire,
+          id: `${react.userId}-fire`,
+        });
+      }
+      if (react.clap > 0) {
+        reactItems.push({
+          type: "clap",
+          timestamp: react.clap,
+          id: `${react.userId}-clap`,
+        });
+      }
+      if (react.wow > 0) {
+        reactItems.push({
+          type: "wow",
+          timestamp: react.wow,
+          id: `${react.userId}-wow`,
+        });
+      }
+      if (react.heart > 0) {
+        reactItems.push({
+          type: "heart",
+          timestamp: react.heart,
+          id: `${react.userId}-heart`,
+        });
+      }
+    }
+
+    return reactItems.sort((a, b) => a.timestamp - b.timestamp);
+  }, [videoReacts, currentVideo?.video.id]);
+
+  // Fetch reacts for a video
+  const fetchReacts = useCallback(async (videoId: string) => {
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const response = await fetch(`/api/tv/videos/${videoId}/reacts`, {
+        signal: abortControllerRef.current.signal,
+      });
+      if (response.ok) {
+        const reacts = await response.json();
+        setVideoReacts((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(videoId, reacts);
+
+          // Enforce memory limit
+          if (newMap.size > MAX_CACHED_VIDEOS) {
+            const firstKey = newMap.keys().next().value;
+            if (firstKey) {
+              newMap.delete(firstKey);
+            }
+          }
+
+          return newMap;
+        });
+      }
+    } catch (error: any) {
+      if (error.name !== "AbortError") {
+        console.error("Error fetching reacts:", error);
+      }
+    }
+  }, []);
+
+  // Fetch reacts when video changes
+  useEffect(() => {
+    const videoId = currentVideo?.video.id;
+    if (videoId) {
+      fetchReacts(videoId);
+      // Clear triggered reacts for new video
+      triggeredReacts.current.delete(videoId);
+    }
+  }, [currentVideo?.video.id, fetchReacts]);
+
+  // Handle user react
+  const handleReact = useCallback(
+    async (type: string, timestamp: number) => {
+      if (!currentVideo || !session?.user?.id) return;
+
+      const videoId = currentVideo.video.id;
+      const userId = session.user.id;
+
+      // Optimistic update
+      setVideoReacts((prev) => {
+        const newMap = new Map(prev);
+        const existingReacts = newMap.get(videoId) || [];
+        const existingUserReact = existingReacts.find(
+          (r) => r.userId === userId,
+        );
+
+        if (existingUserReact) {
+          const updatedReacts = existingReacts.map((r) =>
+            r.userId === userId ? { ...r, [type]: timestamp } : r,
+          );
+          newMap.set(videoId, updatedReacts);
+        } else {
+          newMap.set(videoId, [
+            ...existingReacts,
+            {
+              userId,
+              fire: type === "fire" ? timestamp : 0,
+              clap: type === "clap" ? timestamp : 0,
+              wow: type === "wow" ? timestamp : 0,
+              heart: type === "heart" ? timestamp : 0,
+            },
+          ]);
+        }
+
+        return newMap;
+      });
+
+      // Fire and forget API call
+      fetch(`/api/tv/videos/${videoId}/reacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, timestamp }),
+      }).catch((error) => {
+        console.error("Error saving react:", error);
+      });
+    },
+    [currentVideo, session?.user?.id],
+  );
+
+  // Handle reset
+  const handleReset = useCallback(async () => {
+    if (!currentVideo || !session?.user?.id) return;
+
+    const videoId = currentVideo.video.id;
+    const userId = session.user.id;
+
+    // Optimistic update
+    setVideoReacts((prev) => {
+      const newMap = new Map(prev);
+      const existingReacts = newMap.get(videoId) || [];
+      const updatedReacts = existingReacts.map((r) =>
+        r.userId === userId ? { ...r, fire: 0, clap: 0, wow: 0, heart: 0 } : r,
+      );
+      newMap.set(videoId, updatedReacts);
+      return newMap;
+    });
+
+    // Fire and forget API call
+    fetch(`/api/tv/videos/${videoId}/reacts`, {
+      method: "DELETE",
+    }).catch((error) => {
+      console.error("Error resetting react:", error);
+    });
+  }, [currentVideo, session?.user?.id]);
 
   // Load more sections when near bottom
   const loadMoreSections = useCallback(async () => {
@@ -252,7 +457,7 @@ export function TVClient({ initialSections }: TVClientProps) {
 
     try {
       const response = await fetch(
-        `/api/tv/sections?offset=${allLoadedSections.length}&limit=10`
+        `/api/tv/sections?offset=${allLoadedSections.length}&limit=10`,
       );
       if (response.ok) {
         const newSections = await response.json();
@@ -299,23 +504,18 @@ export function TVClient({ initialSections }: TVClientProps) {
           playerRef.current.loadVideoById(video.src);
           playerRef.current.mute();
           setIsMuted(true);
-          // Only autoplay if this video hasn't been seen before
-          if (lastAutoplayedVideoRef.current !== video.id) {
-            setTimeout(() => {
-              if (
-                playerRef.current &&
-                lastAutoplayedVideoRef.current !== video.id
-              ) {
-                playerRef.current.playVideo();
-                setIsPlaying(true);
-                lastAutoplayedVideoRef.current = video.id;
-              }
-            }, 300);
-          }
+          // Always autoplay after manual navigation
+          setTimeout(() => {
+            if (playerRef.current) {
+              playerRef.current.playVideo();
+              setIsPlaying(true);
+              lastAutoplayedVideoRef.current = video.id;
+            }
+          }, 300);
         }
       }
     },
-    [sections, currentVideoIndex, loadMoreSections, showSlider]
+    [sections, currentVideoIndex, loadMoreSections, showSlider],
   );
 
   // Handle video swiper (within section) slide change
@@ -336,16 +536,14 @@ export function TVClient({ initialSections }: TVClientProps) {
           playerRef.current.loadVideoById(video.src);
           playerRef.current.mute();
           setIsMuted(true);
-          // Only autoplay if this video hasn't been seen before
-          if (lastAutoplayedVideoRef.current !== video.id) {
-            playerRef.current.playVideo();
-            setIsPlaying(true);
-            lastAutoplayedVideoRef.current = video.id;
-          }
+          // Always autoplay after manual navigation
+          playerRef.current.playVideo();
+          setIsPlaying(true);
+          lastAutoplayedVideoRef.current = video.id;
         }
       }
     },
-    [sections, showSlider]
+    [sections, showSlider],
   );
 
   // Keyboard navigation
@@ -411,13 +609,13 @@ export function TVClient({ initialSections }: TVClientProps) {
           // Normal navigation: clamp to bounds
           newIndex = Math.max(
             0,
-            Math.min(videos.length - 1, currentIdx + direction)
+            Math.min(videos.length - 1, currentIdx + direction),
           );
         }
         videoSwiper.slideTo(newIndex);
       }
     },
-    [sections, currentSectionIndex, currentVideoIndex]
+    [sections, currentSectionIndex, currentVideoIndex],
   );
 
   const navigateSection = useCallback(
@@ -425,12 +623,12 @@ export function TVClient({ initialSections }: TVClientProps) {
       if (mainSwiperRef.current) {
         const newIndex = Math.max(
           0,
-          Math.min(sections.length - 1, currentSectionIndex + direction)
+          Math.min(sections.length - 1, currentSectionIndex + direction),
         );
         mainSwiperRef.current.slideTo(newIndex);
       }
     },
-    [sections.length, currentSectionIndex]
+    [sections.length, currentSectionIndex],
   );
 
   const togglePlayPause = useCallback(() => {
@@ -572,6 +770,38 @@ export function TVClient({ initialSections }: TVClientProps) {
     };
   }, []);
 
+  // Detect landscape mode
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(
+      "(orientation: landscape) and (max-height: 500px)",
+    );
+    const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsLandscape(e.matches);
+    };
+    handleChange(mediaQuery); // Set initial value
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  // Detect mobile device and window width
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      setWindowWidth(width);
+      const isMobileDevice =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        ) || width < 768;
+      setIsMobile(isMobileDevice);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Calculate if emojis should be large: width > sm breakpoint (640px) AND not in landscape mode
+  const useLargeEmojis = windowWidth > 640 && !isLandscape;
+
   const handleSeek = useCallback(
     (value: number[]) => {
       if (playerRef.current && value.length > 0) {
@@ -579,9 +809,14 @@ export function TVClient({ initialSections }: TVClientProps) {
         playerRef.current.seekTo(seekTime);
         setCurrentTime(seekTime);
         showSlider(); // Show slider when interacting
+
+        // Clear triggered reacts to allow retriggering when seeking
+        if (currentVideo?.video.id) {
+          triggeredReacts.current.delete(currentVideo.video.id);
+        }
       }
     },
-    [showSlider]
+    [showSlider, currentVideo?.video.id],
   );
 
   const handleRewind = useCallback(() => {
@@ -637,40 +872,39 @@ export function TVClient({ initialSections }: TVClientProps) {
         }
       }
     },
-    [showSlider, navigateVideo]
+    [showSlider, navigateVideo],
   );
 
-  // Get bracket name for display - use currentVideo to ensure accuracy
-  const getBracketName = () => {
-    if (currentVideo?.bracket) {
-      return currentVideo.bracket.title;
-    }
-    return null;
-  };
-
-  if (sections.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-foreground">No battle sections available</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden bg-black">
+    <div className="relative w-full h-full max-w-6xl flex flex-col overflow-hidden bg-black tv-container-height">
       {/* Header */}
       <div className="flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 shrink-0 landscape:hidden">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="!text-lg">{currentVideo?.eventTitle}</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsInfoDialogOpen(true)}
-            className="text-white hover:bg-white/20"
-            aria-label="Video information"
-          >
-            <Info className="h-5 w-5" />
-          </Button>
+        <div className="flex justify-between items-baseline mb-2">
+          <div className="flex flex-col items-start">
+            <h2 className="!text-lg">{currentVideo?.eventTitle}</h2>
+            {currentVideo?.eventDate && <p>{currentVideo.eventDate}</p>}
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsInfoDialogOpen(true)}
+              className="text-white hover:bg-white/20"
+              aria-label="Video information"
+            >
+              <Info className="h-5 w-5" />
+            </Button>
+            <Link
+              href="#"
+              className="text-white/70 hover:text-white underline text-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                // Placeholder for future filters
+              }}
+            >
+              Filters
+            </Link>
+          </div>
         </div>
         <div className="flex justify-between gap-2">
           {currentVideo?.video.styles &&
@@ -680,153 +914,184 @@ export function TVClient({ initialSections }: TVClientProps) {
         </div>
       </div>
 
+      {/* React Animation Overlay - Outside SwiperSlide when not in landscape */}
+      {currentVideo && !isLandscape && isMobile && (
+        <ReactAnimation
+          reacts={sortedReacts}
+          currentTime={currentTime}
+          videoContainerRef={videoContainerRef as any}
+          isPlaying={isPlaying}
+          animationType="slide"
+          useLargeEmojis={useLargeEmojis}
+        />
+      )}
+
       {/* Main Content Area - Flex layout */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 min-h-0 relative z-30">
-        <Swiper
-          direction="horizontal"
-          modules={[Navigation, Keyboard]}
-          onSwiper={(swiper) => {
-            mainSwiperRef.current = swiper;
-          }}
-          onSlideChange={handleSectionChange}
-          slidesPerView={1}
-          spaceBetween={0}
-          centeredSlides={true}
-          keyboard={{
-            enabled: true,
-            onlyInViewport: false,
-          }}
-          touchEventsTarget="container"
-          allowTouchMove={true}
-          simulateTouch={true}
-          touchStartPreventDefault={false}
-          touchReleaseOnEdges={true}
-          className="w-full aspect-video"
-          speed={300}
-        >
-          {sections.map((sectionData, sectionIdx) => {
-            const videos = sectionData.section.videos;
-            if (videos.length === 0) return null;
+      <div className="flex-1 flex flex-col items-center min-h-0 relative z-30">
+        <div className="flex-1 flex items-center justify-center w-full">
+          <Swiper
+            direction="horizontal"
+            modules={[Navigation, Keyboard]}
+            onSwiper={(swiper) => {
+              mainSwiperRef.current = swiper;
+            }}
+            onSlideChange={handleSectionChange}
+            slidesPerView={1}
+            spaceBetween={0}
+            centeredSlides={true}
+            keyboard={{
+              enabled: true,
+              onlyInViewport: false,
+            }}
+            touchEventsTarget="container"
+            allowTouchMove={true}
+            simulateTouch={true}
+            touchStartPreventDefault={false}
+            touchReleaseOnEdges={true}
+            className="w-full aspect-video"
+            speed={300}
+          >
+            {sections.map((sectionData, sectionIdx) => {
+              const videos = sectionData.section.videos;
+              if (videos.length === 0) return null;
 
-            return (
-              <SwiperSlide
-                key={sectionData.section.id}
-                className="flex items-center justify-center"
-              >
-                {/* Nested Swiper - Vertical Videos (all brackets combined) */}
-                <Swiper
-                  direction="vertical"
-                  modules={[Navigation, Keyboard]}
-                  onSwiper={(swiper) => {
-                    videoSwipersRef.current.set(sectionIdx, swiper);
-                  }}
-                  onSlideChange={(swiper) => {
-                    handleVideoChange(sectionIdx, swiper);
-                  }}
-                  slidesPerView={1}
-                  spaceBetween={0}
-                  centeredSlides={true}
-                  keyboard={{
-                    enabled: true,
-                    onlyInViewport: false,
-                  }}
-                  touchEventsTarget="container"
-                  allowTouchMove={true}
-                  simulateTouch={true}
-                  touchStartPreventDefault={false}
-                  touchReleaseOnEdges={true}
-                  className="w-full h-full"
-                  speed={300}
+              return (
+                <SwiperSlide
+                  key={sectionData.section.id}
+                  className="flex items-center justify-center"
                 >
-                  {videos.map((video, videoIdx) => {
-                    // Only render VideoPlayer for the current video to enable lazy loading
-                    const isCurrentVideo =
-                      currentVideo && currentVideo.video.id === video.id;
-                    return (
-                      <SwiperSlide key={video.id} className="relative">
-                        {isCurrentVideo ? (
-                          <>
-                            <VideoPlayer
-                              ref={playerRef}
-                              videoId={currentVideo.video.src}
-                              autoplay={true}
-                              muted={true}
-                              onReady={handlePlayerReady}
-                              onStateChange={handlePlayerStateChange}
-                              className="w-full aspect-video"
-                            />
-
-                            {/* Tap interaction overlay */}
-                            <div
-                              className="absolute inset-0 z-10"
-                              onTouchStart={showSlider}
-                              onMouseDown={showSlider}
-                              onClick={(e) => {
-                                showSlider();
-                                togglePlayPause();
-                              }}
-                            />
-
-                            {/* Video Title - Overlay on top */}
-                            <h3
-                              className={`absolute top-0 left-0 right-0 text-center z-30 pointer-events-none transition-opacity duration-700 py-2 ${
-                                isSliderVisible ? "opacity-100" : "opacity-0"
-                              }`}
-                            >
-                              <a
-                                href={currentVideo.video.src}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-white hover:text-primary-light underline transition-colors pointer-events-auto font-bold"
+                  {/* Nested Swiper - Vertical Videos (all brackets combined) */}
+                  <Swiper
+                    direction="vertical"
+                    modules={[Navigation, Keyboard]}
+                    onSwiper={(swiper) => {
+                      videoSwipersRef.current.set(sectionIdx, swiper);
+                    }}
+                    onSlideChange={(swiper) => {
+                      handleVideoChange(sectionIdx, swiper);
+                    }}
+                    slidesPerView={1}
+                    spaceBetween={0}
+                    centeredSlides={true}
+                    keyboard={{
+                      enabled: true,
+                      onlyInViewport: false,
+                    }}
+                    touchEventsTarget="container"
+                    allowTouchMove={true}
+                    simulateTouch={true}
+                    touchStartPreventDefault={false}
+                    touchReleaseOnEdges={true}
+                    className="w-full h-full"
+                    speed={300}
+                  >
+                    {videos.map((video, videoIdx) => {
+                      // Only render VideoPlayer for the current video to enable lazy loading
+                      const isCurrentVideo =
+                        currentVideo && currentVideo.video.id === video.id;
+                      return (
+                        <SwiperSlide key={video.id} className="relative">
+                          {isCurrentVideo ? (
+                            <>
+                              <div
+                                ref={videoContainerRef}
+                                className="relative w-full aspect-video"
                               >
-                                {currentVideo.video.title}
-                              </a>
-                              <br />
-                              <span className="!text-sm no-underline">
-                                {currentVideo?.bracket &&
-                                  currentVideo.bracket.title}
-                              </span>
-                            </h3>
-
-                            {/* Timeline Slider - Overlay on video */}
-                            <div
-                              className={`absolute bottom-0 left-0 right-0 px-4 pb-4 flex items-center gap-3 pointer-events-none transition-opacity duration-700 z-20 landscape:mx-10 ${
-                                isSliderVisible ? "opacity-100" : "opacity-0"
-                              }`}
-                            >
-                              <span className="text-white text-xs font-mono min-w-[3.5rem] text-right tabular-nums pointer-events-auto">
-                                {formatTime(clampedTime)}
-                              </span>
-                              <div className="flex-1 pointer-events-auto">
-                                <Slider
-                                  value={sliderValue}
-                                  min={0}
-                                  max={maxValue}
-                                  step={0.1}
-                                  onValueChange={handleSeek}
-                                  disabled={duration === 0}
+                                <VideoPlayer
+                                  ref={playerRef}
+                                  videoId={currentVideo.video.src}
+                                  autoplay={true}
+                                  muted={true}
+                                  onReady={handlePlayerReady}
+                                  onStateChange={handlePlayerStateChange}
+                                  className="w-full aspect-video"
                                 />
                               </div>
-                              <span className="text-white text-xs font-mono min-w-[3.5rem] tabular-nums pointer-events-auto">
-                                {formatTime(duration)}
-                              </span>
+
+                              {/* Tap interaction overlay */}
+                              <div
+                                className="absolute inset-0 z-10"
+                                onTouchStart={showSlider}
+                                onMouseDown={showSlider}
+                                onClick={(e) => {
+                                  showSlider();
+                                  togglePlayPause();
+                                }}
+                              />
+
+                              {/* Video Title - Overlay on top */}
+                              <h3
+                                className={`absolute top-2 left-0 right-0 text-center z-30 pointer-events-none transition-opacity duration-700 py-2 ${
+                                  isSliderVisible ? "opacity-100" : "opacity-0"
+                                }`}
+                              >
+                                <a
+                                  href={currentVideo.video.src}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-white hover:text-primary-light underline transition-colors pointer-events-auto font-bold"
+                                >
+                                  {currentVideo.video.title}
+                                </a>
+                                <br />
+                                <span className="!text-sm no-underline">
+                                  {currentVideo?.bracket &&
+                                    currentVideo.bracket.title}
+                                </span>
+                              </h3>
+
+                              {/* Timeline Slider - Overlay on video */}
+                              <div
+                                className={`absolute bottom-0 left-0 right-0 px-4 pb-4 flex items-center gap-3 pointer-events-none transition-opacity duration-700 z-20 landscape:mx-10 ${
+                                  isSliderVisible ? "opacity-100" : "opacity-0"
+                                }`}
+                              >
+                                <span className="text-white text-xs font-mono min-w-[3.5rem] text-right tabular-nums pointer-events-auto">
+                                  {formatTime(clampedTime)}
+                                </span>
+                                <div className="flex-1 pointer-events-auto">
+                                  <Slider
+                                    value={sliderValue}
+                                    min={0}
+                                    max={maxValue}
+                                    step={0.1}
+                                    onValueChange={handleSeek}
+                                    disabled={duration === 0}
+                                  />
+                                </div>
+                                <span className="text-white text-xs font-mono min-w-[3.5rem] tabular-nums pointer-events-auto">
+                                  {formatTime(duration)}
+                                </span>
+                              </div>
+
+                              {/* React Animation Overlay - Inside SwiperSlide when in landscape */}
+                              {(isLandscape || !isMobile) && (
+                                <ReactAnimation
+                                  reacts={sortedReacts}
+                                  currentTime={currentTime}
+                                  videoContainerRef={videoContainerRef as any}
+                                  isPlaying={isPlaying}
+                                  animationType="pop"
+                                  useLargeEmojis={useLargeEmojis}
+                                />
+                              )}
+                            </>
+                          ) : (
+                            <div className="w-full aspect-video bg-black flex items-center justify-center">
+                              <p className="text-white text-sm opacity-50">
+                                {video.title}
+                              </p>
                             </div>
-                          </>
-                        ) : (
-                          <div className="w-full aspect-video bg-black flex items-center justify-center">
-                            <p className="text-white text-sm opacity-50">
-                              {video.title}
-                            </p>
-                          </div>
-                        )}
-                      </SwiperSlide>
-                    );
-                  })}
-                </Swiper>
-              </SwiperSlide>
-            );
-          })}
-        </Swiper>
+                          )}
+                        </SwiperSlide>
+                      );
+                    })}
+                  </Swiper>
+                </SwiperSlide>
+              );
+            })}
+          </Swiper>
+        </div>
 
         {/* Controls */}
         <div className="w-full pb-4 flex flex-col gap-2 landscape:hidden">
@@ -842,7 +1107,24 @@ export function TVClient({ initialSections }: TVClientProps) {
             onRestart={handleRestart}
             isPlaying={isPlaying}
             isMuted={isMuted}
+            videoId={currentVideo?.video.id}
+            currentTime={currentTime}
+            onReact={handleReact}
+            userReacts={userReacts}
+            onReset={handleReset}
           />
+          {/* Video Reacts - Below controls on mobile (only on very small screens) */}
+          {currentVideo && isMobile && (
+            <div className="sm:hidden">
+              <VideoReacts
+                videoId={currentVideo.video.id}
+                currentTime={currentTime}
+                onReact={handleReact}
+                userReacts={userReacts}
+                onReset={handleReset}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -874,19 +1156,18 @@ export function TVClient({ initialSections }: TVClientProps) {
         </button>
       </div>
 
-      {/* Filters Link - Bottom Right */}
-      <div className="absolute bottom-4 right-4 z-40 landscape:hidden">
-        <Link
-          href="#"
-          className="text-white/70 hover:text-white underline text-sm"
-          onClick={(e) => {
-            e.preventDefault();
-            // Placeholder for future filters
-          }}
-        >
-          Filters
-        </Link>
-      </div>
+      {/* Video Reacts - Left side in landscape */}
+      {currentVideo && (
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-40 hidden landscape:block">
+          <VideoReacts
+            videoId={currentVideo.video.id}
+            currentTime={currentTime}
+            onReact={handleReact}
+            userReacts={userReacts}
+            onReset={handleReset}
+          />
+        </div>
+      )}
 
       {/* Info Dialog */}
       {currentVideo && (
@@ -898,6 +1179,8 @@ export function TVClient({ initialSections }: TVClientProps) {
           section={currentVideo.section}
           bracket={currentVideo.bracket}
           video={currentVideo.video}
+          city={currentVideo.city}
+          eventDate={currentVideo.eventDate}
         />
       )}
     </div>
