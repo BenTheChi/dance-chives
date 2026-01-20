@@ -20,7 +20,7 @@ interface UserReacts {
   fire: number;
   clap: number;
   wow: number;
-  heart: number;
+  laugh: number;
 }
 
 interface VideoControlsProps {

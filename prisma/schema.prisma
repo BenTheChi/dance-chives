@@ -412,7 +412,7 @@ model React {
   fire    Int @default(0) // timestamp in seconds, 0 means not used
   clap    Int @default(0) // timestamp in seconds, 0 means not used
   wow     Int @default(0) // timestamp in seconds, 0 means not used
-  heart   Int @default(0) // timestamp in seconds, 0 means not used
+  laugh   Int @default(0) // timestamp in seconds, 0 means not used
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

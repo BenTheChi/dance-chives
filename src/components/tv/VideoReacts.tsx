@@ -17,7 +17,7 @@ interface UserReacts {
   fire: number;
   clap: number;
   wow: number;
-  heart: number;
+  laugh: number;
 }
 
 interface VideoReactsProps {
@@ -34,7 +34,7 @@ const REACT_TYPES = [
   { type: "fire", emoji: "🔥", label: "Fire" },
   { type: "clap", emoji: "👏", label: "Clap" },
   { type: "wow", emoji: "😮", label: "Wow" },
-  { type: "heart", emoji: "❤️", label: "Heart" },
+  { type: "laugh", emoji: "😂", label: "Laugh" },
 ] as const;
 
 export function VideoReacts({
@@ -54,7 +54,7 @@ export function VideoReacts({
     (userReacts.fire > 0 ||
       userReacts.clap > 0 ||
       userReacts.wow > 0 ||
-      userReacts.heart > 0);
+      userReacts.laugh > 0);
 
   // Check if a specific react type has been used
   const isReactUsed = (type: string): boolean => {

@@ -206,7 +206,7 @@ export function TVClient({ initialSections }: TVClientProps) {
         fire: number;
         clap: number;
         wow: number;
-        heart: number;
+        laugh: number;
       }>
     >
   >(new Map());
@@ -284,7 +284,7 @@ export function TVClient({ initialSections }: TVClientProps) {
       fire: userReact.fire,
       clap: userReact.clap,
       wow: userReact.wow,
-      heart: userReact.heart,
+      laugh: userReact.laugh,
     };
   }, [videoReacts, currentVideo?.video.id, session?.user?.id]);
 
@@ -317,11 +317,11 @@ export function TVClient({ initialSections }: TVClientProps) {
           id: `${react.userId}-wow`,
         });
       }
-      if (react.heart > 0) {
+      if (react.laugh > 0) {
         reactItems.push({
-          type: "heart",
-          timestamp: react.heart,
-          id: `${react.userId}-heart`,
+          type: "laugh",
+          timestamp: react.laugh,
+          id: `${react.userId}-laugh`,
         });
       }
     }
@@ -404,7 +404,7 @@ export function TVClient({ initialSections }: TVClientProps) {
               fire: type === "fire" ? timestamp : 0,
               clap: type === "clap" ? timestamp : 0,
               wow: type === "wow" ? timestamp : 0,
-              heart: type === "heart" ? timestamp : 0,
+              laugh: type === "laugh" ? timestamp : 0,
             },
           ]);
         }
@@ -436,7 +436,7 @@ export function TVClient({ initialSections }: TVClientProps) {
       const newMap = new Map(prev);
       const existingReacts = newMap.get(videoId) || [];
       const updatedReacts = existingReacts.map((r) =>
-        r.userId === userId ? { ...r, fire: 0, clap: 0, wow: 0, heart: 0 } : r,
+        r.userId === userId ? { ...r, fire: 0, clap: 0, wow: 0, laugh: 0 } : r,
       );
       newMap.set(videoId, updatedReacts);
       return newMap;

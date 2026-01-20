@@ -26,7 +26,7 @@ const REACT_EMOJIS: Record<string, string> = {
   fire: "🔥",
   clap: "👏",
   wow: "😮",
-  heart: "❤️",
+  laugh: "😂",
 };
 
 const TOLERANCE = 0.5; // ±0.5 seconds tolerance
@@ -203,7 +203,7 @@ export function ReactAnimation({
     <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
       <AnimatePresence>
         {activeAnimations.map((item) => {
-          const emoji = REACT_EMOJIS[item.type] || "❤️";
+          const emoji = REACT_EMOJIS[item.type] || "😂";
 
           if (animationType === "pop") {
             // Pop animation: quickly enter, expand slightly, pause, then fade out

@@ -24,7 +24,7 @@ export async function GET(
         fire: true,
         clap: true,
         wow: true,
-        heart: true,
+        laugh: true,
       },
     });
 
@@ -62,7 +62,7 @@ export async function POST(
           );
         }
 
-        if (!type || !["fire", "clap", "wow", "heart"].includes(type)) {
+        if (!type || !["fire", "clap", "wow", "laugh"].includes(type)) {
           return NextResponse.json(
             { error: "Invalid react type" },
             { status: 400 },
@@ -106,7 +106,7 @@ export async function POST(
               fire: type === "fire" ? timestamp : 0,
               clap: type === "clap" ? timestamp : 0,
               wow: type === "wow" ? timestamp : 0,
-              heart: type === "heart" ? timestamp : 0,
+              laugh: type === "laugh" ? timestamp : 0,
             },
           });
         }
@@ -162,7 +162,7 @@ export async function DELETE(
               fire: 0,
               clap: 0,
               wow: 0,
-              heart: 0,
+              laugh: 0,
             },
           });
         }
