@@ -621,7 +621,13 @@ export function VideoGallery({
         }
       }
     },
-    [sections, currentVideoIndex, loadMoreSections, showSlider, enableUrlRouting],
+    [
+      sections,
+      currentVideoIndex,
+      loadMoreSections,
+      showSlider,
+      enableUrlRouting,
+    ],
   );
 
   // Handle video swiper (within section) slide change
@@ -999,7 +1005,22 @@ export function VideoGallery({
       <div className="flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 shrink-0 landscape:hidden">
         <div className="flex justify-between items-baseline mb-2">
           <div className="flex flex-col items-start">
-            <h2 className="!text-lg">{currentVideo?.eventTitle}</h2>
+            {currentVideo && (
+              <Link
+                href={`/events/${currentVideo.eventId}`}
+                className="!text-lg hover:underline font-semibold"
+              >
+                {currentVideo.eventTitle}
+              </Link>
+            )}
+            {currentVideo && (
+              <Link
+                href={`/events/${currentVideo.eventId}/sections/${currentVideo.section.id}`}
+                className="hover:underline"
+              >
+                {currentVideo.section.title}
+              </Link>
+            )}
             {currentVideo?.eventDate && <p>{currentVideo.eventDate}</p>}
           </div>
           <div className="flex flex-col items-end gap-1">
