@@ -3,6 +3,7 @@
 import { VideoCard } from "@/components/videos/VideoCard";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Video } from "@/types/video";
 
 interface RecentlyAddedVideosProps {
   videos: Array<{
@@ -20,7 +21,7 @@ export function RecentlyAddedVideos({ videos }: RecentlyAddedVideosProps) {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const handleVideoClick = (item: typeof videos[0]) => {
+  const handleVideoClick = (item: (typeof videos)[0]) => {
     router.push(`/watch/${item.eventId}?video=${item.video.id}`);
   };
 
@@ -43,7 +44,6 @@ export function RecentlyAddedVideos({ videos }: RecentlyAddedVideosProps) {
           );
         })}
       </div>
-
     </>
   );
 }
