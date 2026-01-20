@@ -26,7 +26,8 @@ interface VideoReactsProps {
   onReact: (type: string, timestamp: number) => void;
   userReacts: UserReacts | null;
   onReset: () => void;
-
+  showReacts: boolean;
+  onToggleReacts: () => void;
   className?: string;
 }
 
@@ -43,6 +44,8 @@ export function VideoReacts({
   onReact,
   userReacts,
   onReset,
+  showReacts,
+  onToggleReacts,
   className,
 }: VideoReactsProps) {
   const { data: session } = useSession();
@@ -64,7 +67,7 @@ export function VideoReacts({
 
   const handleReact = (type: string) => {
     if (isReactUsed(type) || !session?.user?.id) return;
-    onReact(type, currentTime);
+    onReact(type, Math.max(0, currentTime - 1));
   };
 
   const handleResetClick = () => {
@@ -83,7 +86,7 @@ export function VideoReacts({
 
   return (
     <>
-      <div className={cn("flex flex-col items-center gap-2 w-full", className)}>
+      <div className={cn("flex flex-col items-center gap-5 w-full", className)}>
         {/* React Buttons */}
         <div className="flex items-center justify-center gap-3 landscape:flex-col">
           {REACT_TYPES.map(({ type, emoji, label }) => {
@@ -109,15 +112,25 @@ export function VideoReacts({
           })}
         </div>
 
-        {/* Reset Link */}
-        {hasReacted && (
+        <div className="flex items-center justify-center gap-8 landscape:gap-3 landscape:flex-col">
+          {/* Reset Link */}
+          {hasReacted && (
+            <button
+              onClick={handleResetClick}
+              className="text-sm text-white/70 hover:text-white underline transition-colors"
+            >
+              Reset
+            </button>
+          )}
+
+          {/* Toggle Reacts Link */}
           <button
-            onClick={handleResetClick}
-            className="text-sm text-white/70 hover:text-white underline transition-colors"
+            onClick={onToggleReacts}
+            className="text-sm text-white/70 hover:text-white underline transition-colors font-semibold uppercase"
           >
-            Reset
+            {showReacts ? "OFF" : "ON"}
           </button>
-        )}
+        </div>
       </div>
 
       {/* Reset Confirmation Dialog */}

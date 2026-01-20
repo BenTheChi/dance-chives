@@ -198,6 +198,7 @@ export function TVClient({ initialSections }: TVClientProps) {
 
   // React state management
   const { data: session } = useSession();
+  const [showReacts, setShowReacts] = useState(true); // true = shows reacts (OFF state), false = hides reacts (ON state)
   const [videoReacts, setVideoReacts] = useState<
     Map<
       string,
@@ -915,7 +916,7 @@ export function TVClient({ initialSections }: TVClientProps) {
       </div>
 
       {/* React Animation Overlay - Outside SwiperSlide when not in landscape */}
-      {currentVideo && !isLandscape && isMobile && (
+      {currentVideo && !isLandscape && isMobile && showReacts && (
         <ReactAnimation
           reacts={sortedReacts}
           currentTime={currentTime}
@@ -1065,7 +1066,7 @@ export function TVClient({ initialSections }: TVClientProps) {
                               </div>
 
                               {/* React Animation Overlay - Inside SwiperSlide when in landscape */}
-                              {(isLandscape || !isMobile) && (
+                              {(isLandscape || !isMobile) && showReacts && (
                                 <ReactAnimation
                                   reacts={sortedReacts}
                                   currentTime={currentTime}
@@ -1094,7 +1095,7 @@ export function TVClient({ initialSections }: TVClientProps) {
         </div>
 
         {/* Controls */}
-        <div className="w-full pb-4 flex flex-col gap-2 landscape:hidden">
+        <div className="w-full pb-4 flex flex-col gap-5 landscape:hidden">
           <VideoControls
             onUp={() => navigateVideo(-1)}
             onDown={() => navigateVideo(1)}
@@ -1112,6 +1113,8 @@ export function TVClient({ initialSections }: TVClientProps) {
             onReact={handleReact}
             userReacts={userReacts}
             onReset={handleReset}
+            showReacts={showReacts}
+            onToggleReacts={() => setShowReacts(!showReacts)}
           />
           {/* Video Reacts - Below controls on mobile (only on very small screens) */}
           {currentVideo && isMobile && (
@@ -1122,6 +1125,8 @@ export function TVClient({ initialSections }: TVClientProps) {
                 onReact={handleReact}
                 userReacts={userReacts}
                 onReset={handleReset}
+                showReacts={showReacts}
+                onToggleReacts={() => setShowReacts(!showReacts)}
               />
             </div>
           )}
@@ -1165,6 +1170,8 @@ export function TVClient({ initialSections }: TVClientProps) {
             onReact={handleReact}
             userReacts={userReacts}
             onReset={handleReset}
+            showReacts={showReacts}
+            onToggleReacts={() => setShowReacts(!showReacts)}
           />
         </div>
       )}

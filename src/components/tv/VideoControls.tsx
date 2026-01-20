@@ -42,6 +42,8 @@ interface VideoControlsProps {
   onReact?: (type: string, timestamp: number) => void;
   userReacts?: UserReacts | null;
   onReset?: () => void;
+  showReacts?: boolean;
+  onToggleReacts?: () => void;
 }
 
 export function VideoControls({
@@ -62,6 +64,8 @@ export function VideoControls({
   onReact,
   userReacts,
   onReset,
+  showReacts,
+  onToggleReacts,
 }: VideoControlsProps) {
   return (
     <div
@@ -78,6 +82,8 @@ export function VideoControls({
               onReact={onReact}
               userReacts={userReacts || null}
               onReset={onReset}
+              showReacts={showReacts ?? true}
+              onToggleReacts={onToggleReacts || (() => {})}
             />
           </div>
         )}
