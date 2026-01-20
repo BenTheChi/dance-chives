@@ -5,8 +5,7 @@ import { useSession } from "next-auth/react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { VideoCard } from "@/components/videos/VideoCard";
-import { VideoLightbox } from "@/components/ui/video-lightbox";
-import { Video } from "@/types/event";
+import { useRouter } from "next/navigation";
 import { UserSearchItem } from "@/types/user";
 import { VIDEO_ROLE_WINNER, VIDEO_ROLE_DANCER } from "@/lib/utils/roles";
 
@@ -63,9 +62,7 @@ function countWinsInVideos(videos: TaggedVideo[]): number {
 
 export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
   const { data: session } = useSession();
-  const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(
-    null
-  );
+  const router = useRouter();
   const [showWinsOnly, setShowWinsOnly] = useState(false);
 
   // Count total wins
@@ -107,35 +104,8 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
     });
   }, [videos, showWinsOnly]);
 
-  const handleVideoSelect = (index: number) => {
-    setSelectedVideoIndex(index);
-  };
-
-  // Convert TaggedVideo to Video format for VideoLightbox
-  const convertToVideo = (taggedVideo: TaggedVideo): Video => {
-    const winners: typeof taggedVideo.taggedUsers = [];
-    const dancers: typeof taggedVideo.taggedUsers = [];
-
-    (taggedVideo.taggedUsers || []).forEach((user) => {
-      if (!user || !user.username) return;
-      const role = user.role?.toUpperCase();
-      if (role === "WINNER" || role === VIDEO_ROLE_WINNER) {
-        winners.push(user);
-      }
-      if (role === "DANCER" || role === VIDEO_ROLE_DANCER || !role) {
-        dancers.push(user);
-      }
-    });
-
-    return {
-      id: taggedVideo.videoId,
-      title: taggedVideo.videoTitle,
-      src: taggedVideo.videoSrc || "",
-      styles: taggedVideo.styles || [],
-      type: taggedVideo.type || "battle",
-      taggedWinners: winners,
-      taggedDancers: dancers,
-    };
+  const handleVideoSelect = (video: TaggedVideo) => {
+    router.push(`/watch/${video.eventId}?video=${video.videoId}`);
   };
 
   if (videos.length === 0) {
@@ -186,7 +156,7 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
                   eventLink={`/events/${video.eventId}`}
                   eventTitle={video.eventTitle}
                   sectionTitle={video.sectionTitle}
-                  onClick={() => handleVideoSelect(index)}
+                  onClick={() => handleVideoSelect(video)}
                   currentUserId={session?.user?.id}
                   eventId={video.eventId}
                   key={video.videoId}
@@ -196,52 +166,6 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
           </div>
         </div>
 
-        {selectedVideoIndex !== null &&
-          filteredAndSortedVideos[selectedVideoIndex] && (
-            <VideoLightbox
-              video={convertToVideo(
-                filteredAndSortedVideos[selectedVideoIndex]
-              )}
-              isOpen={selectedVideoIndex !== null}
-              onClose={() => setSelectedVideoIndex(null)}
-              onNext={() =>
-                selectedVideoIndex !== null
-                  ? setSelectedVideoIndex(
-                      (selectedVideoIndex + 1) % filteredAndSortedVideos.length
-                    )
-                  : null
-              }
-              onPrev={() =>
-                selectedVideoIndex !== null
-                  ? setSelectedVideoIndex(
-                      (selectedVideoIndex -
-                        1 +
-                        filteredAndSortedVideos.length) %
-                        filteredAndSortedVideos.length
-                    )
-                  : null
-              }
-              hasNext={filteredAndSortedVideos.length > 1}
-              hasPrev={filteredAndSortedVideos.length > 1}
-              currentIndex={selectedVideoIndex}
-              totalVideos={filteredAndSortedVideos.length}
-              eventLink={`/events/${filteredAndSortedVideos[selectedVideoIndex].eventId}`}
-              eventTitle={
-                filteredAndSortedVideos[selectedVideoIndex].eventTitle
-              }
-              eventId={filteredAndSortedVideos[selectedVideoIndex].eventId}
-              sectionTitle={
-                filteredAndSortedVideos[selectedVideoIndex].sectionTitle
-              }
-              sectionSlug={
-                filteredAndSortedVideos[selectedVideoIndex].sectionId
-              }
-              bracketTitle={undefined}
-              sectionStyles={undefined}
-              applyStylesToVideos={undefined}
-              currentUserId={session?.user?.id}
-            />
-          )}
       </div>
     </section>
   );

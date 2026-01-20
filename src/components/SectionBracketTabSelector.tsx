@@ -3,8 +3,8 @@
 import { Section } from "@/types/event";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
-import VideoGallery from "./VideoGallery";
+import { useSearchParams, useRouter } from "next/navigation";
+import { VideoCard } from "@/components/videos/VideoCard";
 import { cn } from "@/lib/utils";
 
 export default function SectionBracketTabSelector({
@@ -20,9 +20,10 @@ export default function SectionBracketTabSelector({
 }) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const currentUserId = session?.user?.id;
   const [activeBracket, setActiveBracket] = useState(
-    section?.brackets[0]?.id || ""
+    section?.brackets[0]?.id || "",
   );
   const [isSticky, setIsSticky] = useState(false);
   const bracketRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -157,23 +158,34 @@ export default function SectionBracketTabSelector({
     }
   }, [searchParams, SCROLL_OFFSET]);
 
+  // Determine styles to display
+  const displayStyles =
+    section?.applyStylesToVideos && section?.styles
+      ? section.styles
+      : undefined;
+
   // Render section without brackets
   if (!section?.hasBrackets && section?.videos.length > 0) {
     return (
       <div className="w-full p-2 sm:p-4 lg:px-6 border-2 border-secondary-light rounded-sm bg-secondary-dark">
-        <VideoGallery
-          videos={section?.videos}
-          eventLink={`/events/${eventId}`}
-          eventTitle={eventTitle}
-          eventId={eventId}
-          sectionTitle={section?.title}
-          sectionSlug={section?.id}
-          sectionStyles={section?.styles}
-          applyStylesToVideos={section?.applyStylesToVideos}
-          currentUserId={currentUserId}
-          canEdit={canEdit}
-          enableUrlRouting={true}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {section.videos.map((video) => (
+            <VideoCard
+              key={video.id}
+              video={video}
+              eventLink={`/events/${eventId}`}
+              eventTitle={eventTitle}
+              sectionTitle={section.title}
+              onClick={() => {
+                router.push(`/watch/${eventId}?video=${video.id}`);
+              }}
+              styles={displayStyles}
+              currentUserId={currentUserId}
+              eventId={eventId}
+              canEdit={canEdit}
+            />
+          ))}
+        </div>
       </div>
     );
   }
@@ -189,7 +201,7 @@ export default function SectionBracketTabSelector({
             "bg-background/95 backdrop-blur-sm z-40 transition-shadow duration-200",
             "sticky top-14", // Stick under navbar (h-14 = 56px = top-14)
             "sm:hidden", // Only show on mobile
-            isSticky && "shadow-md border-b"
+            isSticky && "shadow-md border-b",
           )}
         >
           <div className="flex flex-row gap-2 py-2 px-1 overflow-x-auto scrollbar-hide">
@@ -202,7 +214,7 @@ export default function SectionBracketTabSelector({
                   "hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   activeBracket === bracket.id
                     ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted/50 text-muted-foreground hover:text-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground",
                 )}
               >
                 {bracket.title}
@@ -224,20 +236,25 @@ export default function SectionBracketTabSelector({
                 <h2 className="!font-extrabold mb-4 text-center">
                   {bracket.title.toUpperCase()}
                 </h2>
-                <VideoGallery
-                  videos={bracket.videos}
-                  eventLink={`/events/${eventId}`}
-                  eventTitle={eventTitle}
-                  eventId={eventId}
-                  sectionTitle={section?.title}
-                  sectionSlug={section?.id}
-                  bracketTitle={bracket.title}
-                  sectionStyles={section?.styles}
-                  applyStylesToVideos={section?.applyStylesToVideos}
-                  currentUserId={currentUserId}
-                  canEdit={canEdit}
-                  enableUrlRouting={true}
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {bracket.videos.map((video) => (
+                    <VideoCard
+                      key={video.id}
+                      video={video}
+                      eventLink={`/events/${eventId}`}
+                      eventTitle={eventTitle}
+                      sectionTitle={section?.title}
+                      bracketTitle={bracket.title}
+                      onClick={() => {
+                        router.push(`/watch/${eventId}?video=${video.id}`);
+                      }}
+                      styles={displayStyles}
+                      currentUserId={currentUserId}
+                      eventId={eventId}
+                      canEdit={canEdit}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           ))}
