@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
-import { Search, HelpCircle } from "lucide-react";
+import { Tv, HelpCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MaintenanceLink } from "./MaintenanceLink";
@@ -112,16 +112,18 @@ export function AppNavbar() {
         <div className="flex items-center gap-x-2">
           <div className="flex gap-3 mr-0 md:mr-5">
             <Button asChild size="icon" variant="ghost">
-              <MaintenanceLink href="/search">
-                <Search className="h-5 w-5" />
+              <MaintenanceLink href="/watch">
+                <Tv className="h-5 w-5" />
               </MaintenanceLink>
             </Button>
-            <ReportButton className="cursor-pointer" />
-            <Button asChild size="icon" variant="ghost">
-              <MaintenanceLink href="/help">
-                <HelpCircle className="h-5 w-5" />
-              </MaintenanceLink>
-            </Button>
+            {!isMobile && <ReportButton className="cursor-pointer" />}
+            {!isMobile && (
+              <Button asChild size="icon" variant="ghost">
+                <MaintenanceLink href="/help">
+                  <HelpCircle className="h-5 w-5" />
+                </MaintenanceLink>
+              </Button>
+            )}
             {session && <NotificationPopover />}
           </div>
           {session ? (
