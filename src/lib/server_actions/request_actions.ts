@@ -42,7 +42,6 @@ import {
   removeTag,
 } from "@/db/queries/team-member";
 import driver from "@/db/driver";
-import { getLatestEventVideos } from "@/db/queries/event";
 import {
   getUser,
   getUserByUsername,
@@ -89,11 +88,6 @@ async function revalidateProfilesForUserIds(userIds: string[]) {
   }
 }
 
-async function shouldRevalidateHomeForVideo(videoId: string): Promise<boolean> {
-  const latestVideos = await getLatestEventVideos();
-  return latestVideos.some(({ video }) => video.id === videoId);
-}
-
 async function getSectionIdsForVideo(videoId: string): Promise<string[]> {
   const session = driver.session();
   try {
@@ -120,10 +114,6 @@ async function revalidateVideoDependentPages(
   eventId: string,
   videoId: string
 ): Promise<void> {
-  if (await shouldRevalidateHomeForVideo(videoId)) {
-    revalidatePath("/");
-  }
-
   revalidatePath(`/events/${eventId}`);
 
   const sectionIds = await getSectionIdsForVideo(videoId);

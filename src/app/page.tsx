@@ -3,14 +3,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { AppNavbar } from "@/components/AppNavbar";
 import { SectionCard } from "@/components/ui/section-card";
-import {
-  getLatestBattleSections,
-  getLatestEventVideos,
-} from "@/db/queries/event";
+import { getLatestBattleSections } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
-import { RecentVideosSection } from "@/components/RecentVideosSection";
 import { MobileAuthSection } from "@/components/MobileAuthSection";
 import { HomePageCTA } from "@/components/HomePageCTA";
 import { EventCard } from "@/components/EventCard";
@@ -21,9 +17,6 @@ export const revalidate = 60;
 export default async function Home() {
   // Fetch latest battle sections from 6 events
   const latestBattleSections = await getLatestBattleSections();
-
-  // Fetch latest videos from 6 events
-  const latestVideos = await getLatestEventVideos();
 
   // Fetch upcoming events
   const upcomingEvents = await getUpcomingEventCards(4);
@@ -206,22 +199,6 @@ export default async function Home() {
                 </div>
               </section>
             )}
-
-            {/* Recently Added Videos */}
-            <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm py-8 px-4 border-4 border-primary-light">
-              <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
-                Recently Added Videos
-              </h2>
-              {latestVideos.length > 0 ? (
-                <RecentVideosSection videos={latestVideos} />
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    No videos available yet.
-                  </p>
-                </div>
-              )}
-            </section>
 
             {/* Watch Battles */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
