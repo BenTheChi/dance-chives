@@ -1096,11 +1096,11 @@ export function VideoGallery({
     >
       {/* Header */}
       <div
-        className={`flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 landscape:hidden transition-opacity duration-300 ${
-          isFullscreen ? "hidden" : "opacity-100"
+        className={`flex flex-col px-4 py-2 z-50 landscape:hidden ${
+          isFullscreen ? "hidden" : ""
         }`}
       >
-        <div className="flex justify-between items-baseline mb-12">
+        <div className="flex justify-between items-baseline mb-[80px]">
           <div className="flex flex-col items-start gap-2">
             {currentVideo && (
               <Link
@@ -1125,12 +1125,13 @@ export function VideoGallery({
                 </p>
               )}
             </div>
-            <div className="flex justify-between gap-2 opacity-70">
-              {currentVideo?.video.styles &&
-                currentVideo?.video.styles.map((style) => (
+            {currentVideo?.video.styles && (
+              <div className="flex justify-between gap-2 opacity-70">
+                {currentVideo?.video.styles.map((style) => (
                   <StyleBadge key={style} style={style} />
                 ))}
-            </div>
+              </div>
+            )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <Button

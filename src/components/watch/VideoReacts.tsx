@@ -90,7 +90,7 @@ export function VideoReacts({
     <>
       <div
         className={cn(
-          "flex flex-col items-center gap-2 w-full",
+          "flex flex-col items-center gap-2 sm:gap-2 w-full",
           isFullscreen && "gap-10 sm:gap-4",
           className,
         )}
@@ -98,7 +98,7 @@ export function VideoReacts({
         {/* React Buttons */}
         <div
           className={cn(
-            "flex items-center justify-center gap-3",
+            "flex items-center justify-center",
             isFullscreen ? "flex-col gap-6" : "landscape:flex-col",
           )}
         >
@@ -110,7 +110,7 @@ export function VideoReacts({
                 onClick={() => handleReact(type)}
                 disabled={isUsed}
                 className={cn(
-                  "text-3xl px-2 rounded-lg transition-all",
+                  "text-3xl p-3 rounded-lg transition-all",
                   isFullscreen && "text-6xl px-4",
                   "hover:bg-white/10 active:scale-95",
                   isUsed
@@ -128,10 +128,8 @@ export function VideoReacts({
 
         <div
           className={cn(
-            "flex items-center justify-center gap-8",
-            isFullscreen
-              ? "gap-6 flex-col"
-              : "landscape:gap-3 landscape:flex-col",
+            "flex items-center justify-center gap-3",
+            isFullscreen ? "gap-6 flex-col" : "landscape:flex-col",
           )}
         >
           {/* Reset Link */}
