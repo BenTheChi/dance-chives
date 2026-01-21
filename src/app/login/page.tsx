@@ -64,7 +64,7 @@ const TEST_USERS: TestUser[] = [
 ];
 
 export default function LoginPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -77,7 +77,13 @@ export default function LoginPage() {
   const isDevelopment = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    if (session) {
+    // Wait for session to be fully loaded
+    if (status === "loading") {
+      return;
+    }
+
+    // Only redirect if authenticated
+    if (status === "authenticated" && session) {
       // Check if user is registered (account verified)
       if (isAccountVerified(session)) {
         router.push("/dashboard");
@@ -85,9 +91,10 @@ export default function LoginPage() {
         router.push("/signup");
       }
     }
-  }, [session, router]);
+  }, [session, status, router]);
 
-  if (session) {
+  // Show nothing while redirecting authenticated users
+  if (status === "authenticated" && session) {
     return null;
   }
 

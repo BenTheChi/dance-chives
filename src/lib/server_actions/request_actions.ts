@@ -2340,8 +2340,7 @@ export async function getSavedEventsForUser(): Promise<TEventCard[]> {
 
 /**
  * Tag self with a role in an event
- * If user has permission (admin, super admin, moderator, event creator), tags directly
- * Otherwise, creates a tagging request
+ * All logged-in users can tag directly
  */
 export async function tagSelfWithRole(eventId: string, role: string) {
   const userId = await requireAuth();
@@ -2360,42 +2359,13 @@ export async function tagSelfWithRole(eventId: string, role: string) {
     throw new Error("Event not found");
   }
 
-  // Regular role handling (non-Team Member roles)
-  // Verified users can tag directly
-  const authLevel = session?.user?.auth || 0;
-  const isVerified = !!session?.user?.accountVerified;
-  const canTagDirectly =
-    isVerified ||
-    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-    (await isTeamMember(eventId, userId)) ||
-    (await isEventCreator(eventId, userId));
-
-  if (canTagDirectly) {
-    // User has permission - tag directly
-    try {
-      await setEventRoles(eventId, userId, role);
-      return { success: true, directTag: true };
-    } catch (error) {
-      console.error("Error tagging self with role:", error);
-      throw error;
-    }
-  } else {
-    // User doesn't have permission - create a tagging request
-    try {
-      const result = await createTaggingRequest(
-        eventId,
-        undefined,
-        undefined,
-        role
-      );
-      return { success: true, directTag: false, request: result.request };
-    } catch (error) {
-      console.error(
-        "❌ [tagSelfWithRole] Error creating tagging request:",
-        error
-      );
-      throw error;
-    }
+  // Tag directly - all logged-in users can tag
+  try {
+    await setEventRoles(eventId, userId, role);
+    return { success: true, directTag: true };
+  } catch (error) {
+    console.error("Error tagging self with role:", error);
+    throw error;
   }
 }
 
@@ -2477,136 +2447,42 @@ export async function tagSelfInVideo(
     }
   }
 
-  // Check if user has permission to tag directly
-  const authLevel = session?.user?.auth || 0;
-  const isVerified = !!session?.user?.accountVerified;
-  const canTagDirectly =
-    isVerified ||
-    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-    (await isTeamMember(eventId, userId)) ||
-    (await isEventCreator(eventId, userId));
-
-  if (canTagDirectly) {
-    // User has permission - tag directly with specified role(s)
-    try {
-      // Get existing roles for this user in this video
-      const existingRoles: string[] = [];
-      for (const roleToCheck of [
-        VIDEO_ROLE_DANCER,
-        VIDEO_ROLE_WINNER,
-        "Choreographer",
-        "Teacher",
-      ]) {
-        const hasRole = await isUserTaggedInVideoWithRole(
-          eventId,
-          videoId,
-          userId,
-          roleToCheck
-        );
-        if (hasRole) {
-          existingRoles.push(roleToCheck);
-        }
-      }
-
-      // Combine existing roles with new roles to set
-      const allRoles = Array.from(new Set([...existingRoles, ...rolesToTag]));
-      await setVideoRoles(eventId, videoId, userId, allRoles);
-      console.log("✅ [tagSelfInVideo] Tag(s) applied successfully");
-      return { success: true, directTag: true };
-    } catch (error) {
-      console.error("Error tagging self in video:", error);
-      throw error;
-    }
-  } else {
-    // User doesn't have permission - create tagging request(s)
-    console.log(
-      "🔵 [tagSelfInVideo] User doesn't have permission, creating request(s)..."
-    );
-    try {
-      // Create requests for all roles (Winner and Dancer if needed)
-      const requests = [];
-      const existingRequests: string[] = [];
-      for (const roleToTag of rolesToTag) {
-        try {
-          const result = await createTaggingRequest(
-            eventId,
-            videoId,
-            undefined,
-            roleToTag
-          );
-          // Only add to requests if it's a new request (not an existing one)
-          // Existing requests are returned but shouldn't be counted as "newly created"
-          if (!result.isExisting) {
-            requests.push(result);
-          } else {
-            existingRequests.push(roleToTag);
-            console.log(
-              `⚠️ [tagSelfInVideo] Request for ${roleToTag} already exists, not counting as new`
-            );
-          }
-        } catch (error) {
-          // For any other errors, re-throw
-          throw error;
-        }
-      }
-
-      if (requests.length === 0) {
-        // All requests already exist - return success with existing requests info
-        // This allows the UI to show a notification instead of throwing an error
-        return { success: true, directTag: false, existingRequests };
-      }
-
-      const requestIds = requests
-        .map((r) => r?.request?.id)
-        .filter((id): id is string => id !== undefined);
-
-      // If multiple requests were created (Winner + Dancer), update notifications
-      // to indicate both requests were sent
-      if (requests.length > 1 && role === VIDEO_ROLE_WINNER) {
-        const eventTitle = await getEventTitle(eventId);
-        const eventDisplayName = eventTitle || eventId;
-        const videoTitle = await getVideoTitle(videoId);
-        const videoDisplayName = videoTitle || videoId;
-        const username = session?.user?.name || session?.user?.email || "User";
-
-        // Update notifications for approvers to indicate both requests
-        const approvers = await getTaggingRequestApprovers(eventId);
-        for (const approverId of approvers) {
-          try {
-            // Create an additional combined notification
-            await createNotification(
-              approverId,
-              "INCOMING_REQUEST",
-              "New Tagging Requests",
-              `${username} requesting tags for video ${videoDisplayName} as Winner and Dancer in event ${eventDisplayName}`,
-              REQUEST_TYPES.TAGGING,
-              requestIds[0] // Use first request ID for the notification
-            );
-          } catch (error) {
-            console.error(
-              `⚠️ [tagSelfInVideo] Failed to create combined notification:`,
-              error
-            );
-          }
-        }
-      }
-
-      return { success: true, directTag: false };
-    } catch (error) {
-      console.error(
-        "❌ [tagSelfInVideo] Error creating tagging request:",
-        error
+  // Tag directly - all logged-in users can tag
+  try {
+    // Get existing roles for this user in this video
+    const existingRoles: string[] = [];
+    for (const roleToCheck of [
+      VIDEO_ROLE_DANCER,
+      VIDEO_ROLE_WINNER,
+      "Choreographer",
+      "Teacher",
+    ]) {
+      const hasRole = await isUserTaggedInVideoWithRole(
+        eventId,
+        videoId,
+        userId,
+        roleToCheck
       );
-      throw error;
+      if (hasRole) {
+        existingRoles.push(roleToCheck);
+      }
     }
+
+    // Combine existing roles with new roles to set
+    const allRoles = Array.from(new Set([...existingRoles, ...rolesToTag]));
+    await setVideoRoles(eventId, videoId, userId, allRoles);
+    console.log("✅ [tagSelfInVideo] Tag(s) applied successfully");
+    return { success: true, directTag: true };
+  } catch (error) {
+    console.error("Error tagging self in video:", error);
+    throw error;
   }
 }
 
 /**
  * Tag self in a section
- * If user has permission (admin, super admin, moderator, event creator, or team member), tags directly
- * Otherwise, creates a tagging request
- * Role is required (must be "Winner" for now)
+ * All logged-in users can tag directly
+ * Role is required
  */
 export async function tagSelfInSection(
   eventId: string,
@@ -2640,72 +2516,37 @@ export async function tagSelfInSection(
     throw new Error("Section not found in this event");
   }
 
-  // Check if user has permission to tag directly
-  const authLevel = session?.user?.auth || 0;
-  const isVerified = !!session?.user?.accountVerified;
-  const canTagDirectly =
-    isVerified ||
-    authLevel >= AUTH_LEVELS.MODERATOR || // Admins (3) and Super Admins (4) are included
-    (await isTeamMember(eventId, userId)) ||
-    (await isEventCreator(eventId, userId));
+  // Tag directly - all logged-in users can tag
+  console.log("Applying section tag in Neo4j");
 
-  if (canTagDirectly) {
-    console.log("Applying section tag in Neo4j");
-
-    // User has permission - tag directly with specified role
-    try {
-      if (role === SECTION_ROLE_WINNER) {
-        // Get current winners and add this user to the list (don't remove existing winners)
-        const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
-        // Check if user is already a winner
-        if (!currentWinnerIds.includes(userId)) {
-          const updatedWinnerIds = [...currentWinnerIds, userId];
-          await setSectionWinners(eventId, sectionId, updatedWinnerIds);
-          console.log("✅ [tagSelfInSection] Winner tag applied successfully");
-        } else {
-          console.log("✅ [tagSelfInSection] User is already a winner");
-        }
-      } else if (role === SECTION_ROLE_JUDGE) {
-        // Get current judges and add this user to the list (don't remove existing judges)
-        const currentJudgeIds = await getSectionJudgeIds(eventId, sectionId);
-        // Check if user is already a judge
-        if (!currentJudgeIds.includes(userId)) {
-          const updatedJudgeIds = [...currentJudgeIds, userId];
-          await setSectionJudges(eventId, sectionId, updatedJudgeIds);
-          console.log("✅ [tagSelfInSection] Judge tag applied successfully");
-        } else {
-          console.log("✅ [tagSelfInSection] User is already a judge");
-        }
+  try {
+    if (role === SECTION_ROLE_WINNER) {
+      // Get current winners and add this user to the list (don't remove existing winners)
+      const currentWinnerIds = await getSectionWinnerIds(eventId, sectionId);
+      // Check if user is already a winner
+      if (!currentWinnerIds.includes(userId)) {
+        const updatedWinnerIds = [...currentWinnerIds, userId];
+        await setSectionWinners(eventId, sectionId, updatedWinnerIds);
+        console.log("✅ [tagSelfInSection] Winner tag applied successfully");
+      } else {
+        console.log("✅ [tagSelfInSection] User is already a winner");
       }
-      return { success: true, directTag: true };
-    } catch (error) {
-      console.error("Error tagging self in section:", error);
-      throw error;
+    } else if (role === SECTION_ROLE_JUDGE) {
+      // Get current judges and add this user to the list (don't remove existing judges)
+      const currentJudgeIds = await getSectionJudgeIds(eventId, sectionId);
+      // Check if user is already a judge
+      if (!currentJudgeIds.includes(userId)) {
+        const updatedJudgeIds = [...currentJudgeIds, userId];
+        await setSectionJudges(eventId, sectionId, updatedJudgeIds);
+        console.log("✅ [tagSelfInSection] Judge tag applied successfully");
+      } else {
+        console.log("✅ [tagSelfInSection] User is already a judge");
+      }
     }
-  } else {
-    // User doesn't have permission - create a tagging request
-    console.log(
-      "🔵 [tagSelfInSection] User doesn't have permission, creating request..."
-    );
-    try {
-      const result = await createTaggingRequest(
-        eventId,
-        undefined,
-        sectionId,
-        role
-      );
-      console.log(
-        "✅ [tagSelfInSection] Request created successfully:",
-        result.request.id
-      );
-      return { success: true, directTag: false };
-    } catch (error) {
-      console.error(
-        "❌ [tagSelfInSection] Error creating tagging request:",
-        error
-      );
-      throw error;
-    }
+    return { success: true, directTag: true };
+  } catch (error) {
+    console.error("Error tagging self in section:", error);
+    throw error;
   }
 }
 
@@ -3194,7 +3035,6 @@ export async function tagUsersWithRole(
   failed: Array<{ userId: string; error: string }>;
 }> {
   const session = await auth();
-  ensureVerified(session);
   if (!isValidRole(role)) {
     throw new Error(
       `Invalid role: ${role}. Must be one of: ${AVAILABLE_ROLES.join(", ")}`
@@ -3245,7 +3085,6 @@ export async function tagUsersInVideo(
   failed: Array<{ userId: string; error: string }>;
 }> {
   const session = await auth();
-  ensureVerified(session);
   if (!role) {
     throw new Error("Role is required for video tags");
   }
@@ -3348,7 +3187,6 @@ export async function tagUsersInSection(
   failed: Array<{ userId: string; error: string }>;
 }> {
   const session = await auth();
-  ensureVerified(session);
   if (!role) {
     throw new Error("Role is required for section tags");
   }

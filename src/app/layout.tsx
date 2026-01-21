@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationRedirector } from "@/components/account-verification-redirector";
 import { SubmissionOverlayProvider } from "@/components/SubmissionOverlay";
+import { PageLoadingProvider } from "@/components/PageLoadingProvider";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -138,7 +139,9 @@ export default function RootLayout({
               <AppSidebar />
               <div className="flex flex-col min-h-screen w-full relative z-10">
                 <AppNavbar />
-                <main className="flex flex-col flex-1">{children}</main>
+                <main className="flex flex-col flex-1">
+                  <PageLoadingProvider>{children}</PageLoadingProvider>
+                </main>
                 <Footer />
               </div>
             </SidebarProvider>

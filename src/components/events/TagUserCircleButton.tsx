@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useTransition, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { isAccountVerified } from "@/lib/utils/auth-utils-shared";
 import {
   Dialog,
   DialogContent,
@@ -252,11 +251,9 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
     });
   };
 
-  // Only show button if user is logged in and has completed registration
+  // Only show button if user is logged in
   const isLoggedIn = status === "authenticated" && session?.user?.id;
-  const isVerified = isLoggedIn && isAccountVerified(session);
-  const shouldHideButton =
-    !isLoggedIn || !isVerified || availableRoles.length === 0;
+  const shouldHideButton = !isLoggedIn || availableRoles.length === 0;
 
   if (shouldHideButton) return null;
 

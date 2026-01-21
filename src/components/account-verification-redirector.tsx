@@ -14,6 +14,12 @@ export function AccountVerificationRedirector() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // Wait for session to be fully loaded
+    if (status === "loading") {
+      return;
+    }
+
+    // Only proceed if authenticated
     if (status !== "authenticated") {
       return;
     }
@@ -22,10 +28,12 @@ export function AccountVerificationRedirector() {
       return;
     }
 
+    // Don't redirect if user is already verified
     if (isAccountVerified(session)) {
       return;
     }
 
+    // Don't redirect if already on an exempt path
     if (EXEMPT_PATHS.includes(pathname)) {
       return;
     }

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { signInWithGoogle } from "@/lib/server_actions/auth_actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isAccountVerified } from "@/lib/utils/auth-utils-client";
 
 import SignUpForm from "./signup-form";
 
@@ -35,11 +36,19 @@ export function SignupContent() {
     }
   }, [fromMagicLink, update, router, hasRefreshedSession]);
 
+  // Redirect verified users to dashboard
+  // Wait for session to be fully loaded before checking
   useEffect(() => {
-    if (session?.user.username) {
+    // Don't redirect if session is still loading
+    if (status === "loading") {
+      return;
+    }
+
+    // Only redirect if we have a session and the user is verified
+    if (status === "authenticated" && session && isAccountVerified(session)) {
       router.push("/dashboard");
     }
-  }, [session, router]);
+  }, [session, status, router]);
 
   const handleSendMagicLink = async (event: React.FormEvent) => {
     event.preventDefault();
