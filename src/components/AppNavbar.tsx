@@ -131,15 +131,12 @@ export function AppNavbar() {
           ) : (
             <>
               {/* Hide login/signup buttons on mobile when not logged in */}
-              <MaintenanceLink href="/login" className="hidden md:inline-block">
+              <MaintenanceLink href="/login">
                 <Button size="default" variant="secondary">
                   Login
                 </Button>
               </MaintenanceLink>
-              <MaintenanceLink
-                href="/signup"
-                className="hidden md:inline-block"
-              >
+              <MaintenanceLink href="/signup">
                 <Button size="default">Sign Up</Button>
               </MaintenanceLink>
             </>

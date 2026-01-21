@@ -1100,7 +1100,7 @@ export function VideoGallery({
     >
       {/* Header */}
       <div
-        className={`flex flex-col px-4 z-50 landscape:hidden ${
+        className={`flex flex-col px-4 z-50 mb-2 landscape:hidden ${
           isFullscreen ? "hidden" : ""
         }`}
       >
@@ -1142,7 +1142,7 @@ export function VideoGallery({
               </div>
             )}
           </div>
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 items-end gap-1">
             <Button
               variant="ghost"
               size="icon"

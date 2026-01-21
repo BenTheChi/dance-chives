@@ -55,7 +55,7 @@ export async function generateMetadata({
   if (profile.bio) {
     const bio = profile.bio.replace(/\n/g, " ").trim();
     descriptionParts.push(
-      bio.length > 150 ? bio.substring(0, 147) + "..." : bio
+      bio.length > 150 ? bio.substring(0, 147) + "..." : bio,
     );
   }
 
@@ -81,28 +81,28 @@ export async function generateMetadata({
     stats.push(
       `${profile.taggedVideos.length} video${
         profile.taggedVideos.length !== 1 ? "s" : ""
-      }`
+      }`,
     );
   }
   if (profile.winningSections && profile.winningSections.length > 0) {
     stats.push(
       `${profile.winningSections.length} section${
         profile.winningSections.length !== 1 ? "s" : ""
-      } won`
+      } won`,
     );
   }
   if (profile.eventsCreated && profile.eventsCreated.length > 0) {
     stats.push(
       `${profile.eventsCreated.length} event${
         profile.eventsCreated.length !== 1 ? "s" : ""
-      } created`
+      } created`,
     );
   }
   if (profile.eventsWithRoles && profile.eventsWithRoles.length > 0) {
     stats.push(
       `${profile.eventsWithRoles.length} event${
         profile.eventsWithRoles.length !== 1 ? "s" : ""
-      } with roles`
+      } with roles`,
     );
   }
 
@@ -159,10 +159,10 @@ export async function generateMetadata({
         type: imageUrl.endsWith(".png")
           ? "image/png"
           : imageUrl.endsWith(".jpg") || imageUrl.endsWith(".jpeg")
-          ? "image/jpeg"
-          : imageUrl.endsWith(".webp")
-          ? "image/webp"
-          : "image/png",
+            ? "image/jpeg"
+            : imageUrl.endsWith(".webp")
+              ? "image/webp"
+              : "image/png",
       }
     : undefined;
 
@@ -228,7 +228,6 @@ export default async function ProfilePage({ params }: PageProps) {
   }
 
   const profile = profileResult.profile;
-  console.log("profile", profile);
   const pendingClaimCount = profile.username
     ? await getPendingAccountClaimRequestCount(profile.username)
     : 0;
@@ -270,7 +269,7 @@ export default async function ProfilePage({ params }: PageProps) {
   return (
     <>
       <div className="flex flex-col items-center justify-center">
-        <div className="flex items-center justify-between py-7 border-b-2 border-primary-light bg-charcoal">
+        <div className="flex items-center justify-between py-7 border-b-2 border-primary-light bg-charcoal w-full">
           <h1 className="flex-1">{profile.displayName || profile.username}</h1>
         </div>
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto overflow-x-visible">
@@ -349,7 +348,7 @@ export default async function ProfilePage({ params }: PageProps) {
                           <span className="text-lg text-muted-foreground">
                             {pendingClaimRequest.instagramHandle.replace(
                               /^@/,
-                              ""
+                              "",
                             )}{" "}
                             <span className="text-xs text-yellow-200">
                               (under review)
@@ -359,7 +358,7 @@ export default async function ProfilePage({ params }: PageProps) {
                           <Link
                             href={`https://instagram.com/${profile.instagram.replace(
                               /^@/,
-                              ""
+                              "",
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"

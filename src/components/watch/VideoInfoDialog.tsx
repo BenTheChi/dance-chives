@@ -83,19 +83,31 @@ export function VideoInfoDialog({
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          {/* Tagged Dancers */}
-          {allTaggedDancers.length > 0 && (
+          {/* Dance Styles */}
+          {styles.length > 0 && (
             <div className="flex flex-col justify-center items-center">
-              <div className="flex flex-wrap gap-2">
-                <p className="font-semibold text-sm mb-2">Dancers</p>
-                <TagUserCircleButton
-                  eventId={eventId}
-                  target="video"
-                  targetId={video.id}
-                  size="sm"
-                />
+              <p className="font-semibold text-sm mb-2">Dance Styles</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {styles.map((style) => (
+                  <StyleBadge key={style} style={style} asLink={true} />
+                ))}
               </div>
+            </div>
+          )}
 
+          {/* Tagged Dancers */}
+          <div className="flex flex-col justify-center items-center">
+            <div className="flex flex-wrap gap-2">
+              <p className="font-semibold text-sm mb-2">Dancers</p>
+              <TagUserCircleButton
+                eventId={eventId}
+                target="video"
+                targetId={video.id}
+                size="sm"
+              />
+            </div>
+
+            {allTaggedDancers.length > 0 && (
               <div className="flex flex-wrap gap-3">
                 {allTaggedDancers.map((dancer) => (
                   <div
@@ -118,8 +130,8 @@ export function VideoInfoDialog({
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Tagged Winners */}
           {video.taggedWinners && video.taggedWinners.length > 0 && (

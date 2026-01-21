@@ -30,6 +30,7 @@
   --color-secondary-dark: var(--secondary-color-dark);
   --color-accent-purple: var(--accent-color-purple);
   --color-accent-orange: var(--accent-color-orange);
+  --color-accent-red-orange: var(--accent-color-red-orange);
   --color-accent-yellow: var(--accent-color-yellow);
   --color-accent-blue: var(--accent-color-blue);
 }
@@ -89,6 +90,7 @@
 
   --accent-color-purple: #9d7eff;
   --accent-color-orange: #ff6700;
+  --accent-color-red-orange: rgb(248, 94, 60);
   --accent-color-yellow: #ffe12d;
   --accent-color-blue: #00e1ff;
 
@@ -185,6 +187,14 @@
 }
 
 @layer utilities {
+  .text-outline {
+    -webkit-text-stroke: 2px black;
+  }
+
+  .text-outline-thin {
+    -webkit-text-stroke: 1px black;
+  }
+
   /* Hide scrollbar but allow scrolling */
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */
@@ -305,6 +315,7 @@ h1 {
   word-spacing: -18px;
   line-height: 1;
   text-align: center;
+  -webkit-text-stroke: 2px black;
 }
 
 @media (max-width: 640px) {

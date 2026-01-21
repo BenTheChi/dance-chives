@@ -5,10 +5,16 @@ import { SectionCard } from "@/components/ui/section-card";
 import { getLatestBattleSections } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
-import { MaintenanceLink } from "@/components/MaintenanceLink";
-import { MobileAuthSection } from "@/components/MobileAuthSection";
-import { HomePageCTA } from "@/components/HomePageCTA";
 import { EventCard } from "@/components/EventCard";
+import {
+  Info,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  Tv,
+  Plus,
+} from "lucide-react";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
@@ -29,12 +35,14 @@ export default async function Home() {
           <section className="flex flex-col items-center px-8 gap-10 py-20 sm:py-32">
             <div className="flex flex-col items-center gap-10 bg-charcoal p-6 border-4 border-primary-light rounded-sm">
               <div className="flex flex-col items-center gap-4">
-                <Image
-                  src="/AltLogo_Color_onDark-cropped.svg"
-                  alt="Dance Chives Logo"
-                  width={500}
-                  height={500}
-                />
+                <h1>
+                  <Image
+                    src="/AltLogo_Color_onDark-cropped.svg"
+                    alt="Dance Chives. The free community archive for street dance events and battle videos."
+                    width={500}
+                    height={500}
+                  />
+                </h1>
                 <Link
                   href="#open-beta"
                   className="text-center bg-white text-charcoal px-4 py-2 rounded-sm text-4xl font-rubik-mono-one w-full"
@@ -53,11 +61,8 @@ export default async function Home() {
           </section>
 
           <div className="flex flex-col items-center gap-20">
-            {/* Mobile Auth Section - Only shows on mobile when not logged in */}
-            <MobileAuthSection />
-
             {/* CTA - Changes based on login status */}
-            <HomePageCTA variant="primary" />
+            {/* <HomePageCTA variant="primary" /> */}
             {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
               <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
                 Tired of bouncing between Youtube, Facebook, and Instagram?
@@ -184,10 +189,210 @@ export default async function Home() {
               </div>
             </section> */}
 
+            {/* Battle TV Promotion */}
+            <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm py-12 px-4 sm:px-8 border-4 border-primary-light">
+              <div className="flex flex-col items-center gap-10">
+                <div className="text-center space-y-4">
+                  <h2
+                    className="flex items-center gap-6 mb-4"
+                    style={{ wordSpacing: -25 }}
+                  >
+                    <div className="text-3xl sm:text-5xl hidden sm:block">
+                      📺
+                    </div>
+                    <Link
+                      href="/watch"
+                      className="!text-5xl md:!text-6xl !font-rubik-mono-one text-accent-red-orange text-outline opacity hover:underline decoration-accent-red-orange transition-all tracking-wide"
+                    >
+                      Battle TV
+                    </Link>
+                    <div className="text-3xl sm:text-5xl hidden sm:block">
+                      📺
+                    </div>
+                  </h2>
+                </div>
+
+                {/* Feature Bullet Points */}
+                <div className="flex flex-col items-center gap-15 max-w-3xl">
+                  <div className="flex flex-col items-center gap-2">
+                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                      React
+                    </h3>
+                    {/* Reactions Feature */}
+                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
+                      <div className="flex gap-8 text-5xl sm:text-6xl justify-center items-center">
+                        <span className="transition-transform duration-300 hover:scale-150 cursor-default inline-block !text-4xl">
+                          🔥
+                        </span>
+                        <span className="transition-transform duration-300 hover:scale-150 cursor-default inline-block !text-4xl">
+                          👏
+                        </span>
+                        <span className="transition-transform duration-300 hover:scale-150 cursor-default inline-block !text-4xl">
+                          😮
+                        </span>
+                        <span className="transition-transform duration-300 hover:scale-150 cursor-default inline-block !text-4xl">
+                          😂
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <p>
+                          Drop your reactions on <b>exact timestamps</b> in the
+                          video and see how the community felt move by move
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                      Browse
+                    </h3>
+                    {/* Navigation Feature */}
+                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors w-full">
+                      <div className="flex items-center justify-center gap-2 min-w-[120px]">
+                        <div className="flex items-center gap-6">
+                          <ArrowLeft
+                            size={40}
+                            className="text-orange-400 transition-transform duration-300 hover:scale-150 cursor-default"
+                            strokeWidth={3}
+                          />
+                          <ArrowRight
+                            size={40}
+                            className="text-orange-400 transition-transform duration-300 hover:scale-150 cursor-default"
+                            strokeWidth={3}
+                          />
+                          <ArrowUp
+                            size={40}
+                            className="text-yellow-400 transition-transform duration-300 hover:scale-150 cursor-default"
+                            strokeWidth={3}
+                          />
+                          <ArrowDown
+                            size={40}
+                            className="text-yellow-400 transition-transform duration-300 hover:scale-150 cursor-default"
+                            strokeWidth={3}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p>
+                          Navigate <b>videos</b>, <b>sections</b>, and{" "}
+                          <b>battles</b> across events in a way that makes
+                          sense. No more confusing IG and YT algorithms.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Screen Optimization Feature */}
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                      All Screens
+                    </h3>
+                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors w-full">
+                      <div className="flex items-center justify-center gap-2 min-w-[120px]">
+                        <div className="flex flex-row items-center justify-center gap-6 flex-wrap">
+                          {/* Mobile Portrait */}
+                          <div className="w-16 h-28 bg-accent-blue border-2 border-primary-light rounded-sm flex items-center justify-center shadow-hover">
+                            <span className="text-charcoal !font-semibold rotate-90 whitespace-nowrap">
+                              Portrait
+                            </span>
+                          </div>
+                          {/* Mobile Landscape */}
+                          <div className="w-28 h-16 bg-accent-blue border-2 border-primary-light rounded-sm flex items-center justify-center shadow-hover">
+                            <span className="text-charcoal !font-semibold whitespace-nowrap">
+                              Landscape
+                            </span>
+                          </div>
+                          {/* Desktop */}
+                          <div className="w-36 h-24 bg-accent-purple border-2 border-primary-light rounded-sm flex items-center justify-center shadow-hover">
+                            <span className="text-charcoal !font-semibold whitespace-nowrap">
+                              Desktop
+                            </span>
+                          </div>
+                          {/* Fullscreen */}
+                          <div className="w-60 h-30 bg-accent-purple border-2 border-primary-light rounded-sm flex items-center justify-center shadow-hover">
+                            <span className="text-charcoal !font-semibold whitespace-nowrap">
+                              Fullscreen
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p>
+                          Optimized for <b>every screen</b>. Whether you're on
+                          the go or at home, you can watch event footage from
+                          <b> any browser</b> on <b>any device.</b>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Details Feature */}
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                      Deep Dive
+                    </h3>
+                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
+                      <div className="flex items-center justify-center gap-2 min-w-[120px]">
+                        <div className="w-12 h-12 rounded-full bg-fog-white border-2 border-black flex items-center justify-center shadow-hover">
+                          <Info className="w-6 h-6 text-charcoal" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p>
+                          Ever watch a video and wish you could learn more about
+                          the event or dancers? Click on{" "}
+                          <Info className="inline" size={21} strokeWidth={3} />{" "}
+                          to quickly learn more about the
+                          <b> event and dancers.</b> Then let your curiosity
+                          guide you to the details page through easy
+                          <b> navigation links.</b>
+                        </p>
+                        <p className="!text-base sm:!text-lg"></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tag Feature */}
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                      Tag People
+                    </h3>
+                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
+                      <div className="flex items-center justify-center gap-2 min-w-[120px]">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-accent-yellow text-black border-2 border-charcoal transition-shadow duration-150 hover:glow hover:scale-130 transition-transform duration-150 cursor-default">
+                          <Plus className="w-7 h-7 stroke-[3]" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p>
+                          Tag your <b> friends and other community members</b>{" "}
+                          as dancers, winners, and more to help build our
+                          history and give credit where it's due.
+                          <br />
+                          <br />
+                          <b>See yourself? Tag yourself!</b>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Link href="/watch">
+                  <Button
+                    size="xl"
+                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-6 sm:px-8 md:px-12 mt-4 hover:scale-105 transition-transform shadow-hover"
+                  >
+                    Watch Battles Now
+                  </Button>
+                </Link>
+              </div>
+            </section>
+
             {/* Upcoming Events */}
             {upcomingEvents.length > 0 && (
               <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
-                <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
+                <h2 className="!text-4xl sm:!text-5xl text-center mb-12 !font-rubik-mono-one text-outline">
                   Upcoming Events
                 </h2>
                 <div className="flex flex-wrap justify-center gap-6">
@@ -198,18 +403,11 @@ export default async function Home() {
               </section>
             )}
 
-            {/* Watch Battles */}
+            {/* Recent Battles */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
-              <div className="flex justify-center mb-12">
-                <Link href="/watch">
-                  <Button
-                    size="xl"
-                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-4 sm:px-6 md:px-10"
-                  >
-                    Watch Battles Now
-                  </Button>
-                </Link>
-              </div>
+              <h2 className="mb-12 !font-rubik-mono-one !text-4xl sm:!text-5xl text-outline text-center">
+                Recent Battles
+              </h2>
               {latestBattleSections.length > 0 ? (
                 <div className="sections-grid">
                   {latestBattleSections.map(
@@ -222,7 +420,7 @@ export default async function Home() {
                         showEventTitle={true}
                         city={city}
                       />
-                    )
+                    ),
                   )}
                 </div>
               ) : (
@@ -240,8 +438,8 @@ export default async function Home() {
               className="max-w-6xl mx-auto bg-primary rounded-sm p-4 border-4 border-primary-light w-full"
             >
               <div className="py-6">
-                <h2 className="mb-12 !text-4xl sm:!text-5xl text-center">
-                  Help shape the future of Dance Chives
+                <h2 className="mb-12 !text-4xl sm:!text-5xl text-center !font-rubik-mono-one text-outline">
+                  Contribute
                 </h2>
                 <div className="flex flex-col md:flex-row justify-center gap-12 md:gap-20">
                   {/* Discord Section */}
@@ -323,10 +521,10 @@ export default async function Home() {
             </section>
 
             <section
-              className="max-w-6xl mx-auto w-full bg-secondary rounded-sm p-4 border-4 border-primary-light"
+              className="max-w-6xl mx-auto w-full bg-primary rounded-sm p-4 border-4 border-primary-light"
               id="open-beta"
             >
-              <h2 className="!text-4xl sm:!text-5xl text-center mb-6">
+              <h2 className="!text-4xl sm:!text-5xl text-center mb-6 !font-rubik-mono-one text-outline">
                 Open Beta
               </h2>
               <p className="!text-lg px-10">
