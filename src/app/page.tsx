@@ -200,9 +200,16 @@ export default async function Home() {
 
             {/* Watch Battles */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
-              <h2 className="!text-4xl sm:!text-5xl text-center mb-12">
-                Watch Battles
-              </h2>
+              <div className="flex justify-center mb-12">
+                <Link href="/watch">
+                  <Button
+                    size="xl"
+                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-4 sm:px-6 md:px-10"
+                  >
+                    Watch Battles Now
+                  </Button>
+                </Link>
+              </div>
               {latestBattleSections.length > 0 ? (
                 <div className="sections-grid">
                   {latestBattleSections.map(

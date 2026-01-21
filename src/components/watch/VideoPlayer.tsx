@@ -485,9 +485,9 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           <Image
             src="/Dancechives_Icon_Color_onDark.svg"
             alt="Loading"
-            width={130}
-            height={130}
-            className="animate-rock mt-5"
+            width={250}
+            height={250}
+            className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
           />
         </div>
       </div>

@@ -1135,7 +1135,7 @@ export function VideoGallery({
               </div>
             )}
             {currentVideo?.video.styles && (
-              <div className="flex justify-between gap-2 opacity-70">
+              <div className="flex justify-between gap-2 opacity-70 sm:mb-4">
                 {currentVideo?.video.styles.map((style) => (
                   <StyleBadge key={style} style={style} />
                 ))}
