@@ -1410,6 +1410,13 @@ const createSections = async (eventId: string, sections: Section[]) => {
         },
       );
 
+      // Update section style relationships - delete old ones first
+      await session.run(
+        `MATCH (s:Section {id: $sectionId})-[r:STYLE]->(:Style)
+         DELETE r`,
+        { sectionId: sec.id },
+      );
+
       // Create section style relationships if applyStylesToVideos is true
       if (sec.applyStylesToVideos && sec.styles && sec.styles.length > 0) {
         const normalizedStyles = normalizeStyleNames(sec.styles);

@@ -1134,13 +1134,23 @@ export function VideoGallery({
                 )}
               </div>
             )}
-            {currentVideo?.video.styles && (
-              <div className="flex justify-between gap-2 opacity-70 sm:mb-4">
-                {currentVideo?.video.styles.map((style) => (
-                  <StyleBadge key={style} style={style} />
-                ))}
-              </div>
-            )}
+            {(() => {
+              // Determine styles to display based on section.applyStylesToVideos
+              const displayStyles =
+                currentVideo?.section.applyStylesToVideos &&
+                currentVideo?.section.styles &&
+                currentVideo.section.styles.length > 0
+                  ? currentVideo.section.styles
+                  : currentVideo?.video.styles || [];
+
+              return displayStyles.length > 0 ? (
+                <div className="flex justify-between gap-2 opacity-70 sm:mb-4">
+                  {displayStyles.map((style) => (
+                    <StyleBadge key={style} style={style} />
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 items-end gap-1">
             <Button

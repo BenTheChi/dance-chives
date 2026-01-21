@@ -47,8 +47,11 @@ export function VideoInfoDialog({
     ...(video.taggedTeachers || []),
   ];
 
-  // Get styles (from video or section)
-  const styles = video.styles || section.styles || [];
+  // Get styles - use section styles if applyStylesToVideos is true, otherwise use video styles
+  const styles =
+    section.applyStylesToVideos && section.styles && section.styles.length > 0
+      ? section.styles
+      : video.styles || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

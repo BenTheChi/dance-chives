@@ -159,8 +159,10 @@ export default function SectionBracketTabSelector({
   }, [searchParams, SCROLL_OFFSET]);
 
   // Determine styles to display
+  // If applyStylesToVideos is true, use section styles
+  // Otherwise, pass undefined to let VideoCard use video.styles
   const displayStyles =
-    section?.applyStylesToVideos && section?.styles
+    section?.applyStylesToVideos && section?.styles && section.styles.length > 0
       ? section.styles
       : undefined;
 
