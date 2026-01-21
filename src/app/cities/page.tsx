@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import { getAllCities } from "@/db/queries/event";
 import { CityCard } from "@/components/CityCard";
 import { UnderConstruction } from "@/components/UnderConstruction";
@@ -12,7 +11,6 @@ export default async function CitiesPage() {
 
   return (
     <>
-      <AppNavbar />
       <UnderConstruction />
       {/* 
       <div className="flex flex-col items-center justify-center">

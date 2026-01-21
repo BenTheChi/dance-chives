@@ -23,7 +23,7 @@ export async function DELETE(request: NextRequest) {
   if (!id) {
     return NextResponse.json(
       { message: "Event ID is required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -32,7 +32,7 @@ export async function DELETE(request: NextRequest) {
     const eventData = await getEvent(
       id,
       session.user.id,
-      session.user.auth ?? 0
+      session.user.auth ?? 0,
     );
     if (!eventData) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
@@ -42,7 +42,7 @@ export async function DELETE(request: NextRequest) {
     if (!session.user.auth) {
       return NextResponse.json(
         { message: "User authorization level not found" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -55,13 +55,13 @@ export async function DELETE(request: NextRequest) {
         eventCreatorId: eventData.eventDetails.creatorId,
         isTeamMember: isEventTeamMember,
       },
-      session.user.id
+      session.user.id,
     );
 
     if (!hasPermission) {
       return NextResponse.json(
         { message: "You do not have permission to delete this event" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -71,7 +71,7 @@ export async function DELETE(request: NextRequest) {
     await Promise.all(
       pictures.map(async (url) => {
         return deleteFromR2(url);
-      })
+      }),
     );
 
     const result = await deleteEvent(id);
@@ -79,7 +79,7 @@ export async function DELETE(request: NextRequest) {
     if (!result) {
       return NextResponse.json(
         { message: "Failed to delete event" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -93,11 +93,11 @@ export async function DELETE(request: NextRequest) {
     // Also revalidate the individual event page (in case it was cached)
     revalidatePath(`/events/${id}`);
     // Revalidate TV page
-    revalidatePath("/tv");
-    revalidateTag("tv-sections", "");
+    revalidatePath("/watch");
+    revalidateTag("watch-sections", "");
 
     const citySlug = getCitySlug(
-      eventData.eventDetails.city as City | undefined
+      eventData.eventDetails.city as City | undefined,
     );
     revalidateCalendarForSlugs([citySlug]);
 
@@ -106,7 +106,7 @@ export async function DELETE(request: NextRequest) {
     console.error(error);
     return NextResponse.json(
       { message: "Failed to delete session" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
       const results = await searchAccessibleEvents(
         session.user.id,
         authLevel,
-        keyword || undefined
+        keyword || undefined,
       );
 
       return NextResponse.json({ data: results });
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     console.error(error);
     return NextResponse.json(
       { message: "Failed to search sessions" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

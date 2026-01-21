@@ -1,7 +1,6 @@
 //THIS PAGE IS NOT USING ISR.  IF WE WANT TO USE ISR AGAIN IT WILL EFFECT THE HIDE/VISIBLE FUNCTIONALITY.
 
 import React from "react";
-import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { StyleBadge } from "@/components/ui/style-badge";
@@ -455,7 +454,6 @@ export default async function EventPage({ params }: PageProps) {
 
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col">
         <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
           <div className="max-w-3xl mx-auto">{event.eventDetails.title}</div>

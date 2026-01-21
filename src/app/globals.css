@@ -665,6 +665,35 @@ span {
     }
   }
 
+  /* Fullscreen styles */
+  .tv-container-height:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
+  .tv-container-height:-webkit-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
+  .tv-container-height:-moz-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
+  .tv-container-height:-ms-fullscreen {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+
   /* Fix mobile Chrome landscape zoom issue */
   @media (orientation: landscape) and (max-height: 500px) {
     /* Prevent zoom on mobile Chrome in landscape */
@@ -696,14 +725,6 @@ span {
       max-height: 100vh !important;
       transform: scale(1) !important;
       -webkit-transform: scale(1) !important;
-    }
-
-    /* Prevent any zoom on video player containers */
-    .aspect-video > div:not(.swiper):not(.swiper-wrapper):not(.swiper-slide) {
-      transform: scale(1) !important;
-      -webkit-transform: scale(1) !important;
-      max-width: 100vw !important;
-      max-height: 100vh !important;
     }
   }
 }

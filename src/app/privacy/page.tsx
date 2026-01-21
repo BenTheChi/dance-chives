@@ -1,11 +1,8 @@
 "use client";
 
-import { AppNavbar } from "@/components/AppNavbar";
-
 export default function PrivacyPage() {
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 md:p-8 pb-16">
         {/* Page Header */}
         <h1 className="mb-2">PRIVACY POLICY</h1>

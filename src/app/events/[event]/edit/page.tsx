@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import EventFormWrapper from "@/components/EventFormWrapper";
 import { getEvent } from "@/db/queries/event";
 import { generateShortId } from "@/lib/utils";
@@ -139,7 +138,6 @@ export default async function EditEventPage({
 
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col gap-4 p-6 md:px-4">
         <EventFormWrapper initialData={eventFormValues} />
       </div>

@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import { getEventCards } from "@/db/queries/event-cards";
 import { getAllCities, getAllStyles } from "@/db/queries/event";
 import { EventsClient } from "./events-client";
@@ -18,7 +17,6 @@ export default async function EventsPage() {
   return (
     <>
       <div className="flex flex-col">
-        <AppNavbar />
         <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
           All Events
         </h1>

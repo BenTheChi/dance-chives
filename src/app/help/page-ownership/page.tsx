@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import Link from "next/link";
 import Image from "next/image";
 import { ReportLink } from "@/components/report/ReportLink";
@@ -7,7 +6,6 @@ import { PencilIcon, Settings } from "lucide-react";
 export default function PageOwnershipPage() {
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 md:p-8 pb-16">
         {/* Page Header */}
         <h1 className="mb-2">Page Ownership</h1>

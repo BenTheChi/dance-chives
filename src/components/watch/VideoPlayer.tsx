@@ -53,14 +53,14 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       muted = true,
       className,
     },
-    ref
+    ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null);
     const [isApiReady, setIsApiReady] = useState(false);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [currentVideoId, setCurrentVideoId] = useState<string | null>(
-      videoId
+      videoId,
     );
     const [isVisible, setIsVisible] = useState(false);
     const [playerState, setPlayerState] = useState<number>(-1); // -1 = unstarted
@@ -99,7 +99,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         {
           rootMargin: "50px", // Start loading 50px before entering viewport
           threshold: 0.1,
-        }
+        },
       );
 
       observer.observe(containerRef.current);
@@ -177,7 +177,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           mute: muted ? 1 : 0,
           playsinline: 1,
           enablejsapi: 1,
-          controls: 0,
+          controls: 1,
           fs: 0,
           rel: 0,
           origin: typeof window !== "undefined" ? window.location.origin : "",
@@ -214,7 +214,6 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       isApiReady,
       currentVideoId,
       autoplay,
-      muted,
       onReady,
       onStateChange,
       onError,
@@ -236,6 +235,21 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         }
       }
     }, [videoId, currentVideoId]);
+
+    // Sync mute state when muted prop changes (without recreating player)
+    useEffect(() => {
+      if (playerRef.current && isPlayerReady) {
+        try {
+          if (muted) {
+            playerRef.current.mute();
+          } else {
+            playerRef.current.unMute();
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    }, [muted, isPlayerReady]);
 
     // Track current time periodically - this keeps the ref updated
     useEffect(() => {
@@ -424,7 +438,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           );
         },
       }),
-      [isPlayerReady, playerState]
+      [isPlayerReady, playerState],
     );
 
     if (!currentVideoId) {
@@ -461,12 +475,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
     return (
       <div className={`relative w-full h-full ${className || ""} `}>
-        <div
-          ref={containerRef}
-          className={`w-full h-full ${
-            isMobile ? "pointer-events-none" : "pointer-events-auto"
-          } `}
-        />
+        <div ref={containerRef} className="w-full h-full pointer-events-auto" />
         {/* Loading Spinner Overlay */}
         <div
           className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-secondary-dark transition-opacity duration-700 ${
@@ -483,7 +492,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         </div>
       </div>
     );
-  }
+  },
 );
 
 VideoPlayer.displayName = "VideoPlayer";

@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getUserProfile } from "@/lib/server_actions/auth_actions";
 import { getUserPendingAccountClaimRequest } from "@/lib/server_actions/account_claim_actions";
-import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 import SignUpForm from "@/components/forms/signup-form";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
@@ -57,7 +56,6 @@ export default async function EditProfilePage({ params }: PageProps) {
 
   return (
     <AccountVerificationGuard requireVerification={true}>
-      <AppNavbar />
       <main className="flex justify-center items-center mt-10">
         <SignUpForm
           isEditMode={true}

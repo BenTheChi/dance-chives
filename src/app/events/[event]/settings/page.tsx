@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import { getEvent } from "@/db/queries/event";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -72,7 +71,6 @@ export default async function EventSettingsPage({ params }: PageProps) {
 
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col gap-4 p-6 md:px-4">
         <div className="container mx-auto px-4 sm:px-4 py-6 max-w-full overflow-x-hidden">
           <h1 className="text-3xl font-bold text-center mb-8">

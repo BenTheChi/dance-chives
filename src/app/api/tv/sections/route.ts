@@ -3,7 +3,7 @@ import { getAllBattleSections } from "@/db/queries/event";
 import { unstable_cache } from "next/cache";
 
 // Force dynamic rendering since we use searchParams
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Revalidation time: 1 hour
 export const revalidate = 3600;
@@ -19,25 +19,25 @@ export async function GET(request: NextRequest) {
       async (limit: number, offset: number) => {
         return await getAllBattleSections(limit, offset);
       },
-      [`tv-sections-${limit}-${offset}`],
+      [`watch-sections-${limit}-${offset}`],
       {
         revalidate: 3600, // 1 hour
-        tags: ["tv-sections"],
-      }
+        tags: ["watch-sections"],
+      },
     );
 
     const sections = await getCachedSections(limit, offset);
 
     return NextResponse.json(sections, {
       headers: {
-        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
       },
     });
   } catch (error) {
     console.error("Error fetching battle sections:", error);
     return NextResponse.json(
       { error: "Failed to fetch sections" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

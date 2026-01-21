@@ -12,6 +12,8 @@ import {
   Rewind,
   FastForward,
   RotateCcw,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VideoReacts } from "./VideoReacts";
@@ -44,6 +46,10 @@ interface VideoControlsProps {
   onReset?: () => void;
   showReacts?: boolean;
   onToggleReacts?: () => void;
+  // Fullscreen props
+  onToggleFullscreen?: () => void;
+  isFullscreen?: boolean;
+  showFullscreenButton?: boolean;
 }
 
 export function VideoControls({
@@ -66,6 +72,9 @@ export function VideoControls({
   onReset,
   showReacts,
   onToggleReacts,
+  onToggleFullscreen,
+  isFullscreen = false,
+  showFullscreenButton = false,
 }: VideoControlsProps) {
   return (
     <div
@@ -137,6 +146,21 @@ export function VideoControls({
               <Volume2 className="h-6 w-6 text-purple-400 hover:text-purple-300 transition-colors" />
             )}
           </button>
+
+          {/* Fullscreen Button - Only visible for non-mobile, non-landscape */}
+          {showFullscreenButton && onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize className="h-6 w-6 text-green-400 hover:text-green-300 transition-colors" />
+              ) : (
+                <Maximize className="h-6 w-6 text-green-400 hover:text-green-300 transition-colors" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Desktop Navigation Controls - Hidden on Mobile */}

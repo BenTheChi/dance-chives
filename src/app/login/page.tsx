@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FlaskConical } from "lucide-react";
-import { AppNavbar } from "@/components/AppNavbar";
 import { isAccountVerified } from "@/lib/utils/auth-utils-client";
 
 interface TestUser {
@@ -184,7 +183,6 @@ export default function LoginPage() {
 
   return (
     <>
-      <AppNavbar />
       <main className="container mx-auto flex flex-col items-center justify-center min-h-screen">
         <h1 className="mb-6">Login</h1>
 

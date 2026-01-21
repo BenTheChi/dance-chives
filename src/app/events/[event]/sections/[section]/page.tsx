@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import SectionBracketTabSelector from "@/components/SectionBracketTabSelector";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
@@ -46,7 +45,7 @@ function isValidEventId(id: string): boolean {
 // Helper function to find video in section (direct videos or bracket videos)
 function findVideoInSection(
   section: Section,
-  videoId: string
+  videoId: string,
 ): { video: Video | null; isInBracket: boolean; bracketId?: string } {
   // Check direct videos first
   const directVideo = section.videos?.find((v) => v.id === videoId);
@@ -228,7 +227,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
             eventCreatorId: event.eventDetails.creatorId,
             isTeamMember: isEventTeamMember,
           },
-          session.user.id
+          session.user.id,
         )
       : false;
 
@@ -271,7 +270,6 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
 
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
         <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
           {section.title}

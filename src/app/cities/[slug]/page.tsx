@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import { getCityData } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { EventCard } from "@/components/EventCard";
@@ -46,7 +45,6 @@ export default async function CityPage({ params }: PageProps) {
 
   return (
     <>
-      <AppNavbar />
       <UnderConstruction />
       {/* 
       Original code preserved for future use:

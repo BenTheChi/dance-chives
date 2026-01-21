@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { AppNavbar } from "@/components/AppNavbar";
 import { SectionCard } from "@/components/ui/section-card";
 import { getLatestBattleSections } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
@@ -23,7 +22,6 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col">
-      <AppNavbar />
       <main className="flex-1 flex flex-col bg-charcoal/15 mb-10">
         {/* Content */}
         <div>

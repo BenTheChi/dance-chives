@@ -1,6 +1,5 @@
 "use client";
 
-import { AppNavbar } from "@/components/AppNavbar";
 import {
   Accordion,
   AccordionContent,
@@ -12,7 +11,6 @@ import Link from "next/link";
 export default function FAQPage() {
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 md:p-8 pb-16">
         {/* Page Header */}
         <h1 className="mb-2">Frequently Asked Questions</h1>

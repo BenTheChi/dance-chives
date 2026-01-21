@@ -52,7 +52,7 @@ export function VideoCard({
   const youtubeId = extractYouTubeVideoId(video.src);
   const thumbnailUrl = youtubeId
     ? normalizeYouTubeThumbnailUrl(
-        `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+        `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
       )
     : "/placeholder.svg";
 
@@ -69,7 +69,7 @@ export function VideoCard({
     if (
       taggedDancers.some(
         (dancer) =>
-          dancer.id === currentUserId || dancer.username === currentUserId
+          dancer.id === currentUserId || dancer.username === currentUserId,
       )
     ) {
       currentVideoRoles.push("Dancer");
@@ -79,7 +79,7 @@ export function VideoCard({
       if (
         video.taggedWinners.some(
           (winner) =>
-            winner.id === currentUserId || winner.username === currentUserId
+            winner.id === currentUserId || winner.username === currentUserId,
         )
       ) {
         currentVideoRoles.push("Winner");
@@ -91,7 +91,7 @@ export function VideoCard({
         video.taggedChoreographers.some(
           (choreographer) =>
             choreographer.id === currentUserId ||
-            choreographer.username === currentUserId
+            choreographer.username === currentUserId,
         )
       ) {
         currentVideoRoles.push("Choreographer");
@@ -102,7 +102,7 @@ export function VideoCard({
       if (
         video.taggedTeachers.some(
           (teacher) =>
-            teacher.id === currentUserId || teacher.username === currentUserId
+            teacher.id === currentUserId || teacher.username === currentUserId,
         )
       ) {
         currentVideoRoles.push("Teacher");
@@ -124,7 +124,7 @@ export function VideoCard({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to remove tag. Please try again."
+            : "Failed to remove tag. Please try again.",
         );
       }
     });
@@ -249,9 +249,6 @@ export function VideoCard({
             >
               {eventTitle}
             </MaintenanceLink>
-            <span className="text-xs text-gray-500 capitalize">
-              {video.type}
-            </span>
           </div>
         </div>
         {/* Style tags and dancer tags */}

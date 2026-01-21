@@ -29,6 +29,7 @@ interface VideoReactsProps {
   showReacts: boolean;
   onToggleReacts: () => void;
   className?: string;
+  isFullscreen?: boolean;
 }
 
 const REACT_TYPES = [
@@ -47,6 +48,7 @@ export function VideoReacts({
   showReacts,
   onToggleReacts,
   className,
+  isFullscreen = false,
 }: VideoReactsProps) {
   const { data: session } = useSession();
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -86,9 +88,20 @@ export function VideoReacts({
 
   return (
     <>
-      <div className={cn("flex flex-col items-center gap-5 w-full", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center gap-2 w-full",
+          isFullscreen && "gap-10 sm:gap-4",
+          className,
+        )}
+      >
         {/* React Buttons */}
-        <div className="flex items-center justify-center gap-3 landscape:flex-col">
+        <div
+          className={cn(
+            "flex items-center justify-center gap-3",
+            isFullscreen ? "flex-col gap-6" : "landscape:flex-col",
+          )}
+        >
           {REACT_TYPES.map(({ type, emoji, label }) => {
             const isUsed = isReactUsed(type);
             return (
@@ -98,6 +111,7 @@ export function VideoReacts({
                 disabled={isUsed}
                 className={cn(
                   "text-3xl px-2 rounded-lg transition-all",
+                  isFullscreen && "text-6xl px-4",
                   "hover:bg-white/10 active:scale-95",
                   isUsed
                     ? "opacity-50 cursor-not-allowed"
@@ -112,12 +126,22 @@ export function VideoReacts({
           })}
         </div>
 
-        <div className="flex items-center justify-center gap-8 landscape:gap-3 landscape:flex-col">
+        <div
+          className={cn(
+            "flex items-center justify-center gap-8",
+            isFullscreen
+              ? "gap-6 flex-col"
+              : "landscape:gap-3 landscape:flex-col",
+          )}
+        >
           {/* Reset Link */}
           {hasReacted && (
             <button
               onClick={handleResetClick}
-              className="text-sm text-white/70 hover:text-white underline transition-colors"
+              className={cn(
+                "text-sm text-white/70 hover:text-white underline transition-colors",
+                isFullscreen && "text-base",
+              )}
             >
               Reset
             </button>
@@ -126,7 +150,10 @@ export function VideoReacts({
           {/* Toggle Reacts Link */}
           <button
             onClick={onToggleReacts}
-            className="text-sm text-white/70 hover:text-white underline transition-colors font-semibold uppercase"
+            className={cn(
+              "text-sm text-white/70 hover:text-white underline transition-colors font-semibold uppercase",
+              isFullscreen && "text-base",
+            )}
           >
             {showReacts ? "OFF" : "ON"}
           </button>

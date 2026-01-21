@@ -1,11 +1,9 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import Link from "next/link";
 import { ReportLink } from "@/components/report/ReportLink";
 
 export default function AddEditEventsPage() {
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 md:p-8 pb-16">
         {/* Page Header */}
         <h1 className="mb-2">Adding and Editing Events</h1>

@@ -11,15 +11,14 @@ interface ReactAnimationItem {
   y?: number; // Random Y position (for pop animation)
 }
 
-type AnimationType = "slide" | "pop";
-
 interface ReactAnimationProps {
   reacts: Array<{ type: string; timestamp: number; id: string }>;
   currentTime: number;
   videoContainerRef: React.RefObject<HTMLElement | HTMLDivElement | null>;
   isPlaying: boolean;
-  animationType?: AnimationType;
   useLargeEmojis?: boolean;
+  minYPercent?: number; // Minimum Y position as percentage (0-1)
+  maxYPercent?: number; // Maximum Y position as percentage (0-1)
 }
 
 const REACT_EMOJIS: Record<string, string> = {
@@ -36,8 +35,9 @@ export function ReactAnimation({
   currentTime,
   videoContainerRef,
   isPlaying,
-  animationType = "slide",
   useLargeEmojis = false,
+  minYPercent,
+  maxYPercent,
 }: ReactAnimationProps) {
   const [activeAnimations, setActiveAnimations] = useState<
     ReactAnimationItem[]
@@ -49,52 +49,53 @@ export function ReactAnimation({
   // Track which side the next animation should appear on (for equal distribution)
   const nextSideRef = useRef<"left" | "right">("left");
 
-  // Generate random X position on specified side (10% to 50% for left, 50% to 90% for right)
-  const getRandomX = (
-    containerWidth: number,
-    side: "left" | "right",
-  ): number => {
-    if (side === "left") {
-      return containerWidth * (0.1 + Math.random() * 0.4); // 10% to 50%
-    } else {
-      return containerWidth * (0.5 + Math.random() * 0.4); // 50% to 90%
-    }
-  };
-
   // Generate random position for pop animation that avoids certain areas
   // - Avoid 10% on all edges (top, bottom, left, right)
   // - Avoid center 35% radius (17.5% on each side of center)
   // - Distributes equally between left and right sides
+  // - If minYPercent/maxYPercent are provided, constrains Y to that range
   const getRandomPopPosition = (
     containerWidth: number,
     containerHeight: number,
     side: "left" | "right",
   ): { x: number; y: number } => {
-    // Valid areas are in the corners:
-    // Left side: Top-left (X: 10-32.5%, Y: 10-25%) or Bottom-left (X: 10-32.5%, Y: 75-90%)
-    // Right side: Top-right (X: 67.5-90%, Y: 10-25%) or Bottom-right (X: 67.5-90%, Y: 75-90%)
-
     let x: number, y: number;
-    const topOrBottom = Math.random() < 0.5; // Randomly choose top or bottom
 
-    if (side === "left") {
-      x = containerWidth * (0.1 + Math.random() * 0.225); // 10% to 32.5%
+    // Determine Y range based on constraints or default behavior
+    let minY: number, maxY: number;
+    if (minYPercent !== undefined && maxYPercent !== undefined) {
+      // Use provided constraints
+      minY = containerHeight * minYPercent;
+      maxY = containerHeight * maxYPercent;
+      // Randomly choose top or bottom within the constrained range
+      const range = maxY - minY;
+      const topOrBottom = Math.random() < 0.5;
       if (topOrBottom) {
-        // Top-left corner
-        y = containerHeight * (0.1 + Math.random() * 0.15); // 10% to 25%
+        // Top half of constrained range
+        y = minY + range * (0.1 + Math.random() * 0.4); // 10% to 50% of range
       } else {
-        // Bottom-left corner
-        y = containerHeight * (0.75 + Math.random() * 0.15); // 75% to 90%
+        // Bottom half of constrained range
+        y = minY + range * (0.5 + Math.random() * 0.4); // 50% to 90% of range
       }
     } else {
-      x = containerWidth * (0.675 + Math.random() * 0.225); // 67.5% to 90%
+      // Default behavior: Valid areas are in the corners
+      // Left side: Top-left (X: 10-32.5%, Y: 10-25%) or Bottom-left (X: 10-32.5%, Y: 75-90%)
+      // Right side: Top-right (X: 67.5-90%, Y: 10-25%) or Bottom-right (X: 67.5-90%, Y: 75-90%)
+      const topOrBottom = Math.random() < 0.5; // Randomly choose top or bottom
       if (topOrBottom) {
-        // Top-right corner
+        // Top corners
         y = containerHeight * (0.1 + Math.random() * 0.15); // 10% to 25%
       } else {
-        // Bottom-right corner
+        // Bottom corners
         y = containerHeight * (0.75 + Math.random() * 0.15); // 75% to 90%
       }
+    }
+
+    // X position (same for both constrained and unconstrained)
+    if (side === "left") {
+      x = containerWidth * (0.1 + Math.random() * 0.225); // 10% to 32.5%
+    } else {
+      x = containerWidth * (0.675 + Math.random() * 0.225); // 67.5% to 90%
     }
 
     return { x, y };
@@ -105,8 +106,17 @@ export function ReactAnimation({
 
   // Check for reacts that should be triggered
   useEffect(() => {
-    if (!isPlaying || !videoContainerRef.current) {
-      // Clear tolerance window tracking when paused
+    if (!videoContainerRef.current) {
+      return;
+    }
+
+    // Check for newly added reacts even when paused (for immediate user feedback)
+    const hasNewReacts = reacts.some(
+      (r) => r.timestamp > 0 && !previousReactsRef.current.has(r.id),
+    );
+
+    if (!isPlaying && !hasNewReacts) {
+      // Clear tolerance window tracking when paused (unless there are new reacts)
       inToleranceWindowRef.current.clear();
       return;
     }
@@ -131,13 +141,24 @@ export function ReactAnimation({
         inToleranceWindowRef.current.get(react.id) || false;
       const isNewReact = !previousReactsRef.current.has(react.id);
 
+      // For newly added reacts, allow a larger tolerance window (2 seconds) to trigger immediately
+      const isNewReactInRange = isNewReact && timeDiff <= 2.0;
+
       // Update tolerance window tracking
-      inToleranceWindowRef.current.set(react.id, isInTolerance);
+      // If a new react triggers immediately, mark it as having been in tolerance to prevent retriggering
+      if (isNewReactInRange) {
+        inToleranceWindowRef.current.set(react.id, true);
+      } else {
+        inToleranceWindowRef.current.set(react.id, isInTolerance);
+      }
 
       // Trigger if:
       // 1. We're entering the tolerance window (allows retriggering when seeking)
-      // 2. OR it's a newly added react and we're currently in tolerance (immediate trigger)
-      if (isInTolerance && (!wasInTolerance || isNewReact)) {
+      // 2. OR it's a newly added react within 2 seconds (immediate trigger for user's own reacts)
+      if (
+        (isInTolerance && (!wasInTolerance || isNewReact)) ||
+        isNewReactInRange
+      ) {
         // Generate unique ID with timestamp to allow multiple instances of same react
         const uniqueId = `${react.id}-${Date.now()}-${Math.random()}`;
         const containerHeight = container.offsetHeight;
@@ -146,25 +167,17 @@ export function ReactAnimation({
         const side = nextSideRef.current;
         nextSideRef.current = side === "left" ? "right" : "left";
 
-        if (animationType === "pop") {
-          const position = getRandomPopPosition(
-            containerWidth,
-            containerHeight,
-            side,
-          );
-          newReacts.push({
-            ...react,
-            id: uniqueId,
-            x: position.x,
-            y: position.y,
-          });
-        } else {
-          newReacts.push({
-            ...react,
-            id: uniqueId,
-            x: getRandomX(containerWidth, side),
-          });
-        }
+        const position = getRandomPopPosition(
+          containerWidth,
+          containerHeight,
+          side,
+        );
+        newReacts.push({
+          ...react,
+          id: uniqueId,
+          x: position.x,
+          y: position.y,
+        });
       }
     }
 
@@ -178,7 +191,7 @@ export function ReactAnimation({
 
   // Remove animation after it completes
   const handleAnimationComplete = (id: string) => {
-    const timeout = animationType === "pop" ? 3000 : 12000; // 3s for pop, 12s for slide
+    const timeout = 3000; // 3s for pop animation
     setTimeout(() => {
       setActiveAnimations((prev) => prev.filter((item) => item.id !== id));
     }, timeout);
@@ -205,97 +218,40 @@ export function ReactAnimation({
         {activeAnimations.map((item) => {
           const emoji = REACT_EMOJIS[item.type] || "😂";
 
-          if (animationType === "pop") {
-            // Pop animation: quickly enter, expand slightly, pause, then fade out
-            // Position is pre-calculated to avoid center and side margins
-            const y = item.y ?? containerHeight * 0.25; // Fallback if y not set
-            return (
-              <motion.div
-                key={item.id}
-                className="absolute will-change-transform"
-                style={{
-                  left: `${item.x}px`,
-                  top: `${y}px`,
-                  transform: "translate3d(-50%, -50%, 0)", // Center on position
-                }}
-                initial={{
-                  opacity: 0,
-                  scale: 0.3,
-                }}
-                animate={{
-                  opacity: [0, 1, 1, 0],
-                  scale: [0.3, 1.2, 1.2, 1.0],
-                }}
-                exit={{
-                  opacity: 0,
-                  scale: 1.0,
-                }}
-                transition={{
-                  duration: 2.5,
-                  ease: "easeOut",
-                  opacity: {
-                    times: [0, 0.15, 0.7, 1], // Quick fade in, hold, then fade out
-                    duration: 2.5,
-                  },
-                  scale: {
-                    times: [0, 0.15, 0.7, 1], // Quick expand, hold, slight shrink
-                    duration: 2.5,
-                  },
-                }}
-                onAnimationComplete={() => handleAnimationComplete(item.id)}
-              >
-                <span
-                  className={
-                    useLargeEmojis
-                      ? "!text-5xl select-none"
-                      : "text-4xl select-none"
-                  }
-                  style={{ willChange: "transform" }}
-                >
-                  {emoji}
-                </span>
-              </motion.div>
-            );
-          }
-
-          // Slide animation (original): slides down the screen
+          // Pop animation: quickly expand in, pause, then fade out
+          // Position is pre-calculated to avoid center and side margins
+          const y = item.y ?? containerHeight * 0.25; // Fallback if y not set
           return (
             <motion.div
               key={item.id}
               className="absolute will-change-transform"
               style={{
                 left: `${item.x}px`,
-                transform: "translate3d(0, 0, 0)", // Force GPU acceleration
-                y: 40,
+                top: `${y}px`,
+                transform: "translate3d(-50%, -50%, 0)", // Center on position
               }}
               initial={{
-                opacity: 0,
-                scale: 0.5,
+                opacity: 1,
+                scale: 0.3,
               }}
               animate={{
-                opacity: [0, 1, 1],
-                scale: [0.5, 1.5, 1.5],
-                y: 800, // Move down 800px
+                opacity: [1, 1, 1, 0],
+                scale: [0.3, 1.2, 1.2, 1.0],
               }}
               exit={{
                 opacity: 0,
-                scale: 1.5,
+                scale: 1.0,
               }}
               transition={{
-                duration: 5,
+                duration: 1.5,
                 ease: "easeOut",
                 opacity: {
-                  times: [0, 0.1, 1],
-                  duration: 10,
+                  times: [0, 0.15, 0.7, 1], // Hold at full opacity, then fade out
+                  duration: 2.5,
                 },
                 scale: {
-                  times: [0, 0.1, 1],
-                  duration: 5,
-                },
-                y: {
-                  delay: 0.5,
-                  duration: 8,
-                  ease: "easeOut",
+                  times: [0, 0.15, 0.7, 1], // Quick expand, hold, slight shrink
+                  duration: 1.5,
                 },
               }}
               onAnimationComplete={() => handleAnimationComplete(item.id)}
@@ -303,8 +259,8 @@ export function ReactAnimation({
               <span
                 className={
                   useLargeEmojis
-                    ? "text-9xl select-none"
-                    : "text-4xl select-none"
+                    ? "!text-5xl select-none"
+                    : "text-3xl select-none"
                 }
                 style={{ willChange: "transform" }}
               >

@@ -1,6 +1,5 @@
 import { VideoGallery } from "@/components/VideoGallery";
 import { HideFooterOnMobile } from "./hide-footer";
-import { AppNavbar } from "@/components/AppNavbar";
 import { getAllBattleSections } from "@/db/queries/event";
 import { unstable_cache } from "next/cache";
 
@@ -29,7 +28,6 @@ export default async function WatchPage() {
     <>
       <HideFooterOnMobile />
       <div className="flex flex-col">
-        <AppNavbar />
         <div className="relative w-full flex flex-col items-center justify-center bg-black">
           <VideoGallery initialSections={initialSections} />
         </div>

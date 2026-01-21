@@ -1,6 +1,5 @@
 "use client";
 
-import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationGuard } from "@/components/AccountVerificationGuard";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
@@ -341,7 +340,6 @@ export function DashboardClient({
   if (loading) {
     return (
       <AccountVerificationGuard requireVerification={true}>
-        <AppNavbar />
         <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
           <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
             Dashboard
@@ -358,7 +356,6 @@ export function DashboardClient({
 
   return (
     <AccountVerificationGuard requireVerification={true}>
-      <AppNavbar />
       <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
         <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
           Dashboard

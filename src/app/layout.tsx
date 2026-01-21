@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Footer } from "@/components/Footer";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationRedirector } from "@/components/account-verification-redirector";
 import { SubmissionOverlayProvider } from "@/components/SubmissionOverlay";
 
@@ -136,6 +137,7 @@ export default function RootLayout({
             <SidebarProvider>
               <AppSidebar />
               <div className="flex flex-col min-h-screen w-full relative z-10">
+                <AppNavbar />
                 <main className="flex flex-col flex-1">{children}</main>
                 <Footer />
               </div>

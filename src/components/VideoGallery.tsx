@@ -1,25 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Keyboard } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
-import "swiper/css";
-import "swiper/css/navigation";
-import { VideoPlayer, VideoPlayerRef } from "@/components/tv/VideoPlayer";
-import { VideoControls } from "@/components/tv/VideoControls";
-import { VideoInfoDialog } from "@/components/tv/VideoInfoDialog";
-import { VideoReacts } from "@/components/tv/VideoReacts";
-import { ReactAnimation } from "@/components/tv/ReactAnimation";
+import { VideoPlayer, VideoPlayerRef } from "@/components/watch/VideoPlayer";
+import { VideoControls } from "@/components/watch/VideoControls";
+import { VideoInfoDialog } from "@/components/watch/VideoInfoDialog";
+import { VideoReacts } from "@/components/watch/VideoReacts";
+import { Button } from "@/components/ui/button";
+import { ReactAnimation } from "@/components/watch/ReactAnimation";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
-import { Info, Volume2, VolumeX } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  Info,
+  Volume2,
+  VolumeX,
+  Minimize,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { cn } from "@/lib/utils";
 
 interface VideoGalleryProps {
   initialSections: Array<{
@@ -184,7 +189,7 @@ export function VideoGallery({
   >(new Map());
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(true); // Start muted for first video to comply with autoplay policies
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -200,12 +205,13 @@ export function VideoGallery({
   const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPlayingRef = useRef(isPlaying);
   const hasInitializedFromUrlRef = useRef(false);
+  const hasPlayedFirstVideoRef = useRef(false);
 
-  const mainSwiperRef = useRef<SwiperType | null>(null);
-  const videoSwipersRef = useRef<Map<number, SwiperType>>(new Map());
   const playerRef = useRef<VideoPlayerRef>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // React state management
   const { data: session } = useSession();
@@ -268,19 +274,18 @@ export function VideoGallery({
         return newMap;
       });
 
-      // Navigate swipers to correct positions
+      // State is already set above, just need to load the video
       setTimeout(() => {
-        if (mainSwiperRef.current) {
-          mainSwiperRef.current.slideTo(videoLocation.sectionIndex);
-        }
-        setTimeout(() => {
-          const videoSwiper = videoSwipersRef.current.get(
-            videoLocation.sectionIndex,
-          );
-          if (videoSwiper) {
-            videoSwiper.slideTo(videoLocation.videoIndex);
+        const section = sections[videoLocation.sectionIndex];
+        if (
+          section &&
+          section.section.videos.length > videoLocation.videoIndex
+        ) {
+          const video = section.section.videos[videoLocation.videoIndex];
+          if (video && playerRef.current) {
+            playerRef.current.loadVideoById(video.src);
           }
-        }, 300);
+        }
       }, 100);
 
       hasInitializedFromUrlRef.current = true;
@@ -298,8 +303,6 @@ export function VideoGallery({
     0,
     Math.min(currentTime, duration > 0 ? duration : currentTime),
   );
-  const sliderValue = duration > 0 ? [clampedTime] : [0];
-  const maxValue = duration > 0 ? duration : 100;
 
   // Show slider and reset fade-out timer
   const showSlider = useCallback(() => {
@@ -580,11 +583,9 @@ export function VideoGallery({
     }
   }, [allLoadedSections.length, isLoadingMore, enableUrlRouting]);
 
-  // Handle main swiper (sections) slide change
+  // Handle section change - called when section index changes
   const handleSectionChange = useCallback(
-    (swiper: SwiperType) => {
-      const newIndex = swiper.activeIndex;
-      setCurrentSectionIndex(newIndex);
+    (newIndex: number) => {
       showSlider(); // Show slider when navigating
 
       // Load more if near end (only for multi-event view)
@@ -608,11 +609,15 @@ export function VideoGallery({
         const video = section.section.videos[videoIndex];
         if (video && playerRef.current) {
           playerRef.current.loadVideoById(video.src);
-          playerRef.current.mute();
-          setIsMuted(true);
           // Always autoplay after manual navigation
           setTimeout(() => {
             if (playerRef.current) {
+              // Apply mute state after player is ready
+              if (isMuted) {
+                playerRef.current.mute();
+              } else {
+                playerRef.current.unmute();
+              }
               playerRef.current.playVideo();
               setIsPlaying(true);
               lastAutoplayedVideoRef.current = video.id;
@@ -627,18 +632,13 @@ export function VideoGallery({
       loadMoreSections,
       showSlider,
       enableUrlRouting,
+      isMuted,
     ],
   );
 
-  // Handle video swiper (within section) slide change
+  // Handle video change - called when video index changes
   const handleVideoChange = useCallback(
-    (sectionIndex: number, swiper: SwiperType) => {
-      const newVideoIndex = swiper.activeIndex;
-      setCurrentVideoIndex((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(sectionIndex, newVideoIndex);
-        return newMap;
-      });
+    (sectionIndex: number, newVideoIndex: number) => {
       showSlider(); // Show slider when navigating
 
       const section = sections[sectionIndex];
@@ -658,17 +658,59 @@ export function VideoGallery({
           }
 
           playerRef.current.loadVideoById(video.src);
-          playerRef.current.mute();
-          setIsMuted(true);
           // Always autoplay after manual navigation
-          playerRef.current.playVideo();
-          setIsPlaying(true);
-          lastAutoplayedVideoRef.current = video.id;
+          // Apply mute state after a short delay
+          setTimeout(() => {
+            if (playerRef.current) {
+              if (isMuted) {
+                playerRef.current.mute();
+              } else {
+                playerRef.current.unmute();
+              }
+              playerRef.current.playVideo();
+              setIsPlaying(true);
+              lastAutoplayedVideoRef.current = video.id;
+            }
+          }, 100);
         }
       }
     },
-    [sections, showSlider, enableUrlRouting, eventId, videoExistsInEvent],
+    [
+      sections,
+      showSlider,
+      enableUrlRouting,
+      eventId,
+      videoExistsInEvent,
+      isMuted,
+    ],
   );
+
+  // Track previous values to avoid unnecessary calls
+  const prevSectionIndexRef = useRef(currentSectionIndex);
+  const prevVideoIndexRef = useRef<Map<number, number>>(new Map());
+
+  // Effect to handle section changes
+  useEffect(() => {
+    if (prevSectionIndexRef.current !== currentSectionIndex) {
+      prevSectionIndexRef.current = currentSectionIndex;
+      handleSectionChange(currentSectionIndex);
+    }
+  }, [currentSectionIndex, handleSectionChange]);
+
+  // Effect to handle video changes
+  useEffect(() => {
+    const videoIndex = currentVideoIndex.get(currentSectionIndex) ?? 0;
+    const prevVideoIndex =
+      prevVideoIndexRef.current.get(currentSectionIndex) ?? -1;
+
+    if (
+      prevVideoIndex !== videoIndex ||
+      prevSectionIndexRef.current !== currentSectionIndex
+    ) {
+      prevVideoIndexRef.current.set(currentSectionIndex, videoIndex);
+      handleVideoChange(currentSectionIndex, videoIndex);
+    }
+  }, [currentVideoIndex, currentSectionIndex, handleVideoChange]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -723,34 +765,34 @@ export function VideoGallery({
       const videos = section.section.videos;
       if (videos.length === 0) return;
 
-      const videoSwiper = videoSwipersRef.current.get(currentSectionIndex);
-      if (videoSwiper) {
-        let newIndex: number;
-        if (circular) {
-          // Circular navigation: wrap around
-          newIndex = (currentIdx + direction + videos.length) % videos.length;
-        } else {
-          // Normal navigation: clamp to bounds
-          newIndex = Math.max(
-            0,
-            Math.min(videos.length - 1, currentIdx + direction),
-          );
-        }
-        videoSwiper.slideTo(newIndex);
+      let newIndex: number;
+      if (circular) {
+        // Circular navigation: wrap around
+        newIndex = (currentIdx + direction + videos.length) % videos.length;
+      } else {
+        // Normal navigation: clamp to bounds
+        newIndex = Math.max(
+          0,
+          Math.min(videos.length - 1, currentIdx + direction),
+        );
       }
+
+      setCurrentVideoIndex((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(currentSectionIndex, newIndex);
+        return newMap;
+      });
     },
     [sections, currentSectionIndex, currentVideoIndex],
   );
 
   const navigateSection = useCallback(
     (direction: number) => {
-      if (mainSwiperRef.current) {
-        const newIndex = Math.max(
-          0,
-          Math.min(sections.length - 1, currentSectionIndex + direction),
-        );
-        mainSwiperRef.current.slideTo(newIndex);
-      }
+      const newIndex = Math.max(
+        0,
+        Math.min(sections.length - 1, currentSectionIndex + direction),
+      );
+      setCurrentSectionIndex(newIndex);
     },
     [sections.length, currentSectionIndex],
   );
@@ -783,7 +825,7 @@ export function VideoGallery({
     }
   }, [isMuted]);
 
-  // Auto-play when video enters center (muted) - only on first appearance
+  // Auto-play when video enters center - only on first appearance
   useEffect(() => {
     if (currentVideo && playerRef.current) {
       const videoId = currentVideo.video.id;
@@ -792,11 +834,6 @@ export function VideoGallery({
       if (lastAutoplayedVideoRef.current !== videoId) {
         const timer = setTimeout(() => {
           if (playerRef.current && lastAutoplayedVideoRef.current !== videoId) {
-            // Ensure muted before playing
-            if (!isMuted) {
-              playerRef.current.mute();
-              setIsMuted(true);
-            }
             playerRef.current.playVideo();
             setIsPlaying(true);
             lastAutoplayedVideoRef.current = videoId;
@@ -808,7 +845,7 @@ export function VideoGallery({
         };
       }
     }
-  }, [currentVideo?.video.id, isMuted]);
+  }, [currentVideo?.video.id]);
 
   // Update playing state based on player state
   // Track video time and duration
@@ -820,6 +857,7 @@ export function VideoGallery({
         try {
           const time = playerRef.current.getCurrentTime();
           const dur = playerRef.current.getDuration();
+          const muted = playerRef.current.isMuted();
 
           // Only update if we have valid values
           if (time >= 0 && isFinite(time) && !isNaN(time)) {
@@ -827,6 +865,11 @@ export function VideoGallery({
           }
           if (dur > 0 && isFinite(dur) && !isNaN(dur)) {
             setDuration(dur);
+          }
+
+          if (!playerRef.current.isLoading()) {
+            // Sync mute state with actual player state
+            setIsMuted(muted);
           }
         } catch (e) {
           // Ignore errors (player might not be ready)
@@ -926,6 +969,49 @@ export function VideoGallery({
   // Calculate if emojis should be large: width > sm breakpoint (640px) AND not in landscape mode
   const useLargeEmojis = windowWidth > 640 && !isLandscape;
 
+  // Fullscreen handlers
+  const toggleFullscreen = useCallback(async () => {
+    if (!fullscreenContainerRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await fullscreenContainerRef.current.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error("Error toggling fullscreen:", error);
+    }
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "mozfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "MSFullscreenChange",
+        handleFullscreenChange,
+      );
+    };
+  }, []);
+
   const handleSeek = useCallback(
     (value: number[]) => {
       if (playerRef.current && value.length > 0) {
@@ -983,6 +1069,10 @@ export function VideoGallery({
       // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
       if (state === 1) {
         setIsPlaying(true);
+        // Track that first video has played (for autoplay policy compliance)
+        if (!hasPlayedFirstVideoRef.current) {
+          hasPlayedFirstVideoRef.current = true;
+        }
       } else if (state === 2 || state === 0) {
         setIsPlaying(false);
         showSlider(); // Show slider when paused or ended
@@ -1000,28 +1090,47 @@ export function VideoGallery({
   );
 
   return (
-    <div className="relative w-full max-w-5xl flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0 pt-10">
+    <div
+      ref={fullscreenContainerRef}
+      className={`relative w-full max-w-[1500px] flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0`}
+    >
       {/* Header */}
-      <div className="flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 shrink-0 landscape:hidden">
-        <div className="flex justify-between items-baseline mb-2">
-          <div className="flex flex-col items-start">
+      <div
+        className={`flex flex-col px-4 py-2 bg-gradient-to-b from-black/80 to-transparent z-50 landscape:hidden transition-opacity duration-300 ${
+          isFullscreen ? "hidden" : "opacity-100"
+        }`}
+      >
+        <div className="flex justify-between items-baseline mb-12">
+          <div className="flex flex-col items-start gap-2">
             {currentVideo && (
               <Link
                 href={`/events/${currentVideo.eventId}`}
-                className="!text-lg hover:underline font-semibold"
+                className="!text-lg hover:underline font-semibold leading-tight"
               >
                 {currentVideo.eventTitle}
               </Link>
             )}
-            {currentVideo && (
-              <Link
-                href={`/events/${currentVideo.eventId}/sections/${currentVideo.section.id}`}
-                className="hover:underline"
-              >
-                {currentVideo.section.title}
-              </Link>
-            )}
-            {currentVideo?.eventDate && <p>{currentVideo.eventDate}</p>}
+            <div className="flex items-baseline gap-3">
+              {currentVideo && (
+                <Link
+                  href={`/events/${currentVideo.eventId}/sections/${currentVideo.section.id}`}
+                  className="hover:underline"
+                >
+                  {currentVideo.section.title}
+                </Link>
+              )}
+              {currentVideo?.eventDate && (
+                <p className="!text-[16px] text-white/70">
+                  {currentVideo.eventDate}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-between gap-2 opacity-70">
+              {currentVideo?.video.styles &&
+                currentVideo?.video.styles.map((style) => (
+                  <StyleBadge key={style} style={style} />
+                ))}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-1">
             <Button
@@ -1045,195 +1154,113 @@ export function VideoGallery({
             </Link>
           </div>
         </div>
-        <div className="flex justify-between gap-2">
-          {currentVideo?.video.styles &&
-            currentVideo?.video.styles.map((style) => (
-              <StyleBadge key={style} style={style} />
-            ))}
-        </div>
       </div>
 
-      {/* React Animation Overlay - Outside SwiperSlide when not in landscape */}
+      {/* React Animation Overlay - Outside video container when not in landscape */}
       {currentVideo && !isLandscape && isMobile && showReacts && (
         <ReactAnimation
           reacts={sortedReacts}
           currentTime={currentTime}
           videoContainerRef={videoContainerRef as any}
           isPlaying={isPlaying}
-          animationType="slide"
           useLargeEmojis={useLargeEmojis}
+          minYPercent={0.3}
+          maxYPercent={0.6}
         />
       )}
 
       {/* Main Content Area - Flex layout */}
       <div className="flex-1 flex flex-col items-center min-h-0 relative z-30">
-        <div className="w-full">
-          <Swiper
-            direction="horizontal"
-            modules={[Navigation, Keyboard]}
-            onSwiper={(swiper) => {
-              mainSwiperRef.current = swiper;
+        <div className="w-full aspect-video relative overflow-hidden">
+          {/* Sections Container - Horizontal */}
+          <div
+            className="w-full h-full flex transition-transform duration-300 ease-in-out"
+            style={{
+              transform: `translateX(-${currentSectionIndex * 100}%)`,
             }}
-            onSlideChange={handleSectionChange}
-            slidesPerView={1}
-            spaceBetween={0}
-            centeredSlides={true}
-            keyboard={{
-              enabled: true,
-              onlyInViewport: false,
-            }}
-            touchEventsTarget="container"
-            allowTouchMove={true}
-            simulateTouch={true}
-            touchStartPreventDefault={false}
-            touchReleaseOnEdges={true}
-            className="w-full aspect-video"
-            speed={300}
           >
             {sections.map((sectionData, sectionIdx) => {
               const videos = sectionData.section.videos;
               if (videos.length === 0) return null;
 
+              const currentVideoIdx = currentVideoIndex.get(sectionIdx) ?? 0;
+
               return (
-                <SwiperSlide
+                <div
                   key={sectionData.section.id}
-                  className="flex items-center justify-center"
+                  className="flex-shrink-0 w-full h-full flex items-center justify-center"
                 >
-                  {/* Nested Swiper - Vertical Videos (all brackets combined) */}
-                  <Swiper
-                    direction="vertical"
-                    modules={[Navigation, Keyboard]}
-                    onSwiper={(swiper) => {
-                      videoSwipersRef.current.set(sectionIdx, swiper);
+                  {/* Videos Container - Vertical */}
+                  <div
+                    className="w-full h-full flex flex-col transition-transform duration-300 ease-in-out"
+                    style={{
+                      transform: `translateY(-${currentVideoIdx * 100}%)`,
                     }}
-                    onSlideChange={(swiper) => {
-                      handleVideoChange(sectionIdx, swiper);
-                    }}
-                    slidesPerView={1}
-                    spaceBetween={0}
-                    centeredSlides={true}
-                    keyboard={{
-                      enabled: true,
-                      onlyInViewport: false,
-                    }}
-                    touchEventsTarget="container"
-                    allowTouchMove={true}
-                    simulateTouch={true}
-                    touchStartPreventDefault={false}
-                    touchReleaseOnEdges={true}
-                    className="w-full h-full"
-                    speed={300}
                   >
                     {videos.map((video, videoIdx) => {
                       // Only render VideoPlayer for the current video to enable lazy loading
                       const isCurrentVideo =
-                        currentVideo && currentVideo.video.id === video.id;
+                        currentVideo &&
+                        currentVideo.video.id === video.id &&
+                        sectionIdx === currentSectionIndex &&
+                        videoIdx === currentVideoIdx;
                       return (
-                        <SwiperSlide key={video.id} className="relative">
+                        <div
+                          key={video.id}
+                          className="flex-shrink-0 w-full h-full relative"
+                        >
                           {isCurrentVideo ? (
                             <>
                               <div
                                 ref={videoContainerRef}
-                                className="relative w-full aspect-video"
+                                className="relative w-full h-full"
                               >
                                 <VideoPlayer
                                   ref={playerRef}
                                   videoId={currentVideo.video.src}
                                   autoplay={true}
-                                  muted={true}
+                                  muted={isMuted}
                                   onReady={handlePlayerReady}
                                   onStateChange={handlePlayerStateChange}
-                                  className="w-full aspect-video"
+                                  className="w-full h-full"
                                 />
                               </div>
 
-                              {/* Tap interaction overlay */}
-                              <div
-                                className="absolute inset-0 z-10"
-                                onTouchStart={showSlider}
-                                onMouseDown={showSlider}
-                                onClick={(e) => {
-                                  showSlider();
-                                  togglePlayPause();
-                                }}
-                              />
-
-                              {/* Video Title - Overlay on top */}
-                              <h3
-                                className={`absolute top-2 left-0 right-0 text-center z-30 pointer-events-none transition-opacity duration-700 py-2 ${
-                                  isSliderVisible ? "opacity-100" : "opacity-0"
-                                }`}
-                              >
-                                <a
-                                  href={currentVideo.video.src}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-white hover:text-primary-light underline transition-colors pointer-events-auto font-bold"
-                                >
-                                  {currentVideo.video.title}
-                                </a>
-                                <br />
-                                <span className="!text-sm no-underline">
-                                  {currentVideo?.bracket &&
-                                    currentVideo.bracket.title}
-                                </span>
-                              </h3>
-
-                              {/* Timeline Slider - Overlay on video */}
-                              <div
-                                className={`absolute bottom-0 left-0 right-0 px-4 pb-4 flex items-center gap-3 pointer-events-none transition-opacity duration-700 z-20 landscape:mx-10 ${
-                                  isSliderVisible ? "opacity-100" : "opacity-0"
-                                }`}
-                              >
-                                <span className="text-white text-xs font-mono min-w-[3.5rem] text-right tabular-nums pointer-events-auto">
-                                  {formatTime(clampedTime)}
-                                </span>
-                                <div className="flex-1 pointer-events-auto">
-                                  <Slider
-                                    value={sliderValue}
-                                    min={0}
-                                    max={maxValue}
-                                    step={0.1}
-                                    onValueChange={handleSeek}
-                                    disabled={duration === 0}
+                              {/* React Animation Overlay - Inside when in landscape or fullscreen */}
+                              {(isLandscape || !isMobile || isFullscreen) &&
+                                showReacts && (
+                                  <ReactAnimation
+                                    reacts={sortedReacts}
+                                    currentTime={currentTime}
+                                    videoContainerRef={videoContainerRef as any}
+                                    isPlaying={isPlaying}
+                                    useLargeEmojis={useLargeEmojis}
                                   />
-                                </div>
-                                <span className="text-white text-xs font-mono min-w-[3.5rem] tabular-nums pointer-events-auto">
-                                  {formatTime(duration)}
-                                </span>
-                              </div>
-
-                              {/* React Animation Overlay - Inside SwiperSlide when in landscape */}
-                              {(isLandscape || !isMobile) && showReacts && (
-                                <ReactAnimation
-                                  reacts={sortedReacts}
-                                  currentTime={currentTime}
-                                  videoContainerRef={videoContainerRef as any}
-                                  isPlaying={isPlaying}
-                                  animationType="pop"
-                                  useLargeEmojis={useLargeEmojis}
-                                />
-                              )}
+                                )}
                             </>
                           ) : (
-                            <div className="w-full aspect-video bg-black flex items-center justify-center">
+                            <div className="w-full h-full bg-black flex items-center justify-center">
                               <p className="text-white text-sm opacity-50">
                                 {video.title}
                               </p>
                             </div>
                           )}
-                        </SwiperSlide>
+                        </div>
                       );
                     })}
-                  </Swiper>
-                </SwiperSlide>
+                  </div>
+                </div>
               );
             })}
-          </Swiper>
+          </div>
         </div>
 
         {/* Controls */}
-        <div className="w-full pb-4 flex flex-col gap-5 landscape:hidden">
+        <div
+          className={`w-full pb-4 flex flex-col gap-3 ${
+            isFullscreen ? "hidden" : "landscape:hidden"
+          }`}
+        >
           <VideoControls
             onUp={() => navigateVideo(-1)}
             onDown={() => navigateVideo(1)}
@@ -1253,6 +1280,9 @@ export function VideoGallery({
             onReset={handleReset}
             showReacts={showReacts}
             onToggleReacts={() => setShowReacts(!showReacts)}
+            onToggleFullscreen={toggleFullscreen}
+            isFullscreen={isFullscreen}
+            showFullscreenButton={!isMobile && !isLandscape}
           />
           {/* Video Reacts - Below controls on mobile (only on very small screens) */}
           {currentVideo && isMobile && (
@@ -1266,42 +1296,181 @@ export function VideoGallery({
                 showReacts={showReacts}
                 onToggleReacts={() => setShowReacts(!showReacts)}
               />
+              {/* Navigation Arrows - Below Reacts on mobile */}
+              <div className="flex items-center justify-center gap-4 mt-3">
+                <button
+                  onClick={() => navigateVideo(-1)}
+                  className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
+                  aria-label="Previous video"
+                >
+                  <ArrowUp className="h-6 w-6 text-yellow-400" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigateSection(-1)}
+                    className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
+                    aria-label="Previous section"
+                  >
+                    <ArrowLeft className="h-6 w-6 text-orange-400" />
+                  </button>
+                  <button
+                    onClick={() => navigateSection(1)}
+                    className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
+                    aria-label="Next section"
+                  >
+                    <ArrowRight className="h-6 w-6 text-orange-400" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => navigateVideo(1)}
+                  className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
+                  aria-label="Next video"
+                >
+                  <ArrowDown className="h-6 w-6 text-yellow-400" />
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Info Button - Top right on landscape only */}
-      <div className="absolute top-3 right-3 z-40 hidden landscape:block">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsInfoDialogOpen(true)}
-          className="text-white hover:bg-white/20"
-          aria-label="Video information"
-        >
-          <Info className="h-5 w-5" />
-        </Button>
-      </div>
-
-      {/* Mute Link - Bottom right on landscape only */}
-      <div className="absolute bottom-3 right-3 z-40 hidden landscape:block">
-        <button
-          onClick={toggleMute}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          aria-label={isMuted ? "Unmute" : "Mute"}
-        >
-          {isMuted ? (
-            <VolumeX className="h-6 w-6 text-red-400 hover:text-red-300 transition-colors" />
-          ) : (
-            <Volume2 className="h-6 w-6 text-purple-400 hover:text-purple-300 transition-colors" />
+      {/* Info Button and Navigation Arrows - Top right on landscape and fullscreen */}
+      <div
+        className={`absolute top-1/3 -translate-y-1/3 right-3 z-40 flex flex-col items-end gap-3 ${
+          isFullscreen ? "block" : "hidden landscape:block"
+        }`}
+      >
+        {/* Navigation Arrows - Stacked in column under info button */}
+        <div
+          className={cn(
+            "flex flex-col items-center gap-3 rounded-lg p-2",
+            isFullscreen && "gap-6 p-4",
           )}
-        </button>
+        >
+          {isFullscreen ? (
+            <button
+              onClick={() => setIsInfoDialogOpen(true)}
+              className="h-24 w-24 rounded-lg hover:bg-white/20 transition-colors flex items-center justify-center text-white"
+              aria-label="Video information"
+            >
+              <Info className="size-10" />
+            </button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsInfoDialogOpen(true)}
+              className="text-white hover:bg-white/20"
+              aria-label="Video information"
+            >
+              <Info />
+            </Button>
+          )}
+          <button
+            onClick={() => navigateVideo(-1)}
+            className={cn(
+              "p-1 rounded-lg hover:bg-white/10 transition-colors",
+              isFullscreen && "p-2",
+            )}
+            aria-label="Previous video"
+          >
+            <ArrowUp
+              className={cn(
+                "h-6 w-6 text-yellow-400",
+                isFullscreen && "h-12 w-12",
+              )}
+            />
+          </button>
+          <button
+            onClick={() => navigateVideo(1)}
+            className={cn(
+              "p-1 rounded-lg hover:bg-white/10 transition-colors",
+              isFullscreen && "p-2",
+            )}
+            aria-label="Next video"
+          >
+            <ArrowDown
+              className={cn(
+                "h-6 w-6 text-yellow-400",
+                isFullscreen && "h-12 w-12",
+              )}
+            />
+          </button>
+          <button
+            onClick={() => navigateSection(-1)}
+            className={cn(
+              "p-1 rounded-lg hover:bg-white/10 transition-colors",
+              isFullscreen && "p-2",
+            )}
+            aria-label="Previous section"
+          >
+            <ArrowLeft
+              className={cn(
+                "h-6 w-6 text-orange-400",
+                isFullscreen && "h-12 w-12",
+              )}
+            />
+          </button>
+          <button
+            onClick={() => navigateSection(1)}
+            className={cn(
+              "p-1 rounded-lg hover:bg-white/10 transition-colors",
+              isFullscreen && "p-2",
+            )}
+            aria-label="Next section"
+          >
+            <ArrowRight
+              className={cn(
+                "h-6 w-6 text-orange-400",
+                isFullscreen && "h-12 w-12",
+              )}
+            />
+          </button>
+          {!(isLandscape && !isPlaying) && (
+            <button
+              onClick={toggleMute}
+              className={cn(
+                "p-2 rounded-lg hover:bg-white/10 transition-colors",
+                isFullscreen && "p-4",
+              )}
+              aria-label={isMuted ? "Unmute" : "Mute"}
+            >
+              {isMuted ? (
+                <VolumeX
+                  className={cn(
+                    "h-6 w-6 text-red-400 hover:text-red-300 transition-colors",
+                    isFullscreen && "h-12 w-12",
+                  )}
+                />
+              ) : (
+                <Volume2
+                  className={cn(
+                    "h-6 w-6 text-purple-400 hover:text-purple-300 transition-colors",
+                    isFullscreen && "h-12 w-12",
+                  )}
+                />
+              )}
+            </button>
+          )}
+          {isFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              className="p-4 rounded-lg hover:bg-white/10 transition-colors"
+              aria-label="Exit fullscreen"
+            >
+              <Minimize className="h-12 w-12 text-green-400 hover:text-green-300 transition-colors" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Video Reacts - Left side in landscape */}
-      {currentVideo && (
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-40 hidden landscape:block">
+      {/* Video Reacts - Left side in landscape and fullscreen */}
+      {currentVideo && !(isLandscape && !isPlaying) && (
+        <div
+          className={`absolute top-1/3 -translate-y-1/3 left-3 z-40 ${
+            isFullscreen ? "block" : "hidden landscape:block"
+          }`}
+        >
           <VideoReacts
             videoId={currentVideo.video.id}
             currentTime={currentTime}
@@ -1310,6 +1479,7 @@ export function VideoGallery({
             onReset={handleReset}
             showReacts={showReacts}
             onToggleReacts={() => setShowReacts(!showReacts)}
+            isFullscreen={isFullscreen}
           />
         </div>
       )}
@@ -1326,6 +1496,7 @@ export function VideoGallery({
           video={currentVideo.video}
           city={currentVideo.city}
           eventDate={currentVideo.eventDate}
+          container={isFullscreen ? fullscreenContainerRef.current : undefined}
         />
       )}
     </div>

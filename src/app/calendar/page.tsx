@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import {
   getAllCities,
   getAllStyles,
@@ -61,7 +60,6 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <AppNavbar />
       <CalendarPageClient
         cities={cities}
         styles={styles}

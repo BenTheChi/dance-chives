@@ -40,7 +40,10 @@ import {
   VIDEO_ROLE_DANCER,
   fromNeo4jRoleFormat,
 } from "@/lib/utils/roles";
-import { createTagNotification, createNotification } from "@/lib/utils/request-utils";
+import {
+  createTagNotification,
+  createNotification,
+} from "@/lib/utils/request-utils";
 import { getEventTitle, getVideoTitle } from "@/db/queries/team-member";
 import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
@@ -72,7 +75,7 @@ const hexToRgb = (hex: string) => {
 
 const buildPosterBuffers = async (
   file: File,
-  bgColor: string | undefined
+  bgColor: string | undefined,
 ): Promise<{ originalBuffer: Buffer; thumbnailBuffer: Buffer }> => {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -325,26 +328,26 @@ export async function addEvent(props: addEventProps): Promise<response> {
         file.name,
         {
           type: file.type,
-        }
+        },
       );
       const thumbnailFile = new File(
         [new Uint8Array(thumbnailBuffer)],
         `thumbnail-${file.name}`,
-        { type: file.type }
+        { type: file.type },
       );
 
       // Upload original poster
       const originalResult = await uploadToR2(
         originalFile,
         "event-poster",
-        eventId
+        eventId,
       );
 
       // Upload thumbnail
       const thumbnailResult = await uploadToR2(
         thumbnailFile,
         "event-poster",
-        eventId
+        eventId,
       );
 
       if (
@@ -375,12 +378,12 @@ export async function addEvent(props: addEventProps): Promise<response> {
     if (galleryFiles.length > 0) {
       const galleryResults = await uploadEventGalleryToR2(
         galleryFiles.map((item) => item.file!),
-        eventId
+        eventId,
       );
       galleryResults.forEach((result, index) => {
         const originalItem = galleryFiles[index];
         const galleryIndex = props.gallery.findIndex(
-          (g) => g.id === originalItem.id
+          (g) => g.id === originalItem.id,
         );
         if (galleryIndex !== -1 && result.success && result.url && result.id) {
           props.gallery[galleryIndex].id = result.id;
@@ -395,18 +398,18 @@ export async function addEvent(props: addEventProps): Promise<response> {
       if (section.poster?.file) {
         const { thumbnailBuffer } = await buildPosterBuffers(
           section.poster.file,
-          section.bgColor
+          section.bgColor,
         );
         const thumbnailFile = new File(
           [new Uint8Array(thumbnailBuffer)],
           `thumbnail-${section.poster.file.name}`,
-          { type: section.poster.file.type }
+          { type: section.poster.file.type },
         );
 
         const posterResult = await uploadSectionPosterToR2(
           thumbnailFile,
           eventId,
-          section.id
+          section.id,
         );
         if (posterResult.success) {
           section.poster = {
@@ -472,7 +475,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
       try {
         const timezoneResult = await getTimezone(
           existingCity.latitude!,
-          existingCity.longitude!
+          existingCity.longitude!,
         );
         normalizedTimezone = timezoneResult.timeZoneId;
         // Update city in Neo4j with timezone
@@ -493,30 +496,33 @@ export async function addEvent(props: addEventProps): Promise<response> {
       // Only attempt if city.id looks like a valid Google place_id
       // Google place_ids are typically long alphanumeric strings
       const cityId = props.eventDetails.city.id;
-      const looksLikePlaceId = cityId && cityId.length > 10 && /^[A-Za-z0-9_-]+$/.test(cityId);
-      
+      const looksLikePlaceId =
+        cityId && cityId.length > 10 && /^[A-Za-z0-9_-]+$/.test(cityId);
+
       if (!looksLikePlaceId && existingCity) {
         // City exists in Neo4j but missing coordinates - use existing data
         // This shouldn't happen normally, but handle gracefully
-        console.warn(`City ${cityId} exists in Neo4j but missing coordinates. Using form data.`);
+        console.warn(
+          `City ${cityId} exists in Neo4j but missing coordinates. Using form data.`,
+        );
         normalizedTimezone = existingCity.timezone || "UTC";
       } else if (looksLikePlaceId) {
         try {
           const placeDetails = await getPlaceDetails(cityId);
           const timezoneResult = await getTimezone(
             placeDetails.geometry.location.lat,
-            placeDetails.geometry.location.lng
+            placeDetails.geometry.location.lng,
           );
           normalizedTimezone = timezoneResult.timeZoneId;
 
           // Extract city data from place details
           const region =
             placeDetails.address_components.find((ac) =>
-              ac.types.includes("administrative_area_level_1")
+              ac.types.includes("administrative_area_level_1"),
             )?.short_name || "";
           const countryCode =
             placeDetails.address_components.find((ac) =>
-              ac.types.includes("country")
+              ac.types.includes("country"),
             )?.short_name || "";
 
           // Store in Neo4j for future use
@@ -704,7 +710,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           } catch (notifError) {
             console.error(
               `❌ [addEvent] Error creating notification for role ${role.title}:`,
-              notifError
+              notifError,
             );
           }
         }
@@ -728,15 +734,19 @@ export async function addEvent(props: addEventProps): Promise<response> {
           try {
             const userId = await getUserIdFromUser(user);
             const roles: string[] = [];
-            if (video.taggedDancers?.some((u) => u.username === user.username)) {
+            if (
+              video.taggedDancers?.some((u) => u.username === user.username)
+            ) {
               roles.push(VIDEO_ROLE_DANCER);
             }
-            if (video.taggedWinners?.some((u) => u.username === user.username)) {
+            if (
+              video.taggedWinners?.some((u) => u.username === user.username)
+            ) {
               roles.push(VIDEO_ROLE_WINNER);
             }
             if (
               video.taggedChoreographers?.some(
-                (u) => u.username === user.username
+                (u) => u.username === user.username,
               )
             ) {
               roles.push("CHOREOGRAPHER");
@@ -762,7 +772,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           } catch (notifError) {
             console.error(
               `❌ [addEvent] Error creating notification for video tag:`,
-              notifError
+              notifError,
             );
           }
         }
@@ -796,7 +806,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
               }
               if (
                 video.taggedChoreographers?.some(
-                  (u) => u.username === user.username
+                  (u) => u.username === user.username,
                 )
               ) {
                 roles.push("CHOREOGRAPHER");
@@ -822,7 +832,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
             } catch (notifError) {
               console.error(
                 `❌ [addEvent] Error creating notification for bracket video tag:`,
-                notifError
+                notifError,
               );
             }
           }
@@ -844,7 +854,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           } catch (notifError) {
             console.error(
               `❌ [addEvent] Error creating notification for section winner:`,
-              notifError
+              notifError,
             );
           }
         }
@@ -865,7 +875,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
           } catch (notifError) {
             console.error(
               `❌ [addEvent] Error creating notification for section judge:`,
-              notifError
+              notifError,
             );
           }
         }
@@ -877,8 +887,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Also revalidate the individual event page
     revalidatePath(`/events/${result.id}`);
     // Revalidate TV page
-    revalidatePath("/tv");
-    revalidateTag("tv-sections", "");
+    revalidatePath("/watch");
+    revalidateTag("watch-sections", "");
 
     const newCitySlug = getCitySlug(props.eventDetails.city as City);
     revalidateCalendarForSlugs([newCitySlug]);
@@ -897,10 +907,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
               revalidatePath(`/profiles/${user.username}`);
             }
           } catch (error) {
-            console.error(
-              `Failed to revalidate profile for role user:`,
-              error
-            );
+            console.error(`Failed to revalidate profile for role user:`, error);
           }
         }
       }
@@ -922,7 +929,7 @@ export async function addEvent(props: addEventProps): Promise<response> {
 
 export async function editEvent(
   eventId: string,
-  editedEvent: addEventProps
+  editedEvent: addEventProps,
 ): Promise<response> {
   console.log("🟢 [editEvent] Starting editEvent");
   const session = await auth();
@@ -940,7 +947,7 @@ export async function editEvent(
   const oldEvent = await getEventQuery(
     eventId,
     session.user.id,
-    session.user.auth ?? 0
+    session.user.auth ?? 0,
   );
 
   if (!oldEvent) {
@@ -963,7 +970,7 @@ export async function editEvent(
       eventCreatorId: oldEvent.eventDetails.creatorId,
       isTeamMember: isEventTeamMember,
     },
-    session.user.id
+    session.user.id,
   );
 
   if (!hasPermission) {
@@ -1054,26 +1061,26 @@ export async function editEvent(
         file.name,
         {
           type: file.type,
-        }
+        },
       );
       const thumbnailFile = new File(
         [new Uint8Array(thumbnailBuffer)],
         `thumbnail-${file.name}`,
-        { type: file.type }
+        { type: file.type },
       );
 
       // Upload original poster
       const originalResult = await uploadToR2(
         originalFile,
         "event-poster",
-        eventId
+        eventId,
       );
 
       // Upload thumbnail
       const thumbnailResult = await uploadToR2(
         thumbnailFile,
         "event-poster",
-        eventId
+        eventId,
       );
 
       if (
@@ -1104,12 +1111,12 @@ export async function editEvent(
     if (galleryFiles.length > 0) {
       const galleryResults = await uploadEventGalleryToR2(
         galleryFiles.map((item) => item.file!),
-        eventId
+        eventId,
       );
       galleryResults.forEach((result, index) => {
         const originalItem = galleryFiles[index];
         const galleryIndex = editedEvent.gallery.findIndex(
-          (g) => g.id === originalItem.id
+          (g) => g.id === originalItem.id,
         );
         if (galleryIndex !== -1 && result.success && result.url && result.id) {
           editedEvent.gallery[galleryIndex].id = result.id;
@@ -1131,7 +1138,7 @@ export async function editEvent(
     for (const oldSection of oldEvent.sections) {
       if (oldSection.poster) {
         const newSection = editedEvent.sections.find(
-          (s) => s.id === oldSection.id
+          (s) => s.id === oldSection.id,
         );
         // Delete poster if section was removed, or poster was removed, or poster was replaced
         if (
@@ -1156,18 +1163,18 @@ export async function editEvent(
 
         const { thumbnailBuffer } = await buildPosterBuffers(
           section.poster.file,
-          section.bgColor
+          section.bgColor,
         );
         const thumbnailFile = new File(
           [new Uint8Array(thumbnailBuffer)],
           `thumbnail-${section.poster.file.name}`,
-          { type: section.poster.file.type }
+          { type: section.poster.file.type },
         );
 
         const posterResult = await uploadSectionPosterToR2(
           thumbnailFile,
           eventId,
-          section.id
+          section.id,
         );
         if (posterResult.success) {
           section.poster = {
@@ -1223,7 +1230,7 @@ export async function editEvent(
     // Only make API calls if city changed AND new city data is missing
     if (editedEvent.eventDetails.city.id !== oldEvent.eventDetails.city.id) {
       const existingCity = await getCityFromNeo4j(
-        editedEvent.eventDetails.city.id
+        editedEvent.eventDetails.city.id,
       );
 
       if (
@@ -1238,7 +1245,7 @@ export async function editEvent(
         try {
           const timezoneResult = await getTimezone(
             existingCity.latitude!,
-            existingCity.longitude!
+            existingCity.longitude!,
           );
           timezone = timezoneResult.timeZoneId;
           // Update city in Neo4j with timezone
@@ -1258,22 +1265,22 @@ export async function editEvent(
         // Fetch place details + timezone - 2 API CALLS (only for new cities)
         try {
           const placeDetails = await getPlaceDetails(
-            editedEvent.eventDetails.city.id
+            editedEvent.eventDetails.city.id,
           );
           const timezoneResult = await getTimezone(
             placeDetails.geometry.location.lat,
-            placeDetails.geometry.location.lng
+            placeDetails.geometry.location.lng,
           );
           timezone = timezoneResult.timeZoneId;
 
           // Extract city data from place details
           const region =
             placeDetails.address_components.find((ac) =>
-              ac.types.includes("administrative_area_level_1")
+              ac.types.includes("administrative_area_level_1"),
             )?.short_name || "";
           const countryCode =
             placeDetails.address_components.find((ac) =>
-              ac.types.includes("country")
+              ac.types.includes("country"),
             )?.short_name || "";
 
           // Store in Neo4j for future use
@@ -1407,7 +1414,7 @@ export async function editEvent(
         }
         if (!user.username) {
           throw new Error(
-            `User must have either id or username. Got: ${JSON.stringify(user)}`
+            `User must have either id or username. Got: ${JSON.stringify(user)}`,
           );
         }
         const userRecord = await getUserByUsername(user.username);
@@ -1424,13 +1431,13 @@ export async function editEvent(
         // Process section videos and bracket videos
         for (const newSection of processedSections) {
           const oldSection = oldEvent.sections.find(
-            (s) => s.id === newSection.id
+            (s) => s.id === newSection.id,
           );
 
           // Process section videos
           for (const newVideo of newSection.videos || []) {
             const oldVideo = oldSection?.videos.find(
-              (v) => v.id === newVideo.id
+              (v) => v.id === newVideo.id,
             );
             await processVideoTagDiffs(
               newVideo,
@@ -1438,19 +1445,19 @@ export async function editEvent(
               eventId,
               newSection.id,
               newSection.title,
-              getUserId
+              getUserId,
             );
           }
 
           // Process bracket videos
           for (const newBracket of newSection.brackets || []) {
             const oldBracket = oldSection?.brackets.find(
-              (b) => b.id === newBracket.id
+              (b) => b.id === newBracket.id,
             );
 
             for (const newVideo of newBracket.videos || []) {
               const oldVideo = oldBracket?.videos.find(
-                (v) => v.id === newVideo.id
+                (v) => v.id === newVideo.id,
               );
               await processVideoTagDiffs(
                 newVideo,
@@ -1458,7 +1465,7 @@ export async function editEvent(
                 eventId,
                 newSection.id,
                 newSection.title,
-                getUserId
+                getUserId,
               );
             }
           }
@@ -1468,36 +1475,36 @@ export async function editEvent(
           const newWinners = newSection.winners || [];
 
           const oldWinnerUsernames = new Set(
-            oldWinners.map((w) => w.username).filter(Boolean)
+            oldWinners.map((w) => w.username).filter(Boolean),
           );
           const newWinnerUsernames = new Set(
-            newWinners.map((w) => w.username).filter(Boolean)
+            newWinners.map((w) => w.username).filter(Boolean),
           );
 
           const winnersChanged =
             oldWinnerUsernames.size !== newWinnerUsernames.size ||
             [...oldWinnerUsernames].some(
-              (username) => !newWinnerUsernames.has(username)
+              (username) => !newWinnerUsernames.has(username),
             ) ||
             [...newWinnerUsernames].some(
-              (username) => !oldWinnerUsernames.has(username)
+              (username) => !oldWinnerUsernames.has(username),
             );
 
           if (winnersChanged) {
             try {
               if (newWinners.length > 0) {
                 const winnerUserIds = await Promise.all(
-                  newWinners.map((winner) => getUserId(winner))
+                  newWinners.map((winner) => getUserId(winner)),
                 );
                 console.log(
-                  `🟢 [editEvent] Setting ${winnerUserIds.length} winners for section ${newSection.id}`
+                  `🟢 [editEvent] Setting ${winnerUserIds.length} winners for section ${newSection.id}`,
                 );
                 await setSectionWinners(eventId, newSection.id, winnerUserIds);
 
                 // Create notifications for newly tagged winners
                 const eventTitle = await getEventTitle(eventId);
                 const newlyTaggedWinners = newWinners.filter(
-                  (w) => !oldWinnerUsernames.has(w.username)
+                  (w) => !oldWinnerUsernames.has(w.username),
                 );
                 for (const winner of newlyTaggedWinners) {
                   try {
@@ -1512,20 +1519,20 @@ export async function editEvent(
                   } catch (notifError) {
                     console.error(
                       `❌ [editEvent] Error creating notification for winner ${winner.username}:`,
-                      notifError
+                      notifError,
                     );
                   }
                 }
               } else {
                 console.log(
-                  `🟢 [editEvent] Removing all winners from section ${newSection.id}`
+                  `🟢 [editEvent] Removing all winners from section ${newSection.id}`,
                 );
                 await setSectionWinners(eventId, newSection.id, []);
               }
             } catch (winnerError) {
               console.error(
                 `❌ [editEvent] Error setting section winners:`,
-                winnerError
+                winnerError,
               );
             }
           }
@@ -1535,36 +1542,36 @@ export async function editEvent(
           const newJudges = newSection.judges || [];
 
           const oldJudgeUsernames = new Set(
-            oldJudges.map((j) => j.username).filter(Boolean)
+            oldJudges.map((j) => j.username).filter(Boolean),
           );
           const newJudgeUsernames = new Set(
-            newJudges.map((j) => j.username).filter(Boolean)
+            newJudges.map((j) => j.username).filter(Boolean),
           );
 
           const judgesChanged =
             oldJudgeUsernames.size !== newJudgeUsernames.size ||
             [...oldJudgeUsernames].some(
-              (username) => !newJudgeUsernames.has(username)
+              (username) => !newJudgeUsernames.has(username),
             ) ||
             [...newJudgeUsernames].some(
-              (username) => !oldJudgeUsernames.has(username)
+              (username) => !oldJudgeUsernames.has(username),
             );
 
           if (judgesChanged) {
             try {
               if (newJudges.length > 0) {
                 const judgeUserIds = await Promise.all(
-                  newJudges.map((judge) => getUserId(judge))
+                  newJudges.map((judge) => getUserId(judge)),
                 );
                 console.log(
-                  `🟢 [editEvent] Setting ${judgeUserIds.length} judges for section ${newSection.id}`
+                  `🟢 [editEvent] Setting ${judgeUserIds.length} judges for section ${newSection.id}`,
                 );
                 await setSectionJudges(eventId, newSection.id, judgeUserIds);
 
                 // Create notifications for newly tagged judges
                 const eventTitle = await getEventTitle(eventId);
                 const newlyTaggedJudges = newJudges.filter(
-                  (j) => !oldJudgeUsernames.has(j.username)
+                  (j) => !oldJudgeUsernames.has(j.username),
                 );
                 for (const judge of newlyTaggedJudges) {
                   try {
@@ -1579,20 +1586,20 @@ export async function editEvent(
                   } catch (notifError) {
                     console.error(
                       `❌ [editEvent] Error creating notification for judge ${judge.username}:`,
-                      notifError
+                      notifError,
                     );
                   }
                 }
               } else {
                 console.log(
-                  `🟢 [editEvent] Removing all judges from section ${newSection.id}`
+                  `🟢 [editEvent] Removing all judges from section ${newSection.id}`,
                 );
                 await setSectionJudges(eventId, newSection.id, []);
               }
             } catch (judgeError) {
               console.error(
                 `❌ [editEvent] Error setting section judges:`,
-                judgeError
+                judgeError,
               );
             }
           }
@@ -1602,7 +1609,7 @@ export async function editEvent(
         throw new Error(
           `Failed to process tag changes: ${
             tagError instanceof Error ? tagError.message : String(tagError)
-          }`
+          }`,
         );
       }
       console.log("✅ [editEvent] Tag diff processing completed");
@@ -1611,21 +1618,17 @@ export async function editEvent(
       const oldRoles = oldEvent.roles || [];
       const newRoles = editedEvent.roles || [];
       const oldRoleUserIds = new Set(
-        oldRoles
-          .map((r) => r.user?.id || r.user?.username)
-          .filter(Boolean)
+        oldRoles.map((r) => r.user?.id || r.user?.username).filter(Boolean),
       );
       const newRoleUserIds = new Set(
-        newRoles
-          .map((r) => r.user?.id || r.user?.username)
-          .filter(Boolean)
+        newRoles.map((r) => r.user?.id || r.user?.username).filter(Boolean),
       );
 
       // Find newly added roles
       const newlyTaggedRoles = newRoles.filter(
         (role) =>
           role.user &&
-          !oldRoleUserIds.has(role.user.id || role.user.username || "")
+          !oldRoleUserIds.has(role.user.id || role.user.username || ""),
       );
 
       if (newlyTaggedRoles.length > 0) {
@@ -1642,7 +1645,7 @@ export async function editEvent(
             } catch (notifError) {
               console.error(
                 `❌ [editEvent] Error creating notification for role ${role.title}:`,
-                notifError
+                notifError,
               );
             }
           }
@@ -1677,8 +1680,8 @@ export async function editEvent(
       // Also revalidate the individual event page
       revalidatePath(`/events/${eventId}`);
       // Revalidate TV page
-      revalidatePath("/tv");
-      revalidateTag("tv-sections", "");
+      revalidatePath("/watch");
+      revalidateTag("watch-sections", "");
 
       // Revalidate profiles for all users involved in role changes
       const allAffectedUserIds = new Set([
@@ -1704,7 +1707,7 @@ export async function editEvent(
           } catch (error) {
             console.error(
               `Failed to revalidate profile for user ${userIdOrUsername}:`,
-              error
+              error,
             );
           }
         }
@@ -1714,18 +1717,18 @@ export async function editEvent(
         new Set(
           processedSections
             .map((section) => section.id)
-            .filter((id): id is string => !!id)
-        )
+            .filter((id): id is string => !!id),
+        ),
       );
       for (const sectionId of sectionIds) {
         revalidatePath(`/events/${eventId}/sections/${sectionId}`);
       }
 
       const oldCitySlug = getCitySlug(
-        oldEvent.eventDetails.city as City | undefined
+        oldEvent.eventDetails.city as City | undefined,
       );
       const newCitySlug = getCitySlug(
-        editedEvent.eventDetails.city as City | undefined
+        editedEvent.eventDetails.city as City | undefined,
       );
       revalidateCalendarForSlugs([oldCitySlug, newCitySlug]);
 
@@ -1752,7 +1755,7 @@ export async function editEvent(
 
 function aggregateEventStylesForCard(
   eventDetails: EventDetails,
-  sections: Section[]
+  sections: Section[],
 ): string[] {
   const styles = new Set<string>();
 
@@ -1794,7 +1797,7 @@ function buildSectionCardRow(input: { eventId: string; section: Section }) {
   const directVideoCount = section.videos?.length || 0;
   const bracketVideoCount = (section.brackets || []).reduce(
     (sum, b) => sum + (b.videos?.length || 0),
-    0
+    0,
   );
   const parsedDate = section.date ? parseMmddyyyy(section.date) : null;
 
@@ -1851,7 +1854,7 @@ async function upsertEventReadModels(input: {
   const displayDateLocal = eventDetails.dates?.[0]?.date || null;
   const additionalDatesCount = Math.max(
     0,
-    (eventDetails.dates?.length || 0) - 1
+    (eventDetails.dates?.length || 0) - 1,
   );
 
   const styles = aggregateEventStylesForCard(eventDetails, sections);
@@ -1953,7 +1956,7 @@ async function upsertEventReadModels(input: {
   await prisma.sectionCard.deleteMany({ where: { eventId } });
   if (sections && sections.length > 0) {
     const sectionRows = sections.map((s) =>
-      buildSectionCardRow({ eventId, section: s })
+      buildSectionCardRow({ eventId, section: s }),
     );
     await prisma.sectionCard.createMany({ data: sectionRows });
   }
@@ -1966,7 +1969,7 @@ async function processVideoTagDiffs(
   eventId: string,
   sectionId: string | undefined,
   sectionTitle: string | undefined,
-  getUserId: (user: UserSearchItem) => Promise<string>
+  getUserId: (user: UserSearchItem) => Promise<string>,
 ): Promise<void> {
   const oldTaggedWinners = oldVideo?.taggedWinners || [];
   const oldTaggedDancers = oldVideo?.taggedDancers || [];
@@ -1983,7 +1986,7 @@ async function processVideoTagDiffs(
       ...oldTaggedDancers.map((u: UserSearchItem) => u.username),
       ...oldTaggedChoreographers.map((u: UserSearchItem) => u.username),
       ...oldTaggedTeachers.map((u: UserSearchItem) => u.username),
-    ].filter(Boolean)
+    ].filter(Boolean),
   );
   const allNewUsers = new Set(
     [
@@ -1991,7 +1994,7 @@ async function processVideoTagDiffs(
       ...newTaggedDancers.map((u: UserSearchItem) => u.username),
       ...newTaggedChoreographers.map((u: UserSearchItem) => u.username),
       ...newTaggedTeachers.map((u: UserSearchItem) => u.username),
-    ].filter(Boolean)
+    ].filter(Boolean),
   );
 
   // Get event and video titles for notifications
@@ -2003,16 +2006,16 @@ async function processVideoTagDiffs(
   // Process all users in the new set
   for (const username of allNewUsers) {
     const winner = newTaggedWinners.find(
-      (u: UserSearchItem) => u.username === username
+      (u: UserSearchItem) => u.username === username,
     );
     const dancer = newTaggedDancers.find(
-      (u: UserSearchItem) => u.username === username
+      (u: UserSearchItem) => u.username === username,
     );
     const choreographer = newTaggedChoreographers.find(
-      (u: UserSearchItem) => u.username === username
+      (u: UserSearchItem) => u.username === username,
     );
     const teacher = newTaggedTeachers.find(
-      (u: UserSearchItem) => u.username === username
+      (u: UserSearchItem) => u.username === username,
     );
     const user = winner || dancer || choreographer || teacher;
 
@@ -2046,7 +2049,7 @@ async function processVideoTagDiffs(
           } catch (notifError) {
             console.error(
               `❌ [editEvent] Error creating notification for user ${username}:`,
-              notifError
+              notifError,
             );
             // Continue with other notifications even if one fails
           }
@@ -2055,7 +2058,7 @@ async function processVideoTagDiffs(
     } catch (userTagError) {
       console.error(
         `❌ [editEvent] Error setting roles for user ${username} in video ${newVideo.id}:`,
-        userTagError
+        userTagError,
       );
     }
   }
@@ -2067,7 +2070,7 @@ async function processVideoTagDiffs(
         oldTaggedWinners.find((u: UserSearchItem) => u.username === username) ||
         oldTaggedDancers.find((u: UserSearchItem) => u.username === username) ||
         oldTaggedChoreographers.find(
-          (u: UserSearchItem) => u.username === username
+          (u: UserSearchItem) => u.username === username,
         ) ||
         oldTaggedTeachers.find((u: UserSearchItem) => u.username === username);
       if (oldUser) {
@@ -2094,7 +2097,7 @@ export async function getEvent(eventId: string): Promise<response> {
     const eventData = await getEventQuery(
       eventId,
       session.user.id,
-      session.user.auth ?? 0
+      session.user.auth ?? 0,
     );
 
     if (!eventData) {
@@ -2120,7 +2123,7 @@ export async function getEvent(eventId: string): Promise<response> {
 }
 
 export async function toggleSaveEvent(
-  eventId: string
+  eventId: string,
 ): Promise<
   { status: number; saved: boolean } | { status: number; error: string }
 > {
@@ -2260,7 +2263,7 @@ export async function getEventAuthData(eventId: string): Promise<{
         eventCreatorId: event.eventDetails.creatorId,
         isTeamMember: isEventTeamMember,
       },
-      userId
+      userId,
     );
 
     // Check if user can tag directly
@@ -2273,8 +2276,7 @@ export async function getEventAuthData(eventId: string): Promise<{
     // Get current user's roles for this event
     const currentUserRoles = event.roles
       .filter(
-        (role) =>
-          role.user?.id === userId && role.title !== "TEAM_MEMBER"
+        (role) => role.user?.id === userId && role.title !== "TEAM_MEMBER",
       )
       .map((role) => fromNeo4jRoleFormat(role.title))
       .filter((role): role is string => role !== null);
@@ -2306,7 +2308,7 @@ export async function getEventAuthData(eventId: string): Promise<{
 
 export async function updateEventTeamMembers(
   eventId: string,
-  teamMembers: UserSearchItem[]
+  teamMembers: UserSearchItem[],
 ): Promise<{ status: number; error?: string }> {
   const session = await auth();
 
@@ -2335,7 +2337,7 @@ export async function updateEventTeamMembers(
         eventCreatorId: event.eventDetails.creatorId,
         isTeamMember: isEventTeamMember,
       },
-      session.user.id
+      session.user.id,
     );
 
     if (!hasPermission) {
@@ -2390,7 +2392,7 @@ export async function updateEventTeamMembers(
       gallery: event.gallery || [],
     };
 
-      await editEventQuery(minimalEvent, processedTeamMembers);
+    await editEventQuery(minimalEvent, processedTeamMembers);
 
     // Revalidate events list page and individual event page
     revalidatePath("/events");
@@ -2411,7 +2413,7 @@ export async function updateEventTeamMembers(
 export async function updateEventCreator(
   eventId: string,
   newCreator: UserSearchItem | null,
-  addOldCreatorAsTeamMember: boolean = false
+  addOldCreatorAsTeamMember: boolean = false,
 ): Promise<{ status: number; error?: string }> {
   const session = await auth();
 
@@ -2440,7 +2442,7 @@ export async function updateEventCreator(
         eventCreatorId: event.eventDetails.creatorId,
         isTeamMember: isEventTeamMember,
       },
-      session.user.id
+      session.user.id,
     );
 
     if (!hasPermission) {
@@ -2497,7 +2499,7 @@ export async function updateEventCreator(
           MATCH (oldCreator:User)-[r:CREATED]->(e:Event {id: $eventId})
           DELETE r
           `,
-          { eventId }
+          { eventId },
         );
 
         // Create new CREATED relationship
@@ -2507,7 +2509,7 @@ export async function updateEventCreator(
           MATCH (newCreator:User {id: $newCreatorId})
           MERGE (newCreator)-[:CREATED]->(e)
           `,
-          { eventId, newCreatorId }
+          { eventId, newCreatorId },
         );
       } finally {
         await neo4jSession.close();
@@ -2552,10 +2554,10 @@ export async function updateEventCreator(
             username: user.username,
             displayName: user.displayName || "",
           };
-        })
+        }),
       );
       const processedTeamMembers = teamMembersData.filter(
-        (member): member is NonNullable<typeof member> => member !== null
+        (member): member is NonNullable<typeof member> => member !== null,
       );
 
       // Update event with new creator ID, preserving current team members
@@ -2572,12 +2574,12 @@ export async function updateEventCreator(
           "New Event Ownership",
           `Ownership of ${eventDisplayName} has been transferred to you|eventId:${eventId}`,
           undefined,
-          undefined
+          undefined,
         );
       } catch (notifError) {
         console.error(
           "❌ [updateEventCreator] Error creating ownership notification:",
-          notifError
+          notifError,
         );
         // Don't fail the ownership transfer if notification fails
       }
@@ -2601,8 +2603,8 @@ export async function updateEventCreator(
     revalidatePath("/events");
     revalidatePath(`/events/${eventId}`);
     // Revalidate TV page
-    revalidatePath("/tv");
-    revalidateTag("tv-sections", "");
+    revalidatePath("/watch");
+    revalidateTag("watch-sections", "");
 
     return {
       status: 200,
@@ -2618,7 +2620,7 @@ export async function updateEventCreator(
 
 export async function updateEventStatus(
   eventId: string,
-  status: "hidden" | "visible"
+  status: "hidden" | "visible",
 ): Promise<{ status: number } | { status: number; error: string }> {
   const session = await auth();
 
@@ -2644,7 +2646,7 @@ export async function updateEventStatus(
     const event = await getEventQuery(
       eventId,
       session.user.id,
-      session.user.auth ?? 0
+      session.user.auth ?? 0,
     );
     if (!event) {
       return {
@@ -2665,7 +2667,7 @@ export async function updateEventStatus(
           eventId,
           status,
           updatedAt: new Date().toISOString(),
-        }
+        },
       );
     } finally {
       await neo4jSession.close();
@@ -2682,8 +2684,8 @@ export async function updateEventStatus(
     // Also revalidate the individual event page
     revalidatePath(`/events/${eventId}`);
     // Revalidate TV page
-    revalidatePath("/tv");
-    revalidateTag("tv-sections", "");
+    revalidatePath("/watch");
+    revalidateTag("watch-sections", "");
     const citySlug = getCitySlug(event.eventDetails.city as City | undefined);
     revalidateCalendarForSlugs([citySlug]);
 

@@ -24,6 +24,7 @@ interface VideoInfoDialogProps {
   video: Video;
   city?: string;
   eventDate?: string; // Formatted as "Mar 2026"
+  container?: HTMLElement | null;
 }
 
 export function VideoInfoDialog({
@@ -36,6 +37,7 @@ export function VideoInfoDialog({
   video,
   city,
   eventDate,
+  container,
 }: VideoInfoDialogProps) {
   // Get all tagged dancers (combine all tag types)
   const allTaggedDancers: UserSearchItem[] = [
@@ -50,7 +52,7 @@ export function VideoInfoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto" container={container || undefined}>
         <DialogHeader>
           <DialogTitle className="sr-only">{video.title}</DialogTitle>
           <div className="flex flex-col items-center">

@@ -4,7 +4,6 @@ import {
   getPendingAccountClaimRequestCount,
   getPendingAccountClaimRequestByUsername,
 } from "@/lib/server_actions/account_claim_actions";
-import { AppNavbar } from "@/components/AppNavbar";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -270,7 +269,6 @@ export default async function ProfilePage({ params }: PageProps) {
 
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col items-center justify-center">
         <div className="flex items-center justify-between py-7 border-b-2 border-primary-light bg-charcoal">
           <h1 className="flex-1">{profile.displayName || profile.username}</h1>

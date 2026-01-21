@@ -1,4 +1,3 @@
-import { AppNavbar } from "@/components/AppNavbar";
 import { getAllStyles } from "@/db/queries/event";
 import { StyleCard } from "@/components/StyleCard";
 
@@ -10,7 +9,6 @@ export default async function StylesPage() {
 
   return (
     <>
-      <AppNavbar />
       <div className="flex flex-col items-center justify-center px-4 py-8">
         <h1 className="mt-5 mb-12">Dance Styles</h1>
 

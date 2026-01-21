@@ -82,7 +82,7 @@ async function findUnclaimedUserByInstagram(instagram: string) {
       RETURN u
       LIMIT 1
       `,
-      { instagram }
+      { instagram },
     );
     if (result.records.length === 0) {
       return null;
@@ -101,7 +101,7 @@ async function removeAllUserRelationships(userId: string) {
       MATCH (u:User {id: $userId})-[r]-()
       DELETE r
       `,
-      { userId }
+      { userId },
     );
   } finally {
     await session.close();
@@ -110,7 +110,7 @@ async function removeAllUserRelationships(userId: string) {
 
 async function transferUserRelationships(
   sourceUserId: string,
-  targetUserId: string
+  targetUserId: string,
 ) {
   const session = driver.session();
   try {
@@ -124,7 +124,7 @@ async function transferUserRelationships(
         endNode(r).id as endId,
         properties(r) as props
       `,
-      { sourceUserId }
+      { sourceUserId },
     );
 
     // Process each relationship
@@ -149,7 +149,7 @@ async function transferUserRelationships(
           CALL apoc.create.relationship(target, $relType, $props, other) YIELD rel
           RETURN rel
           `,
-          { targetUserId, otherNodeId, relType, props }
+          { targetUserId, otherNodeId, relType, props },
         );
       } else {
         await session.run(
@@ -159,7 +159,7 @@ async function transferUserRelationships(
           CALL apoc.create.relationship(other, $relType, $props, target) YIELD rel
           RETURN rel
           `,
-          { targetUserId, otherNodeId, relType, props }
+          { targetUserId, otherNodeId, relType, props },
         );
       }
     }
@@ -170,7 +170,7 @@ async function transferUserRelationships(
       MATCH (source:User {id: $sourceUserId})-[r]-()
       DELETE r
       `,
-      { sourceUserId }
+      { sourceUserId },
     );
   } finally {
     await session.close();
@@ -185,7 +185,7 @@ async function instagramExistsInNeo4j(instagram: string): Promise<boolean> {
       MATCH (u:User {instagram: $instagram})
       RETURN count(u) as count
       `,
-      { instagram }
+      { instagram },
     );
     const count = result.records[0]?.get("count")?.toNumber?.() || 0;
     return count > 0;
@@ -195,7 +195,7 @@ async function instagramExistsInNeo4j(instagram: string): Promise<boolean> {
 }
 
 export async function getUnclaimedUserTagCount(
-  userId: string
+  userId: string,
 ): Promise<number> {
   const session = driver.session();
   try {
@@ -205,7 +205,7 @@ export async function getUnclaimedUserTagCount(
       OPTIONAL MATCH (u)-[r]-()
       RETURN count(r) as relCount
       `,
-      { userId }
+      { userId },
     );
     return result.records[0]?.get("relCount")?.toNumber?.() || 0;
   } finally {
@@ -302,14 +302,14 @@ export async function executeAccountMerge(params: {
         imageUrl: profileData.image ?? null,
         cityId:
           typeof profileData.city === "object"
-            ? profileData.city?.id ?? null
+            ? (profileData.city?.id ?? null)
             : null,
         cityName:
           typeof profileData.city === "object"
-            ? profileData.city?.name ?? null
-            : (profileData.city as string) ?? null,
+            ? (profileData.city?.name ?? null)
+            : ((profileData.city as string) ?? null),
         styles: (profileData.styles || []).map((s: string) =>
-          s.toUpperCase().trim()
+          s.toUpperCase().trim(),
         ),
       },
       create: {
@@ -319,14 +319,14 @@ export async function executeAccountMerge(params: {
         imageUrl: profileData.image ?? null,
         cityId:
           typeof profileData.city === "object"
-            ? profileData.city?.id ?? null
+            ? (profileData.city?.id ?? null)
             : null,
         cityName:
           typeof profileData.city === "object"
-            ? profileData.city?.name ?? null
-            : (profileData.city as string) ?? null,
+            ? (profileData.city?.name ?? null)
+            : ((profileData.city as string) ?? null),
         styles: (profileData.styles || []).map((s: string) =>
-          s.toUpperCase().trim()
+          s.toUpperCase().trim(),
         ),
       },
     });
@@ -366,7 +366,7 @@ export async function executeAccountMerge(params: {
       MATCH (source:User {id: $sourceUserId})
       DETACH DELETE source
       `,
-      { sourceUserId }
+      { sourceUserId },
     );
   } finally {
     await neoSession.close();
@@ -377,7 +377,7 @@ export async function executeAccountMerge(params: {
 
 export async function createUnclaimedUser(
   displayName: string,
-  instagram: string
+  instagram: string,
 ): Promise<{ success: boolean; user?: UserSearchItem; error?: string }> {
   try {
     const normalizedInstagram = normalizeInstagramHandle(instagram || "");
@@ -431,7 +431,7 @@ export async function createUnclaimedUser(
           displayName,
           username,
           instagram: normalizedInstagram,
-        }
+        },
       );
     } finally {
       await neoSession.close();
@@ -486,7 +486,7 @@ export async function createUnclaimedUser(
 }
 
 export async function signup(
-  formData: FormData
+  formData: FormData,
 ): Promise<{ success: boolean; error?: string }> {
   const session = await auth();
 
@@ -589,7 +589,7 @@ export async function signup(
     const wipeRelationships = formData.get("wipeRelationships") === "true";
 
     const normalizedInstagram = normalizeInstagramHandle(
-      instagram || session.user.instagram || ""
+      instagram || session.user.instagram || "",
     );
 
     let targetUserId = session.user.id;
@@ -605,7 +605,7 @@ export async function signup(
         RETURN u.id as id, u.claimed as claimed
         LIMIT 1
         `,
-          { instagram: normalizedInstagram }
+          { instagram: normalizedInstagram },
         );
         if (result.records.length > 0) {
           const record = result.records[0];
@@ -647,7 +647,7 @@ export async function signup(
         const uploadResult = await uploadProfileAndAvatarToR2(
           profilePicture,
           avatarPicture,
-          username
+          username,
         );
         if (uploadResult.success) {
           imageUrl = uploadResult.profileUrl || null;
@@ -662,7 +662,7 @@ export async function signup(
       } else {
         const uploadResult = await uploadProfilePictureToR2(
           profilePicture,
-          username
+          username,
         );
         if (uploadResult.success && uploadResult.url) {
           imageUrl = uploadResult.url;
@@ -787,10 +787,10 @@ export async function signup(
 
     if (isSuperAdminUser) {
       console.log(
-        `🔑 Auto-assigned SUPER_ADMIN (${authLevel}) to ${session.user.email}`
+        `🔑 Auto-assigned SUPER_ADMIN (${authLevel}) to ${session.user.email}`,
       );
       console.log(
-        `📝 Super admin user created with username: ${SUPER_ADMIN_USERNAME}`
+        `📝 Super admin user created with username: ${SUPER_ADMIN_USERNAME}`,
       );
     }
 
@@ -802,14 +802,14 @@ export async function signup(
         const mailerLiteResult = await addMailerLiteSubscriber(
           session.user.email,
           profileData.displayName,
-          "subscribers"
+          "subscribers",
         );
         if (mailerLiteResult.success) {
           console.log("✅ User subscribed to MailerLite newsletter");
         } else {
           console.warn(
             "⚠️  Failed to subscribe user to newsletter:",
-            mailerLiteResult.error
+            mailerLiteResult.error,
           );
           // Don't fail the signup if newsletter subscription fails
         }
@@ -964,7 +964,7 @@ export async function getUserProfile(userIdOrUsername: string) {
              collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
-      { userId, allEventTypeLabels }
+      { userId, allEventTypeLabels },
     );
 
     const eventsCreated: Event[] = eventsCreatedResult.records.map((record) => {
@@ -1069,7 +1069,7 @@ export async function getUserProfile(userIdOrUsername: string) {
              collect(DISTINCT s.name) as styles, eventTypeLabel
       ORDER BY e.createdAt DESC
       `,
-      { userId, validRoles: validRoleFormats, allEventTypeLabels }
+      { userId, validRoles: validRoleFormats, allEventTypeLabels },
     );
 
     const eventsWithRoles: Event[] = eventsWithRolesResult.records.map(
@@ -1154,7 +1154,7 @@ export async function getUserProfile(userIdOrUsername: string) {
           gallery: [],
           sections: [],
         };
-      }
+      },
     );
 
     // Get videos where user is tagged with full video data (collecting all roles)
@@ -1173,7 +1173,7 @@ export async function getUserProfile(userIdOrUsername: string) {
              collect(DISTINCT role) as roles, collect(DISTINCT style.name) as styles
       ORDER BY eventCreatedAt DESC
       `,
-      { userId }
+      { userId },
     );
 
     // Get winning videos (where user has :WINNER relationship)
@@ -1191,7 +1191,7 @@ export async function getUserProfile(userIdOrUsername: string) {
              collect(DISTINCT style.name) as styles
       ORDER BY eventCreatedAt DESC
       `,
-      { userId }
+      { userId },
     );
 
     // Get winning sections (where user has :WINNER relationship)
@@ -1224,12 +1224,12 @@ export async function getUserProfile(userIdOrUsername: string) {
              c.name as city, c.id as cityId
       ORDER BY eventCreatedAt DESC
       `,
-      { userId }
+      { userId },
     );
 
     // Get all tagged users for each video
     const videoIds = taggedVideosResult.records.map((record) =>
-      record.get("videoId")
+      record.get("videoId"),
     );
     const taggedUsersMap = new Map<string, UserSearchItem[]>();
 
@@ -1248,13 +1248,13 @@ export async function getUserProfile(userIdOrUsername: string) {
           role: role
         }) as taggedUsers
         `,
-        { videoIds }
+        { videoIds },
       );
 
       taggedUsersResult.records.forEach((record) => {
         const videoId = record.get("videoId");
         const taggedUsers = (record.get("taggedUsers") || []).filter(
-          (tu: UserSearchItem) => tu.id !== null && tu.id !== undefined
+          (tu: UserSearchItem) => tu.id !== null && tu.id !== undefined,
         );
         taggedUsersMap.set(videoId, taggedUsers);
       });
@@ -1276,7 +1276,7 @@ export async function getUserProfile(userIdOrUsername: string) {
 
     // Get all tagged users for winning videos
     const winningVideoIds = winningVideosResult.records.map((record) =>
-      record.get("videoId")
+      record.get("videoId"),
     );
     const winningVideoUsersMap = new Map<string, UserSearchItem[]>();
 
@@ -1302,13 +1302,13 @@ export async function getUserProfile(userIdOrUsername: string) {
           role: role
         }) as taggedUsers
         `,
-        { videoIds: winningVideoIds }
+        { videoIds: winningVideoIds },
       );
 
       winningVideoUsersResult.records.forEach((record) => {
         const videoId = record.get("videoId");
         const taggedUsers = (record.get("taggedUsers") || []).filter(
-          (tu: UserSearchItem) => tu.id !== null && tu.id !== undefined
+          (tu: UserSearchItem) => tu.id !== null && tu.id !== undefined,
         );
         winningVideoUsersMap.set(videoId, taggedUsers);
       });
@@ -1447,7 +1447,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
           RETURN u.id as id, u.claimed as claimed
           LIMIT 1
           `,
-          { instagram: normalizedInstagram }
+          { instagram: normalizedInstagram },
         );
         if (result.records.length > 0) {
           const record = result.records[0];
@@ -1510,7 +1510,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         const uploadResult = await uploadProfileAndAvatarToR2(
           profilePicture,
           avatarPicture,
-          username
+          username,
         );
         if (uploadResult.success) {
           imageUrl = uploadResult.profileUrl || currentUser.image;
@@ -1529,7 +1529,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       } else {
         const uploadResult = await uploadProfilePictureToR2(
           profilePicture,
-          username
+          username,
         );
         if (uploadResult.success && uploadResult.url) {
           imageUrl = uploadResult.url;
@@ -1641,7 +1641,7 @@ async function transferUserEventsToAdmin(userId: string): Promise<void> {
   // If super admin doesn't exist, we can't transfer events
   if (!adminUserId) {
     console.warn(
-      `⚠️  Super admin user (${SUPER_ADMIN_EMAIL}) does not exist. Cannot transfer events from user ${userId}. Events will be orphaned.`
+      `⚠️  Super admin user (${SUPER_ADMIN_EMAIL}) does not exist. Cannot transfer events from user ${userId}. Events will be orphaned.`,
     );
     // Still delete the CREATED relationships to clean up
     const neo4jSession = driver.session();
@@ -1652,7 +1652,7 @@ async function transferUserEventsToAdmin(userId: string): Promise<void> {
           MATCH (oldCreator:User {id: $userId})-[r:CREATED]->(e:Event {id: $eventId})
           DELETE r
           `,
-          { eventId, userId }
+          { eventId, userId },
         );
       }
     } finally {
@@ -1680,7 +1680,7 @@ async function transferUserEventsToAdmin(userId: string): Promise<void> {
           MATCH (oldCreator:User {id: $userId})-[r:CREATED]->(e:Event {id: $eventId})
           DELETE r
           `,
-          { eventId, userId }
+          { eventId, userId },
         );
 
         // Create new CREATED relationship with admin
@@ -1690,7 +1690,7 @@ async function transferUserEventsToAdmin(userId: string): Promise<void> {
           MATCH (admin:User {id: $adminUserId})
           MERGE (admin)-[:CREATED]->(e)
           `,
-          { eventId, adminUserId }
+          { eventId, adminUserId },
         );
       } finally {
         neo4jSession.close();
@@ -1716,7 +1716,7 @@ async function transferUserEventsToAdmin(userId: string): Promise<void> {
 export async function deleteUserAccount(
   targetUserId: string,
   deleteEvents: boolean,
-  usernameConfirmation?: string
+  usernameConfirmation?: string,
 ): Promise<{ success: boolean; error?: string }> {
   const session = await auth();
 
@@ -1783,10 +1783,10 @@ export async function deleteUserAccount(
           const eventData = await getEvent(
             eventId,
             session.user.id,
-            session.user.auth ?? 0
+            session.user.auth ?? 0,
           );
           citySlug = getCitySlug(
-            eventData?.eventDetails.city as City | undefined
+            eventData?.eventDetails.city as City | undefined,
           );
 
           // Delete event images from R2
@@ -1794,7 +1794,7 @@ export async function deleteUserAccount(
           await Promise.all(
             pictures.map(async (url) => {
               return deleteFromR2(url);
-            })
+            }),
           );
 
           // Delete event from Neo4j (cascades to sections, videos, images)
@@ -1814,8 +1814,8 @@ export async function deleteUserAccount(
       // Revalidate events list page after deleting all events
       revalidatePath("/events");
       // Revalidate TV page
-      revalidatePath("/tv");
-      revalidateTag("tv-sections", "");
+      revalidatePath("/watch");
+      revalidateTag("watch-sections", "");
     } else {
       // Transfer events to admin user
       await transferUserEventsToAdmin(targetUserId);
