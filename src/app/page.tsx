@@ -340,15 +340,14 @@ export default async function Home() {
                       </div>
                       <div className="flex-1">
                         <p>
-                          Ever watch a video and wish you could learn more about
-                          the event or dancers? Click on{" "}
+                          Ever watch a video and wish you could learn more?
+                          Click on{" "}
                           <Info className="inline" size={21} strokeWidth={3} />{" "}
-                          to quickly learn more about the
+                          to quickly find the details about the
                           <b> event and dancers.</b> Then let your curiosity
-                          guide you to the details page through easy
+                          guide you through easy
                           <b> navigation links.</b>
                         </p>
-                        <p className="!text-base sm:!text-lg"></p>
                       </div>
                     </div>
                   </div>
