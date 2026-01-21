@@ -5423,26 +5423,40 @@ export async function getEventSections(eventId: string): Promise<
         applyStylesToVideos: sectionRecord.get("applyStylesToVideos") || false,
       };
 
-      // Merge brackets into combined sections (like current TV client)
-      // Combine all brackets within the same section
+      // For TV, we want to flatten sections with brackets into individual entries
+      // Each bracket becomes a separate "section" entry (like getAllBattleSections)
       if (hasBrackets && bracketList.length > 0) {
-        // Combine all videos from all brackets
-        const combinedVideos: Video[] = [...sectionVideos];
         for (const bracket of bracketList) {
-          combinedVideos.push(...bracket.videos);
+          result.push({
+            section: {
+              ...section,
+              id: `${sectionId}-${bracket.id}`,
+              title: `${sectionTitle} - ${bracket.title}`,
+              hasBrackets: false,
+              videos: bracket.videos,
+              brackets: [],
+            },
+            eventId,
+            eventTitle,
+            bracket,
+            city: cityName || undefined,
+            eventDate: formattedEventDate,
+          });
         }
-
-        result.push({
-          section: {
-            ...section,
-            videos: combinedVideos,
-            hasBrackets: true,
-          },
-          eventId,
-          eventTitle,
-          city: cityName || undefined,
-          eventDate: formattedEventDate,
-        });
+        // Also include direct videos (videos not in brackets) if any exist
+        if (sectionVideos.length > 0) {
+          result.push({
+            section: {
+              ...section,
+              videos: sectionVideos,
+              brackets: [],
+            },
+            eventId,
+            eventTitle,
+            city: cityName || undefined,
+            eventDate: formattedEventDate,
+          });
+        }
       } else {
         result.push({
           section,

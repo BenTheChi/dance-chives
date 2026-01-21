@@ -725,11 +725,11 @@ export function VideoGallery({
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault();
-          navigateVideo(-1);
+          navigateVideo(-1, true);
           break;
         case "ArrowDown":
           e.preventDefault();
-          navigateVideo(1);
+          navigateVideo(1, true);
           break;
         case "ArrowLeft":
           e.preventDefault();
@@ -1300,8 +1300,8 @@ export function VideoGallery({
           }`}
         >
           <VideoControls
-            onUp={() => navigateVideo(-1)}
-            onDown={() => navigateVideo(1)}
+            onUp={() => navigateVideo(-1, true)}
+            onDown={() => navigateVideo(1, true)}
             onLeft={() => navigateSection(-1)}
             onRight={() => navigateSection(1)}
             onPlayPause={togglePlayPause}
@@ -1379,8 +1379,8 @@ export function VideoGallery({
             </Button>
           )}
           <VideoControls
-            onUp={() => navigateVideo(-1)}
-            onDown={() => navigateVideo(1)}
+            onUp={() => navigateVideo(-1, true)}
+            onDown={() => navigateVideo(1, true)}
             onLeft={() => navigateSection(-1)}
             onRight={() => navigateSection(1)}
             onPlayPause={togglePlayPause}
