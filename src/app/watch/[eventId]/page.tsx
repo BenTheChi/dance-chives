@@ -42,7 +42,7 @@ export default async function WatchEventPage({
   return (
     <>
       <HideFooterOnMobile />
-      <div className="flex flex-col">
+      <div className="flex flex-col justify-center items-center bg-black h-full">
         <div className="relative w-full flex flex-col items-center justify-center bg-black">
           <VideoGallery
             initialSections={sections}

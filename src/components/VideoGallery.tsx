@@ -1094,7 +1094,7 @@ export function VideoGallery({
       ref={fullscreenContainerRef}
       className={cn(
         "relative w-full flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0",
-        !isFullscreen && "max-w-[1500px]",
+        !isFullscreen && "max-w-[1200px]",
         isFullscreen && "w-screen h-screen max-w-none",
       )}
     >
@@ -1201,7 +1201,7 @@ export function VideoGallery({
       <div
         className={cn(
           "flex flex-col items-center relative z-30",
-          isFullscreen ? "flex-1 h-full" : "flex-1 min-h-0",
+          isFullscreen ? "flex-1 h-full" : "flex-1",
         )}
       >
         <div

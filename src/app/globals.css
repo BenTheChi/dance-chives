@@ -656,7 +656,7 @@ span {
 
   /* TV page height - only apply in portrait mode */
   .tv-container-height {
-    height: calc(100vh - 4rem);
+    height: 100%;
   }
 
   @media (orientation: landscape) {

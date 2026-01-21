@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,7 @@ export function VideoReacts({
 }: VideoReactsProps) {
   const { data: session } = useSession();
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showSignUpDialog, setShowSignUpDialog] = useState(false);
 
   // Check if user has used any react (for showing reset button)
   const hasReacted =
@@ -68,7 +70,16 @@ export function VideoReacts({
   };
 
   const handleReact = (type: string) => {
-    if (isReactUsed(type) || !session?.user?.id) return;
+    // If user is not authenticated, show sign-up dialog
+    if (!session?.user?.id) {
+      setShowSignUpDialog(true);
+      return;
+    }
+
+    // If react is already used, don't do anything
+    if (isReactUsed(type)) return;
+
+    // User is authenticated and react is not used, proceed with react
     onReact(type, Math.max(0, currentTime - 1));
   };
 
@@ -81,10 +92,7 @@ export function VideoReacts({
     setShowResetDialog(false);
   };
 
-  // Don't render if user is not authenticated
-  if (!session?.user?.id) {
-    return null;
-  }
+  const isAuthenticated = !!session?.user?.id;
 
   return (
     <>
@@ -108,17 +116,23 @@ export function VideoReacts({
               <button
                 key={type}
                 onClick={() => handleReact(type)}
-                disabled={isUsed}
+                disabled={isUsed && isAuthenticated}
                 className={cn(
                   "text-3xl p-3 rounded-lg transition-all",
                   isFullscreen && "text-6xl px-4",
                   "hover:bg-white/10 active:scale-95",
-                  isUsed
+                  isUsed && isAuthenticated
                     ? "opacity-50 cursor-not-allowed"
                     : "cursor-pointer hover:scale-110",
                 )}
                 aria-label={`React with ${label}`}
-                title={isUsed ? `${label} already used` : label}
+                title={
+                  isUsed && isAuthenticated
+                    ? `${label} already used`
+                    : !isAuthenticated
+                      ? `Sign up to react with ${label}`
+                      : label
+                }
               >
                 {emoji}
               </button>
@@ -132,8 +146,8 @@ export function VideoReacts({
             isFullscreen ? "gap-6 flex-col" : "landscape:flex-col",
           )}
         >
-          {/* Reset Link */}
-          {hasReacted && (
+          {/* Reset Link - Only show if authenticated and has reacted */}
+          {isAuthenticated && hasReacted && (
             <button
               onClick={handleResetClick}
               className={cn(
@@ -174,6 +188,29 @@ export function VideoReacts({
             </Button>
             <Button variant="destructive" onClick={handleResetConfirm}>
               Reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sign Up Dialog */}
+      <Dialog open={showSignUpDialog} onOpenChange={setShowSignUpDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create an account to add your reactions</DialogTitle>
+            <DialogDescription>
+              Sign up to react to videos and engage with the community.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSignUpDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button asChild>
+              <Link href="/signup">Sign Up</Link>
             </Button>
           </DialogFooter>
         </DialogContent>

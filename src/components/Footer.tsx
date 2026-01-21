@@ -5,7 +5,7 @@ import { MaintenanceLink } from "./MaintenanceLink";
 export function Footer({ className }: { className?: string }) {
   return (
     <footer
-      className={`bg-primary border-t-4 border-primary-light relative z-10 mt-6 ${
+      className={`bg-primary border-t-4 border-primary-light relative z-10 ${
         className || ""
       }`}
     >
