@@ -9,16 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ReactAnimation } from "@/components/watch/ReactAnimation";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
-import {
-  Info,
-  Volume2,
-  VolumeX,
-  Minimize,
-  ArrowUp,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-} from "lucide-react";
+import { Info, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -355,6 +346,15 @@ export function VideoGallery({
   }, [sections, currentSectionIndex, currentVideoIndex]);
 
   const currentVideo = getCurrentVideo();
+
+  // Calculate navigation disabled states
+  const canNavigateLeft = currentSectionIndex > 0;
+  const canNavigateRight = currentSectionIndex < sections.length - 1;
+  const currentSection = sections[currentSectionIndex];
+  const currentVideoCount = currentSection?.section.videos.length || 0;
+  // Disable up/down only if there's only 1 video (looping works for 2+)
+  const canNavigateUp = currentVideoCount > 1;
+  const canNavigateDown = currentVideoCount > 1;
 
   // Update URL when video changes (if URL routing is enabled)
   useEffect(() => {
@@ -1092,39 +1092,48 @@ export function VideoGallery({
   return (
     <div
       ref={fullscreenContainerRef}
-      className={`relative w-full max-w-[1500px] flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0`}
+      className={cn(
+        "relative w-full flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0",
+        !isFullscreen && "max-w-[1500px]",
+        isFullscreen && "w-screen h-screen max-w-none",
+      )}
     >
       {/* Header */}
       <div
-        className={`flex flex-col px-4 py-2 z-50 landscape:hidden ${
+        className={`flex flex-col px-4 z-50 landscape:hidden ${
           isFullscreen ? "hidden" : ""
         }`}
       >
-        <div className="flex justify-between items-baseline mb-[80px]">
+        <div className="flex justify-between items-baseline pt-2">
           <div className="flex flex-col items-start gap-2">
             {currentVideo && (
-              <Link
-                href={`/events/${currentVideo.eventId}`}
-                className="!text-lg hover:underline font-semibold leading-tight"
-              >
-                {currentVideo.eventTitle}
-              </Link>
-            )}
-            <div className="flex items-baseline gap-3">
-              {currentVideo && (
+              <div className="!text-[14px] sm:!text-[16px] flex flex-col sm:flex-row items-baseline gap-1 sm:gap-8">
+                <Link
+                  href={`/events/${currentVideo.eventId}`}
+                  className="hover:underline font-bold leading-tight"
+                >
+                  {currentVideo.eventTitle}
+                </Link>
                 <Link
                   href={`/events/${currentVideo.eventId}/sections/${currentVideo.section.id}`}
                   className="hover:underline"
                 >
                   {currentVideo.section.title}
                 </Link>
-              )}
-              {currentVideo?.eventDate && (
-                <p className="!text-[16px] text-white/70">
-                  {currentVideo.eventDate}
-                </p>
-              )}
-            </div>
+                {currentVideo && (
+                  <div className="gap-1 items-center justify-between hidden sm:flex">
+                    <div className="flex items-baseline gap-1">
+                      {currentVideo.bracket?.title && (
+                        <p className="!text-[16px]">
+                          {currentVideo.bracket.title} -
+                        </p>
+                      )}
+                      <p className="!text-[16px]">{currentVideo.video.title}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {currentVideo?.video.styles && (
               <div className="flex justify-between gap-2 opacity-70">
                 {currentVideo?.video.styles.map((style) => (
@@ -1157,6 +1166,24 @@ export function VideoGallery({
         </div>
       </div>
 
+      {/* Section Name, Bracket, and Video Title - 80px space below header, only when not playing or loading */}
+      <div
+        className={`h-[80px] px-4 flex items-center justify-center z-50 landscape:hidden sm:hidden ${
+          isPlaying && !isVideoLoading ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div className="flex justify-center items-baseline gap-3">
+          {currentVideo && (
+            <div className="flex items-baseline gap-1">
+              {currentVideo.bracket?.title && (
+                <p className="!text-[16px]">{currentVideo.bracket.title} -</p>
+              )}
+              <p className="!text-[16px]">{currentVideo.video.title}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* React Animation Overlay - Outside video container when not in landscape */}
       {currentVideo && !isLandscape && isMobile && showReacts && (
         <ReactAnimation
@@ -1171,8 +1198,18 @@ export function VideoGallery({
       )}
 
       {/* Main Content Area - Flex layout */}
-      <div className="flex-1 flex flex-col items-center min-h-0 relative z-30">
-        <div className="w-full aspect-video relative overflow-hidden">
+      <div
+        className={cn(
+          "flex flex-col items-center relative z-30",
+          isFullscreen ? "flex-1 h-full" : "flex-1 min-h-0",
+        )}
+      >
+        <div
+          className={cn(
+            "w-full relative overflow-hidden",
+            isFullscreen ? "h-full flex-1" : "aspect-video",
+          )}
+        >
           {/* Sections Container - Horizontal */}
           <div
             className="w-full h-full flex transition-transform duration-300 ease-in-out"
@@ -1258,7 +1295,7 @@ export function VideoGallery({
 
         {/* Controls */}
         <div
-          className={`w-full pb-4 flex flex-col gap-3 ${
+          className={`w-full pb-4 flex flex-col gap-1 ${
             isFullscreen ? "hidden" : "landscape:hidden"
           }`}
         >
@@ -1284,6 +1321,14 @@ export function VideoGallery({
             onToggleFullscreen={toggleFullscreen}
             isFullscreen={isFullscreen}
             showFullscreenButton={!isMobile && !isLandscape}
+            canNavigateLeft={canNavigateLeft}
+            canNavigateRight={canNavigateRight}
+            canNavigateUp={canNavigateUp}
+            canNavigateDown={canNavigateDown}
+            isMobile={isMobile}
+            isLandscape={isLandscape}
+            showMobileNavigation={isMobile}
+            showLandscapeNavigation={false}
           />
           {/* Video Reacts - Below controls on mobile (only on very small screens) */}
           {currentVideo && isMobile && (
@@ -1297,51 +1342,17 @@ export function VideoGallery({
                 showReacts={showReacts}
                 onToggleReacts={() => setShowReacts(!showReacts)}
               />
-              {/* Navigation Arrows - Below Reacts on mobile */}
-              <div className="flex items-center justify-center gap-4 mt-3">
-                <button
-                  onClick={() => navigateVideo(-1)}
-                  className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
-                  aria-label="Previous video"
-                >
-                  <ArrowUp className="h-6 w-6 text-yellow-400" />
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => navigateSection(-1)}
-                    className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
-                    aria-label="Previous section"
-                  >
-                    <ArrowLeft className="h-6 w-6 text-orange-400" />
-                  </button>
-                  <button
-                    onClick={() => navigateSection(1)}
-                    className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
-                    aria-label="Next section"
-                  >
-                    <ArrowRight className="h-6 w-6 text-orange-400" />
-                  </button>
-                </div>
-                <button
-                  onClick={() => navigateVideo(1)}
-                  className="p-3 rounded-lg bg-black/60 hover:bg-black/80 transition-colors"
-                  aria-label="Next video"
-                >
-                  <ArrowDown className="h-6 w-6 text-yellow-400" />
-                </button>
-              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Info Button and Navigation Arrows - Top right on landscape and fullscreen */}
+      {/* Info Button and Landscape Navigation - Top right on landscape and fullscreen */}
       <div
         className={`absolute top-1/3 -translate-y-1/3 right-3 z-40 flex flex-col items-end gap-3 ${
           isFullscreen ? "block" : "hidden landscape:block"
         }`}
       >
-        {/* Navigation Arrows - Stacked in column under info button */}
         <div
           className={cn(
             "flex flex-col items-center gap-3 rounded-lg p-2",
@@ -1367,101 +1378,29 @@ export function VideoGallery({
               <Info />
             </Button>
           )}
-          <button
-            onClick={() => navigateVideo(-1)}
-            className={cn(
-              "p-1 rounded-lg hover:bg-white/10 transition-colors",
-              isFullscreen && "p-2",
-            )}
-            aria-label="Previous video"
-          >
-            <ArrowUp
-              className={cn(
-                "h-6 w-6 text-yellow-400",
-                isFullscreen && "h-12 w-12",
-              )}
-            />
-          </button>
-          <button
-            onClick={() => navigateVideo(1)}
-            className={cn(
-              "p-1 rounded-lg hover:bg-white/10 transition-colors",
-              isFullscreen && "p-2",
-            )}
-            aria-label="Next video"
-          >
-            <ArrowDown
-              className={cn(
-                "h-6 w-6 text-yellow-400",
-                isFullscreen && "h-12 w-12",
-              )}
-            />
-          </button>
-          <button
-            onClick={() => navigateSection(-1)}
-            className={cn(
-              "p-1 rounded-lg hover:bg-white/10 transition-colors",
-              isFullscreen && "p-2",
-            )}
-            aria-label="Previous section"
-          >
-            <ArrowLeft
-              className={cn(
-                "h-6 w-6 text-orange-400",
-                isFullscreen && "h-12 w-12",
-              )}
-            />
-          </button>
-          <button
-            onClick={() => navigateSection(1)}
-            className={cn(
-              "p-1 rounded-lg hover:bg-white/10 transition-colors",
-              isFullscreen && "p-2",
-            )}
-            aria-label="Next section"
-          >
-            <ArrowRight
-              className={cn(
-                "h-6 w-6 text-orange-400",
-                isFullscreen && "h-12 w-12",
-              )}
-            />
-          </button>
-          {!(isLandscape && !isPlaying) && (
-            <button
-              onClick={toggleMute}
-              className={cn(
-                "p-2 rounded-lg hover:bg-white/10 transition-colors",
-                isFullscreen && "p-4",
-              )}
-              aria-label={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? (
-                <VolumeX
-                  className={cn(
-                    "h-6 w-6 text-red-400 hover:text-red-300 transition-colors",
-                    isFullscreen && "h-12 w-12",
-                  )}
-                />
-              ) : (
-                <Volume2
-                  className={cn(
-                    "h-6 w-6 text-purple-400 hover:text-purple-300 transition-colors",
-                    isFullscreen && "h-12 w-12",
-                  )}
-                />
-              )}
-            </button>
-          )}
-          {isFullscreen && (
-            <button
-              onClick={toggleFullscreen}
-              className="p-4 rounded-lg hover:bg-white/10 transition-colors"
-              aria-label="Exit fullscreen"
-            >
-              <Minimize className="h-12 w-12 text-green-400 hover:text-green-300 transition-colors" />
-            </button>
-          )}
+          <VideoControls
+            onUp={() => navigateVideo(-1)}
+            onDown={() => navigateVideo(1)}
+            onLeft={() => navigateSection(-1)}
+            onRight={() => navigateSection(1)}
+            onPlayPause={togglePlayPause}
+            onMuteToggle={toggleMute}
+            onRewind={handleRewind}
+            onFastForward={handleFastForward}
+            onRestart={handleRestart}
+            isPlaying={isPlaying}
+            isMuted={isMuted}
+            onToggleFullscreen={toggleFullscreen}
+            isFullscreen={isFullscreen}
+            canNavigateLeft={canNavigateLeft}
+            canNavigateRight={canNavigateRight}
+            canNavigateUp={canNavigateUp}
+            canNavigateDown={canNavigateDown}
+            isMobile={isMobile}
+            isLandscape={isLandscape}
+            showMobileNavigation={false}
+            showLandscapeNavigation={true}
+          />
         </div>
       </div>
 

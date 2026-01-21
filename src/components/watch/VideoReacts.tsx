@@ -90,7 +90,7 @@ export function VideoReacts({
     <>
       <div
         className={cn(
-          "flex flex-col items-center gap-2 sm:gap-2 w-full",
+          "flex flex-col items-center sm:gap-2 w-full",
           isFullscreen && "gap-10 sm:gap-4",
           className,
         )}
