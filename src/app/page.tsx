@@ -405,7 +405,7 @@ export default async function Home() {
             {/* Recent Battles */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
               <h2 className="mb-12 !font-rubik-mono-one !text-4xl sm:!text-5xl text-outline text-center">
-                Recent Battles
+                Recently Added Battles
               </h2>
               {latestBattleSections.length > 0 ? (
                 <div className="sections-grid">
