@@ -203,6 +203,39 @@ export default function RoleTaggingPage() {
             </div>
           </div>
 
+          {/* Step 3.5: Tagging with an unregistered Instagram account */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-secondary-light text-primary font-bold text-xl border-2 border-secondary-light">
+                3.5
+              </div>
+              <h3 className="text-xl font-bold font-display text-white">
+                Tagging with an unregistered Instagram account
+              </h3>
+            </div>
+            <p className="text-base leading-relaxed ml-16 text-white">
+              It is also possible to tag events and assign roles to unregistered Instagram accounts. This is useful when you know the Instagram handle of the person you want to tag but they are not on Dance Chives yet. </p>
+            <p className="text-base leading-relaxed ml-16 text-white">
+              To tag an event and assign a role to an unregistered Instagram account, you will need to provide the Instagram handle of the account you are tagging. You will also need to provide the name of the person you are tagging. </p>
+            <p className="text-base leading-relaxed ml-16 text-white">Here is an example of how to look up an Instagram account and add it to an event:</p>
+            <Image
+              src="/screenshots/SearchforInstagram1.png"
+              alt="Search for Instagram"
+              width={1000}
+              height={1000} 
+              className="border-4 border-secondary-light rounded-sm"
+            />
+            <p className="text-base leading-relaxed ml-16 text-white">Select a role and click "Add Account". Then add the Instagram handle of the account you are tagging. You can also add a name if you want to:</p>
+            <Image
+              src="/screenshots/tagwithunclaimedinstagram1.png"
+              alt="Tag with Unclaimed Instagram"
+              width={1000}
+              height={1000}
+              className="border-4 border-secondary-light rounded-sm"
+            />
+            <p className="text-base leading-relaxed ml-16 text-white">Once you have added the account, you will need to submit your request. The request will be sent for administration approval. </p>
+          </div>
+
           {/* Step 4: Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-4">

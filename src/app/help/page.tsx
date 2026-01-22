@@ -7,6 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function FAQPage() {
@@ -148,7 +149,7 @@ export default function FAQPage() {
 
             <AccordionItem
               value="register"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
+              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
             >
               <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
                 How do I register?
@@ -173,6 +174,55 @@ export default function FAQPage() {
                     </div>
                   </div>
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem
+              value="register-instagram"
+              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
+            >
+              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
+                What if my Instagram is already on Dance Chives?
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-5 pt-2">
+                <div className="space-y-4 text-base leading-relaxed">
+                  <p className="text-muted-foreground">In some cases your Instagram may already be on Dance Chives. This happens when an Instagram account is tagged in an event, section, or video for a particular role associated with a dance event. If your Instagram has been tagged on an event, you will see an account on the community page which looks like this: </p>
+                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light text-black text-center">
+                    <p className="text-black mb-2">
+                      Screenshot: Community page showing tagged account
+                    </p>
+                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
+                      <Image
+                        src="/screenshots/sampleunclaimedaccount.png"
+                        alt="Sample Unclaimed Account"
+                        width={1000}
+                        height={1000}
+                        className="border-4 border-secondary-light rounded-sm"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">If you are the Instagram account owner and would like to claim your account please sign up and add your Instagram handle during registration. It must also be verified by sending a DM to{" "}
+                      <Link
+                        href="https://instagram.com/dancechives"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-light hover:text-white underline"
+                      >
+                        dancechives
+                      </Link>{" "}on Instagram with the username of the account you are claiming.</p>
+                  <p className="text-muted-foreground">If you are the Instagram account owner and would like to remove this account please DM{" "}
+                      <Link
+                        href="https://instagram.com/dancechives"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-light hover:text-white underline"
+                      >
+                        dancechives
+                      </Link>{" "}
+                      on Instagram with your request and it will be removed
+                      within 24 hours.</p>
+                </div>
+                <p className="text-muted-foreground pt-4">For information on how to tag events and assign roles to unregistered Instagram accounts, please see our <Link href="/help/role-tagging" className="text-primary-light hover:text-white underline">Role Tagging</Link> guide.</p>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
