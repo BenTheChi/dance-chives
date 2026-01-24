@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ReactAnimation } from "@/components/watch/ReactAnimation";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
+import { UserSearchItem } from "@/types/user";
 import { Info, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useSession } from "next-auth/react";
@@ -346,6 +347,141 @@ export function VideoGallery({
   }, [sections, currentSectionIndex, currentVideoIndex]);
 
   const currentVideo = getCurrentVideo();
+
+  // Optimistically remove user from video when tag is removed
+  // Note: removeTagFromVideo removes all roles, so we remove from all arrays
+  const handleVideoRemove = useCallback(
+    (videoId: string, userId: string, role: string) => {
+      setSections((prevSections) => {
+        return prevSections.map((sectionData) => {
+          const updatedVideos = sectionData.section.videos.map((video) => {
+            if (video.id === videoId) {
+              const updatedVideo = { ...video };
+
+              // Remove user from all role arrays (since removeTagFromVideo removes all roles)
+              const filterUser = (user: UserSearchItem) =>
+                user.id !== userId &&
+                user.username !== userId &&
+                (user.id || user.username) !== userId;
+
+              updatedVideo.taggedDancers = (
+                updatedVideo.taggedDancers || []
+              ).filter(filterUser);
+              updatedVideo.taggedWinners = (
+                updatedVideo.taggedWinners || []
+              ).filter(filterUser);
+              updatedVideo.taggedChoreographers = (
+                updatedVideo.taggedChoreographers || []
+              ).filter(filterUser);
+              updatedVideo.taggedTeachers = (
+                updatedVideo.taggedTeachers || []
+              ).filter(filterUser);
+
+              return updatedVideo;
+            }
+            return video;
+          });
+
+          return {
+            ...sectionData,
+            section: {
+              ...sectionData.section,
+              videos: updatedVideos,
+            },
+          };
+        });
+      });
+    },
+    []
+  );
+
+  // Optimistically update video when users are tagged
+  const handleVideoUpdate = useCallback(
+    (videoId: string, role: string, users: UserSearchItem[]) => {
+      setSections((prevSections) => {
+        return prevSections.map((sectionData) => {
+          const updatedVideos = sectionData.section.videos.map((video) => {
+            if (video.id === videoId) {
+              // Create updated video with new tagged users
+              const updatedVideo = { ...video };
+
+              // Determine which array to update based on role
+              if (role === "Dancer") {
+                const existingDancers = updatedVideo.taggedDancers || [];
+                const newDancers = users.filter(
+                  (user) =>
+                    !existingDancers.some(
+                      (d) =>
+                        (d.id && d.id === user.id) ||
+                        d.username === user.username
+                    )
+                );
+                updatedVideo.taggedDancers = [
+                  ...existingDancers,
+                  ...newDancers,
+                ];
+              } else if (role === "Winner") {
+                const existingWinners = updatedVideo.taggedWinners || [];
+                const newWinners = users.filter(
+                  (user) =>
+                    !existingWinners.some(
+                      (w) =>
+                        (w.id && w.id === user.id) ||
+                        w.username === user.username
+                    )
+                );
+                updatedVideo.taggedWinners = [
+                  ...existingWinners,
+                  ...newWinners,
+                ];
+              } else if (role === "Choreographer") {
+                const existingChoreographers =
+                  updatedVideo.taggedChoreographers || [];
+                const newChoreographers = users.filter(
+                  (user) =>
+                    !existingChoreographers.some(
+                      (c) =>
+                        (c.id && c.id === user.id) ||
+                        c.username === user.username
+                    )
+                );
+                updatedVideo.taggedChoreographers = [
+                  ...existingChoreographers,
+                  ...newChoreographers,
+                ];
+              } else if (role === "Teacher") {
+                const existingTeachers = updatedVideo.taggedTeachers || [];
+                const newTeachers = users.filter(
+                  (user) =>
+                    !existingTeachers.some(
+                      (t) =>
+                        (t.id && t.id === user.id) ||
+                        t.username === user.username
+                    )
+                );
+                updatedVideo.taggedTeachers = [
+                  ...existingTeachers,
+                  ...newTeachers,
+                ];
+              }
+
+              return updatedVideo;
+            }
+            return video;
+          });
+
+          return {
+            ...sectionData,
+            section: {
+              ...sectionData.section,
+              videos: updatedVideos,
+            },
+          };
+        });
+      });
+    },
+    []
+  );
 
   // Calculate navigation disabled states
   const canNavigateLeft = currentSectionIndex > 0;
@@ -1146,7 +1282,7 @@ export function VideoGallery({
               return displayStyles.length > 0 ? (
                 <div className="flex justify-between gap-2 opacity-70 sm:mb-4">
                   {displayStyles.map((style) => (
-                    <StyleBadge key={style} style={style} />
+                    <StyleBadge key={style} style={style} asLink={false} />
                   ))}
                 </div>
               ) : null;
@@ -1447,6 +1583,8 @@ export function VideoGallery({
           city={currentVideo.city}
           eventDate={currentVideo.eventDate}
           container={isFullscreen ? fullscreenContainerRef.current : undefined}
+          onVideoUpdate={handleVideoUpdate}
+          onVideoRemove={handleVideoRemove}
         />
       )}
     </div>

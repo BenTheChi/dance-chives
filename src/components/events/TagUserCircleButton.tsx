@@ -42,7 +42,7 @@ interface TagUserCircleButtonProps {
   dialogTitle?: string;
   defaultRole?: string;
   existingTaggedUsers?: UserSearchItem[];
-  onUsersTagged?: (users: UserSearchItem[]) => void;
+  onUsersTagged?: (users: UserSearchItem[], role: string) => void;
 }
 
 async function searchUsers(keyword: string): Promise<UserSearchItem[]> {
@@ -219,6 +219,11 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
       return;
     }
 
+    // Optimistically update UI before API call
+    if (onUsersTagged) {
+      onUsersTagged(selectedUsers, roleToUse);
+    }
+
     startTransition(async () => {
       try {
         const result = await tagUsersApi({
@@ -237,9 +242,6 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
         } else {
           toast.error("Failed to tag users");
         }
-        if (onUsersTagged) {
-          onUsersTagged(selectedUsers);
-        }
         setIsDialogOpen(false);
         setSelectedRole(undefined);
         router.refresh();
@@ -247,6 +249,7 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
         toast.error(
           error instanceof Error ? error.message : "Failed to tag users"
         );
+        // On error, we could revert the optimistic update, but router.refresh() will handle it
       }
     });
   };
