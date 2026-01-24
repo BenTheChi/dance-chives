@@ -270,7 +270,11 @@ export function TagUserCircleButton(props: TagUserCircleButtonProps) {
         }}
       />
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-primary">
+        <DialogContent 
+          className="bg-primary"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <DialogHeader>
             <DialogTitle>{dialogTitle || "Tag People"}</DialogTitle>
           </DialogHeader>
