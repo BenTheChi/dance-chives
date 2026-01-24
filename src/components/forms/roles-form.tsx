@@ -10,6 +10,7 @@ import { AVAILABLE_ROLES, RoleTitle } from "@/lib/utils/roles";
 interface RolesFormProps {
   setValue: UseFormSetValue<FormValues>;
   roles?: Role[];
+  eventId?: string;
 }
 
 async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
@@ -30,12 +31,25 @@ async function getUserSearchItems(keyword: string): Promise<UserSearchItem[]> {
     });
 }
 
+async function createUnclaimed(displayName: string, instagram: string) {
+  const res = await fetch("/api/unclaimed-users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ displayName, instagram }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error || "Failed to create account");
+  }
+  return data.user as UserSearchItem;
+}
+
 const generateRoleId = () =>
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
     : Math.random().toString(36).substring(2, 9);
 
-export default function RolesForm({ setValue, roles = [] }: RolesFormProps) {
+export default function RolesForm({ setValue, roles = [], eventId }: RolesFormProps) {
   const getUsersForRole = (title: RoleTitle) =>
     roles
       .filter((role) => role.title === title && role.user)
@@ -96,6 +110,8 @@ export default function RolesForm({ setValue, roles = [] }: RolesFormProps) {
               placeholder={`Search for ${roleTitle.toLowerCase()}s...`}
               value={getUsersForRole(roleTitle)}
               onChange={(value) => handleRoleUsersChange(roleTitle, value)}
+              onCreateUnclaimedUser={createUnclaimed}
+              context={eventId ? { eventId, role: roleTitle } : undefined}
             />
           </div>
         ))}

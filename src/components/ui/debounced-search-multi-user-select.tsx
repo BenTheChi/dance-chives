@@ -399,6 +399,7 @@ export function DebouncedSearchMultiUserSelect({
                     </div>
                     <div className="flex gap-2 justify-end">
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => {
@@ -410,6 +411,7 @@ export function DebouncedSearchMultiUserSelect({
                         Cancel
                       </Button>
                       <Button
+                        type="button"
                         size="sm"
                         onClick={() => setConfirmOpen(true)}
                         disabled={!newName.trim() || !newIg.trim()}
@@ -420,6 +422,7 @@ export function DebouncedSearchMultiUserSelect({
                   </div>
                 ) : (
                   <Button
+                    type="button"
                     variant="ghost"
                     className="w-full justify-start"
                     onClick={() => setAddFormOpen(true)}

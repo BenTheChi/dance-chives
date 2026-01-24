@@ -43,10 +43,10 @@ export function ConfirmationDialog({
           )}
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel} disabled={loading}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button onClick={onConfirm} disabled={loading}>
+          <Button type="button" onClick={onConfirm} disabled={loading}>
             {loading ? "Working..." : confirmLabel}
           </Button>
         </DialogFooter>
