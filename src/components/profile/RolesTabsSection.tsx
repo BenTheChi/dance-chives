@@ -29,7 +29,7 @@ function isEventInFuture(event: Event): boolean {
   }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   // Check if any date is in the future
   return event.eventDetails.dates.some((dateEntry) => {
     const eventDate = parseEventDate(dateEntry.date);
@@ -103,9 +103,9 @@ export function RolesTabsSection({
   return (
     <section className="w-full">
       <h2 className="text-2xl font-bold mb-4">Events with Roles</h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-hidden">
+      <div className="bg-secondary-dark border-primary-light border-4 rounded-sm overflow-hidden">
         {/* Past/Future Toggle */}
-        <div className="flex items-center justify-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light text-center">
+        <div className="flex items-center justify-center gap-3 p-3 bg-secondary-dark rounded-sm border-b-3 border-primary-light text-center">
           <span className="text-sm font-semibold uppercase">Past</span>
           <Switch
             id="past-future-toggle"

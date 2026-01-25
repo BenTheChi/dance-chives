@@ -969,8 +969,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     setIsParsingPlaylist(true);
   };
 
+  // Store cancel function reference
+  const autofillCancelRef = useRef<(() => Promise<void>) | null>(null);
+
   // Poll for autofill job status at parent level to persist across tab navigation
-  useJobPolling<any>({
+  const { cancelJob } = useJobPolling<any>({
     jobId: autofillJobId,
     statusEndpoint: "/api/events/autofill/status",
     onComplete: (result) => {
@@ -992,11 +995,29 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     onError: (errorMessage) => {
       setIsAutofilling(false);
       setAutofillJobId(null);
-      toast.error(errorMessage);
+      // Don't show error toast for user-initiated cancellations
+      if (errorMessage !== "Job cancelled by user") {
+        toast.error(errorMessage);
+      } else {
+        toast.info("Autofill cancelled");
+      }
       autofillPosterFileRef.current = null;
     },
     enabled: !!autofillJobId,
+    timeout: 60000, // 60 seconds timeout
+    cancelEndpoint: "/api/events/autofill/cancel",
   });
+
+  // Store cancel function in ref so it can be accessed by child component
+  useEffect(() => {
+    autofillCancelRef.current = cancelJob;
+  }, [cancelJob]);
+
+  const handleAutofillCancel = async () => {
+    if (autofillCancelRef.current) {
+      await autofillCancelRef.current();
+    }
+  };
 
   const handleAutofillJobStart = (jobId: string, posterFile: File | null) => {
     setAutofillJobId(jobId);
@@ -1393,6 +1414,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               parentAutofillJobId={autofillJobId}
               parentIsAutofilling={isAutofilling}
               onAutofillJobStart={handleAutofillJobStart}
+              onAutofillCancel={handleAutofillCancel}
             />
           )}
 

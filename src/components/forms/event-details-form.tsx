@@ -39,6 +39,7 @@ import {
   Instagram,
   Youtube,
   Facebook,
+  X,
 } from "lucide-react";
 import { StyleMultiSelect } from "../ui/style-multi-select";
 import { Switch } from "../ui/switch";
@@ -56,6 +57,7 @@ interface EventDetailsFormProps {
   parentAutofillJobId?: string | null;
   parentIsAutofilling?: boolean;
   onAutofillJobStart?: (jobId: string, posterFile: File | null) => void;
+  onAutofillCancel?: () => Promise<void>;
 }
 
 interface CitySearchResponse {
@@ -108,6 +110,7 @@ export function EventDetailsForm({
   parentAutofillJobId,
   parentIsAutofilling,
   onAutofillJobStart,
+  onAutofillCancel,
 }: EventDetailsFormProps) {
   const { fields, append, remove } = useFieldArray({
     control,
@@ -253,25 +256,38 @@ export function EventDetailsForm({
               </div>
             )}
 
-            {/* Autofill Button */}
-            <Button
-              onClick={handleAutofill}
-              disabled={(!autofillPoster && !autofillText.trim()) || isAutofilling}
-              className="w-full sm:w-auto"
-              type="button"
-            >
-              {isAutofilling ? (
-                <>
-                  <span className="mr-2">Processing...</span>
-                  <span className="animate-spin">⏳</span>
-                </>
-              ) : (
-                <>
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Autofill with AI
-                </>
+            {/* Autofill Button and Cancel Button */}
+            <div className="flex gap-2">
+              <Button
+                onClick={handleAutofill}
+                disabled={(!autofillPoster && !autofillText.trim()) || isAutofilling}
+                className="w-full sm:w-auto"
+                type="button"
+              >
+                {isAutofilling ? (
+                  <>
+                    <span className="mr-2">Processing...</span>
+                    <span className="animate-spin">⏳</span>
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Autofill with AI
+                  </>
+                )}
+              </Button>
+              {isAutofilling && onAutofillCancel && (
+                <Button
+                  onClick={onAutofillCancel}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  type="button"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
               )}
-            </Button>
+            </div>
           </div>
         </div>
       )}

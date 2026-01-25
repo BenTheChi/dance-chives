@@ -253,6 +253,8 @@ export function DebouncedSearchMultiUserSelect({
         "flex flex-col debounced-search-multi-user-select",
         className
       )}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {label && (
         <label className={cn("text-sm font-medium block", labelColor)}>
@@ -288,6 +290,8 @@ export function DebouncedSearchMultiUserSelect({
               setOpen(true);
               setSelectedValue("");
             }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             className="border-0 p-2 shadow-none focus-visible:ring-0 flex-1 bg-neutral-300"
             disabled={disabled}
           />

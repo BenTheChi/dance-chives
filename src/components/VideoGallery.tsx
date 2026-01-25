@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ReactAnimation } from "@/components/watch/ReactAnimation";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
+import { UserSearchItem } from "@/types/user";
 import { Info, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useSession } from "next-auth/react";
@@ -51,7 +52,7 @@ function combineBracketSections(
     bracket?: Bracket;
     city?: string;
     eventDate?: string; // Formatted as "Mar 2026"
-  }>,
+  }>
 ): CombinedSectionData[] {
   const result: CombinedSectionData[] = [];
   // Group by original section (eventId + original section ID)
@@ -169,7 +170,7 @@ export function VideoGallery({
 
   // Combine bracket sections on initialization and when new sections are loaded
   const [sections, setSections] = useState<CombinedSectionData[]>(() =>
-    combineBracketSections(initialSections),
+    combineBracketSections(initialSections)
   );
   // Track all loaded sections (before combining) for pagination
   const [allLoadedSections, setAllLoadedSections] = useState(initialSections);
@@ -190,7 +191,7 @@ export function VideoGallery({
   const [isLandscape, setIsLandscape] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 0,
+    typeof window !== "undefined" ? window.innerWidth : 0
   );
   const lastAutoplayedVideoRef = useRef<string | null>(null);
   const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -233,7 +234,7 @@ export function VideoGallery({
         if (section.eventId !== eventId) continue;
 
         const videoIdx = section.section.videos.findIndex(
-          (v) => v.id === videoId,
+          (v) => v.id === videoId
         );
         if (videoIdx !== -1) {
           return { sectionIndex: sectionIdx, videoIndex: videoIdx };
@@ -241,7 +242,7 @@ export function VideoGallery({
       }
       return null;
     },
-    [sections, eventId],
+    [sections, eventId]
   );
 
   // Initialize from URL parameter on mount
@@ -283,7 +284,7 @@ export function VideoGallery({
     } else {
       // Video not found, fallback to first video
       console.warn(
-        `Video ${videoIdFromUrl} not found in event ${eventId}, falling back to first video`,
+        `Video ${videoIdFromUrl} not found in event ${eventId}, falling back to first video`
       );
       hasInitializedFromUrlRef.current = true;
     }
@@ -292,7 +293,7 @@ export function VideoGallery({
   // Clamp currentTime to valid range and ensure slider value is always valid
   const clampedTime = Math.max(
     0,
-    Math.min(currentTime, duration > 0 ? duration : currentTime),
+    Math.min(currentTime, duration > 0 ? duration : currentTime)
   );
 
   // Show slider and reset fade-out timer
@@ -346,6 +347,141 @@ export function VideoGallery({
   }, [sections, currentSectionIndex, currentVideoIndex]);
 
   const currentVideo = getCurrentVideo();
+
+  // Optimistically remove user from video when tag is removed
+  // Note: removeTagFromVideo removes all roles, so we remove from all arrays
+  const handleVideoRemove = useCallback(
+    (videoId: string, userId: string, role: string) => {
+      setSections((prevSections) => {
+        return prevSections.map((sectionData) => {
+          const updatedVideos = sectionData.section.videos.map((video) => {
+            if (video.id === videoId) {
+              const updatedVideo = { ...video };
+
+              // Remove user from all role arrays (since removeTagFromVideo removes all roles)
+              const filterUser = (user: UserSearchItem) =>
+                user.id !== userId &&
+                user.username !== userId &&
+                (user.id || user.username) !== userId;
+
+              updatedVideo.taggedDancers = (
+                updatedVideo.taggedDancers || []
+              ).filter(filterUser);
+              updatedVideo.taggedWinners = (
+                updatedVideo.taggedWinners || []
+              ).filter(filterUser);
+              updatedVideo.taggedChoreographers = (
+                updatedVideo.taggedChoreographers || []
+              ).filter(filterUser);
+              updatedVideo.taggedTeachers = (
+                updatedVideo.taggedTeachers || []
+              ).filter(filterUser);
+
+              return updatedVideo;
+            }
+            return video;
+          });
+
+          return {
+            ...sectionData,
+            section: {
+              ...sectionData.section,
+              videos: updatedVideos,
+            },
+          };
+        });
+      });
+    },
+    []
+  );
+
+  // Optimistically update video when users are tagged
+  const handleVideoUpdate = useCallback(
+    (videoId: string, role: string, users: UserSearchItem[]) => {
+      setSections((prevSections) => {
+        return prevSections.map((sectionData) => {
+          const updatedVideos = sectionData.section.videos.map((video) => {
+            if (video.id === videoId) {
+              // Create updated video with new tagged users
+              const updatedVideo = { ...video };
+
+              // Determine which array to update based on role
+              if (role === "Dancer") {
+                const existingDancers = updatedVideo.taggedDancers || [];
+                const newDancers = users.filter(
+                  (user) =>
+                    !existingDancers.some(
+                      (d) =>
+                        (d.id && d.id === user.id) ||
+                        d.username === user.username
+                    )
+                );
+                updatedVideo.taggedDancers = [
+                  ...existingDancers,
+                  ...newDancers,
+                ];
+              } else if (role === "Winner") {
+                const existingWinners = updatedVideo.taggedWinners || [];
+                const newWinners = users.filter(
+                  (user) =>
+                    !existingWinners.some(
+                      (w) =>
+                        (w.id && w.id === user.id) ||
+                        w.username === user.username
+                    )
+                );
+                updatedVideo.taggedWinners = [
+                  ...existingWinners,
+                  ...newWinners,
+                ];
+              } else if (role === "Choreographer") {
+                const existingChoreographers =
+                  updatedVideo.taggedChoreographers || [];
+                const newChoreographers = users.filter(
+                  (user) =>
+                    !existingChoreographers.some(
+                      (c) =>
+                        (c.id && c.id === user.id) ||
+                        c.username === user.username
+                    )
+                );
+                updatedVideo.taggedChoreographers = [
+                  ...existingChoreographers,
+                  ...newChoreographers,
+                ];
+              } else if (role === "Teacher") {
+                const existingTeachers = updatedVideo.taggedTeachers || [];
+                const newTeachers = users.filter(
+                  (user) =>
+                    !existingTeachers.some(
+                      (t) =>
+                        (t.id && t.id === user.id) ||
+                        t.username === user.username
+                    )
+                );
+                updatedVideo.taggedTeachers = [
+                  ...existingTeachers,
+                  ...newTeachers,
+                ];
+              }
+
+              return updatedVideo;
+            }
+            return video;
+          });
+
+          return {
+            ...sectionData,
+            section: {
+              ...sectionData.section,
+              videos: updatedVideos,
+            },
+          };
+        });
+      });
+    },
+    []
+  );
 
   // Calculate navigation disabled states
   const canNavigateLeft = currentSectionIndex > 0;
@@ -497,12 +633,12 @@ export function VideoGallery({
         const newMap = new Map(prev);
         const existingReacts = newMap.get(videoId) || [];
         const existingUserReact = existingReacts.find(
-          (r) => r.userId === userId,
+          (r) => r.userId === userId
         );
 
         if (existingUserReact) {
           const updatedReacts = existingReacts.map((r) =>
-            r.userId === userId ? { ...r, [type]: timestamp } : r,
+            r.userId === userId ? { ...r, [type]: timestamp } : r
           );
           newMap.set(videoId, updatedReacts);
         } else {
@@ -530,7 +666,7 @@ export function VideoGallery({
         console.error("Error saving react:", error);
       });
     },
-    [currentVideo, session?.user?.id],
+    [currentVideo, session?.user?.id]
   );
 
   // Handle reset
@@ -545,7 +681,7 @@ export function VideoGallery({
       const newMap = new Map(prev);
       const existingReacts = newMap.get(videoId) || [];
       const updatedReacts = existingReacts.map((r) =>
-        r.userId === userId ? { ...r, fire: 0, clap: 0, wow: 0, laugh: 0 } : r,
+        r.userId === userId ? { ...r, fire: 0, clap: 0, wow: 0, laugh: 0 } : r
       );
       newMap.set(videoId, updatedReacts);
       return newMap;
@@ -566,7 +702,7 @@ export function VideoGallery({
 
     try {
       const response = await fetch(
-        `/api/watch/sections?offset=${allLoadedSections.length}&limit=10`,
+        `/api/watch/sections?offset=${allLoadedSections.length}&limit=10`
       );
       if (response.ok) {
         const newSections = await response.json();
@@ -633,7 +769,7 @@ export function VideoGallery({
       showSlider,
       enableUrlRouting,
       isMuted,
-    ],
+    ]
   );
 
   // Handle video change - called when video index changes
@@ -651,7 +787,7 @@ export function VideoGallery({
             if (!videoLocation || videoLocation.sectionIndex !== sectionIndex) {
               // Video doesn't belong to this event, prevent navigation
               console.warn(
-                `Video ${video.id} does not belong to event ${eventId}`,
+                `Video ${video.id} does not belong to event ${eventId}`
               );
               return;
             }
@@ -682,7 +818,7 @@ export function VideoGallery({
       eventId,
       videoExistsInEvent,
       isMuted,
-    ],
+    ]
   );
 
   // Track previous values to avoid unnecessary calls
@@ -711,6 +847,76 @@ export function VideoGallery({
       handleVideoChange(currentSectionIndex, videoIndex);
     }
   }, [currentVideoIndex, currentSectionIndex, handleVideoChange]);
+
+  // Navigation functions
+  const navigateVideo = useCallback(
+    (direction: number, circular: boolean = false) => {
+      const section = sections[currentSectionIndex];
+      if (!section) return;
+
+      const currentIdx = currentVideoIndex.get(currentSectionIndex) || 0;
+      const videos = section.section.videos;
+      if (videos.length === 0) return;
+
+      let newIndex: number;
+      if (circular) {
+        // Circular navigation: wrap around
+        newIndex = (currentIdx + direction + videos.length) % videos.length;
+      } else {
+        // Normal navigation: clamp to bounds
+        newIndex = Math.max(
+          0,
+          Math.min(videos.length - 1, currentIdx + direction)
+        );
+      }
+
+      setCurrentVideoIndex((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(currentSectionIndex, newIndex);
+        return newMap;
+      });
+    },
+    [sections, currentSectionIndex, currentVideoIndex]
+  );
+
+  const navigateSection = useCallback(
+    (direction: number) => {
+      const newIndex = Math.max(
+        0,
+        Math.min(sections.length - 1, currentSectionIndex + direction)
+      );
+      setCurrentSectionIndex(newIndex);
+    },
+    [sections.length, currentSectionIndex]
+  );
+
+  const togglePlayPause = useCallback(() => {
+    if (playerRef.current) {
+      // Get actual player state instead of relying on local state
+      const playerState = playerRef.current.getPlayerState();
+      // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
+      if (playerState === 1) {
+        // Currently playing, so pause
+        playerRef.current.pauseVideo();
+      } else {
+        // Not playing (paused, ended, unstarted, etc.), so play
+        playerRef.current.playVideo();
+      }
+      // Don't set state here - let handlePlayerStateChange update it based on actual player state
+    }
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (playerRef.current) {
+      if (isMuted) {
+        playerRef.current.unmute();
+        setIsMuted(false);
+      } else {
+        playerRef.current.mute();
+        setIsMuted(true);
+      }
+    }
+  }, [isMuted]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -753,77 +959,7 @@ export function VideoGallery({
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, []);
-
-  // Navigation functions
-  const navigateVideo = useCallback(
-    (direction: number, circular: boolean = false) => {
-      const section = sections[currentSectionIndex];
-      if (!section) return;
-
-      const currentIdx = currentVideoIndex.get(currentSectionIndex) || 0;
-      const videos = section.section.videos;
-      if (videos.length === 0) return;
-
-      let newIndex: number;
-      if (circular) {
-        // Circular navigation: wrap around
-        newIndex = (currentIdx + direction + videos.length) % videos.length;
-      } else {
-        // Normal navigation: clamp to bounds
-        newIndex = Math.max(
-          0,
-          Math.min(videos.length - 1, currentIdx + direction),
-        );
-      }
-
-      setCurrentVideoIndex((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(currentSectionIndex, newIndex);
-        return newMap;
-      });
-    },
-    [sections, currentSectionIndex, currentVideoIndex],
-  );
-
-  const navigateSection = useCallback(
-    (direction: number) => {
-      const newIndex = Math.max(
-        0,
-        Math.min(sections.length - 1, currentSectionIndex + direction),
-      );
-      setCurrentSectionIndex(newIndex);
-    },
-    [sections.length, currentSectionIndex],
-  );
-
-  const togglePlayPause = useCallback(() => {
-    if (playerRef.current) {
-      // Get actual player state instead of relying on local state
-      const playerState = playerRef.current.getPlayerState();
-      // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
-      if (playerState === 1) {
-        // Currently playing, so pause
-        playerRef.current.pauseVideo();
-      } else {
-        // Not playing (paused, ended, unstarted, etc.), so play
-        playerRef.current.playVideo();
-      }
-      // Don't set state here - let handlePlayerStateChange update it based on actual player state
-    }
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    if (playerRef.current) {
-      if (isMuted) {
-        playerRef.current.unmute();
-        setIsMuted(false);
-      } else {
-        playerRef.current.mute();
-        setIsMuted(true);
-      }
-    }
-  }, [isMuted]);
+  }, [navigateVideo, navigateSection, togglePlayPause, toggleMute]);
 
   // Auto-play when video enters center - only on first appearance
   useEffect(() => {
@@ -940,7 +1076,7 @@ export function VideoGallery({
   // Detect landscape mode
   useEffect(() => {
     const mediaQuery = window.matchMedia(
-      "(orientation: landscape) and (max-height: 500px)",
+      "(orientation: landscape) and (max-height: 500px)"
     );
     const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsLandscape(e.matches);
@@ -957,7 +1093,7 @@ export function VideoGallery({
       setWindowWidth(width);
       const isMobileDevice =
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
+          navigator.userAgent
         ) || width < 768;
       setIsMobile(isMobileDevice);
     };
@@ -999,15 +1135,15 @@ export function VideoGallery({
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener(
         "webkitfullscreenchange",
-        handleFullscreenChange,
+        handleFullscreenChange
       );
       document.removeEventListener(
         "mozfullscreenchange",
-        handleFullscreenChange,
+        handleFullscreenChange
       );
       document.removeEventListener(
         "MSFullscreenChange",
-        handleFullscreenChange,
+        handleFullscreenChange
       );
     };
   }, []);
@@ -1026,7 +1162,7 @@ export function VideoGallery({
         }
       }
     },
-    [showSlider, currentVideo?.video.id],
+    [showSlider, currentVideo?.video.id]
   );
 
   const handleRewind = useCallback(() => {
@@ -1086,7 +1222,7 @@ export function VideoGallery({
         }
       }
     },
-    [showSlider, navigateVideo],
+    [showSlider, navigateVideo]
   );
 
   return (
@@ -1095,7 +1231,7 @@ export function VideoGallery({
       className={cn(
         "relative w-full flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0",
         !isFullscreen && "max-w-[1200px]",
-        isFullscreen && "w-screen h-screen max-w-none",
+        isFullscreen && "w-screen h-screen max-w-none"
       )}
     >
       {/* Header */}
@@ -1146,7 +1282,7 @@ export function VideoGallery({
               return displayStyles.length > 0 ? (
                 <div className="flex justify-between gap-2 opacity-70 sm:mb-4">
                   {displayStyles.map((style) => (
-                    <StyleBadge key={style} style={style} />
+                    <StyleBadge key={style} style={style} asLink={false} />
                   ))}
                 </div>
               ) : null;
@@ -1211,13 +1347,13 @@ export function VideoGallery({
       <div
         className={cn(
           "flex flex-col items-center relative z-30",
-          isFullscreen ? "flex-1 h-full" : "flex-1",
+          isFullscreen ? "flex-1 h-full" : "flex-1"
         )}
       >
         <div
           className={cn(
             "w-full relative overflow-hidden",
-            isFullscreen ? "h-full flex-1" : "aspect-video",
+            isFullscreen ? "h-full flex-1" : "aspect-video"
           )}
         >
           {/* Sections Container - Horizontal */}
@@ -1366,7 +1502,7 @@ export function VideoGallery({
         <div
           className={cn(
             "flex flex-col items-center gap-3 rounded-lg p-2",
-            isFullscreen && "gap-6 p-4",
+            isFullscreen && "gap-6 p-4"
           )}
         >
           {isFullscreen ? (
@@ -1447,6 +1583,8 @@ export function VideoGallery({
           city={currentVideo.city}
           eventDate={currentVideo.eventDate}
           container={isFullscreen ? fullscreenContainerRef.current : undefined}
+          onVideoUpdate={handleVideoUpdate}
+          onVideoRemove={handleVideoRemove}
         />
       )}
     </div>

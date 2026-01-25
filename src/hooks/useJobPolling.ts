@@ -7,6 +7,8 @@ interface UseJobPollingOptions<T> {
   onError?: (error: string) => void;
   pollInterval?: number;
   enabled?: boolean;
+  timeout?: number; // Timeout in milliseconds
+  cancelEndpoint?: string; // Endpoint to cancel the job
 }
 
 /**
@@ -20,8 +22,12 @@ export function useJobPolling<T = any>({
   onError,
   pollInterval = 2000,
   enabled = true,
+  timeout,
+  cancelEndpoint,
 }: UseJobPollingOptions<T>) {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number | null>(null);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
 
@@ -36,12 +42,54 @@ export function useJobPolling<T = any>({
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    startTimeRef.current = null;
   }, []);
+
+  const cancelJob = useCallback(async () => {
+    if (!jobId || !cancelEndpoint) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${cancelEndpoint}/${jobId}`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to cancel job");
+      }
+
+      stopPolling();
+      if (onErrorRef.current) {
+        onErrorRef.current("Job cancelled by user");
+      }
+    } catch (error) {
+      console.error("Error cancelling job:", error);
+      if (onErrorRef.current) {
+        onErrorRef.current(
+          error instanceof Error ? error.message : "Failed to cancel job"
+        );
+      }
+    }
+  }, [jobId, cancelEndpoint, stopPolling]);
 
   useEffect(() => {
     if (!jobId || !enabled) {
       stopPolling();
       return;
+    }
+
+    // Set up timeout if provided
+    if (timeout && timeout > 0) {
+      startTimeRef.current = Date.now();
+      timeoutRef.current = setTimeout(async () => {
+        console.log("Job timeout reached, cancelling...");
+        await cancelJob();
+      }, timeout);
     }
 
     const pollStatus = async () => {
@@ -187,7 +235,7 @@ export function useJobPolling<T = any>({
     return () => {
       stopPolling();
     };
-  }, [jobId, statusEndpoint, pollInterval, enabled, stopPolling]);
+  }, [jobId, statusEndpoint, pollInterval, enabled, timeout, cancelJob, stopPolling]);
 
-  return { stopPolling };
+  return { stopPolling, cancelJob };
 }

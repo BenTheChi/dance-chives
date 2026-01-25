@@ -117,9 +117,9 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
       <h2 className="text-2xl font-bold mb-4">
         Tagged Videos ({videos.length})
       </h2>
-      <div className="bg-primary-dark border-secondary-light border-4 rounded-sm overflow-visible">
+      <div className="bg-secondary-dark border-primary-light border-4 rounded-sm overflow-visible">
         {/* Winner Filter Toggle */}
-        <div className="flex items-center justify-center gap-3 p-3 bg-primary rounded-sm border-b-3 border-secondary-light text-center">
+        <div className="flex items-center justify-center gap-3 p-3 bg-secondary-dark rounded-sm border-b-3 border-primary-light text-center">
           <Switch
             id="wins-only-toggle"
             checked={showWinsOnly}
@@ -165,7 +165,6 @@ export function TaggedVideosSection({ videos }: TaggedVideosSectionProps) {
             )}
           </div>
         </div>
-
       </div>
     </section>
   );
