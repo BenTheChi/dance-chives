@@ -147,7 +147,7 @@ export default function FAQPage() {
 
             <AccordionItem
               value="register"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
+              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2 mb-3"
             >
               <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
                 How do I register?
@@ -180,7 +180,7 @@ export default function FAQPage() {
               value="register-instagram"
               className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
             >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
+              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors pt-4">
                 What if my Instagram is already on Dance Chives?
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-5 pt-2">

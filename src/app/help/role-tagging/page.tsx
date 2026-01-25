@@ -214,7 +214,7 @@ export default function RoleTaggingPage() {
             <p className="text-base leading-relaxed ml-16 text-white">
               It is also possible to tag events and assign roles to unregistered Instagram accounts. This is useful when you know the Instagram handle of the person you want to tag but they are not on Dance Chives yet. </p>
             <p className="text-base leading-relaxed ml-16 text-white">
-              To tag an event and assign a role to an unregistered Instagram account, you will need to provide the Instagram handle of the account you are tagging. You will also need to provide the name of the person you are tagging. </p>
+              To tag an event and assign a role to an unregistered Instagram account, you will need to provide the Instagram handle of the account you are tagging and the user's name. </p>
             <p className="text-base leading-relaxed ml-16 text-white">Here is an example of how to look up an Instagram account and add it to an event:</p>
             <Image
               src="/screenshots/tagpeople.png"
@@ -223,7 +223,7 @@ export default function RoleTaggingPage() {
               height={1000} 
               className="border-4 border-secondary-light rounded-sm"
             />
-            <p className="text-base leading-relaxed ml-16 text-white">Select a role and click "Add Account". Then add the Instagram handle of the account you are tagging. You can also add a name if you want to:</p>
+            <p className="text-base leading-relaxed ml-16 text-white">Select a role and click "Add Account". Then add the Instagram handle of the account you are tagging and the user's name:</p>
             <Image
               src="/screenshots/tagpeoplecreate.png"
               alt="Tag People Create"
