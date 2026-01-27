@@ -1,6 +1,6 @@
 /**
  * OpenRouter LLM client for JSON-only responses
- * Uses model: xiaomi/mimo-v2-flash:free
+ * Uses model: google/gemma-3n-e4b-it:free
  */
 
 /**
@@ -19,7 +19,7 @@ export async function callOpenRouterAPI(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "xiaomi/mimo-v2-flash:free",
+        model: "google/gemma-3n-e4b-it:free",
         messages: [
           {
             role: "system",
