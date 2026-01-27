@@ -4473,6 +4473,196 @@ export async function getLatestBattleSections(): Promise<
 }
 
 /**
+ * Get events that have sections with videos, ordered by most recently added
+ * Used for "Watch Past Events" section on homepage
+ */
+export async function getEventsWithVideosForWatch(
+  limit: number = 6,
+): Promise<TEventCard[]> {
+  const session = driver.session();
+
+  try {
+    // Get events that have sections with videos, ordered by most recently updated
+    const eventsResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE (e.status = 'visible' OR e.status IS NULL)
+      MATCH (e)<-[:IN]-(s:Section)
+      WHERE EXISTS {
+        MATCH (s)<-[:IN]-(v:Video)
+      } OR EXISTS {
+        MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+      }
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
+      OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
+      WITH DISTINCT e, c, poster,
+           [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
+      ORDER BY e.updatedAt DESC, e.createdAt DESC
+      LIMIT $limit
+      RETURN e.id as eventId, 
+             e.title as eventTitle, 
+             e.dates as eventDates,
+             e.startDate as eventStartDate,
+             c.name as cityName,
+             c.id as cityId,
+             poster.url as posterUrl,
+             CASE 
+               WHEN size(eventTypeLabels) > 0 THEN 
+                 CASE eventTypeLabels[0]
+                   WHEN 'BattleEvent' THEN 'Battle'
+                   WHEN 'CompetitionEvent' THEN 'Competition'
+                   WHEN 'ClassEvent' THEN 'Class'
+                   WHEN 'WorkshopEvent' THEN 'Workshop'
+                   WHEN 'SessionEvent' THEN 'Session'
+                   WHEN 'PartyEvent' THEN 'Party'
+                   WHEN 'FestivalEvent' THEN 'Festival'
+                   WHEN 'PerformanceEvent' THEN 'Performance'
+                   ELSE null
+                 END
+               ELSE null 
+             END as eventType
+      `,
+      { limit: int(limit) },
+    );
+
+    const eventIds = eventsResult.records.map((r) => r.get("eventId") as string);
+
+    if (eventIds.length === 0) {
+      return [];
+    }
+
+    // Get styles for each event
+    const stylesResult = await session.run(
+      `
+      UNWIND $eventIds as eventId
+      MATCH (e:Event {id: eventId})
+      OPTIONAL MATCH (e)-[:STYLE]->(style:Style)
+      OPTIONAL MATCH (e)<-[:IN]-(s:Section)-[:STYLE]->(sectionStyle:Style)
+      WITH eventId, collect(DISTINCT style.name) + collect(DISTINCT sectionStyle.name) as allStyles
+      RETURN eventId, allStyles
+      `,
+      { eventIds },
+    );
+
+    const stylesMap = new Map<string, string[]>();
+    for (const record of stylesResult.records) {
+      const eventId = record.get("eventId") as string;
+      const styles = (record.get("allStyles") as string[]).filter(
+        (s) => s !== null,
+      );
+      stylesMap.set(eventId, styles);
+    }
+
+    // Helper function to format date for display (MM/DD/YY format)
+    const formatDisplayDate = (
+      dates: string | null | undefined,
+      startDate: string | null | undefined,
+    ): string => {
+      if (dates) {
+        try {
+          const parsedDates: EventDate[] =
+            typeof dates === "string" ? JSON.parse(dates) : dates;
+          if (Array.isArray(parsedDates) && parsedDates.length > 0) {
+            const firstDate = parsedDates[0];
+            if (firstDate.date) {
+              // If already in MM/DD/YYYY format, convert to MM/DD/YY
+              if (firstDate.date.includes("/")) {
+                const parts = firstDate.date.split("/");
+                if (parts.length === 3) {
+                  const year = parts[2].slice(-2);
+                  return `${parts[0]}/${parts[1]}/${year}`;
+                }
+              }
+              // Try to parse and format
+              try {
+                const dateObj = new Date(firstDate.date);
+                if (!isNaN(dateObj.getTime())) {
+                  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+                  const day = String(dateObj.getDate()).padStart(2, "0");
+                  const year = String(dateObj.getFullYear()).slice(-2);
+                  return `${month}/${day}/${year}`;
+                }
+              } catch {
+                // Fallback
+              }
+            }
+          }
+        } catch {
+          // Fallback to startDate
+        }
+      }
+
+      if (startDate) {
+        try {
+          const dateObj = new Date(startDate);
+          if (!isNaN(dateObj.getTime())) {
+            const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const day = String(dateObj.getDate()).padStart(2, "0");
+            const year = String(dateObj.getFullYear()).slice(-2);
+            return `${month}/${day}/${year}`;
+          }
+        } catch {
+          // Fallback
+        }
+      }
+
+      return "";
+    };
+
+    // Helper function to count additional dates
+    const countAdditionalDates = (
+      dates: string | null | undefined,
+    ): number => {
+      if (!dates) return 0;
+      try {
+        const parsedDates: EventDate[] =
+          typeof dates === "string" ? JSON.parse(dates) : dates;
+        if (Array.isArray(parsedDates) && parsedDates.length > 1) {
+          return parsedDates.length - 1;
+        }
+      } catch {
+        // Fallback
+      }
+      return 0;
+    };
+
+    // Build TEventCard array
+    const result: TEventCard[] = eventsResult.records.map((record) => {
+      const eventId = record.get("eventId") as string;
+      const eventTitle = record.get("eventTitle") as string;
+      const eventDates = record.get("eventDates") as string | null;
+      const eventStartDate = record.get("eventStartDate") as string | null;
+      const cityName = record.get("cityName") as string | null;
+      const cityId = record.get("cityId") as string | null;
+      const posterUrl = record.get("posterUrl") as string | null;
+      const eventType = record.get("eventType") as EventType | null;
+
+      const styles = stylesMap.get(eventId) || [];
+      const displayDate = formatDisplayDate(eventDates, eventStartDate);
+      const additionalDatesCount = countAdditionalDates(eventDates);
+
+      return {
+        id: eventId,
+        title: eventTitle,
+        imageUrl: posterUrl || undefined,
+        date: displayDate,
+        city: cityName || "",
+        cityId: cityId || undefined,
+        styles: styles,
+        eventType: eventType || undefined,
+        additionalDatesCount: additionalDatesCount,
+        status: "visible",
+        hasVideos: true, // All events returned have videos by definition
+      };
+    });
+
+    return result;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
  * Get all battle sections from all visible events with full video/bracket data
  * Supports pagination for lazy loading
  */

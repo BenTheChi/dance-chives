@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/section-card";
-import { getLatestBattleSections } from "@/db/queries/event";
+import { getEventsWithVideosForWatch } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
 import { EventCard } from "@/components/EventCard";
@@ -20,8 +19,8 @@ import {
 export const revalidate = 60;
 
 export default async function Home() {
-  // Fetch latest battle sections from 6 events
-  const latestBattleSections = await getLatestBattleSections();
+  // Fetch events with videos for watch section
+  const watchPastEvents = await getEventsWithVideosForWatch(6);
 
   // Fetch upcoming events
   const upcomingEvents = await getUpcomingEventCards(4);
@@ -402,30 +401,25 @@ export default async function Home() {
               </section>
             )}
 
-            {/* Recent Battles */}
+            {/* Watch Past Events */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
               <h2 className="mb-12 !font-rubik-mono-one !text-4xl sm:!text-5xl text-outline text-center">
-                Recently Added Battles
+                Watch Past Events
               </h2>
-              {latestBattleSections.length > 0 ? (
-                <div className="sections-grid">
-                  {latestBattleSections.map(
-                    ({ section, eventId, eventTitle, city }) => (
-                      <SectionCard
-                        key={section.id}
-                        section={section}
-                        eventId={eventId}
-                        eventTitle={eventTitle}
-                        showEventTitle={true}
-                        city={city}
-                      />
-                    ),
-                  )}
+              {watchPastEvents.length > 0 ? (
+                <div className="flex flex-wrap justify-center gap-6">
+                  {watchPastEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      {...event}
+                      href={`/watch/${event.id}`}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">
-                    No battle sections available yet.
+                    No events with videos available yet.
                   </p>
                 </div>
               )}

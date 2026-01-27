@@ -114,7 +114,7 @@ export function AppNavbar() {
             <Button
               asChild
               size="icon"
-              className="bg-[#9d7eff] hover:bg-[#8d6eef] text-white border-none"
+              className="bg-[#9d7eff] hover:bg-[#8d6eef] text-white border border-white"
             >
               <MaintenanceLink href="/add-event">
                 <Plus className="h-5 w-5" strokeWidth={3} />
