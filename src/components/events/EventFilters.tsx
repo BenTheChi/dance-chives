@@ -310,7 +310,7 @@ export function EventFilters({
                   variant="outline"
                   className="flex-1 bg-neutral-300 text-charcoal font-bold border-charcoal"
                 >
-                  Clear Filters
+                  Clear
                 </Button>
               )}
               {onSave && (
@@ -321,7 +321,7 @@ export function EventFilters({
                   }}
                   className="flex-1 bg-primary-light text-primary font-bold"
                 >
-                  Save Filters
+                  Save
                 </Button>
               )}
             </div>

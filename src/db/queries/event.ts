@@ -3618,6 +3618,130 @@ export const getAllCities = async (): Promise<City[]> => {
   }
 };
 
+/**
+ * Get cities that have at least one future event or workshop
+ * Filters cities to only include those with events/workshops on or after today
+ */
+export const getCitiesWithFutureEvents = async (): Promise<City[]> => {
+  const session = driver.session();
+
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+
+    // Get cities with events that have future startDate or workshops with future dates
+    const result = await session.run(
+      `MATCH (c:City)
+       WHERE EXISTS {
+         // Check for events with future startDate
+         MATCH (c)<-[:IN]-(e:Event)
+         WHERE (e.status = 'visible' OR e.status IS NULL)
+           AND e.startDate >= $today
+       } OR EXISTS {
+         // Check for workshops with future dates
+         MATCH (c)<-[:IN]-(w:Workshop)
+         WHERE w.startDate >= $today
+       }
+       RETURN DISTINCT c.id as id, c.name as name, c.region as region, 
+              c.countryCode as countryCode, c.timezone as timezone,
+              c.latitude as latitude, c.longitude as longitude`,
+      { today },
+    );
+
+    const citiesFromStartDate = result.records.map((record) => ({
+      id: String(record.get("id")),
+      name: record.get("name") as string,
+      region: record.get("region") || "",
+      countryCode: record.get("countryCode") || "",
+      timezone: record.get("timezone") || undefined,
+      latitude: record.get("latitude")
+        ? Number(record.get("latitude"))
+        : undefined,
+      longitude: record.get("longitude")
+        ? Number(record.get("longitude"))
+        : undefined,
+    }));
+
+    // Also check events with dates arrays that might have future dates
+    // (events where startDate might be in the past but dates array has future dates)
+    const eventsWithDatesArray = await session.run(
+      `MATCH (c:City)<-[:IN]-(e:Event)
+       WHERE (e.status = 'visible' OR e.status IS NULL)
+         AND e.dates IS NOT NULL
+         AND (e.startDate IS NULL OR e.startDate < $today)
+       RETURN DISTINCT c.id as cityId, c.name as name, c.region as region,
+              c.countryCode as countryCode, c.timezone as timezone,
+              c.latitude as latitude, c.longitude as longitude,
+              e.dates as dates`,
+      { today },
+    );
+
+    // Parse dates arrays and check for future dates
+    const cityMap = new Map<string, City>();
+    
+    // Add cities from startDate query
+    citiesFromStartDate.forEach((city) => {
+      cityMap.set(city.id, city);
+    });
+
+    // Check events with dates arrays for future dates
+    eventsWithDatesArray.records.forEach((record) => {
+      const cityId = String(record.get("cityId"));
+      const dates = record.get("dates");
+      
+      if (dates) {
+        try {
+          const parsedDates =
+            typeof dates === "string" ? JSON.parse(dates) : dates;
+          if (Array.isArray(parsedDates)) {
+            const hasFutureDate = parsedDates.some((dateObj: any) => {
+              if (dateObj && dateObj.date) {
+                const eventDate = new Date(dateObj.date);
+                const todayDate = new Date(today);
+                // Set time to start of day for comparison
+                todayDate.setHours(0, 0, 0, 0);
+                eventDate.setHours(0, 0, 0, 0);
+                return eventDate >= todayDate;
+              }
+              return false;
+            });
+            
+            if (hasFutureDate && !cityMap.has(cityId)) {
+              // Add city if it has future dates and isn't already in the map
+              cityMap.set(cityId, {
+                id: cityId,
+                name: record.get("name") as string,
+                region: record.get("region") || "",
+                countryCode: record.get("countryCode") || "",
+                timezone: record.get("timezone") || undefined,
+                latitude: record.get("latitude")
+                  ? Number(record.get("latitude"))
+                  : undefined,
+                longitude: record.get("longitude")
+                  ? Number(record.get("longitude"))
+                  : undefined,
+              });
+            }
+          }
+        } catch (error) {
+          // If parsing fails, skip this event
+          console.error("Error parsing dates array:", error);
+        }
+      }
+    });
+
+    await session.close();
+
+    // Convert map to array and sort by name
+    return Array.from(cityMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  } catch (error) {
+    console.error("Error fetching cities with future events:", error);
+    await session.close();
+    return [];
+  }
+};
+
 export const getCityData = async (cityId: string): Promise<CityData | null> => {
   const session = driver.session();
 

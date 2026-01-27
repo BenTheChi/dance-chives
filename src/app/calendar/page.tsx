@@ -1,5 +1,5 @@
 import {
-  getAllCities,
+  getCitiesWithFutureEvents,
   getAllStyles,
   getCalendarEvents,
 } from "@/db/queries/event";
@@ -24,9 +24,9 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const cityParam = params.city;
   const styleParam = params.style;
 
-  // Fetch all cities and styles in parallel (no auth dependency - enables ISR)
+  // Fetch cities with future events and styles in parallel (no auth dependency - enables ISR)
   const [citiesRaw, styles] = await Promise.all([
-    getAllCities(),
+    getCitiesWithFutureEvents(),
     getAllStyles(),
   ]);
   

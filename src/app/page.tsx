@@ -212,7 +212,7 @@ export default async function Home() {
                 </div>
 
                 {/* Feature Bullet Points */}
-                <div className="flex flex-col items-center gap-15 max-w-3xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-15 max-w-5xl w-full">
                   <div className="flex flex-col items-center gap-2">
                     <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
                       React
@@ -326,51 +326,57 @@ export default async function Home() {
                     </div>
                   </div>
 
-                  {/* Details Feature */}
-                  <div className="flex flex-col items-center gap-2 w-full">
-                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
-                      Deep Dive
-                    </h3>
-                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
-                      <div className="flex items-center justify-center gap-2 min-w-[120px]">
-                        <div className="w-12 h-12 rounded-full bg-fog-white border-2 border-black flex items-center justify-center shadow-hover">
-                          <Info className="w-6 h-6 text-charcoal" />
+                  <div className="space-y-4">
+                    {/* Details Feature */}
+                    <div className="flex flex-col items-center gap-2 w-full">
+                      <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                        Deep Dive
+                      </h3>
+                      <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
+                        <div className="flex items-center justify-center gap-2 min-w-[120px]">
+                          <div className="w-12 h-12 rounded-full bg-fog-white border-2 border-black flex items-center justify-center shadow-hover">
+                            <Info className="w-6 h-6 text-charcoal" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex-1">
-                        <p>
-                          Ever watch a video and wish you could learn more?
-                          Click on{" "}
-                          <Info className="inline" size={21} strokeWidth={3} />{" "}
-                          to quickly find the details about the
-                          <b> event and dancers.</b> Then let your curiosity
-                          guide you through easy
-                          <b> navigation links.</b>
-                        </p>
+                        <div className="flex-1">
+                          <p>
+                            Ever watch a video and wish you could learn more?
+                            Click on{" "}
+                            <Info
+                              className="inline"
+                              size={21}
+                              strokeWidth={3}
+                            />{" "}
+                            to quickly find the details about the
+                            <b> event and dancers.</b> Then let your curiosity
+                            guide you through easy
+                            <b> navigation links.</b>
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Tag Feature */}
-                  <div className="flex flex-col items-center gap-2 w-full">
-                    <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
-                      Tag People
-                    </h3>
-                    <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
-                      <div className="flex items-center justify-center gap-2 min-w-[120px]">
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-accent-yellow text-black border-2 border-charcoal transition-shadow duration-150 hover:glow hover:scale-130 transition-transform duration-150 cursor-default">
-                          <Plus className="w-7 h-7 stroke-[3]" />
+                    {/* Tag Feature */}
+                    <div className="flex flex-col items-center gap-2 w-full">
+                      <h3 className="mb-2 !font-rubik-mono-one !text-3xl text-outline-thin">
+                        Tag People
+                      </h3>
+                      <div className="flex flex-col items-center gap-4 p-6 bg-secondary-dark/50 rounded-sm border-2 border-primary-light hover:bg-secondary-dark/70 transition-colors">
+                        <div className="flex items-center justify-center gap-2 min-w-[120px]">
+                          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-accent-yellow text-black border-2 border-charcoal transition-shadow duration-150 hover:glow hover:scale-130 transition-transform duration-150 cursor-default">
+                            <Plus className="w-7 h-7 stroke-[3]" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex-1">
-                        <p>
-                          Tag your <b> friends and other community members</b>{" "}
-                          as dancers, winners, and more to help build our
-                          history and give credit where it's due.
-                          <br />
-                          <br />
-                          <b>See yourself? Tag yourself!</b>
-                        </p>
+                        <div className="flex-1">
+                          <p>
+                            Tag your <b> friends and other community members</b>{" "}
+                            as dancers, winners, and more to help build our
+                            history and give credit where it's due.
+                            <br />
+                            <br />
+                            <b>See yourself? Tag yourself!</b>
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -407,7 +413,7 @@ export default async function Home() {
                 Watch Past Events
               </h2>
               {watchPastEvents.length > 0 ? (
-                <div className="flex flex-wrap justify-center gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
                   {watchPastEvents.map((event) => (
                     <EventCard
                       key={event.id}
