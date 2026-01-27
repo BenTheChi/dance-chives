@@ -1,12 +1,12 @@
 /**
  * Generic LLM orchestrator:
  * - Step 1: Groq (categorization)
- * - Step 2: OpenRouter (battle brackets)
- * - Step 3: OpenRouter (title sanitization)
+ * - Step 2: Cohere (battle brackets)
+ * - Step 3: Cohere (title sanitization)
  */
 
 import { callGroqAPI } from "./groq-llm";
-import { callOpenRouterAPI } from "./openrouter-llm";
+import { callCohereAPI } from "./cohere-llm";
 import { YouTubeVideoMetadata } from "./youtube-api";
 import {
   FormContext,
@@ -27,21 +27,21 @@ export type {
 } from "./llm-utils";
 
 /**
- * Use Groq for Step 1 (categorization) and OpenRouter for Steps 2-3.
+ * Use Groq for Step 1 (categorization) and Cohere for Steps 2-3.
  */
 export async function parsePlaylistWithGroq(
   videos: YouTubeVideoMetadata[],
   context: FormContext
 ): Promise<ParsedPlaylistResponse> {
   const groqApiKey = process.env.GROQ_API_KEY;
-  const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+  const cohereApiKey = process.env.COHERE_API_KEY;
 
   if (!groqApiKey) {
     throw new Error("GROQ_API_KEY environment variable is not set");
   }
 
-  if (!openRouterApiKey) {
-    throw new Error("OPENROUTER_API_KEY environment variable is not set");
+  if (!cohereApiKey) {
+    throw new Error("COHERE_API_KEY environment variable is not set");
   }
 
   if (!videos || videos.length === 0) {
@@ -146,7 +146,7 @@ export async function parsePlaylistWithGroq(
 
     console.log("=== STEP 2: Organizing battle sections into brackets ===");
 
-    // Step 2: For each battle section, organize into brackets (OpenRouter)
+    // Step 2: For each battle section, organize into brackets (Cohere)
     const finalSections = [];
 
     for (let i = 0; i < fixedResponse.sections.length; i++) {
@@ -164,9 +164,9 @@ export async function parsePlaylistWithGroq(
         );
 
         const bracketPrompt = buildBracketOrganizationPrompt(section, i);
-        const bracketResponse = await callOpenRouterAPI(
+        const bracketResponse = await callCohereAPI(
           bracketPrompt,
-          openRouterApiKey
+          cohereApiKey
         );
 
         console.log("=== LLM OUTPUT (Bracket Response) ===");
@@ -388,12 +388,12 @@ export async function parsePlaylistWithGroq(
       `  ✅ All ${videos.length} videos accounted for, no duplicates\n`
     );
 
-    // Step 3: Sanitize all titles to "X vs Y" format (OpenRouter)
+    // Step 3: Sanitize all titles to "X vs Y" format (Cohere)
     console.log("=== STEP 3: Sanitizing video titles ===");
     const sanitizationPrompt = buildTitleSanitizationPrompt(parsed);
-    const sanitizedResponse = await callOpenRouterAPI(
+    const sanitizedResponse = await callCohereAPI(
       sanitizationPrompt,
-      openRouterApiKey
+      cohereApiKey
     );
 
     // Validate the sanitized response has the same structure

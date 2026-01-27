@@ -188,13 +188,13 @@ ${videoList}
 
 STEP-BY-STEP ALGORITHM (follow exactly):
 1. Read each line from the video list above
-2. Extract bracket name from title (Prelims, Top 8, Finals, etc.)
+2. Extract bracket name from title (Prelims, Top 8, Finals, etc. Consider that words may not have spaces between them.  Ex. WaackingTop16 = Waacking Top 16, Break7toSmoke = Breaking 7 to Smoke)
 3. Add video to appropriate bracket
 4. Continue until ALL ${section.videos.length} videos are processed
 5. Count total videos across all brackets - MUST equal ${section.videos.length}
 
 BRACKET NAMES (extract from titles):
-- "Prelims"/"Pre-Selection"/"Preselection" → "Prelims"
+- "Prelims"/"Pre-Selection"/"Preselection"/"Preliminaries"/ → "Prelims"
 - "Top 32"/"Top 16"/"Top 8" -> "Top 32"/"Top 16"/"Top 8"
 - "Quarterfinals"/"Quarter Finals" → "Quarterfinals"
 - "Semifinals"/"Semi Finals"/ "Top 4" → "Semifinals"

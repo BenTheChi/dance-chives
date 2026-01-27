@@ -209,7 +209,7 @@ async function processAutofill(
   jobId: string,
   posterFile: File | null,
   textInput: string,
-  openRouterApiKey: string
+  cohereApiKey: string
 ) {
   try {
     await updateJobStatus(jobId, "processing");
@@ -221,7 +221,7 @@ async function processAutofill(
       // Text-only mode: use text-specific prompt and text-only API
       const fullPrompt = `${AUTOFILL_TEXT_ONLY_PROMPT}\n\nText to analyze:\n${textInput}`;
 
-      aiResponse = await callOpenRouterTextAPI(fullPrompt, openRouterApiKey);
+      aiResponse = await callOpenRouterTextAPI(fullPrompt, cohereApiKey);
     } else {
       // Image mode: validate and process image
       if (!posterFile) {
@@ -295,7 +295,7 @@ async function processAutofill(
       aiResponse = await callOpenRouterVisionAPI(
         base64Image,
         fullPrompt,
-        openRouterApiKey
+        cohereApiKey
       );
     }
 
@@ -422,10 +422,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get API key
-    const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-    if (!openRouterApiKey) {
+    const cohereApiKey = process.env.COHERE_API_KEY;
+    if (!cohereApiKey) {
       return NextResponse.json(
-        { error: "OpenRouter API key not configured" },
+        { error: "Cohere API key not configured" },
         { status: 500 }
       );
     }
@@ -447,7 +447,7 @@ export async function POST(request: NextRequest) {
     const jobId = await createJob();
 
     // Start processing in background (don't await)
-    processAutofill(jobId, posterFile, textInput, openRouterApiKey).catch(
+    processAutofill(jobId, posterFile, textInput, cohereApiKey).catch(
       async (error) => {
         console.error("Background autofill processing error:", error);
         await updateJobStatus(

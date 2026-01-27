@@ -211,10 +211,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get API key
-    const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-    if (!openRouterApiKey) {
+    const cohereApiKey = process.env.COHERE_API_KEY;
+    if (!cohereApiKey) {
       return NextResponse.json(
-        { error: "OpenRouter API key not configured" },
+        { error: "Cohere API key not configured" },
         { status: 500 }
       );
     }
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
       const fullPrompt = `${AUTOFILL_TEXT_ONLY_PROMPT}\n\nText to analyze:\n${textInput}`;
 
       try {
-        aiResponse = await callOpenRouterTextAPI(fullPrompt, openRouterApiKey);
+        aiResponse = await callOpenRouterTextAPI(fullPrompt, cohereApiKey);
       } catch (error) {
         console.error("Autofill text-only API error:", error);
         return NextResponse.json(
@@ -349,7 +349,7 @@ export async function POST(request: NextRequest) {
         aiResponse = await callOpenRouterVisionAPI(
           base64Image,
           fullPrompt,
-          openRouterApiKey
+          cohereApiKey
         );
       } catch (error) {
         console.error("Autofill vision API error:", error);

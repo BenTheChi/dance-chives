@@ -1,17 +1,17 @@
 /**
- * OpenRouter LLM client for JSON-only responses
- * Uses model: google/gemma-3n-e4b-it:free
+ * Cohere LLM client for JSON-only responses
+ * Uses model: command-r7b-12-2024
  */
 
 /**
- * Call OpenRouter's OpenAI-compatible chat completions endpoint.
+ * Call Cohere's chat completions endpoint.
  */
-export async function callOpenRouterAPI(
+export async function callCohereAPI(
   prompt: string,
   apiKey: string
 ): Promise<any> {
   const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
+    "https://api.cohere.com/v2/chat",
     {
       method: "POST",
       headers: {
@@ -19,7 +19,7 @@ export async function callOpenRouterAPI(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemma-3n-e4b-it:free",
+        model: "command-r7b-12-2024",
         messages: [
           {
             role: "system",
@@ -41,29 +41,29 @@ export async function callOpenRouterAPI(
     const errorData = await response.json().catch(() => ({}));
     if (response.status === 401) {
       throw new Error(
-        "Invalid OpenRouter API key. Please check your credentials."
+        "Invalid Cohere API key. Please check your credentials."
       );
     }
     if (response.status === 429) {
       throw new Error(
-        "OpenRouter API rate limit exceeded. Please try again in a moment."
+        "Cohere API rate limit exceeded. Please try again in a moment."
       );
     }
     throw new Error(
-      `OpenRouter API error: ${errorData.error?.message || response.statusText}`
+      `Cohere API error: ${errorData.error?.message || response.statusText}`
     );
   }
 
   const data = await response.json();
 
-  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-    throw new Error("Invalid response format from OpenRouter API");
+  if (!data.message || !data.message.content || !Array.isArray(data.message.content) || data.message.content.length === 0) {
+    throw new Error("Invalid response format from Cohere API");
   }
 
-  const content = data.choices[0].message.content;
+  const content = data.message.content[0].text;
 
   if (!content) {
-    throw new Error("Empty response from OpenRouter API");
+    throw new Error("Empty response from Cohere API");
   }
 
   try {
@@ -74,9 +74,9 @@ export async function callOpenRouterAPI(
 
     return JSON.parse(cleanedContent);
   } catch (parseError) {
-    console.error("Failed to parse OpenRouter response:", content);
+    console.error("Failed to parse Cohere response:", content);
     throw new Error(
-      `Invalid JSON response from OpenRouter: ${
+      `Invalid JSON response from Cohere: ${
         parseError instanceof Error ? parseError.message : "Unknown error"
       }`
     );
