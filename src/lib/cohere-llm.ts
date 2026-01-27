@@ -31,7 +31,7 @@ export async function callCohereAPI(
             content: prompt,
           },
         ],
-        temperature: 0.01,
+        temperature: 0,
         response_format: { type: "json_object" },
       }),
     }

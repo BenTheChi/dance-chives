@@ -188,7 +188,7 @@ ${videoList}
 
 STEP-BY-STEP ALGORITHM (follow exactly):
 1. Read each line from the video list above
-2. Extract bracket name from title (Prelims, Top 8, Finals, etc. Consider that words may not have spaces between them.  Ex. WaackingTop16 = Waacking Top 16, Break7toSmoke = Breaking 7 to Smoke)
+2. Extract bracket name from title (Prelims, Top 8, Finals, etc.)
 3. Add video to appropriate bracket
 4. Continue until ALL ${section.videos.length} videos are processed
 5. Count total videos across all brackets - MUST equal ${section.videos.length}
@@ -196,6 +196,7 @@ STEP-BY-STEP ALGORITHM (follow exactly):
 BRACKET NAMES (extract from titles):
 - "Prelims"/"Pre-Selection"/"Preselection"/"Preliminaries"/ → "Prelims"
 - "Top 32"/"Top 16"/"Top 8" -> "Top 32"/"Top 16"/"Top 8"
+- "WaackingTop16"/"BreakingTop8"/"PoppingTop4" -> "Top 16"/"Top 8"/"Top 4"
 - "Quarterfinals"/"Quarter Finals" → "Quarterfinals"
 - "Semifinals"/"Semi Finals"/ "Top 4" → "Semifinals"
 - "Finals"/"Final" → "Finals"
@@ -220,7 +221,8 @@ OUTPUT FORMAT (JSON only):
 
 CRITICAL RULES:
 - Copy videoId EXACTLY from input (11 characters)
-- Each videoId must appear EXACTLY ONCE
+- Each videoId must appear EXACTLY ONCE.
+- Each title must appear EXACTLY ONCE.
 - Total video count MUST equal ${section.videos.length}
 
 Return ONLY valid JSON.`;
