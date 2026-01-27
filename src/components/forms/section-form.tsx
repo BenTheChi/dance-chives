@@ -880,6 +880,7 @@ export function SectionForm({
                 value={sectionWinners}
                 name="sectionWinners"
                 label="Section Winners"
+                labelColor="text-white"
               />
             </div>
           )}
@@ -915,6 +916,7 @@ export function SectionForm({
                 value={sectionJudges}
                 name="sectionJudges"
                 label="Section Judges"
+                labelColor="text-white"
               />
             </div>
           )}

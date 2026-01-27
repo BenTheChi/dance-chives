@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { EventCard } from "@/components/EventCard";
-import { TEventCard } from "@/types/event";
+import { TEventCard, EventType } from "@/types/event";
 import { City } from "@/types/city";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -13,49 +13,59 @@ import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { EventFilters } from "@/components/events/EventFilters";
 
 interface EventsClientProps {
-  events: TEventCard[];
+  futureEvents: TEventCard[];
+  pastEvents: TEventCard[];
   cities: City[];
   styles: string[];
 }
 
-export function EventsClient({ events, cities, styles }: EventsClientProps) {
+export function EventsClient({
+  futureEvents,
+  pastEvents,
+  cities,
+  styles,
+}: EventsClientProps) {
   const { data: session, status } = useSession();
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
   const [canCreateEvents, setCanCreateEvents] = useState(false);
+  
+  // Applied filter values (used for actual filtering)
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [selectedEventType, setSelectedEventType] = useState<EventType | null>(
+    null
+  );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [hasVideos, setHasVideos] = useState(false);
+  const [hasPoster, setHasPoster] = useState(false);
+  
+  // Draft filter values (used in the UI, not applied until save)
+  const [draftCityId, setDraftCityId] = useState<string | null>(null);
+  const [draftStyles, setDraftStyles] = useState<string[]>([]);
+  const [draftEventType, setDraftEventType] = useState<EventType | null>(null);
+  const [draftStartDate, setDraftStartDate] = useState("");
+  const [draftEndDate, setDraftEndDate] = useState("");
+  const [draftHasVideos, setDraftHasVideos] = useState(false);
+  const [draftHasPoster, setDraftHasPoster] = useState(false);
+  
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Check if there are any future events to determine default state
-  // This will be updated once dates are fetched for events with additional dates
-  const hasFutureEvents = useMemo(() => {
-    if (!events || events.length === 0) return false;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return events.some((event) => {
-      if (!event.date) return false;
-      try {
-        const eventDate = new Date(event.date);
-        eventDate.setHours(0, 0, 0, 0);
-        // If event has additional dates, assume it might have future dates
-        if (event.additionalDatesCount && event.additionalDatesCount > 0) {
-          return true; // Be lenient - assume it might have future dates
-        }
-        return eventDate >= today;
-      } catch {
-        return false;
-      }
-    });
-  }, [events]);
-
-  const [showFutureEvents, setShowFutureEvents] = useState(hasFutureEvents);
+  // Default to showing future events if there are any
+  const [showFutureEvents, setShowFutureEvents] = useState(
+    futureEvents.length > 0
+  );
 
   useEffect(() => {
-    setShowFutureEvents(hasFutureEvents);
-  }, [hasFutureEvents]);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -96,89 +106,98 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
     return parsed;
   };
 
-  // Helper to check if an event has any future dates
-  // For events with multiple dates, we need to check all dates
-  const [eventDatesCache, setEventDatesCache] = useState<
-    Map<string, { hasFuture: boolean; earliestFutureDate?: Date; latestPastDate?: Date }>
-  >(new Map());
+  // Filter cities to only show those available in the currently displayed events (past or future)
+  const availableCities = useMemo(() => {
+    const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
 
-  // Fetch dates for events that have additional dates
+    // Get unique cityIds from the events
+    const cityIds = new Set(
+      sourceEvents
+        .map((event) => event.cityId)
+        .filter(
+          (cityId): cityId is string => cityId !== undefined && cityId !== null
+        )
+    );
+
+    // Filter cities to only include those that appear in the events
+    return cities.filter((city) => cityIds.has(city.id));
+  }, [cities, futureEvents, pastEvents, showFutureEvents]);
+
+  // Filter event types to only show those available in the currently displayed events (past or future)
+  const availableEventTypes = useMemo(() => {
+    const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
+
+    // Get unique event types from the events
+    const eventTypes = new Set(
+      sourceEvents
+        .map((event) => event.eventType)
+        .filter(
+          (eventType): eventType is EventType =>
+            eventType !== undefined && eventType !== null
+        )
+    );
+
+    // Return sorted array of available event types
+    return Array.from(eventTypes).sort();
+  }, [futureEvents, pastEvents, showFutureEvents]);
+
+  // Sync draft values with applied values when they change externally
   useEffect(() => {
-    const fetchDatesForEvents = async () => {
-      const eventsToFetch = events.filter(
-        (event) =>
-          event.additionalDatesCount &&
-          event.additionalDatesCount > 0 &&
-          !eventDatesCache.has(event.id)
-      );
+    setDraftCityId(selectedCityId);
+    setDraftStyles(selectedStyles);
+    setDraftEventType(selectedEventType);
+    setDraftStartDate(startDate);
+    setDraftEndDate(endDate);
+    setDraftHasVideos(hasVideos);
+    setDraftHasPoster(hasPoster);
+  }, [selectedCityId, selectedStyles, selectedEventType, startDate, endDate, hasVideos, hasPoster]);
 
-      if (eventsToFetch.length === 0) return;
+  // Reset selectedCityId if it's no longer in available cities
+  useEffect(() => {
+    if (
+      selectedCityId &&
+      !availableCities.some((city) => city.id === selectedCityId)
+    ) {
+      setSelectedCityId(null);
+      setDraftCityId(null);
+    }
+  }, [availableCities, selectedCityId]);
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+  // Reset selectedEventType if it's no longer in available event types
+  useEffect(() => {
+    if (selectedEventType && !availableEventTypes.includes(selectedEventType)) {
+      setSelectedEventType(null);
+      setDraftEventType(null);
+    }
+  }, [availableEventTypes, selectedEventType]);
 
-      const newCache = new Map(eventDatesCache);
+  // Handle saving filters - apply draft values to actual filter values
+  const handleSaveFilters = () => {
+    setSelectedCityId(draftCityId);
+    setSelectedStyles(draftStyles);
+    setSelectedEventType(draftEventType);
+    setStartDate(draftStartDate);
+    setEndDate(draftEndDate);
+    setHasVideos(draftHasVideos);
+    setHasPoster(draftHasPoster);
+  };
 
-      await Promise.all(
-        eventsToFetch.map(async (event) => {
-          try {
-            const response = await fetch(`/api/events/${event.id}/dates`);
-            if (!response.ok) return;
-
-            const data = await response.json();
-            const items = data.items || [];
-
-            // Extract all dates from the API response and check if any is in the future
-            
-            const parsedDates: Date[] = [];
-            items.forEach((item: any) => {
-              let date: Date | null = null;
-              
-              if (item.localDate) {
-                // localDate is in YYYY-MM-DD format
-                date = new Date(item.localDate + "T00:00:00");
-              } else if (item.startUtc) {
-                date = new Date(item.startUtc);
-              }
-              
-              if (date && !Number.isNaN(date.getTime())) {
-                date.setHours(0, 0, 0, 0);
-                parsedDates.push(date);
-              }
-            });
-            
-            const futureDates = parsedDates.filter((d) => d >= today);
-            const pastDates = parsedDates.filter((d) => d < today);
-            const hasFuture = futureDates.length > 0;
-            
-            const earliestFutureDate = futureDates.length > 0
-              ? futureDates.sort((a, b) => a.getTime() - b.getTime())[0]
-              : undefined;
-            const latestPastDate = pastDates.length > 0
-              ? pastDates.sort((a, b) => b.getTime() - a.getTime())[0]
-              : undefined;
-
-            newCache.set(event.id, { hasFuture, earliestFutureDate, latestPastDate });
-          } catch (error) {
-            console.error(`Failed to fetch dates for event ${event.id}:`, error);
-          }
-        })
-      );
-
-      if (newCache.size > eventDatesCache.size) {
-        setEventDatesCache(newCache);
-      }
-    };
-
-    fetchDatesForEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events]);
+  // Handle clearing filters - reset all draft values to empty/default
+  const handleClearFilters = () => {
+    setDraftCityId(null);
+    setDraftStyles([]);
+    setDraftEventType(null);
+    setDraftStartDate("");
+    setDraftEndDate("");
+    setDraftHasVideos(false);
+    setDraftHasPoster(false);
+  };
 
   const filteredEvents = useMemo(() => {
-    if (!events || events.length === 0) return [];
+    // Use the pre-sorted arrays based on showFutureEvents
+    const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    if (!sourceEvents || sourceEvents.length === 0) return [];
 
     let parsedStartDate: Date | null = null;
     if (startDate) {
@@ -198,45 +217,18 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
       }
     }
 
-    const filtered = events.filter((event) => {
+    // Filter events based on city, styles, date range, and past event filters (hasVideos, hasPoster)
+    // No need to filter by past/future since arrays are already separated
+    return sourceEvents.filter((event) => {
       if (!event.date) return false;
 
       const eventDate = parseEventDate(event.date);
 
-      const matchesFutureFilter = (() => {
-        // If event has additional dates, check the cache
-        if (event.additionalDatesCount && event.additionalDatesCount > 0) {
-          const cached = eventDatesCache.get(event.id);
-          if (cached) {
-            // Use cached result
-            return showFutureEvents ? cached.hasFuture : !cached.hasFuture;
-          }
-          // If not cached yet, fall back to primary date
-          // But be lenient: if primary date is past but has additional dates,
-          // show in future filter (might have future dates)
-          if (!eventDate) return true;
-          if (showFutureEvents) {
-            // Show in future if primary date is future OR if it has additional dates (might have future)
-            return eventDate >= today || true; // Be lenient for events with additional dates
-          } else {
-            // Only show in past if primary date is past AND we know it has no future dates
-            return eventDate < today;
-          }
-        }
-
-        // For events with single date, use primary date
-        if (!eventDate) return true;
-        if (showFutureEvents) {
-          return eventDate >= today;
-        }
-        return eventDate < today;
-      })();
-
-      if (!matchesFutureFilter) {
+      if (selectedCityId && event.cityId !== selectedCityId) {
         return false;
       }
 
-      if (selectedCityId && event.cityId !== selectedCityId) {
+      if (selectedEventType && event.eventType !== selectedEventType) {
         return false;
       }
 
@@ -260,81 +252,61 @@ export function EventsClient({ events, cities, styles }: EventsClientProps) {
         return false;
       }
 
+      // Past event filters (only apply when showing past events)
+      if (!showFutureEvents) {
+        if (hasVideos && !event.hasVideos) {
+          return false;
+        }
+
+        if (hasPoster && !event.imageUrl) {
+          return false;
+        }
+      }
+
       return true;
     });
-
-    // Sort events based on whether showing future or past
-    return filtered.sort((a, b) => {
-      // For events with multiple dates, use the earliest future date or latest past date
-      const getSortDate = (event: TEventCard): Date | null => {
-        if (event.additionalDatesCount && event.additionalDatesCount > 0) {
-          const cached = eventDatesCache.get(event.id);
-          if (cached) {
-            if (showFutureEvents && cached.earliestFutureDate) {
-              return cached.earliestFutureDate;
-            } else if (!showFutureEvents && cached.latestPastDate) {
-              return cached.latestPastDate;
-            }
-          }
-        }
-        return parseEventDate(event.date);
-      };
-
-      const dateA = getSortDate(a);
-      const dateB = getSortDate(b);
-
-      if (!dateA && !dateB) return 0;
-      if (!dateA) return 1;
-      if (!dateB) return -1;
-
-      if (showFutureEvents) {
-        // Future events: soonest to later (ascending)
-        return dateA.getTime() - dateB.getTime();
-      } else {
-        // Past events: most recent to oldest (descending)
-        return dateB.getTime() - dateA.getTime();
-      }
-    });
+    // No sorting needed - events are already sorted server-side
   }, [
-    events,
+    futureEvents,
+    pastEvents,
     showFutureEvents,
     selectedCityId,
+    selectedEventType,
     selectedStyles,
     startDate,
     endDate,
-    eventDatesCache,
+    hasVideos,
+    hasPoster,
   ]);
 
   return (
     <>
-      <div className="flex flex-col gap-4 w-full">
-        <div className="max-w-[1000px] mx-auto flex flex-col gap-4 items-center mb-10">
+      <div className="flex flex-col gap-4 w-full sticky sm:static top-0 z-10">
+        <div className="max-w-[1000px] mx-auto flex flex-col sm:gap-4 items-center mb-10 w-full">
           <EventFilters
-            cities={cities}
+            cities={availableCities}
             styles={styles}
-            selectedCityId={selectedCityId}
-            onCityChange={setSelectedCityId}
-            selectedStyles={selectedStyles}
-            onStylesChange={setSelectedStyles}
-            startDate={startDate}
-            onStartDateChange={setStartDate}
-            endDate={endDate}
-            onEndDateChange={setEndDate}
+            selectedCityId={draftCityId}
+            onCityChange={setDraftCityId}
+            selectedStyles={draftStyles}
+            onStylesChange={setDraftStyles}
+            availableEventTypes={availableEventTypes}
+            selectedEventType={draftEventType}
+            onEventTypeChange={setDraftEventType}
+            startDate={draftStartDate}
+            onStartDateChange={setDraftStartDate}
+            endDate={draftEndDate}
+            onEndDateChange={setDraftEndDate}
+            showPastEventFilters={!showFutureEvents}
+            hasVideos={draftHasVideos}
+            onHasVideosChange={setDraftHasVideos}
+            hasPoster={draftHasPoster}
+            onHasPosterChange={setDraftHasPoster}
+            onSave={handleSaveFilters}
+            onClear={handleClearFilters}
           />
-          <div className="flex flex-wrap gap-5">
-            {canCreateEvents && (
-              <div>
-                <Button asChild variant="secondary" className="h-full">
-                  <Link
-                    href="/add-event"
-                    className="!card text-white !font-extrabold text-[18px]"
-                  >
-                    Add Event
-                  </Link>
-                </Button>
-              </div>
-            )}
-            <div className="flex items-center gap-3 bg-secondary p-3 rounded-sm border-4 border-secondary-light">
+          <div className="flex flex-wrap justify-center gap-5 w-full">
+            <div className="flex items-center justify-center gap-3 bg-secondary p-3 rounded-sm border-t-0 border-b-4 border-l-4 border-r-4 border-secondary-light w-full sm:border-t-4 sm:max-w-[200px]">
               <Label
                 htmlFor="future-events-switch"
                 className="font-bold cursor-pointer"

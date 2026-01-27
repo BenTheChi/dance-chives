@@ -188,19 +188,44 @@ ${videoList}
 
 STEP-BY-STEP ALGORITHM (follow exactly):
 1. Read each line from the video list above
-2. Extract bracket name from title (Prelims, Top 8, Finals, etc.)
-3. Add video to appropriate bracket
+2. For each video title, search for bracket indicators in THIS PRIORITY ORDER:
+   a) First, check for specific bracket rounds (Top 16, Top 8, Top 4, Top 32, etc.)
+   b) Then check for semifinals/finals indicators
+   c) Only if NO bracket indicator is found, use "Prelims"
+3. Extract bracket name and add video to that bracket
 4. Continue until ALL ${section.videos.length} videos are processed
 5. Count total videos across all brackets - MUST equal ${section.videos.length}
 
-BRACKET NAMES (extract from titles):
-- "Prelims"/"Pre-Selection"/"Preselection"/"Preliminaries"/ → "Prelims"
-- "Top 32"/"Top 16"/"Top 8" -> "Top 32"/"Top 16"/"Top 8"
-- "WaackingTop16"/"BreakingTop8"/"PoppingTop4" -> "Top 16"/"Top 8"/"Top 4"
-- "Quarterfinals"/"Quarter Finals" → "Quarterfinals"
-- "Semifinals"/"Semi Finals"/ "Top 4" → "Semifinals"
-- "Finals"/"Final" → "Finals"
-- "7 to Smoke"/"7-to-Smoke" → "7 to Smoke"
+BRACKET DETECTION RULES (check in this order):
+1. TOP ROUNDS (highest priority - check these FIRST):
+   - Look for: "Top 16", "Top16", "WaackingTop16", "[WaackingTop16]", "Top 8", "Top8", "WaackingTop8", "[WaackingTop8]", etc.
+   - Pattern: "Top" followed by a number (16, 8, 4, 32, etc.) OR style name + "Top" + number
+   - Can appear anywhere in title: beginning, middle, end, or in square brackets
+   - Extract the number and create bracket: "Top 16", "Top 8", "Top 4", "Top 32"
+   - Examples:
+     * "Foxy G VS Chantelle [WaackingTop16]" → "Top 16" bracket
+     * "Heartbreaker VS T-Hee [WaackingTop8]" → "Top 8" bracket
+     * "Dancer1 vs Dancer2 - Top 16" → "Top 16" bracket
+     * "BreakingTop8: Name1 vs Name2" → "Top 8" bracket
+
+2. FINALS ROUNDS:
+   - "Finals"/"Final" → "Finals"
+   - "Semifinals"/"Semi Finals"/"Semi-Finals" → "Semifinals"
+   - "Quarterfinals"/"Quarter Finals"/"Quarter-Finals" → "Quarterfinals"
+
+3. SPECIAL FORMATS:
+   - "7 to Smoke"/"7-to-Smoke" → "7 to Smoke"
+
+4. PRELIMS (only if NO other bracket indicator found):
+   - "Prelims"/"Pre-Selection"/"Preselection"/"Preliminaries" → "Prelims"
+   - If title has NO bracket indicator at all → "Prelims"
+
+IMPORTANT EXAMPLES:
+- "Foxy G VS Chantelle [WaackingTop16]" → MUST go to "Top 16" bracket (NOT Prelims)
+- "Heartbreaker VS T-Hee [WaackingTop8]" → MUST go to "Top 8" bracket (NOT Top 16, NOT Prelims)
+- "Name1 vs Name2 - Top 16 Battle" → "Top 16" bracket
+- "Name1 vs Name2 - Prelims" → "Prelims" bracket
+- "Name1 vs Name2" (no bracket indicator) → "Prelims" bracket
 
 OUTPUT FORMAT (JSON only):
 {
@@ -220,9 +245,16 @@ OUTPUT FORMAT (JSON only):
 }
 
 CRITICAL RULES:
+- ALWAYS check for Top 16/Top 8/Top 4/Top 32 indicators FIRST before checking Prelims
+- Bracket indicators can appear anywhere: "[WaackingTop16]", "Top 16", "WaackingTop16", etc.
+- If you find "Top 16" or "Top8" or "[WaackingTop16]" → use "Top 16" bracket (NOT Prelims)
+- If you find "Top 8" or "[WaackingTop8]" → use "Top 8" bracket (NOT Top 16, NOT Prelims)
+- Only use "Prelims" if NO bracket indicator is found in the title
+- NEVER create a bracket named "Battle" - use "Prelims", "Top 16", "Top 8", "Finals", etc. instead
+- Valid bracket names: "Prelims", "Top 32", "Top 16", "Top 8", "Top 4", "Quarterfinals", "Semifinals", "Finals", "7 to Smoke"
 - Copy videoId EXACTLY from input (11 characters)
-- Each videoId must appear EXACTLY ONCE.
-- Each title must appear EXACTLY ONCE.
+- Each videoId must appear EXACTLY ONCE
+- Each title must appear EXACTLY ONCE
 - Total video count MUST equal ${section.videos.length}
 
 Return ONLY valid JSON.`;
@@ -383,6 +415,53 @@ export function fixCategorizationIssues(
 }
 
 /**
+ * Attempt to detect bracket name from video title using the same rules as the prompt
+ * Returns the bracket name if detected, or null if no bracket indicator found
+ */
+function detectBracketFromTitle(title: string): string | null {
+  const titleLower = title.toLowerCase();
+  
+  // 1. Check for Top rounds (highest priority)
+  // Pattern: "Top" followed by a number OR style name + "Top" + number
+  // Can appear in brackets like [WaackingTop16] or as "Top 16", "Top16", etc.
+  const topRoundMatch = title.match(/(?:\[?)(?:\w+)?top\s*(\d+)(?:\]?)/i);
+  if (topRoundMatch) {
+    const number = topRoundMatch[1];
+    // Map common numbers to bracket names
+    if (number === "32") return "Top 32";
+    if (number === "16") return "Top 16";
+    if (number === "8") return "Top 8";
+    if (number === "4") return "Top 4";
+    return `Top ${number}`;
+  }
+  
+  // 2. Check for Finals rounds
+  if (titleLower.includes("finals") && !titleLower.includes("semi") && !titleLower.includes("quarter")) {
+    return "Finals";
+  }
+  if (titleLower.includes("semifinals") || titleLower.includes("semi finals") || titleLower.includes("semi-finals")) {
+    return "Semifinals";
+  }
+  if (titleLower.includes("quarterfinals") || titleLower.includes("quarter finals") || titleLower.includes("quarter-finals")) {
+    return "Quarterfinals";
+  }
+  
+  // 3. Check for special formats
+  if (titleLower.includes("7 to smoke") || titleLower.includes("7-to-smoke")) {
+    return "7 to Smoke";
+  }
+  
+  // 4. Check for Prelims
+  if (titleLower.includes("prelims") || titleLower.includes("pre-selection") || 
+      titleLower.includes("preselection") || titleLower.includes("preliminaries")) {
+    return "Prelims";
+  }
+  
+  // No bracket indicator found
+  return null;
+}
+
+/**
  * Auto-fix bracket organization issues: remove duplicates and add missing videos
  */
 export function fixBracketIssues(
@@ -412,7 +491,41 @@ export function fixBracketIssues(
   }
 
   const seenIds = new Set<string>();
+  // Remove any "Battle" brackets that shouldn't exist - move videos to Prelims
   if (bracketResponse.brackets) {
+    const battleBrackets = bracketResponse.brackets.filter(
+      (b: any) => b.title === "Battle"
+    );
+    if (battleBrackets.length > 0) {
+      // Find or create Prelims bracket
+      let prelimsBracket = bracketResponse.brackets.find(
+        (b: any) => b.title === "Prelims"
+      );
+      if (!prelimsBracket) {
+        prelimsBracket = {
+          title: "Prelims",
+          videos: [],
+        };
+        bracketResponse.brackets.push(prelimsBracket);
+      }
+
+      // Move all videos from Battle brackets to Prelims
+      battleBrackets.forEach((battleBracket: any) => {
+        if (battleBracket.videos && battleBracket.videos.length > 0) {
+          prelimsBracket.videos.push(...battleBracket.videos);
+          console.log(
+            `  🔧 Auto-fixed: Moved ${battleBracket.videos.length} video(s) from "Battle" bracket to "Prelims" bracket`
+          );
+        }
+      });
+
+      // Remove Battle brackets
+      bracketResponse.brackets = bracketResponse.brackets.filter(
+        (b: any) => b.title !== "Battle"
+      );
+    }
+
+    // Remove duplicates across all brackets
     bracketResponse.brackets.forEach((bracket: any) => {
       if (bracket.videos) {
         const originalLength = bracket.videos.length;
@@ -438,20 +551,9 @@ export function fixBracketIssues(
   const missingIds = Array.from(inputVideoIds).filter((id) => !seenIds.has(id));
 
   if (missingIds.length > 0) {
-    let defaultBracket = bracketResponse.brackets?.find(
-      (b: any) => b.title === "Battle"
-    );
-
-    if (!defaultBracket) {
-      defaultBracket = {
-        title: "Battle",
-        videos: [],
-      };
-      if (!bracketResponse.brackets) {
-        bracketResponse.brackets = [];
-      }
-      bracketResponse.brackets.push(defaultBracket);
-    }
+    // Try to re-sort missing videos by analyzing their titles
+    const videosByBracket = new Map<string, Array<{ id: string; video: any; cleanedTitle: string }>>();
+    const videosWithoutBracket: Array<{ id: string; video: any; cleanedTitle: string }> = [];
 
     missingIds.forEach((id) => {
       const video = videoMap.get(id);
@@ -461,16 +563,77 @@ export function fixBracketIssues(
         if (vsMatch) {
           cleanedTitle = `${vsMatch[1].trim()} vs ${vsMatch[2].trim()}`;
         }
-        defaultBracket.videos.push({
+
+        // Try to detect bracket from title
+        const detectedBracket = detectBracketFromTitle(video.title);
+        
+        if (detectedBracket) {
+          if (!videosByBracket.has(detectedBracket)) {
+            videosByBracket.set(detectedBracket, []);
+          }
+          videosByBracket.get(detectedBracket)!.push({ id, video, cleanedTitle });
+        } else {
+          // No bracket indicator found - will go to "Other"
+          videosWithoutBracket.push({ id, video, cleanedTitle });
+        }
+      }
+    });
+
+    // Add videos to their detected brackets (or create brackets if needed)
+    videosByBracket.forEach((videos, bracketName) => {
+      let bracket = bracketResponse.brackets?.find((b: any) => b.title === bracketName);
+      
+      if (!bracket) {
+        bracket = {
+          title: bracketName,
+          videos: [],
+        };
+        if (!bracketResponse.brackets) {
+          bracketResponse.brackets = [];
+        }
+        bracketResponse.brackets.push(bracket);
+      }
+
+      videos.forEach(({ id, cleanedTitle }) => {
+        bracket.videos.push({
           title: cleanedTitle,
           src: id,
           type: "battle",
         });
         console.log(
-          `  🔧 Auto-fixed: Added missing video "${cleanedTitle}" (${id}) to "Battle" bracket`
+          `  🔧 Auto-fixed: Re-sorted missing video "${cleanedTitle}" (${id}) to "${bracketName}" bracket`
         );
-      }
+      });
     });
+
+    // Add videos without bracket indicators to "Other"
+    if (videosWithoutBracket.length > 0) {
+      let otherBracket = bracketResponse.brackets?.find(
+        (b: any) => b.title === "Other"
+      );
+
+      if (!otherBracket) {
+        otherBracket = {
+          title: "Other",
+          videos: [],
+        };
+        if (!bracketResponse.brackets) {
+          bracketResponse.brackets = [];
+        }
+        bracketResponse.brackets.push(otherBracket);
+      }
+
+      videosWithoutBracket.forEach(({ id, cleanedTitle }) => {
+        otherBracket.videos.push({
+          title: cleanedTitle,
+          src: id,
+          type: "battle",
+        });
+        console.log(
+          `  🔧 Auto-fixed: Added missing video "${cleanedTitle}" (${id}) to "Other" bracket (no bracket indicator found)`
+        );
+      });
+    }
   }
 
   return bracketResponse;

@@ -9,19 +9,37 @@ export async function getEventCards(): Promise<TEventCard[]> {
     orderBy: [{ updatedAt: "desc" }],
   });
 
-  return rows.map((r) => ({
-    id: r.eventId,
-    title: r.title,
-    series: undefined,
-    imageUrl: r.posterUrl ?? undefined,
-    date: r.displayDateLocal ?? "",
-    city: r.cityName ?? "",
-    cityId: r.cityId ?? undefined,
-    styles: r.styles ?? [],
-    eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
-    additionalDatesCount: r.additionalDatesCount ?? 0,
-    status: ((r as any).status as "hidden" | "visible") || "visible",
-  }));
+  // Efficiently check for videos: batch check all events at once using a single query
+  const eventIds = rows.map((r) => r.eventId);
+  const eventsWithVideos = await prisma.sectionCard.findMany({
+    where: {
+      eventId: { in: eventIds },
+      totalVideoCount: { gt: 0 },
+    },
+    select: {
+      eventId: true,
+    },
+    distinct: ["eventId"], // Only need one section per event to know it has videos
+  });
+
+  const eventIdsWithVideos = new Set(eventsWithVideos.map((s) => s.eventId));
+
+  return rows.map((r) => {
+    return {
+      id: r.eventId,
+      title: r.title,
+      series: undefined,
+      imageUrl: r.posterUrl ?? undefined,
+      date: r.displayDateLocal ?? "",
+      city: r.cityName ?? "",
+      cityId: r.cityId ?? undefined,
+      styles: r.styles ?? [],
+      eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
+      additionalDatesCount: r.additionalDatesCount ?? 0,
+      status: ((r as any).status as "hidden" | "visible") || "visible",
+      hasVideos: eventIdsWithVideos.has(r.eventId),
+    };
+  });
 }
 
 /**

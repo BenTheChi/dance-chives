@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { NotificationPopover } from "./NotificationPopover";
 import { ReportButton } from "./report/ReportButton";
-import { Tv, HelpCircle } from "lucide-react";
+import { Tv, HelpCircle, Plus } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { MaintenanceLink } from "./MaintenanceLink";
@@ -98,7 +98,7 @@ export function AppNavbar() {
                 isActive &&
                   "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-primary-light text-primary",
                 !isActive &&
-                  "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark",
+                  "text-white hover:bg-[#dfdfeb] hover:text-secondary-dark"
               )}
             >
               {item.title}
@@ -111,6 +111,15 @@ export function AppNavbar() {
       <div className="flex h-18 px-2 md:px-4 py-2 items-center flex-1 justify-end z-10">
         <div className="flex items-center gap-x-2">
           <div className="flex gap-3 mr-0 md:mr-5">
+            <Button
+              asChild
+              size="icon"
+              className="bg-[#9d7eff] hover:bg-[#8d6eef] text-white border-none"
+            >
+              <MaintenanceLink href="/add-event">
+                <Plus className="h-5 w-5" strokeWidth={3} />
+              </MaintenanceLink>
+            </Button>
             <Button asChild size="icon" variant="ghost">
               <MaintenanceLink href="/watch">
                 <Tv className="h-5 w-5" />

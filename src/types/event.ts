@@ -115,4 +115,5 @@ export interface TEventCard {
   eventType?: EventType;
   additionalDatesCount?: number; // Number of additional dates beyond the first one
   status?: "hidden" | "visible"; // Event visibility status
+  hasVideos?: boolean; // Whether the event has any sections with videos
 }
