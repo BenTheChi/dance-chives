@@ -12,6 +12,7 @@ export interface Video {
   taggedWinners?: UserSearchItem[];
   taggedChoreographers?: UserSearchItem[];
   taggedTeachers?: UserSearchItem[];
+  position?: number; // 0-based position for ordering
 }
 
 // Battle Video - has dancers and winners

@@ -425,12 +425,27 @@ export const getEvent = async (
   const sectionsResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)
-    OPTIONAL MATCH (s)<-[:IN]-(v:Video)
-    OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
     OPTIONAL MATCH (s)<-[:POSTER_OF]-(poster:Image)
     
-    WITH s, collect(DISTINCT v) as videos, collect(DISTINCT b) as brackets, poster,
+    WITH s, poster,
          [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ExhibitionSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection', 'OtherSection']] as sectionTypeLabels
+    ORDER BY COALESCE(s.position, 999999) ASC
+    
+    WITH s, poster, sectionTypeLabels
+    OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+    WHERE NOT EXISTS {
+      MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v)
+    }
+    WITH s, poster, sectionTypeLabels, v
+    ORDER BY COALESCE(s.position, 999999) ASC, COALESCE(v.position, 999999) ASC
+    
+    WITH s, poster, sectionTypeLabels, collect(DISTINCT v) as videos
+    OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+    WITH s, poster, sectionTypeLabels, videos, b
+    ORDER BY COALESCE(s.position, 999999) ASC, COALESCE(b.position, 999999) ASC
+    
+    WITH s, poster, sectionTypeLabels, videos, collect(DISTINCT b) as brackets
+    ORDER BY COALESCE(s.position, 999999) ASC
     
     RETURN collect({
       id: s.id,
@@ -463,7 +478,7 @@ export const getEvent = async (
         url: poster.url,
         type: "poster"
       } ELSE null END,
-      videos: [v in videos | {
+      videos: [v in videos WHERE v IS NOT NULL | {
         id: v.id,
         title: v.title,
         src: v.src,
@@ -477,7 +492,7 @@ export const getEvent = async (
         END,
         taggedUsers: []
       }],
-      brackets: [b in brackets | {
+      brackets: [b in brackets WHERE b IS NOT NULL | {
         id: b.id,
         title: b.title,
         videos: []
@@ -491,6 +506,8 @@ export const getEvent = async (
   const bracketVideosResult = await session.run(
     `
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+    WITH s, b, v
+    ORDER BY COALESCE(s.position, 999999) ASC, COALESCE(b.position, 999999) ASC, COALESCE(v.position, 999999) ASC
     RETURN s.id as sectionId, b.id as bracketId, collect({
       id: v.id,
       title: v.title,
@@ -1331,7 +1348,8 @@ const createSections = async (eventId: string, sections: Section[]) => {
       existingTitles.add(normalizedTitle);
     }
 
-    for (const sec of sections) {
+    for (let index = 0; index < sections.length; index++) {
+      const sec = sections[index];
       // Get section type label (if provided)
       const sectionType = sec.sectionType;
       const sectionTypeLabel = getSectionTypeLabel(sectionType);
@@ -1347,7 +1365,8 @@ const createSections = async (eventId: string, sections: Section[]) => {
            s.bgColor = $bgColor,
            s.date = $date,
            s.startTime = $startTime,
-           s.endTime = $endTime
+           s.endTime = $endTime,
+           s.position = $position
          ON MATCH SET
            s.title = $title,
            s.description = $description,
@@ -1355,7 +1374,8 @@ const createSections = async (eventId: string, sections: Section[]) => {
            s.bgColor = $bgColor,
            s.date = $date,
            s.startTime = $startTime,
-           s.endTime = $endTime
+           s.endTime = $endTime,
+           s.position = $position
          WITH s, e
          // Remove old section type labels if section type changed
          CALL apoc.create.removeLabels(s, $sectionTypeLabels) YIELD node as removedNode
@@ -1371,6 +1391,7 @@ const createSections = async (eventId: string, sections: Section[]) => {
           date: sec.date || null,
           startTime: sec.startTime || null,
           endTime: sec.endTime || null,
+          position: int(index),
           sectionTypeLabels: getAllSectionTypeLabels(),
         },
       );
@@ -1449,16 +1470,24 @@ const createBrackets = async (sections: Section[]) => {
   const session = driver.session();
   try {
     for (const sec of sectionsWithBrackets) {
-      for (const br of sec.brackets) {
+      for (let bracketIndex = 0; bracketIndex < sec.brackets.length; bracketIndex++) {
+        const br = sec.brackets[bracketIndex];
         await session.run(
           `MATCH (s:Section {id: $sectionId})
            MERGE (b:Bracket {id: $bracketId})
            ON CREATE SET
-             b.title = $title
+             b.title = $title,
+             b.position = $position
            ON MATCH SET
-             b.title = $title
+             b.title = $title,
+             b.position = $position
            MERGE (b)-[:IN]->(s)`,
-          { sectionId: sec.id, bracketId: br.id, title: br.title },
+          { 
+            sectionId: sec.id, 
+            bracketId: br.id, 
+            title: br.title,
+            position: int(bracketIndex),
+          },
         );
       }
     }
@@ -1480,7 +1509,8 @@ const createBracketVideos = async (sections: Section[]) => {
   try {
     for (const sec of sectionsWithBrackets) {
       for (const br of sec.brackets) {
-        for (const vid of br.videos || []) {
+        for (let videoIndex = 0; videoIndex < (br.videos || []).length; videoIndex++) {
+          const vid = br.videos[videoIndex];
           // Get video type label
           const videoType = vid.type || "battle";
           const videoLabel = getVideoTypeLabel(videoType);
@@ -1490,10 +1520,12 @@ const createBracketVideos = async (sections: Section[]) => {
              MERGE (v:Video {id: $videoId})
              ON CREATE SET
                v.title = $title,
-               v.src = $src
+               v.src = $src,
+               v.position = $position
              ON MATCH SET
                v.title = $title,
-               v.src = $src
+               v.src = $src,
+               v.position = $position
              WITH v, b
              CALL apoc.create.removeLabels(v, ${JSON.stringify(
                getAllVideoTypeLabels(),
@@ -1507,6 +1539,7 @@ const createBracketVideos = async (sections: Section[]) => {
               title: vid.title,
               src: vid.src,
               videoLabel: videoLabel,
+              position: int(videoIndex),
             },
           );
 
@@ -1555,7 +1588,8 @@ const createSectionVideos = async (sections: Section[]) => {
   const session = driver.session();
   try {
     for (const sec of sectionsWithVideos) {
-      for (const vid of sec.videos) {
+      for (let videoIndex = 0; videoIndex < sec.videos.length; videoIndex++) {
+        const vid = sec.videos[videoIndex];
         // Get video type label
         const videoType = vid.type || "battle";
         const videoLabel = getVideoTypeLabel(videoType);
@@ -1565,10 +1599,12 @@ const createSectionVideos = async (sections: Section[]) => {
            MERGE (v:Video {id: $videoId})
            ON CREATE SET
              v.title = $title,
-             v.src = $src
+             v.src = $src,
+             v.position = $position
            ON MATCH SET
              v.title = $title,
-             v.src = $src
+             v.src = $src,
+             v.position = $position
            WITH v, s
            CALL apoc.create.removeLabels(v, ${JSON.stringify(
              getAllVideoTypeLabels(),
@@ -1582,6 +1618,7 @@ const createSectionVideos = async (sections: Section[]) => {
             title: vid.title,
             src: vid.src,
             videoLabel: videoLabel,
+            position: int(videoIndex),
           },
         );
 
@@ -4466,7 +4503,7 @@ export async function getLatestBattleSections(): Promise<
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
       }
       WITH e, s, c
-      ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
+      ORDER BY e.updatedAt DESC, e.createdAt DESC, COALESCE(s.position, 999999) ASC
       WITH e, collect(s)[0] as firstSection, c
       RETURN e.id as eventId, e.title as eventTitle, firstSection.id as sectionId, firstSection.title as sectionTitle, c.name as cityName
       LIMIT 6
@@ -4492,12 +4529,20 @@ export async function getLatestBattleSections(): Promise<
         `
         MATCH (s:Section {id: $sectionId})
         OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+        WHERE NOT EXISTS {
+          MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v)
+        }
+        WITH s, v
+        ORDER BY COALESCE(v.position, 999999) ASC
+        WITH s, collect(DISTINCT v) as directVideos
         OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
+        WITH s, directVideos, b
+        ORDER BY COALESCE(b.position, 999999) ASC
+        WITH s, directVideos, collect(DISTINCT b) as brackets
         OPTIONAL MATCH (b)<-[:IN]-(v2:Video)
-        WITH s, 
-             collect(DISTINCT v) as directVideos,
-             collect(DISTINCT b) as brackets,
-             collect(DISTINCT v2) as bracketVideos
+        WITH s, directVideos, brackets, v2
+        ORDER BY COALESCE(v2.position, 999999) ASC
+        WITH s, directVideos, brackets, collect(DISTINCT v2) as bracketVideos
         RETURN s.id as id, s.title as title, s.description as description,
                s.applyStylesToVideos as applyStylesToVideos,
                size(directVideos) as directVideoCount,
@@ -4826,7 +4871,7 @@ export async function getAllBattleSections(
       }
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       WITH e, s, c
-      ORDER BY e.updatedAt DESC, e.createdAt DESC, s.title
+      ORDER BY e.updatedAt DESC, e.createdAt DESC, COALESCE(s.position, 999999) ASC
       LIMIT $limit
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as eventStartDate, e.dates as eventDates, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription, c.name as cityName
       `,
@@ -4967,6 +5012,7 @@ export async function getAllBattleSections(
           WHERE v.id IN $videoIds
           OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
           WITH v, collect(style.name) as videoStyles
+          ORDER BY COALESCE(v.position, 999999) ASC
           RETURN v.id as id, v.title as title, v.src as src,
                  [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                  videoStyles
@@ -5072,6 +5118,7 @@ export async function getAllBattleSections(
           MATCH (b:Bracket)
           WHERE b.id IN $bracketIds
           RETURN b.id as id, b.title as title
+          ORDER BY COALESCE(b.position, 999999) ASC
           `,
           { bracketIds },
         );
@@ -5086,10 +5133,10 @@ export async function getAllBattleSections(
             MATCH (b:Bracket {id: $bracketId})<-[:IN]-(v:Video)
             OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
             WITH v, collect(style.name) as videoStyles
+            ORDER BY COALESCE(v.position, 999999) ASC
             RETURN v.id as id, v.title as title, v.src as src,
                    [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                    videoStyles
-            ORDER BY v.title
             `,
             { bracketId },
           );
@@ -5411,7 +5458,7 @@ export async function getEventSections(eventId: string): Promise<
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
       }
       RETURN s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription
-      ORDER BY s.title
+      ORDER BY COALESCE(s.position, 999999) ASC
       `,
       { eventId },
     );
@@ -5503,6 +5550,7 @@ export async function getEventSections(eventId: string): Promise<
           WHERE v.id IN $videoIds
           OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
           WITH v, collect(style.name) as videoStyles
+          ORDER BY COALESCE(v.position, 999999) ASC
           RETURN v.id as id, v.title as title, v.src as src,
                  [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                  videoStyles
@@ -5608,6 +5656,7 @@ export async function getEventSections(eventId: string): Promise<
           MATCH (b:Bracket)
           WHERE b.id IN $bracketIds
           RETURN b.id as id, b.title as title
+          ORDER BY COALESCE(b.position, 999999) ASC
           `,
           { bracketIds },
         );
@@ -5622,10 +5671,10 @@ export async function getEventSections(eventId: string): Promise<
             MATCH (b:Bracket {id: $bracketId})<-[:IN]-(v:Video)
             OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
             WITH v, collect(style.name) as videoStyles
+            ORDER BY COALESCE(v.position, 999999) ASC
             RETURN v.id as id, v.title as title, v.src as src,
                    [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                    videoStyles
-            ORDER BY v.title
             `,
             { bracketId },
           );

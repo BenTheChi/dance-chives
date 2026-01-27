@@ -11,6 +11,7 @@ import { AppNavbar } from "@/components/AppNavbar";
 import { AccountVerificationRedirector } from "@/components/account-verification-redirector";
 import { SubmissionOverlayProvider } from "@/components/SubmissionOverlay";
 import { PageLoadingProvider } from "@/components/PageLoadingProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -148,6 +149,7 @@ export default function RootLayout({
           </SubmissionOverlayProvider>
         </SessionProvider>
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );

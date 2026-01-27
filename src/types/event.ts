@@ -94,12 +94,14 @@ export interface Section {
   endTime?: string;
   bgColor?: string; // Form-only background color for poster thumbnail
   poster?: Image | null;
+  position?: number; // 0-based position for ordering
 }
 
 export interface Bracket {
   id: string;
   title: string;
   videos: Video[];
+  position?: number; // 0-based position for ordering
 }
 
 // TEventCard for display purposes
