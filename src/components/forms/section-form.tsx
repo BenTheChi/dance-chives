@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +17,20 @@ import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
 import { DraggableBracketTabs } from "@/components/forms/draggable-bracket-tabs";
 import { DraggableVideoList } from "@/components/forms/draggable-video-list";
+import {
+  DndContext,
+  pointerWithin,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
@@ -36,7 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
-import { Loader2 } from "lucide-react";
+import { GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PosterUpload } from "../ui/poster-upload";
 import { Button } from "@/components/ui/button";
@@ -414,6 +428,13 @@ export function SectionForm({
   const [isAddingVideo, setIsAddingVideo] = useState(false);
   const [newBracketTitle, setNewBracketTitle] = useState("");
   const [bracketTitleError, setBracketTitleError] = useState<string>("");
+  const [activeDragVideoId, setActiveDragVideoId] = useState<string | null>(
+    null
+  );
+  const [dropPreview, setDropPreview] = useState<{
+    bracketId: string;
+    index: number;
+  } | null>(null);
 
   // Load existing section winners from activeSection.winners
   // Use a Map to deduplicate winners by username
@@ -550,6 +571,197 @@ export function SectionForm({
 
     updateSections(updatedSections);
   };
+
+  const bracketIds = useMemo(
+    () => activeSection.brackets.map((b) => b.id),
+    [activeSection.brackets]
+  );
+
+  const handleBracketsDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const id = event.active.id as string;
+      if (bracketIds.includes(id)) {
+        // When reordering bracket tabs, show the dragged bracket so the form doesn't appear to change
+        handleSetActiveBracketId(id);
+      } else {
+        setActiveDragVideoId(id);
+      }
+    },
+    [bracketIds, handleSetActiveBracketId]
+  );
+
+  const handleBracketsDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event;
+      // Only switch active bracket / update drop preview when dragging a video.
+      const isDraggingBracketTab = bracketIds.includes(active.id as string);
+      if (isDraggingBracketTab) {
+        setDropPreview(null);
+        return;
+      }
+
+      if (!over) {
+        setDropPreview(null);
+        return;
+      }
+
+      const overId = over.id as string;
+      const droppablePrefix = "bracket-";
+      let targetBracketId: string;
+      let targetIndex: number;
+
+      const droppedOnBracketTab =
+        overId.startsWith(droppablePrefix) || bracketIds.includes(overId);
+      if (droppedOnBracketTab) {
+        targetBracketId = overId.startsWith(droppablePrefix)
+          ? overId.slice(droppablePrefix.length)
+          : overId;
+        const targetBracket = activeSection.brackets.find(
+          (b) => b.id === targetBracketId
+        );
+        if (!targetBracket) {
+          setDropPreview(null);
+          return;
+        }
+        targetIndex = targetBracket.videos.length;
+      } else {
+        const targetBracket = activeSection.brackets.find((b) =>
+          b.videos.some((v) => v.id === overId)
+        );
+        if (!targetBracket) {
+          setDropPreview(null);
+          return;
+        }
+        targetIndex = targetBracket.videos.findIndex((v) => v.id === overId);
+        if (targetIndex === -1) {
+          setDropPreview(null);
+          return;
+        }
+        targetBracketId = targetBracket.id;
+      }
+
+      setDropPreview({ bracketId: targetBracketId, index: targetIndex });
+      if (targetBracketId !== activeBracketId) {
+        handleSetActiveBracketId(targetBracketId);
+      }
+    },
+    [
+      bracketIds,
+      activeBracketId,
+      activeSection.brackets,
+      handleSetActiveBracketId,
+    ]
+  );
+
+  const handleBracketsDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveDragVideoId(null);
+      setDropPreview(null);
+      if (!over || active.id === over.id) return;
+
+      const isBracketDrag = bracketIds.includes(active.id as string);
+
+      if (isBracketDrag) {
+        const oldIndex = activeSection.brackets.findIndex(
+          (b) => b.id === active.id
+        );
+        const newIndex = activeSection.brackets.findIndex(
+          (b) => b.id === over.id
+        );
+        if (oldIndex === -1 || newIndex === -1) return;
+        const newOrder = arrayMove(activeSection.brackets, oldIndex, newIndex);
+        handleBracketReorder(newOrder);
+        return;
+      }
+
+      const videoId = active.id as string;
+      const sourceBracket = activeSection.brackets.find((b) =>
+        b.videos.some((v) => v.id === videoId)
+      );
+      if (!sourceBracket) return;
+
+      const video = sourceBracket.videos.find((v) => v.id === videoId);
+      if (!video) return;
+
+      const overId = over.id as string;
+      const droppablePrefix = "bracket-";
+      let targetBracketId: string;
+      let targetIndex: number;
+
+      // Drop on bracket tab or bracket droppable zone (same node can report sortable id = bracket.id)
+      const droppedOnBracketTab =
+        overId.startsWith(droppablePrefix) || bracketIds.includes(overId);
+      if (droppedOnBracketTab) {
+        targetBracketId = overId.startsWith(droppablePrefix)
+          ? overId.slice(droppablePrefix.length)
+          : overId;
+        const targetBracket = activeSection.brackets.find(
+          (b) => b.id === targetBracketId
+        );
+        if (!targetBracket) return;
+        targetIndex = targetBracket.videos.length;
+      } else {
+        const targetBracket = activeSection.brackets.find((b) =>
+          b.videos.some((v) => v.id === overId)
+        );
+        if (!targetBracket) return;
+        targetIndex = targetBracket.videos.findIndex((v) => v.id === overId);
+        if (targetIndex === -1) return;
+        targetBracketId = targetBracket.id;
+      }
+
+      const sourceVideos = sourceBracket.videos.filter((v) => v.id !== videoId);
+      const targetBracket = activeSection.brackets.find(
+        (b) => b.id === targetBracketId
+      )!;
+
+      let targetVideos: typeof sourceBracket.videos;
+      if (sourceBracket.id === targetBracketId) {
+        const insertIndex = sourceVideos.findIndex((v) => v.id === overId);
+        targetVideos = [...sourceVideos];
+        targetVideos.splice(
+          insertIndex >= 0 ? insertIndex : targetVideos.length,
+          0,
+          video
+        );
+      } else {
+        targetVideos = [...targetBracket.videos];
+        targetVideos.splice(targetIndex, 0, video);
+      }
+
+      const updatedBrackets = activeSection.brackets.map((b) => {
+        if (b.id === sourceBracket.id && sourceBracket.id !== targetBracketId)
+          return { ...b, videos: sourceVideos };
+        if (b.id === targetBracketId) return { ...b, videos: targetVideos };
+        return b;
+      });
+
+      const updatedSections = sections.map((section) =>
+        section.id === activeSectionId
+          ? { ...section, brackets: updatedBrackets }
+          : section
+      );
+      updateSections(updatedSections);
+    },
+    [
+      activeSection,
+      activeSectionId,
+      bracketIds,
+      sections,
+      updateSections,
+      handleBracketReorder,
+    ]
+  );
+
+  const bracketsDndSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleStylesChange = (styles: string[]) => {
     const updatedSections = sections.map((section) =>
@@ -844,7 +1056,7 @@ export function SectionForm({
           <Accordion
             type="single"
             collapsible
-            className="w-full bg-secondary px-2 border-1 border-secondary-light "
+            className="w-full bg-secondary/80 border-1 border-secondary-light px-4"
           >
             <AccordionItem value="details" className="border-none">
               <AccordionTrigger className="text-white hover:no-underline py-2">
@@ -1124,48 +1336,89 @@ export function SectionForm({
             </div>
           </section>
 
-          {/* Bracket Tabs */}
-          {activeSection.brackets.length > 0 && (
-            <DraggableBracketTabs
-              brackets={activeSection.brackets}
-              activeBracketId={activeBracketId}
-              onBracketClick={handleSetActiveBracketId}
-              onBracketDelete={removeBracket}
-              onReorder={handleBracketReorder}
-            />
-          )}
+          {/* Bracket Tabs + Active Bracket: single DndContext for tab reorder and cross-bracket video drag */}
+          {activeSection.brackets.length > 0 ? (
+            <DndContext
+              sensors={bracketsDndSensors}
+              collisionDetection={pointerWithin}
+              onDragStart={handleBracketsDragStart}
+              onDragOver={handleBracketsDragOver}
+              onDragEnd={handleBracketsDragEnd}
+              onDragCancel={() => {
+                setActiveDragVideoId(null);
+                setDropPreview(null);
+              }}
+            >
+              <DraggableBracketTabs
+                brackets={activeSection.brackets}
+                activeBracketId={activeBracketId}
+                onBracketClick={handleSetActiveBracketId}
+                onBracketDelete={removeBracket}
+                onReorder={handleBracketReorder}
+                useParentContext
+              />
 
-          {/* Active Bracket Container - Outside input container */}
-          {activeSection.brackets.length > 0 &&
-            activeBracketId &&
-            (() => {
-              const bracketIndex = activeSection.brackets.findIndex(
-                (b) => b.id === activeBracketId
-              );
-              const effectiveBracketIndex =
-                bracketIndex === -1 ? 0 : bracketIndex;
-              const bracket = activeSection.brackets[effectiveBracketIndex];
+              {/* Active Bracket Container */}
+              {activeBracketId &&
+                (() => {
+                  const bracketIndex = activeSection.brackets.findIndex(
+                    (b) => b.id === activeBracketId
+                  );
+                  const effectiveBracketIndex =
+                    bracketIndex === -1 ? 0 : bracketIndex;
+                  const bracket = activeSection.brackets[effectiveBracketIndex];
 
-              if (!bracket) {
-                return null;
-              }
+                  if (!bracket) {
+                    return null;
+                  }
 
-              return (
-                <BracketForm
-                  control={control}
-                  setValue={setValue}
-                  getValues={getValues}
-                  activeSectionIndex={activeSectionIndex}
-                  activeBracketIndex={effectiveBracketIndex}
-                  bracket={bracket}
-                  sections={sections}
-                  updateSections={updateSections}
-                  activeSectionId={activeSectionId}
-                  activeBracketId={bracket.id}
-                  eventId={eventId}
-                />
-              );
-            })()}
+                  return (
+                    <BracketForm
+                      control={control}
+                      setValue={setValue}
+                      getValues={getValues}
+                      activeSectionIndex={activeSectionIndex}
+                      activeBracketIndex={effectiveBracketIndex}
+                      bracket={bracket}
+                      sections={sections}
+                      updateSections={updateSections}
+                      activeSectionId={activeSectionId}
+                      activeBracketId={bracket.id}
+                      eventId={eventId}
+                      useParentDndContext
+                      dropPreview={
+                        dropPreview?.bracketId === bracket.id
+                          ? dropPreview.index
+                          : undefined
+                      }
+                    />
+                  );
+                })()}
+
+              {/* Drag overlay so ghost is visible when dragging outside the list */}
+              <DragOverlay dropAnimation={null}>
+                {activeDragVideoId
+                  ? (() => {
+                      const video = activeSection.brackets
+                        .flatMap((b) => b.videos)
+                        .find((v) => v.id === activeDragVideoId);
+                      if (!video) return null;
+                      return (
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 rounded-sm border-2 border-charcoal bg-mint shadow-[4px_4px_0_0_rgb(49,49,49)] cursor-grabbing min-w-[200px] pointer-events-none"
+                          style={{ fontFamily: "var(--font-display)" }}
+                        >
+                          <GripVertical className="h-5 w-5 shrink-0 text-charcoal" />
+                          <span className="text-sm font-medium text-charcoal truncate flex-1">
+                            {video.title || "Untitled video"}
+                          </span>
+                        </div>
+                      );
+                    })()
+                  : null}
+              </DragOverlay>
+            </DndContext>
+          ) : null}
         </div>
       )}
 

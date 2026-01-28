@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDroppable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { CircleXButton } from "@/components/ui/circle-x-button";
@@ -12,10 +13,12 @@ import type {
 import { VideoForm } from "./video-form";
 import { Section, Bracket, Video } from "@/types/event";
 import { DraggableVideoList } from "@/components/forms/draggable-video-list";
+import { getBracketDroppableId } from "@/components/forms/draggable-bracket-tabs";
 import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getDefaultVideoType } from "@/lib/utils/section-helpers";
+import { cn } from "@/lib/utils";
 
 interface BracketFormProps {
   control: Control<any>; // Use any to allow SimpleFormValues or FormValues
@@ -29,6 +32,10 @@ interface BracketFormProps {
   activeSectionId: string;
   activeBracketId: string;
   eventId?: string; // Event ID for winner tagging (only in edit mode)
+  /** When true, video list uses parent DndContext for cross-bracket drag. */
+  useParentDndContext?: boolean;
+  /** Index at which to show drop placeholder when dragging a video from another bracket. */
+  dropPreview?: number;
 }
 
 export function BracketForm({
@@ -42,7 +49,12 @@ export function BracketForm({
   activeSectionId,
   activeBracketId,
   eventId,
+  useParentDndContext = false,
+  dropPreview,
 }: BracketFormProps) {
+  const droppableId = getBracketDroppableId(activeBracketId);
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId });
+
   const removeVideoFromBracket = (videoId: string) => {
     const updatedVideos = bracket.videos.filter(
       (video) => video.id !== videoId
@@ -149,54 +161,70 @@ export function BracketForm({
         )}
       </div>
 
-      {bracket.videos.length > 0 && (
-        <DraggableVideoList
-          videos={bracket.videos}
-          onReorder={(newOrder) => {
-            const updatedSections = sections.map((section) =>
-              section.id === activeSectionId
-                ? {
-                    ...section,
-                    brackets: section.brackets.map((b) =>
-                      b.id === activeBracketId ? { ...b, videos: newOrder } : b
-                    ),
-                  }
-                : section
-            );
-            updateSections(updatedSections);
-          }}
-          onVideoTitleChange={(videoId, title) => {
-            const updatedSections = sections.map((section) =>
-              section.id === activeSectionId
-                ? {
-                    ...section,
-                    brackets: section.brackets.map((b) =>
-                      b.id === activeBracketId
-                        ? {
-                            ...b,
-                            videos: b.videos.map((v) =>
-                              v.id === videoId ? { ...v, title } : v
-                            ),
-                          }
-                        : b
-                    ),
-                  }
-                : section
-            );
-            updateSections(updatedSections);
-          }}
-          onVideoRemove={removeVideoFromBracket}
-          control={control}
-          setValue={setValue}
-          getValues={getValues}
-          sections={sections}
-          updateSections={updateSections}
-          sectionIndex={activeSectionIndex}
-          activeSectionId={activeSectionId}
-          activeBracketId={activeBracketId}
-          context="bracket"
-          eventId={eventId}
-        />
+      {(bracket.videos.length > 0 || useParentDndContext) && (
+        <div
+          ref={setNodeRef}
+          className={cn(
+            "min-h-[80px] rounded-sm transition-colors",
+            isOver && "bg-mint/30 ring-2 ring-primary ring-offset-2"
+          )}
+        >
+          {bracket.videos.length > 0 ? (
+          <DraggableVideoList
+              videos={bracket.videos}
+              onReorder={(newOrder) => {
+                const updatedSections = sections.map((section) =>
+                  section.id === activeSectionId
+                    ? {
+                        ...section,
+                        brackets: section.brackets.map((b) =>
+                          b.id === activeBracketId ? { ...b, videos: newOrder } : b
+                        ),
+                      }
+                    : section
+                );
+                updateSections(updatedSections);
+              }}
+              onVideoTitleChange={(videoId, title) => {
+                const updatedSections = sections.map((section) =>
+                  section.id === activeSectionId
+                    ? {
+                        ...section,
+                        brackets: section.brackets.map((b) =>
+                          b.id === activeBracketId
+                            ? {
+                                ...b,
+                                videos: b.videos.map((v) =>
+                                  v.id === videoId ? { ...v, title } : v
+                                ),
+                              }
+                            : b
+                        ),
+                      }
+                    : section
+                );
+                updateSections(updatedSections);
+              }}
+              onVideoRemove={removeVideoFromBracket}
+              control={control}
+              setValue={setValue}
+              getValues={getValues}
+              sections={sections}
+              updateSections={updateSections}
+              sectionIndex={activeSectionIndex}
+              activeSectionId={activeSectionId}
+              activeBracketId={activeBracketId}
+              context="bracket"
+              eventId={eventId}
+              useParentContext={useParentDndContext}
+              insertIndicatorIndex={dropPreview}
+            />
+          ) : (
+            <div className="py-8 text-center text-sm text-charcoal border border-dashed border-charcoal rounded-sm">
+              Drop videos here from another bracket
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

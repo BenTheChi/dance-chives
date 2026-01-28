@@ -4,10 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import {
-  FieldErrors,
-  useForm,
-} from "react-hook-form";
+import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
@@ -489,6 +486,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const [sections, setSections] = useState<Section[]>(
     initialData?.sections ?? []
   );
+
+  // Active bracket per section (for sections with brackets) – used when dragging to switch tab
+  const [activeBracketIdBySection, setActiveBracketIdBySection] = useState<
+    Record<string, string>
+  >({});
 
   // Helper function to update sections (replaces setValue("sections", ...))
   const updateSections = useCallback((newSections: Section[]) => {
@@ -1536,9 +1538,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                           <SectionForm
                             {...commonProps}
                             mode="brackets"
-                            externalActiveBracketId={null}
-                            onActiveBracketChange={() => {
-                              // Keep track of active bracket but don't change selection type
+                            externalActiveBracketId={
+                              activeBracketIdBySection[selectedSection.id] ??
+                              selectedSection.brackets?.[0]?.id ??
+                              null
+                            }
+                            onActiveBracketChange={(bracketId) => {
+                              setActiveBracketIdBySection((prev) => ({
+                                ...prev,
+                                [selectedSection.id]: bracketId,
+                              }));
                             }}
                           />
                         ) : (

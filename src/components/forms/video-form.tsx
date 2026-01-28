@@ -616,7 +616,9 @@ export function VideoForm({
                       field.onChange(users);
                       updateTaggedWinners(users);
                     }}
-                    value={isUserSearchItemArray(field.value) ? field.value : []}
+                    value={
+                      isUserSearchItemArray(field.value) ? field.value : []
+                    }
                     name="taggedWinners"
                     label="Tagged Winners"
                     labelColor="text-black"

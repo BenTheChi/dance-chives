@@ -52,6 +52,10 @@ interface DraggableVideoListProps {
   activeBracketId?: string;
   context: "section" | "bracket";
   eventId?: string;
+  /** When true, do not render DndContext; parent must provide it (for cross-bracket drag). */
+  useParentContext?: boolean;
+  /** Index at which to show drop placeholder (e.g. when dragging from another bracket). */
+  insertIndicatorIndex?: number;
 }
 
 interface SortableVideoItemProps {
@@ -214,6 +218,8 @@ export function DraggableVideoList({
   activeBracketId,
   context,
   eventId,
+  useParentContext = false,
+  insertIndicatorIndex,
 }: DraggableVideoListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -244,21 +250,23 @@ export function DraggableVideoList({
 
   const videoIds = React.useMemo(() => videos.map((v) => v.id), [videos]);
 
-  if (videos.length === 0) {
-    return null;
-  }
+  const showInsertIndicator =
+    insertIndicatorIndex !== undefined && insertIndicatorIndex >= 0;
 
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={videoIds} strategy={verticalListSortingStrategy}>
-        <Accordion type="single" collapsible className="space-y-3">
-          {videos.map((video, index) => (
+  const listContent = (
+    <SortableContext items={videoIds} strategy={verticalListSortingStrategy}>
+      <Accordion type="single" collapsible className="space-y-3">
+        {videos.map((video, index) => (
+          <React.Fragment key={video.id}>
+            {showInsertIndicator && index === insertIndicatorIndex && (
+              <div
+                className="h-12 rounded-sm border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center text-sm font-medium text-primary transition-colors"
+                aria-hidden
+              >
+                Drop here
+              </div>
+            )}
             <SortableVideoItem
-              key={video.id}
               video={video}
               index={index}
               onVideoTitleChange={onVideoTitleChange}
@@ -274,9 +282,35 @@ export function DraggableVideoList({
               context={context}
               eventId={eventId}
             />
-          ))}
-        </Accordion>
-      </SortableContext>
+          </React.Fragment>
+        ))}
+        {showInsertIndicator && insertIndicatorIndex === videos.length && (
+          <div
+            className="h-12 rounded-sm border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center text-sm font-medium text-primary transition-colors"
+            aria-hidden
+          >
+            Drop here
+          </div>
+        )}
+      </Accordion>
+    </SortableContext>
+  );
+
+  if (videos.length === 0) {
+    return null;
+  }
+
+  if (useParentContext) {
+    return listContent;
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      {listContent}
     </DndContext>
   );
 }

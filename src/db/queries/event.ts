@@ -2298,6 +2298,14 @@ export const editEvent = async (
       );
     }
 
+    // Remove all (Video)-[:IN]-(Bracket) for this event's brackets first, so recreated
+    // bracket videos reflect form state (no duplicates, removed videos stay removed)
+    await tx.run(
+      `MATCH (e:Event {id: $id})<-[:IN]-(s:Section)-[:IN]-(b:Bracket)<-[r:IN]-(v:Video)
+       DELETE r`,
+      { id },
+    );
+
     // Delete all existing sections and their relationships
     await tx.run(
       `MATCH (e:Event {id: $id})<-[:IN]-(s:Section)

@@ -8,6 +8,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -24,12 +25,16 @@ import { Bracket } from "@/types/event";
 import { useIsMobile } from "@/hooks/use-mobile";
 import React from "react";
 
+const BRACKET_DROPPABLE_PREFIX = "bracket-";
+
 interface DraggableBracketTabsProps {
   brackets: Bracket[];
   activeBracketId: string;
   onBracketClick: (bracketId: string) => void;
   onBracketDelete: (bracketId: string) => void;
   onReorder: (newOrder: Bracket[]) => void;
+  /** When true, do not render DndContext; parent provides it (for cross-bracket video drag). */
+  useParentContext?: boolean;
 }
 
 interface SortableBracketTabProps {
@@ -40,6 +45,10 @@ interface SortableBracketTabProps {
   onBracketDelete: (bracketId: string) => void;
 }
 
+export function getBracketDroppableId(bracketId: string) {
+  return `${BRACKET_DROPPABLE_PREFIX}${bracketId}`;
+}
+
 function SortableBracketTab({
   bracket,
   index,
@@ -47,10 +56,14 @@ function SortableBracketTab({
   onBracketClick,
   onBracketDelete,
 }: SortableBracketTabProps) {
+  const droppableId = getBracketDroppableId(bracket.id);
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: droppableId,
+  });
   const {
     attributes,
     listeners,
-    setNodeRef,
+    setNodeRef: setSortableRef,
     transform,
     transition,
     isDragging,
@@ -62,15 +75,18 @@ function SortableBracketTab({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const refCallback = (node: HTMLButtonElement | null) => {
+    setDroppableRef(node as HTMLElement | null);
+    setSortableRef(node as HTMLElement | null);
+  };
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="relative group w-full md:w-auto"
-    >
+    <div className="relative group w-full md:w-auto">
       <button
+        ref={refCallback}
         type="button"
         onClick={() => onBracketClick(bracket.id)}
+        style={{ fontFamily: "var(--font-display)", ...style }}
         className={cn(
           "px-3 py-1.5 rounded-sm transition-all duration-200 w-full md:w-auto",
           "border-2 border-transparent",
@@ -83,9 +99,9 @@ function SortableBracketTab({
           !isActive &&
             "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle",
           isDragging && "cursor-grabbing",
-          !isDragging && "cursor-grab"
+          !isDragging && "cursor-grab",
+          isOver && "ring-2 ring-primary ring-offset-2 rounded-sm"
         )}
-        style={{ fontFamily: "var(--font-display)" }}
         {...attributes}
         {...listeners}
       >
@@ -128,6 +144,7 @@ export function DraggableBracketTabs({
   onBracketClick,
   onBracketDelete,
   onReorder,
+  useParentContext = false,
 }: DraggableBracketTabsProps) {
   const isMobile = useIsMobile();
   const sensors = useSensors(
@@ -165,31 +182,39 @@ export function DraggableBracketTabs({
 
   const bracketIds = React.useMemo(() => brackets.map((b) => b.id), [brackets]);
 
+  const tabsContent = (
+    <SortableContext
+      items={bracketIds}
+      strategy={
+        isMobile ? verticalListSortingStrategy : horizontalListSortingStrategy
+      }
+    >
+      <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2">
+        {brackets.map((bracket, index) => (
+          <SortableBracketTab
+            key={bracket.id}
+            bracket={bracket}
+            index={index}
+            isActive={activeBracketId === bracket.id}
+            onBracketClick={onBracketClick}
+            onBracketDelete={onBracketDelete}
+          />
+        ))}
+      </div>
+    </SortableContext>
+  );
+
+  if (useParentContext) {
+    return tabsContent;
+  }
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext
-        items={bracketIds}
-        strategy={
-          isMobile ? verticalListSortingStrategy : horizontalListSortingStrategy
-        }
-      >
-        <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2">
-          {brackets.map((bracket, index) => (
-            <SortableBracketTab
-              key={bracket.id}
-              bracket={bracket}
-              index={index}
-              isActive={activeBracketId === bracket.id}
-              onBracketClick={onBracketClick}
-              onBracketDelete={onBracketDelete}
-            />
-          ))}
-        </div>
-      </SortableContext>
+      {tabsContent}
     </DndContext>
   );
 }
