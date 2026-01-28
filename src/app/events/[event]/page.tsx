@@ -22,6 +22,8 @@ import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberBu
 import { MessageTemplateDialog } from "@/components/events/MessageTemplateDialog";
 import { LinkifiedText } from "@/components/LinkifiedText";
 import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -110,8 +112,8 @@ export async function generateMetadata({
       const dateStr = nextDate.endTime
         ? `${nextDate.date} (${nextDate.startTime} - ${nextDate.endTime})`
         : nextDate.startTime
-        ? `${nextDate.date} (${nextDate.startTime})`
-        : nextDate.date;
+          ? `${nextDate.date} (${nextDate.startTime})`
+          : nextDate.date;
       descriptionParts.push(`Next date: ${dateStr}`);
     }
   }
@@ -213,10 +215,10 @@ export async function generateMetadata({
         type: posterUrl.endsWith(".png")
           ? "image/png"
           : posterUrl.endsWith(".jpg") || posterUrl.endsWith(".jpeg")
-          ? "image/jpeg"
-          : posterUrl.endsWith(".webp")
-          ? "image/webp"
-          : "image/png",
+            ? "image/jpeg"
+            : posterUrl.endsWith(".webp")
+              ? "image/webp"
+              : "image/png",
       }
     : undefined;
 
@@ -391,9 +393,8 @@ export default async function EventPage({ params }: PageProps) {
     : false;
 
   // Fetch all auth data on server to avoid client-side loading states
-  const { getEventAuthData } = await import(
-    "@/lib/server_actions/event_actions"
-  );
+  const { getEventAuthData } =
+    await import("@/lib/server_actions/event_actions");
   const authDataResult = await getEventAuthData(event.id);
   const authData =
     authDataResult.status === 200 && authDataResult.data
@@ -451,6 +452,17 @@ export default async function EventPage({ params }: PageProps) {
     const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
   };
+
+  // Check if any section has videos (direct videos or videos in brackets)
+  const hasSectionsWithVideos = event.sections.some((section) => {
+    const hasDirectVideos = section.videos && section.videos.length > 0;
+    const hasBracketVideos =
+      section.brackets &&
+      section.brackets.some(
+        (bracket) => bracket.videos && bracket.videos.length > 0
+      );
+    return hasDirectVideos || hasBracketVideos;
+  });
 
   return (
     <>
@@ -812,9 +824,23 @@ export default async function EventPage({ params }: PageProps) {
               </div>
             </div>
 
+            {/* Watch All Videos Button */}
+            {hasSectionsWithVideos && (
+              <div className="w-full mt-[100px] mb-3">
+                <Button
+                  asChild
+                  size="xl"
+                  variant="secondary"
+                  className="w-full text-2xl text-white text-bold"
+                >
+                  <Link href={`/watch/${event.id}`}>Watch All</Link>
+                </Button>
+              </div>
+            )}
+
             {/* Sections - grid layout */}
             {event.sections && event.sections.length > 0 && (
-              <div className="mt-[100px] sections-grid w-full">
+              <div className="sections-grid w-full">
                 {event.sections.map((section) => (
                   <SectionCard
                     key={section.id}

@@ -217,10 +217,11 @@
     overflow: hidden;
   }
   .card:hover {
+    box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
     transform: scale(1.05);
   }
   .card:active {
-    transform: scale(1.05);
+    box-shadow: none;
   }
 
   .section-card {
@@ -232,6 +233,7 @@
       box-shadow 0.2s ease;
   }
   .section-card:hover {
+    box-shadow: 4px 4px 0 0 rgb(0, 0, 0);
     transform: scale(1.05);
   }
 

@@ -52,7 +52,7 @@ export function VideoCard({
   const youtubeId = extractYouTubeVideoId(video.src);
   const thumbnailUrl = youtubeId
     ? normalizeYouTubeThumbnailUrl(
-        `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
+        `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
       )
     : "/placeholder.svg";
 
@@ -69,7 +69,7 @@ export function VideoCard({
     if (
       taggedDancers.some(
         (dancer) =>
-          dancer.id === currentUserId || dancer.username === currentUserId,
+          dancer.id === currentUserId || dancer.username === currentUserId
       )
     ) {
       currentVideoRoles.push("Dancer");
@@ -79,7 +79,7 @@ export function VideoCard({
       if (
         video.taggedWinners.some(
           (winner) =>
-            winner.id === currentUserId || winner.username === currentUserId,
+            winner.id === currentUserId || winner.username === currentUserId
         )
       ) {
         currentVideoRoles.push("Winner");
@@ -91,7 +91,7 @@ export function VideoCard({
         video.taggedChoreographers.some(
           (choreographer) =>
             choreographer.id === currentUserId ||
-            choreographer.username === currentUserId,
+            choreographer.username === currentUserId
         )
       ) {
         currentVideoRoles.push("Choreographer");
@@ -102,7 +102,7 @@ export function VideoCard({
       if (
         video.taggedTeachers.some(
           (teacher) =>
-            teacher.id === currentUserId || teacher.username === currentUserId,
+            teacher.id === currentUserId || teacher.username === currentUserId
         )
       ) {
         currentVideoRoles.push("Teacher");
@@ -124,7 +124,7 @@ export function VideoCard({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to remove tag. Please try again.",
+            : "Failed to remove tag. Please try again."
         );
       }
     });
@@ -145,10 +145,10 @@ export function VideoCard({
     displayStyles && displayStyles.length > 3 ? displayStyles.length - 3 : 0;
 
   return (
-    <div className="group card rounded-sm transition-all duration-300 w-full min-w-[300px] relative overflow-visible">
+    <div className="group card transition-all duration-300 w-full min-w-[300px] relative">
       {/* Thumbnail - clickable */}
       <div
-        className="w-full aspect-[4/3] rounded-sm relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer overflow-hidden"
+        className="w-full aspect-[4/3] relative z-5 flex items-center justify-center bg-gray-200 cursor-pointer"
         onClick={onClick}
       >
         {thumbnailUrl ? (
@@ -236,12 +236,12 @@ export function VideoCard({
 
       {/* Expanded section - always visible on mobile, slides up on hover on desktop */}
       {/* Use pointer-events-none on overlay to allow avatars (z-20) to receive events */}
-      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-none z-10 flex flex-col overflow-visible">
-        <div className="flex flex-col items-baseline bg-neutral-500 px-3 py-2 border-b border-black pointer-events-auto">
-          <h3 className="!text-[14px]">{video.title}</h3>
+      <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-none z-10 flex flex-col">
+        <div className="flex flex-col items-baseline bg-charcoal px-3 py-2 border-b border-black pointer-events-auto">
+          <h3 className="!text-[14px] line-clamp-1">{video.title}</h3>
 
           {/* Title */}
-          <div className="flex gap-1 items-end justify-between w-full">
+          <div className="flex gap-1 items-end justify-between w-full line-clamp-1">
             <MaintenanceLink
               href={eventLink}
               className="text-sm text-white hover:text-primary-light text-end underline"

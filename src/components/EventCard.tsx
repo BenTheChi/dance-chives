@@ -75,7 +75,9 @@ export function EventCard({
             </div>
             {/* Bottom half - event title */}
             <div className="flex-1 flex items-start justify-center">
-              <h2 className="text-center px-4 text-black">{title}</h2>
+              <h2 className="text-center px-4 text-black line-clamp-1">
+                {title}
+              </h2>
             </div>
           </div>
         )}

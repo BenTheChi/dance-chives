@@ -45,7 +45,7 @@ function isValidEventId(id: string): boolean {
 // Helper function to find video in section (direct videos or bracket videos)
 function findVideoInSection(
   section: Section,
-  videoId: string,
+  videoId: string
 ): { video: Video | null; isInBracket: boolean; bracketId?: string } {
   // Check direct videos first
   const directVideo = section.videos?.find((v) => v.id === videoId);
@@ -227,7 +227,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
             eventCreatorId: event.eventDetails.creatorId,
             isTeamMember: isEventTeamMember,
           },
-          session.user.id,
+          session.user.id
         )
       : false;
 
@@ -271,9 +271,16 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
   return (
     <>
       <div className="flex flex-col min-h-[calc(100vh-4.5rem)]">
-        <h1 className="py-7 border-b-2 border-primary-light bg-charcoal">
-          {section.title}
+        <h1 className="py-7 border-b-2 border-primary-light bg-charcoal ">
+          <Link
+            href={`/events/${event.id}`}
+            className="hover:text-primary-light hover:underline hover:decoration-primary-light transition-colors text-center"
+          >
+            {event.eventDetails.title}
+          </Link>
         </h1>
+        {/* Event Title | Section Type */}
+
         <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
           <div className="flex flex-col gap-8 py-5 px-3 sm:px-10 lg:px-15 max-w-[500px] sm:max-w-[1000px] lg:max-w-[1200px] w-full">
             {/* Row 1: Image + Details - using flex for exact sizing */}

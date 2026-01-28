@@ -76,23 +76,9 @@ export function SectionDetails({
   return (
     <section className="border-4 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
       <div className="flex flex-col">
-        {/* Event Title | Section Type */}
-        <div className="flex flex-row gap-1 items-center justify-center mb-4">
-          <Link
-            href={`/events/${eventId}`}
-            className="hover:text-primary-light hover:underline transition-colors"
-          >
-            <h2>{eventTitle}</h2>
-          </Link>
-
-          {section.sectionType && (
-            <h2>
-              {` | `}
-              {section.sectionType}
-            </h2>
-          )}
-        </div>
-
+        <h2 className="text-center mb-2 !text-4xl !font-bold">
+          {section.title}
+        </h2>
         {dateTimeDisplay}
 
         {/* Style badges */}
