@@ -795,7 +795,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   }, [activeMainTab, sections, activeSectionId, sectionsSelection]);
 
-  const mainTabs = ["Details", "Roles", "Sections", "Photo Gallery"];
+  const mainTabs = ["Details", "Roles", "Sections", "Photos"];
 
   const addSection = () => {
     const newSection: Section = {
@@ -1214,7 +1214,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       eventDetails: "Details",
       sections: "Sections",
       roles: "Roles",
-      gallery: "Photo Gallery",
+      gallery: "Photos",
     };
 
     // Map required fields to user-friendly names, including dynamic array fields
@@ -1519,7 +1519,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
             </div>
           )}
 
-          {activeMainTab === "Photo Gallery" && (
+          {activeMainTab === "Photos" && (
             <div className="flex flex-col gap-6 max-w-3xl mx-auto w-full">
               <FormField
                 control={control}

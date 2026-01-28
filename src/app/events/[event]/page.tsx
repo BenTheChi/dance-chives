@@ -852,12 +852,10 @@ export default async function EventPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* Photo Gallery - takes up full width */}
+            {/* Photos - takes up full width */}
             {event.gallery.length > 0 && (
               <section className="flex flex-col bg-primary rounded-sm p-4 w-full border-2 border-primary-light">
-                <h2 className="text-2xl font-bold mb-4 text-center">
-                  Photo Gallery
-                </h2>
+                <h2 className="text-2xl font-bold mb-4 text-center">Photos</h2>
                 <PhotoGallery images={event.gallery} />
               </section>
             )}

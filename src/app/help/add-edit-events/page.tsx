@@ -124,7 +124,8 @@ export default function AddEditEventsPage() {
               Event roles recognize people who were involved in organizing and
               running the event. These are event-level roles that apply to the
               entire event, separate from section-specific roles. Common roles
-              include Organizer, DJ, MC, Videographer, Photographer, and Teacher.
+              include Organizer, DJ, MC, Videographer, Photographer, and
+              Teacher.
             </p>
           </div>
 
@@ -137,10 +138,10 @@ export default function AddEditEventsPage() {
                 To add a role, click the plus button (+) in the Roles tab. Then:
               </p>
               <ol className="list-decimal list-inside space-y-2 ml-4">
-                  <li>
-                    Select the role title from the dropdown (e.g., Organizer, DJ,
-                    MC, Teacher, etc.)
-                  </li>
+                <li>
+                  Select the role title from the dropdown (e.g., Organizer, DJ,
+                  MC, Teacher, etc.)
+                </li>
                 <li>
                   Search for and select the user who held that role. Start
                   typing their username or display name to find them.
@@ -277,17 +278,15 @@ export default function AddEditEventsPage() {
                 When a section uses brackets:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>
-                  Sections can optionally use brackets to organize videos
-                </li>
+                <li>Sections can optionally use brackets to organize videos</li>
                 <li>
                   <strong>Performance</strong>, <strong>Showcase</strong>,{" "}
                   <strong>Class</strong>, and <strong>Session</strong> sections
                   cannot use brackets
                 </li>
                 <li>
-                  <strong>Other</strong> sections
-                  allow you to choose whether to use brackets
+                  <strong>Other</strong> sections allow you to choose whether to
+                  use brackets
                 </li>
                 <li>
                   When brackets are enabled, videos must be added to specific
@@ -492,7 +491,7 @@ export default function AddEditEventsPage() {
         {/* Photo Gallery Tab */}
         <section className="bg-neutral-600 rounded-sm border-4 border-primary-light p-6 md:p-8 space-y-8">
           <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Photo Gallery Tab
+            Photos Tab
           </h2>
 
           <div className="space-y-4">
@@ -501,8 +500,8 @@ export default function AddEditEventsPage() {
             </h3>
             <div className="space-y-3 text-base leading-relaxed text-white ml-4">
               <p>
-                The Photo Gallery tab allows you to upload and manage photos
-                from your event. You can upload up to 10 photos per event.
+                The Photos tab allows you to upload and manage photos from your
+                event. You can upload up to 10 photos per event.
               </p>
               <p>To upload photos:</p>
               <ol className="list-decimal list-inside space-y-2 ml-4">

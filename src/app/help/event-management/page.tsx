@@ -277,8 +277,8 @@ export default function EventManagementPage() {
                 within sections
               </li>
               <li>
-                <strong>Manage photo gallery:</strong> Upload, reorder, and
-                remove photos
+                <strong>Manage photos:</strong> Upload, reorder, and remove
+                photos
               </li>
               <li>
                 <strong>Approve tagging requests:</strong> Review and approve or

@@ -6,8 +6,11 @@ import type { Image } from "@/types/image";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback } from "react";
 import { useObjectUrls } from "@/hooks/useObjectUrls";
+
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
 
 interface UploadFileProps<T extends FieldValues> {
   register: UseFormRegister<T>;
@@ -27,9 +30,11 @@ export default function UploadFile<T extends FieldValues>({
   files,
   enableCaptions = false,
 }: UploadFileProps<T>) {
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [isLoadingFromUrl, setIsLoadingFromUrl] = useState(false);
+
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
-    const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB in bytes
 
     // Check file sizes before processing
     const fileArray = Array.from(selectedFiles || []);
@@ -158,10 +163,79 @@ export default function UploadFile<T extends FieldValues>({
     [files, captionValues, onFileChange]
   );
 
-  // Calculate current file count and check if at limit
   const currentFileCount = Array.isArray(files) ? files.length : files ? 1 : 0;
   const isAtLimit = currentFileCount >= maxFiles;
   const isGallery = maxFiles > 1;
+
+  const handleLoadFromUrl = async () => {
+    const url = imageUrlInput.trim();
+    if (!url) {
+      toast.error("Please enter an image URL.");
+      return;
+    }
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      toast.error("Image URL must start with http:// or https://");
+      return;
+    }
+    if (isAtLimit) {
+      toast.error(`Maximum of ${maxFiles} photos reached. Remove photos to add more.`);
+      return;
+    }
+
+    setIsLoadingFromUrl(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        toast.error("Could not load image from URL.");
+        return;
+      }
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) {
+        toast.error("URL must point to an image.");
+        return;
+      }
+      const blob = await response.blob();
+      if (blob.size > MAX_FILE_SIZE) {
+        toast.error(
+          "Image is too large. Maximum file size is 8MB. Please use a smaller image."
+        );
+        return;
+      }
+
+      let filename = "gallery-from-url";
+      try {
+        const parsed = new URL(url);
+        const lastSegment = parsed.pathname.split("/").filter(Boolean).pop();
+        if (lastSegment) filename = lastSegment;
+      } catch {
+        // ignore
+      }
+      if (!filename.includes(".")) {
+        const subtype = contentType.split("/")[1] || "jpg";
+        filename = `${filename}.${subtype}`;
+      }
+
+      const file = new File([blob], filename, {
+        type: contentType || "image/jpeg",
+      });
+
+      const newImage: Image = {
+        id: crypto.randomUUID(),
+        title: filename,
+        url: "",
+        type: "gallery",
+        file,
+      };
+      const currentFiles = Array.isArray(files) ? files : [];
+      onFileChange([...currentFiles, newImage] as Image[]);
+      setImageUrlInput("");
+    } catch (error) {
+      console.error("Failed to fetch image from URL:", error);
+      toast.error("Failed to load image from URL. Please check the link.");
+    } finally {
+      setIsLoadingFromUrl(false);
+    }
+  };
 
   // Get image sources (object URLs or URLs) using the custom hook
   const filesArray = files ? (Array.isArray(files) ? files : [files]) : null;
@@ -318,6 +392,35 @@ export default function UploadFile<T extends FieldValues>({
               />
             </label>
           </div>
+          {isGallery && (
+            <div className="space-y-1">
+              <Label htmlFor="gallery-image-url" className="text-sm">
+                Add image from URL (optional)
+              </Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  id="gallery-image-url"
+                  type="url"
+                  value={imageUrlInput}
+                  onChange={(e) => setImageUrlInput(e.target.value)}
+                  placeholder="https://example.com/photo.jpg"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleLoadFromUrl}
+                  disabled={
+                    isAtLimit ||
+                    isLoadingFromUrl ||
+                    imageUrlInput.trim().length === 0
+                  }
+                  className="whitespace-nowrap"
+                >
+                  {isLoadingFromUrl ? "Loading..." : "Add from URL"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
