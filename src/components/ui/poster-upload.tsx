@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -37,6 +38,8 @@ export function PosterUpload({
   );
   const [bgColor, setBgColor] = useState<string>(initialBgColor);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [posterUrlInput, setPosterUrlInput] = useState("");
+  const [isLoadingFromUrl, setIsLoadingFromUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewImageRef = useRef<HTMLImageElement | null>(null);
@@ -180,7 +183,7 @@ export function PosterUpload({
       // Load the selected file and apply preview with background color
       const image = new Image();
       let url: string;
-      
+
       try {
         url = URL.createObjectURL(posterFile);
         objectUrlRef.current = url;
@@ -329,6 +332,72 @@ export function PosterUpload({
     }
   };
 
+  const handleLoadFromUrl = async () => {
+    const url = posterUrlInput.trim();
+    if (!url) {
+      toast.error("Please enter an image URL.");
+      return;
+    }
+
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      toast.error("Image URL must start with http:// or https://");
+      return;
+    }
+
+    setIsLoadingFromUrl(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        toast.error("Could not load image from URL.");
+        return;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.startsWith("image/")) {
+        toast.error("URL must point to an image.");
+        return;
+      }
+
+      const blob = await response.blob();
+      if (blob.size > MAX_FILE_SIZE) {
+        toast.error(
+          "Image is too large. Maximum file size is 8MB. Please use a smaller image."
+        );
+        return;
+      }
+
+      let filename = "poster-from-url";
+      try {
+        const parsed = new URL(url);
+        const lastSegment = parsed.pathname.split("/").filter(Boolean).pop();
+        if (lastSegment) {
+          filename = lastSegment;
+        }
+      } catch {
+        // Ignore URL parse errors and use default filename
+      }
+
+      // Ensure filename has an extension
+      if (!filename.includes(".")) {
+        const subtype = contentType.split("/")[1] || "jpg";
+        filename = `${filename}.${subtype}`;
+      }
+
+      const file = new File([blob], filename, {
+        type: contentType || "image/jpeg",
+      });
+
+      setPosterFile(file);
+      onFileChange({ file, bgColor });
+      setPosterUrlInput("");
+    } catch (error) {
+      console.error("Failed to fetch image from URL:", error);
+      toast.error("Failed to load image from URL. Please check the link.");
+    } finally {
+      setIsLoadingFromUrl(false);
+    }
+  };
+
   // Notify parent when bgColor changes (only if we have a file)
   // Debounce to prevent excessive updates during color picker dragging
   useEffect(() => {
@@ -364,7 +433,7 @@ export function PosterUpload({
       {/* Preview Box - 450x450 Canvas */}
       {hasPreview && (
         <div className="flex flex-col items-center gap-4">
-        <div className="relative w-full max-w-[320px] sm:max-w-[450px] aspect-square rounded-sm border border-charcoal overflow-hidden">
+          <div className="relative w-full max-w-[320px] sm:max-w-[450px] aspect-square rounded-sm border border-charcoal overflow-hidden">
             <canvas
               ref={previewCanvasRef}
               className="w-full h-full"
@@ -489,6 +558,32 @@ export function PosterUpload({
                 onChange={handleFileSelect}
               />
             </label>
+          </div>
+          {/* URL input as an alternative to file upload */}
+          <div className="space-y-1">
+            <Label htmlFor="poster-url" className="text-sm">
+              Image URL (optional)
+            </Label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                id="poster-url"
+                type="url"
+                value={posterUrlInput}
+                onChange={(e) => setPosterUrlInput(e.target.value)}
+                placeholder="https://example.com/poster.jpg"
+                className="bg-neutral-300 flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleLoadFromUrl}
+                disabled={
+                  isLoadingFromUrl || posterUrlInput.trim().length === 0
+                }
+                className="whitespace-nowrap"
+              >
+                {isLoadingFromUrl ? "Loading..." : "Load from URL"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

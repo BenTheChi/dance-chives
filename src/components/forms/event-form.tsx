@@ -441,8 +441,6 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   // Autofill job state - managed at parent level to persist across tab navigation
   const [autofillJobId, setAutofillJobId] = useState<string | null>(null);
   const [isAutofilling, setIsAutofilling] = useState(false);
-  // Store poster file reference for autofill (needed when job completes)
-  const autofillPosterFileRef = useRef<File | null>(null);
   //TODO: set up logic for next buttons to use the active tab index
 
   // Initialize form with default values or initial data (without sections)
@@ -601,45 +599,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     sessionStorage.removeItem(CREATE_DRAFT_STORAGE_KEY);
   };
 
-  // Autofill handler
-  const handleAutofill = (data: any, posterFile: File | null) => {
+  // Autofill handler (text-only; no poster from autofill)
+  const handleAutofill = (data: any) => {
     try {
-      // Disable validation during autofill to avoid premature validation errors
-      // Validation will happen when user interacts with fields or submits form
       const autofillOptions = {
         shouldValidate: false,
         shouldDirty: true,
         shouldTouch: false,
       };
-
-      // Set poster if provided
-      if (posterFile && posterFile instanceof File) {
-        // Validate the File object is still valid
-        if (posterFile.size === 0 || !posterFile.type?.startsWith("image/")) {
-          console.warn("Invalid poster file from autofill:", {
-            name: posterFile.name,
-            size: posterFile.size,
-            type: posterFile.type,
-          });
-          // Don't set the poster if the file is invalid
-        } else {
-          const posterImage: Image = {
-            id: crypto.randomUUID(),
-            title: posterFile.name,
-            url: "", // Will be set when uploaded
-            type: "poster",
-            file: posterFile,
-          };
-
-          setValue("eventDetails.poster", posterImage, autofillOptions);
-        }
-
-        // Set default background color if not already set
-        const currentBgColor = getValues("eventDetails.bgColor");
-        if (!currentBgColor || currentBgColor === "#ffffff") {
-          setValue("eventDetails.bgColor", "#ffffff", autofillOptions);
-        }
-      }
 
       // Validate and normalize styles
       const validStyles = data.styles
@@ -1020,27 +987,20 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       setAutofillJobId(null);
 
       if (result && handleAutofill) {
-        // Pass both the data and the poster file
-        handleAutofill(result, autofillPosterFileRef.current);
+        handleAutofill(result);
         toast.success("Event details autofilled successfully!");
-        // Clear poster file reference
-        autofillPosterFileRef.current = null;
       } else {
-        const errorMessage = "Invalid response from autofill API";
-        toast.error(errorMessage);
-        autofillPosterFileRef.current = null;
+        toast.error("Invalid response from autofill API");
       }
     },
     onError: (errorMessage) => {
       setIsAutofilling(false);
       setAutofillJobId(null);
-      // Don't show error toast for user-initiated cancellations
       if (errorMessage !== "Job cancelled by user") {
         toast.error(errorMessage);
       } else {
         toast.info("Autofill cancelled");
       }
-      autofillPosterFileRef.current = null;
     },
     enabled: !!autofillJobId,
     timeout: 60000, // 60 seconds timeout
@@ -1056,11 +1016,9 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   };
 
-  const handleAutofillJobStart = (jobId: string, posterFile: File | null) => {
+  const handleAutofillJobStart = (jobId: string) => {
     setAutofillJobId(jobId);
     setIsAutofilling(true);
-    // Store poster file reference for when job completes
-    autofillPosterFileRef.current = posterFile;
   };
 
   // extract field names from validation errors

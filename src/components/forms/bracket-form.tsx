@@ -170,7 +170,7 @@ export function BracketForm({
           )}
         >
           {bracket.videos.length > 0 ? (
-          <DraggableVideoList
+            <DraggableVideoList
               videos={bracket.videos}
               onReorder={(newOrder) => {
                 const updatedSections = sections.map((section) =>
@@ -178,7 +178,9 @@ export function BracketForm({
                     ? {
                         ...section,
                         brackets: section.brackets.map((b) =>
-                          b.id === activeBracketId ? { ...b, videos: newOrder } : b
+                          b.id === activeBracketId
+                            ? { ...b, videos: newOrder }
+                            : b
                         ),
                       }
                     : section

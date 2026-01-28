@@ -107,11 +107,7 @@ function SortableVideoItem({
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style}
-      className={cn(isDragging && "z-50")}
-    >
+    <div ref={setNodeRef} style={style} className={cn(isDragging && "z-50")}>
       <AccordionItem
         value={video.id}
         className="border border-border rounded-sm bg-periwinkle-light/50 last:border-b"
@@ -158,9 +154,7 @@ function SortableVideoItem({
                 e.stopPropagation();
               }}
             >
-              <AccordionTrigger 
-                className="h-9 w-9 shrink-0 rounded-sm border border-charcoal flex items-center justify-center [&>svg]:text-charcoal"
-              >
+              <AccordionTrigger className="h-9 w-9 shrink-0 rounded-sm border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
                 <span className="sr-only">Toggle video</span>
               </AccordionTrigger>
             </div>

@@ -28,6 +28,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  type CollisionDetection,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -663,11 +664,20 @@ export function SectionForm({
       const isBracketDrag = bracketIds.includes(active.id as string);
 
       if (isBracketDrag) {
+        const droppablePrefix = "bracket-";
+        let overId = over.id as string;
+        // When dragging bracket tabs, the pointer can be over either the sortable tab id
+        // (bracket.id) or the droppable zone id used for cross-bracket video drops
+        // (bracket-${bracket.id}). Normalize to the plain bracket id so reordering works
+        // regardless of which one `pointerWithin` reports.
+        if (overId.startsWith(droppablePrefix)) {
+          overId = overId.slice(droppablePrefix.length);
+        }
         const oldIndex = activeSection.brackets.findIndex(
           (b) => b.id === active.id
         );
         const newIndex = activeSection.brackets.findIndex(
-          (b) => b.id === over.id
+          (b) => b.id === overId
         );
         if (oldIndex === -1 || newIndex === -1) return;
         const newOrder = arrayMove(activeSection.brackets, oldIndex, newIndex);
@@ -761,6 +771,30 @@ export function SectionForm({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
+  );
+
+  const bracketsCollisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      const { active, droppableContainers } = args;
+      const isBracketDrag = bracketIds.includes(active.id as string);
+
+      // When dragging bracket tabs, ignore the special bracket droppable
+      // containers (e.g. "bracket-<id>") that power the cross-bracket
+      // video dragging "white box" so that tab reordering animations
+      // use the sortable tab ids instead.
+      const filteredDroppables = isBracketDrag
+        ? droppableContainers.filter(
+            (container) =>
+              !container.id.toString().startsWith("bracket-")
+          )
+        : droppableContainers;
+
+      return pointerWithin({
+        ...args,
+        droppableContainers: filteredDroppables,
+      });
+    },
+    [bracketIds]
   );
 
   const handleStylesChange = (styles: string[]) => {
@@ -1340,7 +1374,7 @@ export function SectionForm({
           {activeSection.brackets.length > 0 ? (
             <DndContext
               sensors={bracketsDndSensors}
-              collisionDetection={pointerWithin}
+              collisionDetection={bracketsCollisionDetection}
               onDragStart={handleBracketsDragStart}
               onDragOver={handleBracketsDragOver}
               onDragEnd={handleBracketsDragEnd}
