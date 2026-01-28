@@ -6,7 +6,13 @@ import { useSession } from "next-auth/react";
 
 import { isAccountVerified } from "@/lib/utils/auth-utils-shared";
 
-const EXEMPT_PATHS = ["/signup", "/login"];
+const EXEMPT_PATHS = [
+  "/signup",
+  "/login",
+  "/terms",
+  "/privacy",
+  "/content-usage",
+];
 
 export function AccountVerificationRedirector() {
   const { data: session, status } = useSession();

@@ -8,8 +8,11 @@ import { cn } from "@/lib/utils";
 
 function Checkbox({
   className,
+  type = "button",
   ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+}: React.ComponentProps<typeof CheckboxPrimitive.Root> & {
+  type?: "button" | "submit" | "reset";
+}) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
@@ -17,6 +20,7 @@ function Checkbox({
         "peer border-input dark:bg-input/30 data-[state=checked]:bg-secondary-light data-[state=checked]:text-black dark:data-[state=checked]:bg-secondary-light data-[state=checked]:border-black border-2 cursor-pointer focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
+      type={type}
       {...props}
     >
       <CheckboxPrimitive.Indicator
