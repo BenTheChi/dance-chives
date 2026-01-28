@@ -39,22 +39,14 @@ interface VideoFormProps {
   videoIndex: number;
   sectionIndex?: number;
   sections?: Section[];
+  updateSections?: (sections: Section[]) => void; // New prop to update sections
   activeSectionId?: string;
   activeBracketId?: string;
   context: "section" | "bracket";
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
-  getValues: UseFormGetValues<FormValues>;
+  control: Control<any>; // Use any to allow SimpleFormValues or FormValues
+  setValue: UseFormSetValue<any>;
+  getValues: UseFormGetValues<any>;
   eventId?: string; // Event ID for winner tagging (only in edit mode)
-}
-
-// Helper function to normalize sections for form (ensures description is always string)
-function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
-  return sections.map((section) => ({
-    ...section,
-    description: section.description ?? "",
-    bgColor: section.bgColor || "#ffffff",
-  }));
 }
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
@@ -80,6 +72,7 @@ export function VideoForm({
   videoIndex,
   sectionIndex,
   sections,
+  updateSections,
   activeSectionId,
   activeBracketId,
   context,
@@ -129,7 +122,7 @@ export function VideoForm({
     }
 
     // Handle section/bracket videos
-    const currentSections = getValues("sections") || [];
+    const currentSections = sections || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -165,7 +158,9 @@ export function VideoForm({
       }
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    if (updateSections) {
+      updateSections(updatedSections);
+    }
     setVideoDancers(dancers);
   };
 
@@ -203,7 +198,7 @@ export function VideoForm({
     }
 
     // Handle section/bracket videos
-    const currentSections = getValues("sections") || [];
+    const currentSections = sections || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -239,13 +234,15 @@ export function VideoForm({
       }
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    if (updateSections) {
+      updateSections(updatedSections);
+    }
     setVideoWinners(winners);
   };
 
   const updateVideoStyles = (styles: string[]) => {
     // Handle section/bracket videos
-    const currentSections = getValues("sections") || [];
+    const currentSections = sections || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -273,12 +270,14 @@ export function VideoForm({
       }
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    if (updateSections) {
+      updateSections(updatedSections);
+    }
   };
 
   const updateTaggedChoreographers = (choreographers: UserSearchItem[]) => {
     // Handle section/bracket videos
-    const currentSections = getValues("sections") || [];
+    const currentSections = sections || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -310,12 +309,14 @@ export function VideoForm({
       }
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    if (updateSections) {
+      updateSections(updatedSections);
+    }
   };
 
   const updateTaggedTeachers = (teachers: UserSearchItem[]) => {
     // Handle section/bracket videos
-    const currentSections = getValues("sections") || [];
+    const currentSections = sections || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -343,7 +344,9 @@ export function VideoForm({
       }
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    if (updateSections) {
+      updateSections(updatedSections);
+    }
   };
 
   // Check if styles should be disabled (when section has applyStylesToVideos enabled)
@@ -389,7 +392,7 @@ export function VideoForm({
   };
 
   const handleTypeChange = (value: Video["type"]) => {
-    const currentSections = getValues("sections") || [];
+    const currentSections = sections || [];
     const updatedSections = currentSections.map((section) => {
       if (section.id !== activeSectionId) return section;
 
@@ -417,10 +420,9 @@ export function VideoForm({
       };
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
+    if (updateSections) {
+      updateSections(updatedSections);
+    }
   };
 
   const thumbnailFromSrc = () => {

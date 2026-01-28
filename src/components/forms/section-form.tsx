@@ -1,31 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { X } from "lucide-react";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { CircleXButton } from "@/components/ui/circle-x-button";
 import type {
   Control,
   UseFormSetValue,
   UseFormGetValues,
-  UseFormRegister,
-  FieldPath,
 } from "react-hook-form";
 import { Section, Bracket } from "@/types/event";
 import { Video } from "@/types/video";
 import { BracketForm } from "@/components/forms/bracket-form";
 import { VideoForm } from "@/components/forms/video-form";
-import { FormValues } from "./event-form";
+import { DraggableBracketTabs } from "@/components/forms/draggable-bracket-tabs";
+import { DraggableVideoList } from "@/components/forms/draggable-video-list";
 import { StyleMultiSelect } from "@/components/ui/style-multi-select";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 import { UserSearchItem } from "@/types/user";
@@ -34,8 +25,6 @@ import {
   getDefaultVideoType,
   sectionTypeSupportsWinners,
   sectionTypeSupportsJudges,
-  updateVideoTypeForId,
-  VideoType,
   SectionType,
   updateSectionType,
 } from "@/lib/utils/section-helpers";
@@ -46,19 +35,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { PosterUpload } from "../ui/poster-upload";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
+import { cn } from "@/lib/utils";
+import * as z from "zod";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { PosterUpload } from "../ui/poster-upload";
-import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
-import { cn } from "@/lib/utils";
 
 async function searchUsers(query: string): Promise<UserSearchItem[]> {
   return fetch(`${process.env.NEXT_PUBLIC_ORIGIN}/api/users?keyword=${query}`)
@@ -79,27 +76,97 @@ async function searchUsers(query: string): Promise<UserSearchItem[]> {
 }
 
 interface SectionFormProps {
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
-  getValues: UseFormGetValues<FormValues>;
-  register: UseFormRegister<FormValues>;
+  control: Control<any>; // Use any to allow SimpleFormValues or FormValues
+  setValue: UseFormSetValue<any>;
+  getValues: UseFormGetValues<any>;
   activeSectionIndex: number;
   activeSection: Section;
   sections: Section[];
+  updateSections: (sections: Section[]) => void; // New prop to update sections
   activeSectionId: string;
   eventId?: string; // Event ID for winner tagging (only in edit mode)
 }
 
 export type SectionFormMode = "overview" | "videos" | "brackets";
 
-// Helper function to normalize sections for form (ensures description is always string)
-function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
-  return sections.map((section) => ({
-    ...section,
-    description: section.description ?? "",
-    sectionType: section.sectionType ?? "Battle",
-    bgColor: section.bgColor || "#ffffff",
-  }));
+// Custom date picker component that works with sections state
+function SectionDatePicker({
+  value,
+  onChange,
+  hasError,
+}: {
+  value: string;
+  onChange: (date: string) => void;
+  hasError?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Convert MM/DD/YYYY string to Date object
+  const parseDateString = (
+    dateString: string | undefined | null
+  ): Date | undefined => {
+    if (!dateString || dateString.trim() === "") {
+      return undefined;
+    }
+    try {
+      const parsed = parse(dateString, "MM/dd/yyyy", new Date());
+      return isValid(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Convert Date object to MM/DD/YYYY string
+  const formatDateToString = (date: Date | undefined): string => {
+    if (!date || !isValid(date)) {
+      return "";
+    }
+    return format(date, "MM/dd/yyyy");
+  };
+
+  const dateValue = parseDateString(value);
+
+  // Calculate start and end months for year range (1950 to 5 years in the future)
+  const currentYear = new Date().getFullYear();
+  const startMonth = new Date(1950, 0, 1);
+  const endMonth = new Date(currentYear + 5, 11, 31);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full justify-start text-left font-normal bg-neutral-300",
+            !dateValue ? "text-charcoal" : "text-black",
+            hasError && "border-red-500 border-2"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {dateValue ? (
+            format(dateValue, "MM/dd/yyyy")
+          ) : (
+            <span className="!text-sm">Pick a date</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          className="rounded-sm border shadow-sm"
+          mode="single"
+          selected={dateValue}
+          onSelect={(date) => {
+            onChange(formatDateToString(date));
+            setOpen(false);
+          }}
+          defaultMonth={dateValue || new Date()}
+          captionLayout="dropdown"
+          startMonth={startMonth}
+          endMonth={endMonth}
+        />
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 interface SectionFormPropsWithMode extends SectionFormProps {
@@ -117,16 +184,116 @@ export function SectionForm({
   control,
   setValue,
   getValues,
-  register,
   activeSectionIndex,
   activeSection,
   sections,
+  updateSections,
   activeSectionId,
   eventId,
   mode,
   externalActiveBracketId,
   onActiveBracketChange,
 }: SectionFormPropsWithMode) {
+  // Validation state
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Validation schemas
+  const dateRegex =
+    /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/;
+  const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+  // Validate a single section
+  const validateSection = (section: Section): Record<string, string> => {
+    const sectionErrors: Record<string, string> = {};
+
+    // Title validation
+    if (!section.title || section.title.trim().length === 0) {
+      sectionErrors.title = "Section title is required";
+    }
+
+    // Date validation
+    if (section.date) {
+      if (!dateRegex.test(section.date)) {
+        sectionErrors.date = "Date must be in MM/DD/YYYY format";
+      }
+    }
+
+    // Start time validation
+    if (section.startTime) {
+      if (!timeRegex.test(section.startTime)) {
+        sectionErrors.startTime = "Start time must be in HH:MM format";
+      }
+    }
+
+    // End time validation
+    if (section.endTime) {
+      if (!timeRegex.test(section.endTime)) {
+        sectionErrors.endTime = "End time must be in HH:MM format";
+      }
+    }
+
+    // Date/time logic validation
+    const hasDate = Boolean(section.date);
+    const hasStart = Boolean(section.startTime);
+    const hasEnd = Boolean(section.endTime);
+    const anyProvided = hasDate || hasStart || hasEnd;
+
+    if (anyProvided) {
+      if (!hasDate) {
+        sectionErrors.date = "Date required";
+      }
+      if (!hasStart) {
+        sectionErrors.startTime = "Start time required";
+      }
+      if (!hasEnd) {
+        sectionErrors.endTime = "End time required";
+      }
+    }
+
+    return sectionErrors;
+  };
+
+  // Validate active section and update errors
+  const validateActiveSection = useCallback(() => {
+    const sectionErrors = validateSection(activeSection);
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      // Update errors with sectionId prefix
+      Object.keys(sectionErrors).forEach((key) => {
+        const errorKey = `${activeSectionId}-${key}`;
+        newErrors[errorKey] = sectionErrors[key];
+      });
+      // Remove errors for fields that are now valid
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`${activeSectionId}-`)) {
+          const fieldName = key.replace(`${activeSectionId}-`, "");
+          if (!sectionErrors[fieldName]) {
+            delete newErrors[key];
+          }
+        }
+      });
+      return newErrors;
+    });
+  }, [activeSection, activeSectionId]);
+
+  // Validate on section change and clear touched state for previous section
+  useEffect(() => {
+    // Clear errors and touched state when switching sections
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      // Keep only errors for the current section
+      Object.keys(newErrors).forEach((key) => {
+        if (!key.startsWith(`${activeSectionId}-`)) {
+          delete newErrors[key];
+        }
+      });
+      return newErrors;
+    });
+    // Validate the new active section
+    validateActiveSection();
+  }, [activeSectionId, validateActiveSection]);
+
   type SectionDateField = "date" | "startTime" | "endTime";
   const sectionDateFields: SectionDateField[] = [
     "date",
@@ -138,19 +305,59 @@ export function SectionForm({
     field: SectionDateField,
     value: string | undefined
   ) => {
-    setValue(
-      `sections.${activeSectionIndex}.${field}` as FieldPath<FormValues>,
-      value,
-      {
-        shouldValidate: false,
-        shouldDirty: true,
-        shouldTouch: true,
+    // Update sections state directly
+    const updatedSections = sections.map((section, index) => {
+      if (index === activeSectionIndex) {
+        return { ...section, [field]: value };
       }
-    );
+      return section;
+    });
+    updateSections(updatedSections);
+
+    // Clear error when user starts typing
+    const errorKey = `${activeSectionId}-${field}`;
+    if (touched[errorKey] && value) {
+      // Re-validate after a short delay to allow user to finish typing
+      setTimeout(() => {
+        validateActiveSection();
+      }, 300);
+    }
   };
 
   const clearSectionDateTime = () => {
-    sectionDateFields.forEach((field) => setSectionDateValue(field, undefined));
+    // Clear all date/time fields
+    const updatedSections = sections.map((section, index) => {
+      if (index === activeSectionIndex) {
+        return {
+          ...section,
+          date: undefined,
+          startTime: undefined,
+          endTime: undefined,
+        };
+      }
+      return section;
+    });
+    updateSections(updatedSections);
+
+    // Clear validation errors for date/time fields
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      sectionDateFields.forEach((field) => {
+        const errorKey = `${activeSectionId}-${field}`;
+        delete newErrors[errorKey];
+      });
+      return newErrors;
+    });
+
+    // Clear touched state for date/time fields
+    setTouched((prev) => {
+      const newTouched = { ...prev };
+      sectionDateFields.forEach((field) => {
+        const touchedKey = `${activeSectionId}-${field}`;
+        delete newTouched[touchedKey];
+      });
+      return newTouched;
+    });
   };
 
   const [internalActiveBracketId, setInternalActiveBracketId] = useState(
@@ -284,10 +491,8 @@ export function SectionForm({
         : section
     );
 
-    // Update form state, then set the new active bracket
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
-      shouldValidate: true,
-    });
+    // Update sections state
+    updateSections(updatedSections);
     handleSetActiveBracketId(newBracket.id);
     // Clear the input after creating
     setNewBracketTitle("");
@@ -305,7 +510,7 @@ export function SectionForm({
         : section
     );
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    updateSections(updatedSections);
   };
 
   const removeBracket = (bracketId: string) => {
@@ -320,9 +525,7 @@ export function SectionForm({
         : section
     );
 
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
-      shouldValidate: true,
-    });
+    updateSections(updatedSections);
 
     // If we removed the active bracket, switch to the first available bracket
     if (activeBracketId === bracketId) {
@@ -336,11 +539,23 @@ export function SectionForm({
     }
   };
 
+  const handleBracketReorder = (newOrder: Bracket[]) => {
+    if (!activeSection) return;
+
+    const updatedSections = sections.map((section) =>
+      section.id === activeSectionId
+        ? { ...section, brackets: newOrder }
+        : section
+    );
+
+    updateSections(updatedSections);
+  };
+
   const handleStylesChange = (styles: string[]) => {
     const updatedSections = sections.map((section) =>
       section.id === activeSectionId ? { ...section, styles } : section
     );
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    updateSections(updatedSections);
 
     // If applyStylesToVideos is true, propagate styles to all videos
     if (activeSection.applyStylesToVideos) {
@@ -386,11 +601,7 @@ export function SectionForm({
       }
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections), {
-      shouldValidate: false,
-      shouldDirty: false,
-      shouldTouch: false,
-    });
+    updateSections(updatedSections);
 
     // Propagate styles if turning ON
     if (apply) {
@@ -428,7 +639,7 @@ export function SectionForm({
       };
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    updateSections(updatedSections);
   };
 
   const handleRemoveSectionWinner = (username: string) => {
@@ -447,35 +658,11 @@ export function SectionForm({
       };
     });
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    updateSections(updatedSections);
 
     // Update local winners state for display
     setSectionWinners((prev) => prev.filter((w) => w.username !== username));
   };
-
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(
-    activeSection.videos[0]?.id ?? null
-  );
-
-  // Keep the active video in sync with the current section's videos
-  useEffect(() => {
-    if (!activeSection || !Array.isArray(activeSection.videos)) {
-      if (activeVideoId !== null) setActiveVideoId(null);
-      return;
-    }
-
-    if (activeSection.videos.length === 0) {
-      if (activeVideoId !== null) setActiveVideoId(null);
-      return;
-    }
-
-    const exists = activeSection.videos.some(
-      (video) => video.id === activeVideoId
-    );
-    if (!activeVideoId || !exists) {
-      setActiveVideoId(activeSection.videos[0].id);
-    }
-  }, [activeSectionId, activeSection, activeVideoId]);
 
   const resolvedMode: SectionFormMode = mode ?? "overview";
 
@@ -510,11 +697,7 @@ export function SectionForm({
           : { ...section, description: section.description ?? "" }
       );
 
-      setValue("sections", normalizeSectionsForForm(updatedSections), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-      setActiveVideoId(newVideo.id);
+      updateSections(updatedSections);
       setNewVideoUrl("");
     } catch (error) {
       console.error(error);
@@ -526,400 +709,377 @@ export function SectionForm({
 
   return (
     <section className="bg-primary space-y-4 p-6 border-2 border-primary-light rounded-sm">
-      {/* Apply same style tags to all videos (available for all sections) */}
-      <FormField
-        key={`applyStylesToVideos-${activeSectionId}`}
-        control={control}
-        name={`sections.${activeSectionIndex}.applyStylesToVideos`}
-        render={({ field }) => (
-          <FormItem>
-            <div className="flex items-center space-x-2">
-              <FormControl>
-                <Switch
-                  checked={field.value || false}
-                  onCheckedChange={(checked) => {
-                    field.onChange(checked);
-                    handleApplyStylesToVideosChange(checked);
-                  }}
-                />
-              </FormControl>
-              <FormLabel>Apply same style tags to all videos</FormLabel>
-            </div>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {activeSection.applyStylesToVideos && (
-        <FormField
-          key={`styles-${activeSectionId}`}
-          control={control}
-          name={`sections.${activeSectionIndex}.styles`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Section Dance Styles</FormLabel>
-              <FormControl>
-                <StyleMultiSelect
-                  value={field.value || []}
-                  onChange={(styles) => {
-                    field.onChange(styles);
-                    handleStylesChange(styles);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )}
-
       {resolvedMode === "overview" && (
         <>
+          {/* Apply same style tags to all videos (available for all sections) */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={activeSection.applyStylesToVideos || false}
+              onCheckedChange={(checked) => {
+                handleApplyStylesToVideosChange(checked);
+              }}
+            />
+            <label className="text-sm font-medium text-white">
+              Apply same style tags to all videos
+            </label>
+          </div>
+
+          {activeSection.applyStylesToVideos && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white">
+                Section Dance Styles
+              </label>
+              <StyleMultiSelect
+                value={activeSection.styles || []}
+                onChange={(styles) => {
+                  handleStylesChange(styles);
+                }}
+              />
+            </div>
+          )}
+
           {/* Section Title */}
-          <FormField
-            key={`title-${activeSectionId}`}
-            control={control}
-            name={`sections.${activeSectionIndex}.title`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  Section Title <span className="text-red-500">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    value={field.value ?? ""}
-                    className="bg-neutral-300"
-                    placeholder="Section title"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">
+              Section Title <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={activeSection.title ?? ""}
+              onChange={(e) => {
+                const title = e.target.value;
+                const updated = sections.map((section) => {
+                  if (section.id !== activeSectionId) return section;
+                  return {
+                    ...section,
+                    title,
+                  };
+                });
+                updateSections(updated);
+                // Clear error when user starts typing
+                if (
+                  touched[`${activeSectionId}-title`] &&
+                  title.trim().length > 0
+                ) {
+                  setErrors((prev) => {
+                    const newErrors = { ...prev };
+                    delete newErrors[`${activeSectionId}-title`];
+                    return newErrors;
+                  });
+                }
+              }}
+              onBlur={() => {
+                setTouched((prev) => ({
+                  ...prev,
+                  [`${activeSectionId}-title`]: true,
+                }));
+                validateActiveSection();
+              }}
+              className={cn(
+                "bg-neutral-300",
+                errors[`${activeSectionId}-title`] && "border-red-500 border-2"
+              )}
+              placeholder="Section title"
+            />
+            {errors[`${activeSectionId}-title`] && (
+              <p className="text-sm text-red-500">
+                {errors[`${activeSectionId}-title`]}
+              </p>
             )}
-          />
+          </div>
 
           {/* Type and Use Brackets Switch - Above Poster Upload */}
           <div className="flex items-center gap-4">
-            <FormField
-              key={`sectionType-${activeSectionId}`}
-              control={control}
-              name={`sections.${activeSectionIndex}.sectionType`}
-              render={({ field }) => {
-                // Preserve existing section type when editing instead of forcing "Battle"
-                const value = field.value ?? activeSection.sectionType ?? "";
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium text-white">Type</label>
+              <Select
+                onValueChange={(newValue) => {
+                  const updated = updateSectionType(
+                    sections,
+                    activeSectionId,
+                    newValue as SectionType
+                  );
+                  updateSections(updated);
+                }}
+                value={activeSection.sectionType ?? "Battle"}
+              >
+                <SelectTrigger className="bg-neutral-300">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Battle">Battle</SelectItem>
+                  <SelectItem value="Competition">Competition</SelectItem>
+                  <SelectItem value="Class">Class</SelectItem>
+                  <SelectItem value="Exhibition">Exhibition</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Party">Party</SelectItem>
+                  <SelectItem value="Performance">Performance</SelectItem>
+                  <SelectItem value="Session">Session</SelectItem>
+                  <SelectItem value="Showcase">Showcase</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                return (
-                  <>
-                    <FormItem className="flex-1">
-                      <FormLabel>Type</FormLabel>
-                      <Select
-                        onValueChange={(newValue) => {
-                          field.onChange(newValue);
-                          const currentSections = getValues("sections") ?? [];
-                          const updated = updateSectionType(
-                            currentSections,
-                            activeSectionId,
-                            newValue as SectionType
-                          );
-                          setValue(
-                            "sections",
-                            normalizeSectionsForForm(updated),
-                            {
-                              shouldValidate: true,
-                              shouldDirty: true,
-                            }
-                          );
-                        }}
-                        value={value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="bg-neutral-300">
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Battle">Battle</SelectItem>
-                          <SelectItem value="Competition">
-                            Competition
-                          </SelectItem>
-                          <SelectItem value="Class">Class</SelectItem>
-                          <SelectItem value="Exhibition">Exhibition</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                          <SelectItem value="Party">Party</SelectItem>
-                          <SelectItem value="Performance">
-                            Performance
-                          </SelectItem>
-                          <SelectItem value="Session">Session</SelectItem>
-                          <SelectItem value="Showcase">Showcase</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-
-                    <FormField
-                      key={`hasBrackets-${activeSectionId}`}
-                      control={control}
-                      name={`sections.${activeSectionIndex}.hasBrackets`}
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                          <FormLabel className="cursor-pointer whitespace-nowrap">
-                            Use Brackets
-                          </FormLabel>
-                          <FormControl>
-                            <Switch
-                              checked={Boolean(field.value)}
-                              onCheckedChange={(checked) => {
-                                field.onChange(checked);
-                                const currentSections =
-                                  getValues("sections") ?? [];
-                                const updatedSections = currentSections.map(
-                                  (section) =>
-                                    section.id === activeSectionId
-                                      ? {
-                                          ...section,
-                                          hasBrackets: checked,
-                                        }
-                                      : section
-                                );
-                                setValue(
-                                  "sections",
-                                  normalizeSectionsForForm(updatedSections),
-                                  {
-                                    shouldValidate: true,
-                                    shouldDirty: true,
-                                  }
-                                );
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                );
-              }}
-            />
+            <div className="flex flex-row items-center gap-3 space-y-0">
+              <label className="text-sm font-medium text-white cursor-pointer whitespace-nowrap">
+                Use Brackets
+              </label>
+              <Switch
+                checked={Boolean(activeSection.hasBrackets)}
+                onCheckedChange={(checked) => {
+                  const updatedSections = sections.map((section) =>
+                    section.id === activeSectionId
+                      ? {
+                          ...section,
+                          hasBrackets: checked,
+                        }
+                      : section
+                  );
+                  updateSections(updatedSections);
+                }}
+              />
+            </div>
           </div>
 
-          <FormField
-            key={`poster-${activeSectionId}`}
-            control={control}
-            name={`sections.${activeSectionIndex}.poster`}
-            render={() => (
-              <FormItem className="w-full">
-                <FormLabel>Poster Upload</FormLabel>
-                <FormControl>
+          {/* Details Accordion */}
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full bg-secondary px-2 border-1 border-secondary-light "
+          >
+            <AccordionItem value="details" className="border-none">
+              <AccordionTrigger className="text-white hover:no-underline py-2">
+                <span>Details</span>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">
+                    Poster Upload
+                  </label>
                   <PosterUpload
                     initialPoster={activeSection.poster?.url || null}
                     initialPosterFile={activeSection.poster?.file || null}
                     initialBgColor={activeSection.bgColor || "#ffffff"}
                     onFileChange={({ file, bgColor }) => {
-                      setValue(
-                        `sections.${activeSectionIndex}.bgColor`,
-                        bgColor,
-                        {
-                          shouldValidate: true,
-                          shouldDirty: true,
-                          shouldTouch: true,
+                      // Update sections state directly
+                      const updatedSections = sections.map((section, index) => {
+                        if (index === activeSectionIndex) {
+                          const posterImage = file
+                            ? {
+                                id: section.poster?.id || crypto.randomUUID(),
+                                title:
+                                  section.poster?.title || "Section Poster",
+                                url: section.poster?.url || "",
+                                type: "poster" as const,
+                                file,
+                              }
+                            : null;
+                          return {
+                            ...section,
+                            bgColor,
+                            poster: posterImage,
+                          };
                         }
-                      );
-
-                      if (file) {
-                        const posterImage: Image = {
-                          id: activeSection.poster?.id || crypto.randomUUID(),
-                          title:
-                            activeSection.poster?.title || "Section Poster",
-                          url: activeSection.poster?.url || "",
-                          type: "poster",
-                          file,
-                        };
-
-                        setValue(
-                          `sections.${activeSectionIndex}.poster`,
-                          posterImage,
-                          {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                            shouldTouch: true,
-                          }
-                        );
-                      } else {
-                        setValue(
-                          `sections.${activeSectionIndex}.poster`,
-                          null,
-                          {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                            shouldTouch: true,
-                          }
-                        );
-                      }
+                        return section;
+                      });
+                      updateSections(updatedSections);
                     }}
                     editable={true}
                     maxFiles={1}
                   />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+                </div>
 
-          <FormField
-            key={`description-${activeSectionId}`}
-            control={control}
-            name={`sections.${activeSectionIndex}.description`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea {...field} value={field.value ?? ""} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">
+                    Description
+                  </label>
+                  <Textarea
+                    value={activeSection.description ?? ""}
+                    onChange={(e) => {
+                      const description = e.target.value;
+                      const updated = sections.map((section) => {
+                        if (section.id !== activeSectionId) return section;
+                        return {
+                          ...section,
+                          description,
+                        };
+                      });
+                      updateSections(updated);
+                    }}
+                    placeholder="Section description"
+                  />
+                </div>
 
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <FormLabel>Section Date & Time</FormLabel>
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="text-sm font-medium text-white">
+                      Section Date & Time
+                    </label>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={clearSectionDateTime}
-                className="hover:text-primary-light"
-              >
-                Clear date/time
-              </Button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr]  rounded-sm bg-neutral-300 border border-charcoal p-4">
-              <div className="min-w-0">
-                <DatePicker
-                  control={control as Control<FormValues>}
-                  name={
-                    `sections.${activeSectionIndex}.date` as FieldPath<FormValues>
-                  }
-                  label="Section Date"
-                  labelClassName="text-black"
-                />
-              </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSectionDateTime}
+                      className="hover:text-primary-light"
+                    >
+                      Clear date/time
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-[1fr_1fr_1fr]  rounded-sm bg-neutral-300 border border-charcoal p-4">
+                    <div className="min-w-0">
+                      <label className="text-sm font-medium text-black mb-2 block">
+                        Section Date
+                      </label>
+                      <SectionDatePicker
+                        value={activeSection.date ?? ""}
+                        onChange={(date) => {
+                          setSectionDateValue("date", date || undefined);
+                          setTouched((prev) => ({
+                            ...prev,
+                            [`${activeSectionId}-date`]: true,
+                          }));
+                        }}
+                        hasError={!!errors[`${activeSectionId}-date`]}
+                      />
+                      {errors[`${activeSectionId}-date`] && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors[`${activeSectionId}-date`]}
+                        </p>
+                      )}
+                    </div>
 
-              <div className="min-w-0">
-                <FormField
-                  control={control}
-                  name={`sections.${activeSectionIndex}.startTime`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-black">Start Time</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="time"
-                          {...field}
-                          value={field.value ?? ""}
-                          className="bg-neutral-300 w-full"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    <div className="min-w-0">
+                      <label className="text-sm font-medium text-black mb-2 block">
+                        Start Time
+                      </label>
+                      <Input
+                        type="time"
+                        value={activeSection.startTime ?? ""}
+                        onChange={(e) => {
+                          setSectionDateValue(
+                            "startTime",
+                            e.target.value || undefined
+                          );
+                          setTouched((prev) => ({
+                            ...prev,
+                            [`${activeSectionId}-startTime`]: true,
+                          }));
+                        }}
+                        onBlur={() => validateActiveSection()}
+                        className={cn(
+                          "bg-neutral-300 w-full",
+                          errors[`${activeSectionId}-startTime`] &&
+                            "border-red-500 border-2"
+                        )}
+                      />
+                      {errors[`${activeSectionId}-startTime`] && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors[`${activeSectionId}-startTime`]}
+                        </p>
+                      )}
+                    </div>
 
-              <div className="min-w-0">
-                <FormField
-                  control={control}
-                  name={`sections.${activeSectionIndex}.endTime`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-black">End Time</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="time"
-                          {...field}
-                          value={field.value ?? ""}
-                          className="bg-neutral-300 w-full"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-          </div>
+                    <div className="min-w-0">
+                      <label className="text-sm font-medium text-black mb-2 block">
+                        End Time
+                      </label>
+                      <Input
+                        type="time"
+                        value={activeSection.endTime ?? ""}
+                        onChange={(e) => {
+                          setSectionDateValue(
+                            "endTime",
+                            e.target.value || undefined
+                          );
+                          setTouched((prev) => ({
+                            ...prev,
+                            [`${activeSectionId}-endTime`]: true,
+                          }));
+                        }}
+                        onBlur={() => validateActiveSection()}
+                        className={cn(
+                          "bg-neutral-300 w-full",
+                          errors[`${activeSectionId}-endTime`] &&
+                            "border-red-500 border-2"
+                        )}
+                      />
+                      {errors[`${activeSectionId}-endTime`] && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors[`${activeSectionId}-endTime`]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-          {/* Section Winners - only show if section type supports winners */}
-          {sectionTypeSupportsWinners(activeSection.sectionType) && (
-            <div className="space-y-2">
-              <DebouncedSearchMultiSelect<UserSearchItem>
-                onSearch={searchUsers}
-                placeholder="Search users to mark as section winners..."
-                getDisplayValue={(item) =>
-                  `${item.displayName} (${item.username})`
-                }
-                getItemId={(item) => item.username}
-                onChange={(users) => {
-                  // Update section winners in form state with the complete list
-                  const updatedSections = sections.map((section) => {
-                    if (section.id !== activeSectionId) return section;
-                    return {
-                      ...section,
-                      winners: users,
-                    };
-                  });
+                {/* Section Winners - only show if section type supports winners */}
+                {sectionTypeSupportsWinners(activeSection.sectionType) && (
+                  <div className="space-y-2">
+                    <DebouncedSearchMultiSelect<UserSearchItem>
+                      onSearch={searchUsers}
+                      placeholder="Search users to mark as section winners..."
+                      getDisplayValue={(item) =>
+                        `${item.displayName} (${item.username})`
+                      }
+                      getItemId={(item) => item.username}
+                      onChange={(users) => {
+                        // Update section winners in form state with the complete list
+                        const updatedSections = sections.map((section) => {
+                          if (section.id !== activeSectionId) return section;
+                          return {
+                            ...section,
+                            winners: users,
+                          };
+                        });
 
-                  setValue(
-                    "sections",
-                    normalizeSectionsForForm(updatedSections)
-                  );
+                        updateSections(updatedSections);
 
-                  // Update local winners state for display
-                  setSectionWinners(users);
-                }}
-                value={sectionWinners}
-                name="sectionWinners"
-                label="Section Winners"
-                labelColor="text-white"
-              />
-            </div>
-          )}
+                        // Update local winners state for display
+                        setSectionWinners(users);
+                      }}
+                      value={sectionWinners}
+                      name="sectionWinners"
+                      label="Section Winners"
+                      labelColor="text-white"
+                    />
+                  </div>
+                )}
 
-          {/* Section Judges - only show if section type supports judges */}
-          {sectionTypeSupportsJudges(activeSection.sectionType) && (
-            <div className="space-y-2">
-              <DebouncedSearchMultiSelect<UserSearchItem>
-                onSearch={searchUsers}
-                placeholder="Search users to mark as section judges..."
-                getDisplayValue={(item) =>
-                  `${item.displayName} (${item.username})`
-                }
-                getItemId={(item) => item.username}
-                onChange={(users) => {
-                  // Update section judges in form state with the complete list
-                  const updatedSections = sections.map((section) => {
-                    if (section.id !== activeSectionId) return section;
-                    return {
-                      ...section,
-                      judges: users,
-                    };
-                  });
+                {/* Section Judges - only show if section type supports judges */}
+                {sectionTypeSupportsJudges(activeSection.sectionType) && (
+                  <div className="space-y-2">
+                    <DebouncedSearchMultiSelect<UserSearchItem>
+                      onSearch={searchUsers}
+                      placeholder="Search users to mark as section judges..."
+                      getDisplayValue={(item) =>
+                        `${item.displayName} (${item.username})`
+                      }
+                      getItemId={(item) => item.username}
+                      onChange={(users) => {
+                        // Update section judges in form state with the complete list
+                        const updatedSections = sections.map((section) => {
+                          if (section.id !== activeSectionId) return section;
+                          return {
+                            ...section,
+                            judges: users,
+                          };
+                        });
 
-                  setValue(
-                    "sections",
-                    normalizeSectionsForForm(updatedSections)
-                  );
+                        updateSections(updatedSections);
 
-                  // Update local judges state for display
-                  setSectionJudges(users);
-                }}
-                value={sectionJudges}
-                name="sectionJudges"
-                label="Section Judges"
-                labelColor="text-white"
-              />
-            </div>
-          )}
+                        // Update local judges state for display
+                        setSectionJudges(users);
+                      }}
+                      value={sectionJudges}
+                      name="sectionJudges"
+                      label="Section Judges"
+                      labelColor="text-white"
+                    />
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </>
       )}
 
@@ -927,7 +1087,9 @@ export function SectionForm({
         <div className="space-y-4">
           {/* Bracket Title Input - In its own container */}
           <section>
-            <FormLabel>New Bracket</FormLabel>
+            <label className="text-sm font-medium text-white">
+              New Bracket
+            </label>
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <Input
@@ -964,59 +1126,13 @@ export function SectionForm({
 
           {/* Bracket Tabs */}
           {activeSection.brackets.length > 0 && (
-            <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2">
-              {activeSection.brackets.map((bracket, index) => {
-                const isActive = activeBracketId === bracket.id;
-                return (
-                  <div
-                    key={bracket.id}
-                    className="relative group w-full md:w-auto"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleSetActiveBracketId(bracket.id)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-sm transition-all duration-200 w-full md:w-auto",
-                        "border-2 border-transparent",
-                        "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
-                        "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
-                        "text-sm font-bold uppercase tracking-wide",
-                        "font-display",
-                        isActive &&
-                          "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
-                        !isActive &&
-                          "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
-                      )}
-                      style={{ fontFamily: "var(--font-display)" }}
-                    >
-                      {bracket.title || `Bracket ${index + 1}`}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeBracket(bracket.id);
-                      }}
-                      className={cn(
-                        "absolute -top-2 -right-2",
-                        "w-5 h-5 rounded-full",
-                        "bg-destructive text-destructive-foreground",
-                        "border-2 border-charcoal",
-                        "flex items-center justify-center",
-                        "opacity-0 group-hover:opacity-100",
-                        "transition-opacity duration-200",
-                        "hover:bg-destructive/90",
-                        "z-10",
-                        "shadow-[2px_2px_0_0_rgb(49,49,49)]"
-                      )}
-                      aria-label={`Delete ${bracket.title || "bracket"}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            <DraggableBracketTabs
+              brackets={activeSection.brackets}
+              activeBracketId={activeBracketId}
+              onBracketClick={handleSetActiveBracketId}
+              onBracketDelete={removeBracket}
+              onReorder={handleBracketReorder}
+            />
           )}
 
           {/* Active Bracket Container - Outside input container */}
@@ -1043,6 +1159,7 @@ export function SectionForm({
                   activeBracketIndex={effectiveBracketIndex}
                   bracket={bracket}
                   sections={sections}
+                  updateSections={updateSections}
                   activeSectionId={activeSectionId}
                   activeBracketId={bracket.id}
                   eventId={eventId}
@@ -1072,76 +1189,39 @@ export function SectionForm({
           </div>
 
           {activeSection.videos.length > 0 && (
-            <Accordion
-              type="single"
-              collapsible
-              value={activeVideoId ?? undefined}
-              onValueChange={(val) => setActiveVideoId(val || null)}
-              className="space-y-3"
-            >
-              {activeSection.videos.map((video, index) => (
-                <AccordionItem
-                  key={video.id}
-                  value={video.id}
-                  className="border border-border rounded-sm bg-periwinkle-light/50 last:border-b"
-                >
-                  <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
-                    <Input
-                      value={video.title ?? ""}
-                      onChange={(e) => {
-                        const title = e.target.value;
-                        const currentSections = getValues("sections") ?? [];
-                        const updated = currentSections.map((section) => {
-                          if (section.id !== activeSectionId) return section;
-                          return {
-                            ...section,
-                            videos: section.videos.map((v) =>
-                              v.id === video.id ? { ...v, title } : v
-                            ),
-                          };
-                        });
-                        setValue(
-                          "sections",
-                          normalizeSectionsForForm(updated),
-                          {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          }
-                        );
-                      }}
-                      className="h-9"
-                    />
-
-                    <div className="flex items-center gap-5 px-3">
-                      <AccordionTrigger className="h-9 w-9 shrink-0 rounded-sm border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
-                        <span className="sr-only">Toggle video</span>
-                      </AccordionTrigger>
-
-                      <CircleXButton
-                        size="md"
-                        aria-label={`Remove ${video.title || "video"}`}
-                        onClick={() => removeVideoFromSection(video.id)}
-                      />
-                    </div>
-                  </div>
-                  <AccordionContent className="px-4 pb-4 bg-periwinkle-light/50">
-                    <VideoForm
-                      key={video.id}
-                      control={control}
-                      setValue={setValue}
-                      getValues={getValues}
-                      video={video}
-                      videoIndex={index}
-                      sectionIndex={activeSectionIndex}
-                      sections={sections}
-                      activeSectionId={activeSectionId}
-                      context="section"
-                      eventId={eventId}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+            <DraggableVideoList
+              videos={activeSection.videos}
+              onReorder={(newOrder) => {
+                const updatedSections = sections.map((section) =>
+                  section.id === activeSectionId
+                    ? { ...section, videos: newOrder }
+                    : section
+                );
+                updateSections(updatedSections);
+              }}
+              onVideoTitleChange={(videoId, title) => {
+                const updatedSections = sections.map((section) => {
+                  if (section.id !== activeSectionId) return section;
+                  return {
+                    ...section,
+                    videos: section.videos.map((v) =>
+                      v.id === videoId ? { ...v, title } : v
+                    ),
+                  };
+                });
+                updateSections(updatedSections);
+              }}
+              onVideoRemove={removeVideoFromSection}
+              control={control}
+              setValue={setValue}
+              getValues={getValues}
+              sections={sections}
+              updateSections={updateSections}
+              sectionIndex={activeSectionIndex}
+              activeSectionId={activeSectionId}
+              context="section"
+              eventId={eventId}
+            />
           )}
         </div>
       )}

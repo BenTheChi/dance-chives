@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { CircleXButton } from "@/components/ui/circle-x-button";
@@ -10,36 +10,22 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import { VideoForm } from "./video-form";
-import { FormValues } from "./event-form";
 import { Section, Bracket, Video } from "@/types/event";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { DraggableVideoList } from "@/components/forms/draggable-video-list";
 import { fetchYouTubeOEmbed } from "@/lib/utils/youtube-oembed";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getDefaultVideoType } from "@/lib/utils/section-helpers";
 
-// Helper function to normalize sections for form (ensures description is always string)
-function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
-  return sections.map((section) => ({
-    ...section,
-    description: section.description ?? "",
-    bgColor: section.bgColor || "#ffffff",
-  }));
-}
-
 interface BracketFormProps {
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
-  getValues: UseFormGetValues<FormValues>;
+  control: Control<any>; // Use any to allow SimpleFormValues or FormValues
+  setValue: UseFormSetValue<any>;
+  getValues: UseFormGetValues<any>;
   activeSectionIndex: number;
   activeBracketIndex: number;
   bracket: Bracket;
   sections: Section[];
+  updateSections: (sections: Section[]) => void; // New prop to update sections
   activeSectionId: string;
   activeBracketId: string;
   eventId?: string; // Event ID for winner tagging (only in edit mode)
@@ -52,6 +38,7 @@ export function BracketForm({
   activeSectionIndex,
   bracket,
   sections,
+  updateSections,
   activeSectionId,
   activeBracketId,
   eventId,
@@ -71,29 +58,11 @@ export function BracketForm({
         : section
     );
 
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    updateSections(updatedSections);
   };
 
-  const [activeVideoId, setActiveVideoId] = useState<string | null>(
-    bracket.videos[0]?.id ?? null
-  );
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [isAddingVideo, setIsAddingVideo] = useState(false);
-
-  // Keep activeVideoId in sync with the current bracket's videos
-  useEffect(() => {
-    if (!bracket.videos || bracket.videos.length === 0) {
-      if (activeVideoId !== null) {
-        setActiveVideoId(null);
-      }
-      return;
-    }
-
-    const exists = bracket.videos.some((video) => video.id === activeVideoId);
-    if (!activeVideoId || !exists) {
-      setActiveVideoId(bracket.videos[0].id);
-    }
-  }, [bracket.videos, activeVideoId]);
 
   const handleAddVideoFromUrl = async () => {
     if (!newVideoUrl.trim()) {
@@ -129,11 +98,7 @@ export function BracketForm({
           : section
       );
 
-      setValue("sections", normalizeSectionsForForm(updatedSections), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-      setActiveVideoId(newVideo.id);
+      updateSections(updatedSections);
       setNewVideoUrl("");
     } catch (error) {
       console.error(error);
@@ -162,10 +127,7 @@ export function BracketForm({
                   }
                 : section
             );
-            setValue("sections", normalizeSectionsForForm(updatedSections), {
-              shouldValidate: true,
-              shouldDirty: true,
-            });
+            updateSections(updatedSections);
           }}
         />
       </div>
@@ -188,84 +150,53 @@ export function BracketForm({
       </div>
 
       {bracket.videos.length > 0 && (
-        <Accordion
-          type="single"
-          collapsible
-          value={activeVideoId ?? undefined}
-          onValueChange={(val) => setActiveVideoId(val || null)}
-          className="space-y-3"
-        >
-          {bracket.videos.map((video, index) => (
-            <AccordionItem
-              key={video.id}
-              value={video.id}
-              className="border border-border rounded-sm bg-secondary-dark last:border-b"
-            >
-              <div className="bg-periwinkle-light/50 flex items-center gap-3 px-4 py-3">
-                <Input
-                  value={video.title ?? ""}
-                  onChange={(e) => {
-                    const title = e.target.value;
-                    const updatedSections = sections.map((section) =>
-                      section.id === activeSectionId
+        <DraggableVideoList
+          videos={bracket.videos}
+          onReorder={(newOrder) => {
+            const updatedSections = sections.map((section) =>
+              section.id === activeSectionId
+                ? {
+                    ...section,
+                    brackets: section.brackets.map((b) =>
+                      b.id === activeBracketId ? { ...b, videos: newOrder } : b
+                    ),
+                  }
+                : section
+            );
+            updateSections(updatedSections);
+          }}
+          onVideoTitleChange={(videoId, title) => {
+            const updatedSections = sections.map((section) =>
+              section.id === activeSectionId
+                ? {
+                    ...section,
+                    brackets: section.brackets.map((b) =>
+                      b.id === activeBracketId
                         ? {
-                            ...section,
-                            brackets: section.brackets.map((b) =>
-                              b.id === activeBracketId
-                                ? {
-                                    ...b,
-                                    videos: b.videos.map((v) =>
-                                      v.id === video.id ? { ...v, title } : v
-                                    ),
-                                  }
-                                : b
+                            ...b,
+                            videos: b.videos.map((v) =>
+                              v.id === videoId ? { ...v, title } : v
                             ),
                           }
-                        : section
-                    );
-                    setValue(
-                      "sections",
-                      normalizeSectionsForForm(updatedSections),
-                      {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      }
-                    );
-                  }}
-                  className="h-9"
-                />
-
-                <div className="flex items-center gap-5 px-3">
-                  <AccordionTrigger className="h-9 w-9 shrink-0 rounded-full border border-charcoal flex items-center justify-center [&>svg]:text-charcoal">
-                    <span className="sr-only">Toggle video</span>
-                  </AccordionTrigger>
-
-                  <CircleXButton
-                    size="md"
-                    aria-label={`Remove ${video.title || "video"}`}
-                    onClick={() => removeVideoFromBracket(video.id)}
-                  />
-                </div>
-              </div>
-              <AccordionContent className="px-4 pb-4 bg-periwinkle-light/50">
-                <VideoForm
-                  key={video.id}
-                  control={control}
-                  setValue={setValue}
-                  getValues={getValues}
-                  video={video}
-                  videoIndex={index}
-                  sectionIndex={activeSectionIndex}
-                  sections={sections}
-                  activeSectionId={activeSectionId}
-                  activeBracketId={activeBracketId}
-                  context="bracket"
-                  eventId={eventId}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+                        : b
+                    ),
+                  }
+                : section
+            );
+            updateSections(updatedSections);
+          }}
+          onVideoRemove={removeVideoFromBracket}
+          control={control}
+          setValue={setValue}
+          getValues={getValues}
+          sections={sections}
+          updateSections={updateSections}
+          sectionIndex={activeSectionIndex}
+          activeSectionId={activeSectionId}
+          activeBracketId={activeBracketId}
+          context="bracket"
+          eventId={eventId}
+        />
       )}
     </div>
   );

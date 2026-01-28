@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { CirclePlusButton } from "@/components/ui/circle-plus-button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { X } from "lucide-react";
-import { FieldErrors, useForm, Resolver } from "react-hook-form";
+import {
+  FieldErrors,
+  useForm,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { SectionForm } from "@/components/forms/section-form";
 import { Section, EventDetails, Role } from "@/types/event";
+import { DraggableSectionTabs } from "@/components/forms/draggable-section-tabs";
 import { Image } from "@/types/image";
 import { EventDetailsForm } from "./event-details-form";
 import RolesForm from "./roles-form";
@@ -170,8 +173,10 @@ const sectionSchema = z
     styles: z.array(z.string()).optional(),
     applyStylesToVideos: z.boolean().optional(),
     winners: z.array(userSearchItemSchema).optional(),
+    judges: z.array(userSearchItemSchema).optional(),
     bgColor: z.string().optional(),
     poster: imageSchema.nullable().optional(),
+    position: z.number().optional(),
     date: z.preprocess((val) => {
       if (val === null || val === undefined) return undefined;
       if (typeof val === "string" && val.trim().length === 0) return undefined;
@@ -188,6 +193,7 @@ const sectionSchema = z
       return val;
     }, z.string().regex(timeRegex, "End time must be in HH:MM format").optional()),
   })
+  .passthrough() // Allow extra fields that aren't in the schema to pass through
   .superRefine((section, context) => {
     const hasDate = Boolean(section.date);
     const hasStart = Boolean(section.startTime);
@@ -201,7 +207,7 @@ const sectionSchema = z
     if (!hasDate) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Date is required when adding a time",
+        message: "Date required",
         path: ["date"],
       });
     }
@@ -209,7 +215,7 @@ const sectionSchema = z
     if (!hasStart) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Start time is required when adding a date/time",
+        message: "Start time required",
         path: ["startTime"],
       });
     }
@@ -217,7 +223,7 @@ const sectionSchema = z
     if (!hasEnd) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "End time is required when adding a date/time",
+        message: "End time required",
         path: ["endTime"],
       });
     }
@@ -323,18 +329,27 @@ const eventDetailsSchema = z.object({
     (val) => (val === null ? undefined : val),
     z.string().url().optional().or(z.literal(""))
   ),
-  instagram: z.preprocess((val) => {
-    const normalized = normalizeInstagram(val as string | null | undefined);
-    return normalized;
-  }, z.string().url().optional().or(z.literal(""))),
-  youtube: z.preprocess((val) => {
-    const normalized = normalizeYouTube(val as string | null | undefined);
-    return normalized;
-  }, z.string().url().optional().or(z.literal(""))),
-  facebook: z.preprocess((val) => {
-    const normalized = normalizeFacebook(val as string | null | undefined);
-    return normalized;
-  }, z.string().url().optional().or(z.literal(""))),
+  instagram: z.preprocess(
+    (val) => {
+      const normalized = normalizeInstagram(val as string | null | undefined);
+      return normalized;
+    },
+    z.string().url().optional().or(z.literal(""))
+  ),
+  youtube: z.preprocess(
+    (val) => {
+      const normalized = normalizeYouTube(val as string | null | undefined);
+      return normalized;
+    },
+    z.string().url().optional().or(z.literal(""))
+  ),
+  facebook: z.preprocess(
+    (val) => {
+      const normalized = normalizeFacebook(val as string | null | undefined);
+      return normalized;
+    },
+    z.string().url().optional().or(z.literal(""))
+  ),
 });
 
 const roleSchema = z.object({
@@ -349,23 +364,32 @@ const roleSchema = z.object({
   user: userSearchItemSchema.nullable(),
 });
 
-const formSchema = z.object({
+// Schema for simple form fields (without sections)
+const simpleFormSchema = z.object({
   eventDetails: eventDetailsSchema,
-  sections: z.array(sectionSchema).refine(
-    (sections) => {
-      const titles = sections.map((s) => s.title.toLowerCase().trim());
-      const uniqueTitles = new Set(titles);
-      return uniqueTitles.size === titles.length;
-    },
-    {
-      message: "Section titles must be unique within an event",
-    }
-  ),
   roles: z.array(roleSchema).optional(),
   gallery: z.array(imageSchema),
 });
 
+// Separate schema for sections validation
+const sectionsSchema = z.array(sectionSchema).refine(
+  (sections) => {
+    const titles = sections.map((s) => s.title.toLowerCase().trim());
+    const uniqueTitles = new Set(titles);
+    return uniqueTitles.size === titles.length;
+  },
+  {
+    message: "Section titles must be unique within an event",
+  }
+);
+
+// Full schema for final validation (combines simple form + sections)
+const formSchema = simpleFormSchema.extend({
+  sections: sectionsSchema,
+});
+
 export type FormValues = z.infer<typeof formSchema>;
+export type SimpleFormValues = z.infer<typeof simpleFormSchema>;
 
 type SectionsSelection =
   | { type: "sectionOverview"; sectionId: string }
@@ -374,7 +398,8 @@ type SectionsSelection =
   | { type: "bracket"; sectionId: string; bracketId: string };
 
 // Helper function to normalize sections for form (ensures description is always string)
-function normalizeSectionsForForm(sections: Section[]): FormValues["sections"] {
+// Used when loading sections from drafts, autofill, or playlist parsing
+function normalizeSectionsForForm(sections: Section[]): Section[] {
   return sections.map((section) => ({
     ...section,
     description: section.description ?? "",
@@ -423,12 +448,12 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   const autofillPosterFileRef = useRef<File | null>(null);
   //TODO: set up logic for next buttons to use the active tab index
 
-  // Initialize form with default values or initial data
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as Resolver<FormValues>,
+  // Initialize form with default values or initial data (without sections)
+  const form = useForm<SimpleFormValues>({
+    resolver: zodResolver(simpleFormSchema) as any,
     mode: "onSubmit",
-    defaultValues: initialData || {
-      eventDetails: {
+    defaultValues: {
+      eventDetails: initialData?.eventDetails || {
         creatorId: "",
         title: "",
         city: {
@@ -455,11 +480,20 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         bgColor: "#ffffff",
         eventType: "Battle",
       },
-      sections: [],
-      roles: [],
-      gallery: [],
+      roles: initialData?.roles ?? [],
+      gallery: initialData?.gallery ?? [],
     },
   });
+
+  // Sections managed separately with useState (no transformation issues)
+  const [sections, setSections] = useState<Section[]>(
+    initialData?.sections ?? []
+  );
+
+  // Helper function to update sections (replaces setValue("sections", ...))
+  const updateSections = useCallback((newSections: Section[]) => {
+    setSections(newSections);
+  }, []);
 
   const { control, handleSubmit, setValue, getValues, register, watch, reset } =
     form;
@@ -474,14 +508,23 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
     try {
       const parsed = JSON.parse(saved);
-      reset(parsed);
+      // Restore form data (without sections)
+      reset({
+        eventDetails: parsed.eventDetails,
+        roles: parsed.roles,
+        gallery: parsed.gallery,
+      });
+      // Restore sections separately
+      if (parsed.sections) {
+        setSections(parsed.sections);
+      }
     } catch (error) {
       console.error(
         "Failed to parse event form draft from sessionStorage",
         error
       );
     }
-  }, [isEditing, initialData, reset]);
+  }, [isEditing, initialData, reset, setSections]);
 
   // Restore draft when editing an event (per-event storage)
   useEffect(() => {
@@ -493,14 +536,23 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
 
     try {
       const parsed = JSON.parse(saved);
-      reset(parsed);
+      // Restore form data (without sections)
+      reset({
+        eventDetails: parsed.eventDetails,
+        roles: parsed.roles,
+        gallery: parsed.gallery,
+      });
+      // Restore sections separately
+      if (parsed.sections) {
+        setSections(parsed.sections);
+      }
     } catch (error) {
       console.error(
         "Failed to parse event form draft from sessionStorage",
         error
       );
     }
-  }, [isEditing, eventId, reset]);
+  }, [isEditing, eventId, reset, setSections]);
 
   // Persist draft to sessionStorage on change (creation or edit)
   useEffect(() => {
@@ -516,9 +568,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       return;
     }
 
-    const subscription = watch((value) => {
+    const subscription = watch((formValue) => {
       try {
-        sessionStorage.setItem(storageKey, JSON.stringify(value));
+        // Combine form data with sections from state
+        const fullData = {
+          ...formValue,
+          sections, // Include sections from state
+        };
+        sessionStorage.setItem(storageKey, JSON.stringify(fullData));
       } catch (error) {
         console.error(
           "Failed to save event form draft to sessionStorage",
@@ -528,7 +585,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isEditing, initialData, watch, eventId]);
+  }, [isEditing, initialData, watch, eventId, sections]);
 
   const clearDraft = () => {
     if (typeof window === "undefined") return;
@@ -667,17 +724,10 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
         // Normalize sections for form
         const normalizedSections = normalizeSectionsForForm(data.sections);
 
-        // Get current sections
-        const currentSections = getValues("sections") || [];
-
         // Merge with existing sections (don't overwrite if sections already exist)
-        if (currentSections.length === 0) {
+        if (sections.length === 0) {
           // Only set sections if there are no existing sections
-          setValue("sections", normalizedSections, {
-            shouldValidate: false,
-            shouldDirty: true,
-            shouldTouch: false,
-          });
+          updateSections(normalizedSections);
 
           // If we're on the Sections tab, activate the first section
           if (activeMainTab === "Sections" && normalizedSections.length > 0) {
@@ -709,44 +759,32 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
   }, [getValues, setValue]);
 
-  const sectionsRaw = watch("sections");
-  const sections = sectionsRaw ?? [];
+  // Sections are now managed directly with useState - no sync needed
+  // Use sections state directly for both rendering and DND operations
   const eventDetails = watch("eventDetails");
   const roles = watch("roles") ?? [];
   const galleryWatched = watch("gallery");
 
-  // Memoize galleryRaw to prevent unnecessary re-renders
-  const galleryRaw = useMemo(() => galleryWatched ?? [], [galleryWatched]);
-
-  // Normalize and memoize gallery to prevent unnecessary re-renders
-  const gallery: Image[] = useMemo(() => {
-    return galleryRaw.map((img) => ({
-      ...img,
-      type: ((img as Image).type || "gallery") as
-        | "gallery"
-        | "profile"
-        | "poster",
-    }));
-  }, [galleryRaw]);
-
-  // Memoize sections to prevent unnecessary re-renders
-  const sectionsMemo = useMemo(() => sectionsRaw ?? [], [sectionsRaw]);
+  // Normalize gallery images
+  const gallery: Image[] = (galleryWatched ?? []).map((img) => ({
+    ...img,
+    type: ((img as Image).type || "gallery") as
+      | "gallery"
+      | "profile"
+      | "poster",
+  }));
 
   // Auto-select first section and default sidebar selection when Sections tab is active
   useEffect(() => {
     if (activeMainTab !== "Sections") return;
 
     // Check if there are pending autofill sections to apply
-    if (pendingAutofillSectionsRef.current && sectionsMemo.length === 0) {
+    if (pendingAutofillSectionsRef.current && sections.length === 0) {
       const pendingSections = pendingAutofillSectionsRef.current;
       // Ensure sections are properly normalized
       const normalizedPendingSections =
         normalizeSectionsForForm(pendingSections);
-      setValue("sections", normalizedPendingSections, {
-        shouldValidate: true,
-        shouldDirty: true,
-        shouldTouch: true,
-      });
+      updateSections(normalizedPendingSections);
 
       // Activate the first section
       if (normalizedPendingSections.length > 0) {
@@ -762,17 +800,15 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       return;
     }
 
-    if (sectionsMemo.length === 0) {
+    if (sections.length === 0) {
       setActiveSectionId("0");
       setSectionsSelection(null);
       return;
     }
 
     // Ensure activeSectionId is valid
-    const isValidSection = sectionsMemo.some((s) => s.id === activeSectionId);
-    const targetSectionId = isValidSection
-      ? activeSectionId
-      : sectionsMemo[0].id;
+    const isValidSection = sections.some((s) => s.id === activeSectionId);
+    const targetSectionId = isValidSection ? activeSectionId : sections[0].id;
 
     if (!isValidSection || activeSectionId === "0") {
       setActiveSectionId(targetSectionId);
@@ -781,20 +817,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     // Ensure sidebar selection points to a valid section
     if (
       !sectionsSelection ||
-      !sectionsMemo.some((s) => s.id === sectionsSelection.sectionId)
+      !sections.some((s) => s.id === sectionsSelection.sectionId)
     ) {
       setSectionsSelection({
         type: "sectionOverview",
         sectionId: targetSectionId,
       });
     }
-  }, [
-    activeMainTab,
-    sectionsMemo,
-    activeSectionId,
-    sectionsSelection,
-    setValue,
-  ]);
+  }, [activeMainTab, sections, activeSectionId, sectionsSelection]);
 
   const mainTabs = ["Details", "Roles", "Sections", "Photo Gallery"];
 
@@ -810,7 +840,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       bgColor: "#ffffff",
       poster: null,
     };
-    setValue("sections", normalizeSectionsForForm([...sections, newSection]));
+    const updatedSections = [...sections, newSection];
+    updateSections(updatedSections);
     setActiveSectionId(newSection.id);
     setSectionsSelection({
       type: "sectionOverview",
@@ -822,7 +853,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     const updatedSections = sections.filter(
       (section) => section.id !== sectionId
     );
-    setValue("sections", normalizeSectionsForForm(updatedSections));
+    updateSections(updatedSections);
 
     if (updatedSections.length === 0) {
       setActiveSectionId("0");
@@ -850,6 +881,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       });
     }
   };
+
+  const handleSectionReorder = useCallback(
+    (newOrder: Section[]) => {
+      // Direct update - no transformation issues with useState!
+      updateSections(newOrder);
+    },
+    [updateSections]
+  );
 
   const handlePlaylistParseSuccess = (parsedSections: Section[]) => {
     // Calculate detailed statistics for toast message
@@ -899,22 +938,19 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     toast.success(message);
 
     // Merge parsed sections with existing sections using the merge utility
-    const currentSections = sections;
-    const mergedSections = mergeSections(currentSections, parsedSections);
+    const mergedSections = mergeSections(sections, parsedSections);
 
     // Normalize sections for form
     const normalizedMergedSections = normalizeSectionsForForm(mergedSections);
 
-    // Update form state
-    setValue("sections", normalizedMergedSections, {
-      shouldValidate: true,
-      shouldDirty: true,
-    });
+    // Update both DND state and form state
+    updateSections(normalizedMergedSections);
 
     // If we're on the Sections tab, activate the first section
     if (activeMainTab === "Sections" && normalizedMergedSections.length > 0) {
       // If no sections were active before, activate the first new section
-      if (currentSections.length === 0) {
+      const previousSectionsCount = sections.length;
+      if (previousSectionsCount === 0) {
         setActiveSectionId(normalizedMergedSections[0].id);
         setSectionsSelection({
           type: "sectionOverview",
@@ -936,7 +972,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     } else if (normalizedMergedSections.length > 0) {
       // If we're not on the Sections tab, ensure the first section will be active when we navigate there
       // The useEffect for Sections tab will handle this, but we can also set it proactively
-      if (currentSections.length === 0) {
+      const previousSectionsCount = sections.length;
+      if (previousSectionsCount === 0) {
         // Store the first section ID to activate when navigating to Sections tab
         // The useEffect will handle this, but setting it here ensures it's ready
         setActiveSectionId(normalizedMergedSections[0].id);
@@ -1009,9 +1046,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
   });
 
   // Store cancel function in ref so it can be accessed by child component
-  useEffect(() => {
-    autofillCancelRef.current = cancelJob;
-  }, [cancelJob]);
+  autofillCancelRef.current = cancelJob;
 
   const handleAutofillCancel = async () => {
     if (autofillCancelRef.current) {
@@ -1050,18 +1085,87 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     return fieldNames;
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: SimpleFormValues) => {
     setIsSubmitting(true);
     startSubmission();
     let navigating = false;
 
     try {
+      // Combine sections state with form data
+      // Normalize sections to match schema (ensure description is string, etc.)
+      const normalizedSections = sections.map((section) => ({
+        ...section,
+        description: section.description ?? "",
+        sectionType: section.sectionType ?? "Battle",
+        bgColor: section.bgColor || "#ffffff",
+      }));
+
+      const fullFormData: FormValues = {
+        ...data,
+        sections: normalizedSections as FormValues["sections"],
+      };
+
+      // Validate combined data
+      const validationResult = formSchema.safeParse(fullFormData);
+      if (!validationResult.success) {
+        // Handle validation errors - map to form errors
+        const formattedErrors: FieldErrors = {};
+        validationResult.error.errors.forEach((error) => {
+          const path = error.path.join(".");
+          if (path.startsWith("sections.")) {
+            // Section errors - we'll handle these in onError
+            // For now, just log them
+            console.error("Section validation error:", path, error.message);
+          } else {
+            // Form field errors - set them on the form
+            const fieldPath = path.split(".") as any;
+            let current: any = formattedErrors;
+            for (let i = 0; i < fieldPath.length - 1; i++) {
+              if (!current[fieldPath[i]]) {
+                current[fieldPath[i]] = {};
+              }
+              current = current[fieldPath[i]];
+            }
+            current[fieldPath[fieldPath.length - 1]] = {
+              type: error.code,
+              message: error.message,
+            };
+          }
+        });
+
+        // Set form errors for non-section fields
+        Object.keys(formattedErrors).forEach((key) => {
+          setValue(key as any, getValues(key as any), {
+            shouldValidate: true,
+            shouldTouch: true,
+          });
+        });
+
+        // Trigger validation to show errors
+        handleSubmit(
+          () => {},
+          (errors) => {
+            onError(errors);
+          }
+        )();
+
+        // Show toast for section errors if any
+        const sectionErrors = validationResult.error.errors.filter(
+          (e) => e.path[0] === "sections"
+        );
+        if (sectionErrors.length > 0) {
+          toast.error("Please fix section errors before submitting");
+        }
+
+        return;
+      }
+
       // Ensure creatorId is a string (will be overridden by session in server action, but needed for type safety)
       const normalizedData = {
-        ...data,
+        ...validationResult.data,
         eventDetails: {
-          ...data.eventDetails,
-          creatorId: data.eventDetails.creatorId || "",
+          ...validationResult.data.eventDetails,
+          creatorId: validationResult.data.eventDetails.creatorId || "",
         },
       };
 
@@ -1274,7 +1378,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       </h1>
 
       <Form {...form}>
-        <form onSubmit={handleSubmit(onSubmit, onError)}>
+        <form onSubmit={handleSubmit(onSubmit as any, onError)}>
           {/* Main Navigation - Text Style Tabs */}
           <div className="flex flex-col md:flex-row justify-center gap-2 mb-8">
             {mainTabs.map((tab) => {
@@ -1328,7 +1432,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   />
                 </div>
               )}
-              <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2 mb-6">
+              <div className="mb-6">
                 {sections.length === 0 ? (
                   <div className="border rounded-sm p-6 text-center max-w-3xl mx-auto w-full bg-primary">
                     <div className="text-sm mb-6">
@@ -1339,66 +1443,22 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                     </div>
                   </div>
                 ) : (
-                  <>
-                    {sections.map((section, index) => {
-                      const isActive = activeSectionId === section.id;
-                      return (
-                        <div
-                          key={section.id}
-                          className="relative group w-full md:w-auto"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveSectionId(section.id);
-                              setSectionsSelection({
-                                type: "sectionOverview",
-                                sectionId: section.id,
-                              });
-                            }}
-                            className={cn(
-                              "px-3 py-1.5 rounded-sm transition-all duration-200 w-full md:w-auto",
-                              "border-2 border-transparent",
-                              "group-hover:border-charcoal group-hover:shadow-[4px_4px_0_0_rgb(49,49,49)]",
-                              "active:shadow-[2px_2px_0_0_rgb(49,49,49)]",
-                              "text-sm font-bold uppercase tracking-wide",
-                              "font-display",
-                              isActive &&
-                                "border-charcoal shadow-[4px_4px_0_0_rgb(49,49,49)] bg-mint text-primary",
-                              !isActive &&
-                                "text-secondary-light group-hover:bg-[#dfdfeb] group-hover:text-periwinkle"
-                            )}
-                            style={{ fontFamily: "var(--font-display)" }}
-                          >
-                            {section.title || `Section ${index + 1}`}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeSection(section.id);
-                            }}
-                            className={cn(
-                              "absolute -top-2 -right-2",
-                              "w-5 h-5 rounded-full",
-                              "bg-destructive text-destructive-foreground",
-                              "border-2 border-charcoal",
-                              "flex items-center justify-center",
-                              "opacity-0 group-hover:opacity-100",
-                              "transition-opacity duration-200",
-                              "hover:bg-destructive/90",
-                              "z-10",
-                              "shadow-[2px_2px_0_0_rgb(49,49,49)]"
-                            )}
-                            aria-label={`Delete ${section.title || "section"}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <div className="flex flex-col md:flex-row md:flex-wrap justify-center items-center gap-2">
+                    <DraggableSectionTabs
+                      sections={sections}
+                      activeSectionId={activeSectionId}
+                      onSectionClick={(sectionId) => {
+                        setActiveSectionId(sectionId);
+                        setSectionsSelection({
+                          type: "sectionOverview",
+                          sectionId: sectionId,
+                        });
+                      }}
+                      onSectionDelete={removeSection}
+                      onReorder={handleSectionReorder}
+                    />
                     <CirclePlusButton size="lg" onClick={addSection} />
-                  </>
+                  </div>
                 )}
               </div>
             </>
@@ -1407,8 +1467,8 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           {/* Tab Content */}
           {activeMainTab === "Details" && (
             <EventDetailsForm
-              control={control}
-              setValue={setValue}
+              control={control as any}
+              setValue={setValue as any}
               eventDetails={eventDetails as EventDetails}
               onAutofill={handleAutofill}
               parentAutofillJobId={autofillJobId}
@@ -1419,7 +1479,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
           )}
 
           {activeMainTab === "Roles" && (
-            <RolesForm setValue={setValue} roles={roles as Role[]} eventId={eventId} />
+            <RolesForm
+              setValue={setValue as any}
+              roles={roles as Role[]}
+              eventId={eventId}
+            />
           )}
 
           {activeMainTab === "Sections" && (
@@ -1431,6 +1495,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   const selectedSection = sections.find(
                     (s) => s.id === activeSectionId
                   );
+
                   if (!selectedSection) {
                     return (
                       <div className="border rounded-sm p-6 text-sm">
@@ -1447,13 +1512,13 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                   }
 
                   const commonProps = {
-                    control,
-                    setValue,
-                    getValues,
-                    register,
+                    control: control as any,
+                    setValue: setValue as any,
+                    getValues: getValues as any,
                     activeSectionIndex: selectedSectionIndex,
                     activeSection: selectedSection,
-                    sections,
+                    sections: sections, // Use sections state directly
+                    updateSections: updateSections, // Pass update function
                     activeSectionId: selectedSection.id,
                     eventId: isEditing ? eventId : undefined,
                   };
