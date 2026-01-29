@@ -10,39 +10,34 @@ export async function callCohereAPI(
   prompt: string,
   apiKey: string
 ): Promise<any> {
-  const response = await fetch(
-    "https://api.cohere.com/v2/chat",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "command-r7b-12-2024",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a JSON parser expert. Always return valid JSON only, no markdown, no code blocks, no explanations.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0,
-        response_format: { type: "json_object" },
-      }),
-    }
-  );
+  const response = await fetch("https://api.cohere.com/v2/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "command-r7b-12-2024",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a JSON parser expert. Always return valid JSON only, no markdown, no code blocks, no explanations.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0,
+      response_format: { type: "json_object" },
+    }),
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     if (response.status === 401) {
-      throw new Error(
-        "Invalid Cohere API key. Please check your credentials."
-      );
+      throw new Error("Invalid Cohere API key. Please check your credentials.");
     }
     if (response.status === 429) {
       throw new Error(
@@ -56,7 +51,12 @@ export async function callCohereAPI(
 
   const data = await response.json();
 
-  if (!data.message || !data.message.content || !Array.isArray(data.message.content) || data.message.content.length === 0) {
+  if (
+    !data.message ||
+    !data.message.content ||
+    !Array.isArray(data.message.content) ||
+    data.message.content.length === 0
+  ) {
     throw new Error("Invalid response format from Cohere API");
   }
 

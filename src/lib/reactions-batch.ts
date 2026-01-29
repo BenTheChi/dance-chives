@@ -5,12 +5,18 @@ const BATCH_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 const REACT_KEYS = ["fire", "clap", "wow", "laugh"] as const;
 const MAX_PER_EMOJI = 3;
 
-export function validateReactionsPayload(body: unknown): {
-  ok: true;
-  payload: ReactionsPayload;
-} | { ok: false; error: string; status: number } {
+export function validateReactionsPayload(body: unknown):
+  | {
+      ok: true;
+      payload: ReactionsPayload;
+    }
+  | { ok: false; error: string; status: number } {
   if (typeof body !== "object" || body === null) {
-    return { ok: false, error: "Body must be an object with fire, clap, wow, laugh arrays", status: 400 };
+    return {
+      ok: false,
+      error: "Body must be an object with fire, clap, wow, laugh arrays",
+      status: 400,
+    };
   }
   const b = body as Record<string, unknown>;
   const payload: ReactionsPayload = { fire: [], clap: [], wow: [], laugh: [] };
@@ -18,15 +24,27 @@ export function validateReactionsPayload(body: unknown): {
   for (const key of REACT_KEYS) {
     const val = b[key];
     if (!Array.isArray(val)) {
-      return { ok: false, error: `Invalid react: ${key} must be an array`, status: 400 };
+      return {
+        ok: false,
+        error: `Invalid react: ${key} must be an array`,
+        status: 400,
+      };
     }
     if (val.length > MAX_PER_EMOJI) {
-      return { ok: false, error: `Invalid react: ${key} has at most ${MAX_PER_EMOJI} entries`, status: 400 };
+      return {
+        ok: false,
+        error: `Invalid react: ${key} has at most ${MAX_PER_EMOJI} entries`,
+        status: 400,
+      };
     }
     for (let i = 0; i < val.length; i++) {
       const n = val[i];
       if (typeof n !== "number" || !Number.isFinite(n) || n < 0) {
-        return { ok: false, error: `Invalid react: ${key}[${i}] must be a non-negative number`, status: 400 };
+        return {
+          ok: false,
+          error: `Invalid react: ${key}[${i}] must be a non-negative number`,
+          status: 400,
+        };
       }
       payload[key].push(Math.floor(n));
     }
@@ -38,10 +56,12 @@ const ANON_MAX_PER_EMOJI = 1;
 const ANON_MAX_TOTAL = 2;
 
 /** Validate payload for anon: 1 per emoji, total ≤ 2. */
-export function validateReactionsPayloadAnon(body: unknown): {
-  ok: true;
-  payload: ReactionsPayload;
-} | { ok: false; error: string; status: number } {
+export function validateReactionsPayloadAnon(body: unknown):
+  | {
+      ok: true;
+      payload: ReactionsPayload;
+    }
+  | { ok: false; error: string; status: number } {
   const result = validateReactionsPayload(body);
   if (!result.ok) return result;
   const { payload } = result;

@@ -32,6 +32,34 @@ const CREATE_DRAFT_STORAGE_KEY = "event-form-draft";
 const getEditDraftStorageKey = (eventId: string) =>
   `event-form-draft-${eventId}`;
 
+const DEFAULT_EVENT_DETAILS = {
+  creatorId: "",
+  title: "",
+  city: {
+    id: "",
+    name: "",
+    countryCode: "",
+    region: "",
+  },
+  dates: [
+    {
+      date: "",
+      isAllDay: true,
+      startTime: undefined as string | undefined,
+      endTime: undefined as string | undefined,
+    },
+  ],
+  description: "",
+  schedule: "",
+  location: "",
+  cost: "",
+  prize: "",
+  poster: null as Image | null,
+  originalPoster: null as Image | null,
+  bgColor: "#ffffff",
+  eventType: "Battle" as const,
+};
+
 const userSearchItemSchema = z.object({
   id: z.string().optional(), // Optional - only present when coming from server data
   displayName: z.string(),
@@ -448,33 +476,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     resolver: zodResolver(simpleFormSchema) as any,
     mode: "onSubmit",
     defaultValues: {
-      eventDetails: initialData?.eventDetails || {
-        creatorId: "",
-        title: "",
-        city: {
-          id: "",
-          name: "",
-          countryCode: "",
-          region: "",
-        },
-        dates: [
-          {
-            date: "",
-            isAllDay: true,
-            startTime: undefined,
-            endTime: undefined,
-          },
-        ],
-        description: "",
-        schedule: "",
-        location: "",
-        cost: "",
-        prize: "",
-        poster: null,
-        originalPoster: null,
-        bgColor: "#ffffff",
-        eventType: "Battle",
-      },
+      eventDetails: initialData?.eventDetails || DEFAULT_EVENT_DETAILS,
       roles: initialData?.roles ?? [],
       gallery: initialData?.gallery ?? [],
     },
@@ -597,6 +599,27 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
     }
 
     sessionStorage.removeItem(CREATE_DRAFT_STORAGE_KEY);
+  };
+
+  const handleReset = () => {
+    clearDraft();
+    if (isEditing && initialData) {
+      reset({
+        eventDetails: initialData.eventDetails,
+        roles: initialData.roles ?? [],
+        gallery: initialData.gallery ?? [],
+      });
+      setSections(initialData.sections ?? []);
+    } else {
+      reset({
+        eventDetails: DEFAULT_EVENT_DETAILS,
+        roles: [],
+        gallery: [],
+      });
+      setSections([]);
+    }
+    setActiveBracketIdBySection({});
+    toast.success("Form reset to defaults");
   };
 
   // Autofill handler (text-only; no poster from autofill)
@@ -1570,6 +1593,14 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
               className="w-full sm:w-auto"
             >
               Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              className="w-full sm:w-auto"
+            >
+              Reset
             </Button>
             <Button
               type="button"

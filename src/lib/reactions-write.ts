@@ -102,10 +102,7 @@ export async function writeReactionsImmediateAnonMerge(
     where: { userId_videoId: { userId: "anon", videoId } },
     select: { fire: true, clap: true, wow: true, laugh: true },
   });
-  const merged = mergePayloads(
-    existing,
-    payload
-  );
+  const merged = mergePayloads(existing, payload);
   const sorted = sortArrays(merged);
   await prisma.react.upsert({
     where: { userId_videoId: { userId: "anon", videoId } },

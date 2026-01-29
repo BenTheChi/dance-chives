@@ -268,14 +268,19 @@ export function buildTitleSanitizationPrompt(
 ): string {
   const jsonInput = JSON.stringify(parsedResponse, null, 2);
 
-  return `TASK: Sanitize all video titles by removing redundant information.
+  return `TASK: Sanitize all video titles by removing redundant information. Your ONLY job is to rewrite each video's "title" field. The rest of the JSON must be identical (same sections, same brackets, same videos in each bracket, same order).
 
 Input JSON:
 ${jsonInput}
 
+STRUCTURE RULES (MUST NOT CHANGE):
+- If the input section has an empty "videos" array and a "brackets" array, the output MUST have the exact same brackets: same number, same bracket titles (e.g. "Top 16", "Top 8", "Semifinals", "Finals"), and the same videos in each bracket. Do NOT move videos from a bracket into section.videos. Do NOT remove or merge any bracket.
+- If the input section has a "videos" array with items, those stay in section.videos; only their "title" field changes.
+- Every bracket in the input must appear in the output unchanged except for the "title" field of each video inside it.
+
 STEP-BY-STEP ALGORITHM:
-1. For each section, process all videos in the "videos" array
-2. For each bracket in each section, process all videos in the bracket's "videos" array
+1. For each section: if it has no "brackets" (or brackets is empty), sanitize the "title" of each video in section.videos.
+2. For each section that has "brackets": for EACH bracket, sanitize the "title" of each video in that bracket's "videos" array. Leave every bracket in the output with the same bracket title and the same videos (only each video's "title" text changes).
 3. For each video title, apply sanitization based on section type:
    
    FOR BATTLE SECTIONS (sectionType === "Battle"):
@@ -284,6 +289,7 @@ STEP-BY-STEP ALGORITHM:
    - Remove ALL other text: event names, dates, volumes, bracket names, round indicators, dance styles, emojis, separators
    - Keep ONLY: "Name1 vs Name2" or "Name1 vs Name2 vs Name3" (for crew battles)
    - Preserve exact name spelling and capitalization
+   - You MUST shorten every battle title to this format; do not leave event names or "Top 16" etc. in the title
    
    FOR OTHER SECTIONS (Competition, Performance, Showcase, Class, Session, Party, Other):
    - Remove redundant information: event title, section name, dates, emojis, separators
@@ -291,7 +297,7 @@ STEP-BY-STEP ALGORITHM:
    - Preserve exact name spelling and capitalization
 
 4. Keep all other fields unchanged (src, type, styles, etc.)
-5. Keep all structure unchanged (sections, brackets, etc.)
+5. Output must have the exact same structure: same sections, same brackets (including "Top 16" if present), same videos in each bracket.
 
 TITLE PARSING EXAMPLES:
 
@@ -309,19 +315,26 @@ NON-BATTLE SECTIONS (Performance, Showcase, etc.):
 - "Class Demo - John Teaching Popping" → "John Teaching Popping"
 - "Event Vol.1: Crew B Performance (Opening)" → "Crew B Performance"
 
+EXAMPLE — section with brackets (structure stays the same, only titles change):
+Input section:  { "title": "2v2 Battles", "sectionType": "Battle", "hasBrackets": true, "videos": [], "brackets": [ { "title": "Top 16", "videos": [ { "title": "Beach Street Vs Stray Path - 2 V 2 Top 16 - Event Name", "src": "https://youtube.com/watch?v=abc", "type": "battle" } ] }, { "title": "Top 8", "videos": [...] } ] }
+Output section: { "title": "2v2 Battles", "sectionType": "Battle", "hasBrackets": true, "videos": [], "brackets": [ { "title": "Top 16", "videos": [ { "title": "Beach Street vs Stray Path", "src": "https://youtube.com/watch?v=abc", "type": "battle" } ] }, { "title": "Top 8", "videos": [...] } ] }
+Notice: "Top 16" bracket remains; section.videos stays empty; only each video's "title" is shortened.
+
 OUTPUT FORMAT:
 Return the EXACT same JSON structure with ONLY titles sanitized as specified.
 - All other fields remain unchanged
-- All structure remains unchanged
+- All structure remains unchanged (same number of brackets, same bracket titles, same videos in each bracket)
 - All videoIds remain unchanged
+- Do NOT remove any bracket (e.g. keep "Top 16" if present). Do NOT move bracket videos into section.videos.
 - Only the "title" field in each video object is modified
 
 CRITICAL RULES:
 - Do NOT add, remove, or modify any videos
 - Do NOT change any videoIds
-- Do NOT change structure (sections, brackets, etc.)
+- Do NOT change structure: same sections, same brackets (including "Top 16", "Top 8", etc.), same videos in each bracket
+- Do NOT merge brackets or move videos from brackets to section.videos
 - ONLY modify the "title" field according to the section type rules above
-- For Battle sections: extract "X vs Y" format
+- For Battle sections: extract "X vs Y" format (must shorten every title)
 - For other sections: remove redundant info but keep meaningful content
 
 Return ONLY valid JSON.`;
@@ -420,7 +433,7 @@ export function fixCategorizationIssues(
  */
 function detectBracketFromTitle(title: string): string | null {
   const titleLower = title.toLowerCase();
-  
+
   // 1. Check for Top rounds (highest priority)
   // Pattern: "Top" followed by a number OR style name + "Top" + number
   // Can appear in brackets like [WaackingTop16] or as "Top 16", "Top16", etc.
@@ -434,29 +447,45 @@ function detectBracketFromTitle(title: string): string | null {
     if (number === "4") return "Top 4";
     return `Top ${number}`;
   }
-  
+
   // 2. Check for Finals rounds
-  if (titleLower.includes("finals") && !titleLower.includes("semi") && !titleLower.includes("quarter")) {
+  if (
+    titleLower.includes("finals") &&
+    !titleLower.includes("semi") &&
+    !titleLower.includes("quarter")
+  ) {
     return "Finals";
   }
-  if (titleLower.includes("semifinals") || titleLower.includes("semi finals") || titleLower.includes("semi-finals")) {
+  if (
+    titleLower.includes("semifinals") ||
+    titleLower.includes("semi finals") ||
+    titleLower.includes("semi-finals")
+  ) {
     return "Semifinals";
   }
-  if (titleLower.includes("quarterfinals") || titleLower.includes("quarter finals") || titleLower.includes("quarter-finals")) {
+  if (
+    titleLower.includes("quarterfinals") ||
+    titleLower.includes("quarter finals") ||
+    titleLower.includes("quarter-finals")
+  ) {
     return "Quarterfinals";
   }
-  
+
   // 3. Check for special formats
   if (titleLower.includes("7 to smoke") || titleLower.includes("7-to-smoke")) {
     return "7 to Smoke";
   }
-  
+
   // 4. Check for Prelims
-  if (titleLower.includes("prelims") || titleLower.includes("pre-selection") || 
-      titleLower.includes("preselection") || titleLower.includes("preliminaries")) {
+  if (
+    titleLower.includes("prelims") ||
+    titleLower.includes("pre-selection") ||
+    titleLower.includes("preselection") ||
+    titleLower.includes("preliminaries")
+  ) {
     return "Prelims";
   }
-  
+
   // No bracket indicator found
   return null;
 }
@@ -552,8 +581,15 @@ export function fixBracketIssues(
 
   if (missingIds.length > 0) {
     // Try to re-sort missing videos by analyzing their titles
-    const videosByBracket = new Map<string, Array<{ id: string; video: any; cleanedTitle: string }>>();
-    const videosWithoutBracket: Array<{ id: string; video: any; cleanedTitle: string }> = [];
+    const videosByBracket = new Map<
+      string,
+      Array<{ id: string; video: any; cleanedTitle: string }>
+    >();
+    const videosWithoutBracket: Array<{
+      id: string;
+      video: any;
+      cleanedTitle: string;
+    }> = [];
 
     missingIds.forEach((id) => {
       const video = videoMap.get(id);
@@ -566,12 +602,14 @@ export function fixBracketIssues(
 
         // Try to detect bracket from title
         const detectedBracket = detectBracketFromTitle(video.title);
-        
+
         if (detectedBracket) {
           if (!videosByBracket.has(detectedBracket)) {
             videosByBracket.set(detectedBracket, []);
           }
-          videosByBracket.get(detectedBracket)!.push({ id, video, cleanedTitle });
+          videosByBracket
+            .get(detectedBracket)!
+            .push({ id, video, cleanedTitle });
         } else {
           // No bracket indicator found - will go to "Other"
           videosWithoutBracket.push({ id, video, cleanedTitle });
@@ -581,8 +619,10 @@ export function fixBracketIssues(
 
     // Add videos to their detected brackets (or create brackets if needed)
     videosByBracket.forEach((videos, bracketName) => {
-      let bracket = bracketResponse.brackets?.find((b: any) => b.title === bracketName);
-      
+      let bracket = bracketResponse.brackets?.find(
+        (b: any) => b.title === bracketName
+      );
+
       if (!bracket) {
         bracket = {
           title: bracketName,

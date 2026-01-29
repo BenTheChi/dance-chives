@@ -391,10 +391,12 @@ export async function parsePlaylistWithGroq(
     // Step 3: Sanitize all titles to "X vs Y" format (Cohere)
     console.log("=== STEP 3: Sanitizing video titles ===");
     const sanitizationPrompt = buildTitleSanitizationPrompt(parsed);
+    console.log("parsed", parsed.sections[0]);
     const sanitizedResponse = await callCohereAPI(
       sanitizationPrompt,
       cohereApiKey
     );
+    console.log("sanitizedResponse", sanitizedResponse.sections[0]);
 
     // Validate the sanitized response has the same structure
     if (
@@ -457,10 +459,10 @@ export async function parsePlaylistWithGroq(
       }
     });
 
-    console.log("✅ Title sanitization complete\n");
-    console.log("=== LLM OUTPUT (Parsed Response) ===");
-    console.log(JSON.stringify(sanitizedResponse, null, 2));
-    console.log("=== END LLM OUTPUT ===");
+    // console.log("✅ Title sanitization complete\n");
+    // console.log("=== LLM OUTPUT (Parsed Response) ===");
+    // console.log(JSON.stringify(sanitizedResponse, null, 2));
+    // console.log("=== END LLM OUTPUT ===");
 
     return sanitizedResponse as ParsedPlaylistResponse;
   } catch (error) {

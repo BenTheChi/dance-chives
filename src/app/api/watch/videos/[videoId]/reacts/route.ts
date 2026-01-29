@@ -16,7 +16,7 @@ const ANON_USER_ID = "anon";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ videoId: string }> },
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { videoId } = await params;
@@ -24,7 +24,7 @@ export async function GET(
     if (!videoId) {
       return NextResponse.json(
         { error: "videoId is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -48,14 +48,14 @@ export async function GET(
     console.error("Error fetching reacts:", error);
     return NextResponse.json(
       { error: "Failed to fetch reacts" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ videoId: string }> },
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { videoId } = await params;
@@ -65,7 +65,7 @@ export async function POST(
     if (!videoId) {
       return NextResponse.json(
         { error: "videoId is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -74,13 +74,19 @@ export async function POST(
     if (userId === ANON_USER_ID) {
       const result = validateReactionsPayloadAnon(body);
       if (!result.ok) {
-        return NextResponse.json({ error: result.error }, { status: result.status });
+        return NextResponse.json(
+          { error: result.error },
+          { status: result.status }
+        );
       }
       await writeReactionsImmediateAnonMerge(videoId, result.payload);
     } else {
       const result = validateReactionsPayload(body);
       if (!result.ok) {
-        return NextResponse.json({ error: result.error }, { status: result.status });
+        return NextResponse.json(
+          { error: result.error },
+          { status: result.status }
+        );
       }
       addToBatch(videoId, userId, result.payload);
     }
@@ -89,14 +95,14 @@ export async function POST(
     console.error("Error saving react:", error);
     return NextResponse.json(
       { error: "Failed to save react" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ videoId: string }> },
+  { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
     const { videoId } = await params;
@@ -105,7 +111,7 @@ export async function DELETE(
     if (!videoId) {
       return NextResponse.json(
         { error: "videoId is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -126,7 +132,7 @@ export async function DELETE(
     console.error("Error resetting react:", error);
     return NextResponse.json(
       { error: "Failed to reset react" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

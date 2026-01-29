@@ -222,7 +222,10 @@ export function VideoGallery({
   >(new Map());
   /** Anon reactions per video (browsing session). Only used when !session. */
   const [anonReactsByVideo, setAnonReactsByVideo] = useState<
-    Map<string, { fire: number[]; clap: number[]; wow: number[]; laugh: number[] }>
+    Map<
+      string,
+      { fire: number[]; clap: number[]; wow: number[]; laugh: number[] }
+    >
   >(new Map());
   const triggeredReacts = useRef<Map<string, Set<string>>>(new Map());
 
@@ -538,8 +541,20 @@ export function VideoGallery({
         laugh: userReact.laugh,
       };
     }
-    return anonReactsByVideo.get(videoId) ?? { fire: [], clap: [], wow: [], laugh: [] };
-  }, [videoReacts, currentVideo?.video.id, session?.user?.id, anonReactsByVideo]);
+    return (
+      anonReactsByVideo.get(videoId) ?? {
+        fire: [],
+        clap: [],
+        wow: [],
+        laugh: [],
+      }
+    );
+  }, [
+    videoReacts,
+    currentVideo?.video.id,
+    session?.user?.id,
+    anonReactsByVideo,
+  ]);
 
   // Memoize sorted reacts for current video (for animation triggering). Use local anon state when not logged in so anon reacts play back.
   const sortedReacts = useMemo(() => {
@@ -586,7 +601,12 @@ export function VideoGallery({
     }
 
     return reactItems.sort((a, b) => a.timestamp - b.timestamp);
-  }, [videoReacts, currentVideo?.video.id, session?.user?.id, anonReactsByVideo]);
+  }, [
+    videoReacts,
+    currentVideo?.video.id,
+    session?.user?.id,
+    anonReactsByVideo,
+  ]);
 
   // Fetch reacts for a video
   const fetchReacts = useCallback(async (videoId: string) => {
@@ -668,7 +688,12 @@ export function VideoGallery({
                 wow: [...existingUserReact.wow],
                 laugh: [...existingUserReact.laugh],
               }
-            : { fire: [] as number[], clap: [] as number[], wow: [] as number[], laugh: [] as number[] };
+            : {
+                fire: [] as number[],
+                clap: [] as number[],
+                wow: [] as number[],
+                laugh: [] as number[],
+              };
 
           const arr = base[type as keyof typeof base];
           arr.push(safeTs);
@@ -678,7 +703,13 @@ export function VideoGallery({
           const updatedReacts = existingUserReact
             ? existingReacts.map((r) =>
                 r.userId === userId
-                  ? { ...r, fire: base.fire, clap: base.clap, wow: base.wow, laugh: base.laugh }
+                  ? {
+                      ...r,
+                      fire: base.fire,
+                      clap: base.clap,
+                      wow: base.wow,
+                      laugh: base.laugh,
+                    }
                   : r
               )
             : [
