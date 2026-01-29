@@ -28,7 +28,7 @@ const rubikMonoOne = Rubik_Mono_One({
 const baseUrl =
   process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
 
-const defaultImageUrl = `${baseUrl}/DanceChivesShareable.png`;
+const defaultImageUrl = `${baseUrl}/DanceChivesOG.png`;
 
 export const metadata: Metadata = {
   title: "Dance Chives",

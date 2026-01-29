@@ -206,8 +206,7 @@ export async function generateMetadata({
   }
 
   // Use event poster when available; otherwise default site share image (not event-specific artwork)
-  const shareImageUrl =
-    posterUrl ?? `${baseUrl}/DanceChivesShareable.png`;
+  const shareImageUrl = posterUrl ?? `${baseUrl}/DanceChivesOG.png`;
 
   // Build image metadata
   const imageMetadata =
@@ -275,10 +274,9 @@ export async function generateMetadata({
           "article:tag": eventDetails.styles.join(", "),
         }),
       "og:image:type": imageMetadata.type,
-      "og:image:secure_url":
-        shareImageUrl.startsWith("https")
-          ? shareImageUrl
-          : shareImageUrl.replace("http://", "https://"),
+      "og:image:secure_url": shareImageUrl.startsWith("https")
+        ? shareImageUrl
+        : shareImageUrl.replace("http://", "https://"),
     },
     twitter: {
       card: "summary_large_image",

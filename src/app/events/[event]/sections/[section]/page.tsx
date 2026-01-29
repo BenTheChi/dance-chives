@@ -162,9 +162,7 @@ export async function generateMetadata({
     : undefined;
 
   const shareImageUrl =
-    sectionPosterUrl ||
-    eventPosterUrl ||
-    `${baseUrl}/DanceChivesShareable.png`;
+    sectionPosterUrl || eventPosterUrl || `${baseUrl}/DanceChivesOG.png`;
 
   return {
     title,
