@@ -175,8 +175,8 @@ export function VideoReacts({
             isFullscreen ? "gap-6 flex-col" : "landscape:flex-col"
           )}
         >
-          {/* Reset Link - Show if (authenticated or anon) and has reacted */}
-          {(isAuthenticated || canReactAnon) && hasReacted && (
+          {/* Reset Link - Show only for logged-in users who have reacted (anon has no reset) */}
+          {isAuthenticated && hasReacted && (
             <button
               onClick={handleResetClick}
               className={cn(
