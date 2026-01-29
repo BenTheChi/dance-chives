@@ -4,13 +4,13 @@ ALTER TABLE "reacts" ADD COLUMN "clap_new" INTEGER[] NOT NULL DEFAULT '{}';
 ALTER TABLE "reacts" ADD COLUMN "wow_new" INTEGER[] NOT NULL DEFAULT '{}';
 ALTER TABLE "reacts" ADD COLUMN "laugh_new" INTEGER[] NOT NULL DEFAULT '{}';
 
--- Backfill from existing columns (non-zero -> single-element array, zero -> empty array)
+-- Preserve existing data: copy current reaction values into arrays (non-zero -> [value], zero -> [])
 UPDATE "reacts"
 SET
-  "fire_new" = CASE WHEN "fire" != 0 THEN ARRAY["fire"] ELSE '{}' END,
-  "clap_new" = CASE WHEN "clap" != 0 THEN ARRAY["clap"] ELSE '{}' END,
-  "wow_new"  = CASE WHEN "wow"  != 0 THEN ARRAY["wow"]  ELSE '{}' END,
-  "laugh_new" = CASE WHEN "laugh" != 0 THEN ARRAY["laugh"] ELSE '{}' END;
+  "fire_new" = CASE WHEN "fire" IS NOT NULL AND "fire" != 0 THEN ARRAY["fire"::integer] ELSE '{}' END,
+  "clap_new" = CASE WHEN "clap" IS NOT NULL AND "clap" != 0 THEN ARRAY["clap"::integer] ELSE '{}' END,
+  "wow_new"  = CASE WHEN "wow" IS NOT NULL AND "wow" != 0 THEN ARRAY["wow"::integer] ELSE '{}' END,
+  "laugh_new" = CASE WHEN "laugh" IS NOT NULL AND "laugh" != 0 THEN ARRAY["laugh"::integer] ELSE '{}' END;
 
 -- Drop old columns and rename new ones
 ALTER TABLE "reacts" DROP COLUMN "fire";
