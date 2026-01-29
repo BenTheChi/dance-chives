@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withApiAuth } from "@/lib/utils/api-auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
+import {
+  addToBatch,
+  resetBatch,
+  validateReactionsPayload,
+  validateReactionsPayloadAnon,
+} from "@/lib/reactions-batch";
+import { writeReactionsImmediate } from "@/lib/reactions-write";
+
+const ANON_USER_ID = "anon";
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +25,6 @@ export async function GET(
       );
     }
 
-    // Fetch all reacts for this video
     const reacts = await prisma.react.findMany({
       where: { videoId },
       select: {
@@ -46,136 +54,76 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ videoId: string }> },
 ) {
-  return withApiAuth(
-    request,
-    { requireAuth: true },
-    async (request, session) => {
-      try {
-        const { videoId } = await params;
-        const body = await request.json();
-        const { type, timestamp } = body;
+  try {
+    const { videoId } = await params;
+    const body = await request.json();
+    const session = await auth();
 
-        if (!videoId) {
-          return NextResponse.json(
-            { error: "videoId is required" },
-            { status: 400 },
-          );
-        }
+    if (!videoId) {
+      return NextResponse.json(
+        { error: "videoId is required" },
+        { status: 400 },
+      );
+    }
 
-        if (!type || !["fire", "clap", "wow", "laugh"].includes(type)) {
-          return NextResponse.json(
-            { error: "Invalid react type" },
-            { status: 400 },
-          );
-        }
+    const userId = session?.user?.id ?? ANON_USER_ID;
 
-        if (typeof timestamp !== "number" || timestamp < 0) {
-          return NextResponse.json(
-            { error: "Invalid timestamp" },
-            { status: 400 },
-          );
-        }
-
-        const userId = session.user.id;
-
-        // Check if react record exists using findFirst (composite keys)
-        const existingReact = await prisma.react.findFirst({
-          where: {
-            userId,
-            videoId,
-          },
-        });
-
-        if (existingReact) {
-          // Update existing react
-          await prisma.react.updateMany({
-            where: {
-              userId,
-              videoId,
-            },
-            data: {
-              [type]: timestamp,
-            },
-          });
-        } else {
-          // Create new react
-          await prisma.react.create({
-            data: {
-              userId,
-              videoId,
-              fire: type === "fire" ? timestamp : 0,
-              clap: type === "clap" ? timestamp : 0,
-              wow: type === "wow" ? timestamp : 0,
-              laugh: type === "laugh" ? timestamp : 0,
-            },
-          });
-        }
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        console.error("Error saving react:", error);
-        return NextResponse.json(
-          { error: "Failed to save react" },
-          { status: 500 },
-        );
+    if (userId === ANON_USER_ID) {
+      const result = validateReactionsPayloadAnon(body);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
       }
-    },
-  );
+      await writeReactionsImmediate(videoId, ANON_USER_ID, result.payload);
+    } else {
+      const result = validateReactionsPayload(body);
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: result.status });
+      }
+      addToBatch(videoId, userId, result.payload);
+    }
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error saving react:", error);
+    return NextResponse.json(
+      { error: "Failed to save react" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ videoId: string }> },
 ) {
-  return withApiAuth(
-    request,
-    { requireAuth: true },
-    async (request, session) => {
-      try {
-        const { videoId } = await params;
+  try {
+    const { videoId } = await params;
+    const session = await auth();
 
-        if (!videoId) {
-          return NextResponse.json(
-            { error: "videoId is required" },
-            { status: 400 },
-          );
-        }
+    if (!videoId) {
+      return NextResponse.json(
+        { error: "videoId is required" },
+        { status: 400 },
+      );
+    }
 
-        const userId = session.user.id;
+    const userId = session?.user?.id ?? ANON_USER_ID;
 
-        // Check if react record exists
-        const existingReact = await prisma.react.findFirst({
-          where: {
-            userId,
-            videoId,
-          },
-        });
-
-        if (existingReact) {
-          // Update existing react to reset all timestamps to 0
-          await prisma.react.updateMany({
-            where: {
-              userId,
-              videoId,
-            },
-            data: {
-              fire: 0,
-              clap: 0,
-              wow: 0,
-              laugh: 0,
-            },
-          });
-        }
-        // If no react exists, nothing to reset
-
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        console.error("Error resetting react:", error);
-        return NextResponse.json(
-          { error: "Failed to reset react" },
-          { status: 500 },
-        );
-      }
-    },
-  );
+    if (userId === ANON_USER_ID) {
+      await writeReactionsImmediate(videoId, ANON_USER_ID, {
+        fire: [],
+        clap: [],
+        wow: [],
+        laugh: [],
+      });
+    } else {
+      resetBatch(videoId, userId);
+    }
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error resetting react:", error);
+    return NextResponse.json(
+      { error: "Failed to reset react" },
+      { status: 500 },
+    );
+  }
 }

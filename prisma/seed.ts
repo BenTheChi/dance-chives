@@ -149,6 +149,20 @@ async function main() {
     console.log(`✅ Created user: ${userData.email} (auth: ${userData.auth})`);
   }
 
+  // Create anon user for anonymous video reactions (FK for React model)
+  await prisma.user.upsert({
+    where: { id: "anon" },
+    create: {
+      id: "anon",
+      name: "Anonymous",
+      email: "anon@dancechives.local",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    update: {},
+  });
+  console.log(`✅ Ensured anon user exists`);
+
   // Create Accounts (OAuth Google accounts for login)
   console.log(`🌱 Creating OAuth accounts...`);
   const accounts = [

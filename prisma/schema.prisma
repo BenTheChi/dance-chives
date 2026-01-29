@@ -409,10 +409,10 @@ model Job {
 model React {
   userId  String
   videoId String
-  fire    Int @default(0) // timestamp in seconds, 0 means not used
-  clap    Int @default(0) // timestamp in seconds, 0 means not used
-  wow     Int @default(0) // timestamp in seconds, 0 means not used
-  laugh   Int @default(0) // timestamp in seconds, 0 means not used
+  fire    Int[] @default([]) // timestamps in seconds, sorted ascending
+  clap    Int[] @default([])
+  wow     Int[] @default([])
+  laugh   Int[] @default([])
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

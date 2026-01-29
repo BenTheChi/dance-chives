@@ -19,10 +19,10 @@ import { cn } from "@/lib/utils";
 import { VideoReacts } from "./VideoReacts";
 
 interface UserReacts {
-  fire: number;
-  clap: number;
-  wow: number;
-  laugh: number;
+  fire: number[];
+  clap: number[];
+  wow: number[];
+  laugh: number[];
 }
 
 interface VideoControlsProps {
@@ -46,6 +46,9 @@ interface VideoControlsProps {
   onReset?: () => void;
   showReacts?: boolean;
   onToggleReacts?: () => void;
+  maxReactsPerEmoji?: number;
+  maxTotalReacts?: number;
+  allowAnon?: boolean;
   // Fullscreen props
   onToggleFullscreen?: () => void;
   isFullscreen?: boolean;
@@ -84,6 +87,9 @@ export function VideoControls({
   onReset,
   showReacts,
   onToggleReacts,
+  maxReactsPerEmoji,
+  maxTotalReacts,
+  allowAnon,
   onToggleFullscreen,
   isFullscreen = false,
   showFullscreenButton = false,
@@ -108,7 +114,7 @@ export function VideoControls({
             isFullscreen && "p-2",
             canNavigateUp
               ? "hover:bg-white/10"
-              : "opacity-50 cursor-not-allowed",
+              : "opacity-50 cursor-not-allowed"
           )}
           aria-label="Previous video"
         >
@@ -116,7 +122,7 @@ export function VideoControls({
             className={cn(
               "h-6 w-6",
               isFullscreen && "h-12 w-12",
-              canNavigateUp ? "text-yellow-400" : "text-gray-500",
+              canNavigateUp ? "text-yellow-400" : "text-gray-500"
             )}
           />
         </button>
@@ -128,7 +134,7 @@ export function VideoControls({
             isFullscreen && "p-2",
             canNavigateDown
               ? "hover:bg-white/10"
-              : "opacity-50 cursor-not-allowed",
+              : "opacity-50 cursor-not-allowed"
           )}
           aria-label="Next video"
         >
@@ -136,7 +142,7 @@ export function VideoControls({
             className={cn(
               "h-6 w-6",
               isFullscreen && "h-12 w-12",
-              canNavigateDown ? "text-yellow-400" : "text-gray-500",
+              canNavigateDown ? "text-yellow-400" : "text-gray-500"
             )}
           />
         </button>
@@ -149,7 +155,7 @@ export function VideoControls({
             isFullscreen && "p-2",
             canNavigateRight
               ? "hover:bg-white/10"
-              : "opacity-50 cursor-not-allowed",
+              : "opacity-50 cursor-not-allowed"
           )}
           aria-label="Next section"
         >
@@ -157,7 +163,7 @@ export function VideoControls({
             className={cn(
               "h-6 w-6",
               isFullscreen && "h-12 w-12",
-              canNavigateRight ? "text-orange-400" : "text-gray-500",
+              canNavigateRight ? "text-orange-400" : "text-gray-500"
             )}
           />
         </button>
@@ -169,7 +175,7 @@ export function VideoControls({
             isFullscreen && "p-2",
             canNavigateLeft
               ? "hover:bg-white/10"
-              : "opacity-50 cursor-not-allowed",
+              : "opacity-50 cursor-not-allowed"
           )}
           aria-label="Previous section"
         >
@@ -177,7 +183,7 @@ export function VideoControls({
             className={cn(
               "h-6 w-6",
               isFullscreen && "h-12 w-12",
-              canNavigateLeft ? "text-orange-400" : "text-gray-500",
+              canNavigateLeft ? "text-orange-400" : "text-gray-500"
             )}
           />
         </button>
@@ -186,7 +192,7 @@ export function VideoControls({
             onClick={onMuteToggle}
             className={cn(
               "p-2 rounded-lg hover:bg-white/10 transition-colors",
-              isFullscreen && "p-4",
+              isFullscreen && "p-4"
             )}
             aria-label={isMuted ? "Unmute" : "Mute"}
           >
@@ -194,14 +200,14 @@ export function VideoControls({
               <VolumeX
                 className={cn(
                   "h-6 w-6 text-red-400 hover:text-red-300 transition-colors",
-                  isFullscreen && "h-12 w-12",
+                  isFullscreen && "h-12 w-12"
                 )}
               />
             ) : (
               <Volume2
                 className={cn(
                   "h-6 w-6 text-purple-400 hover:text-purple-300 transition-colors",
-                  isFullscreen && "h-12 w-12",
+                  isFullscreen && "h-12 w-12"
                 )}
               />
             )}
@@ -221,9 +227,7 @@ export function VideoControls({
   }
 
   return (
-    <div
-      className={cn("flex flex-col items-center gap-3 w-full px-4", className)}
-    >
+    <div className={cn("flex flex-col items-center w-full px-4", className)}>
       {/* Control Buttons */}
       <div className="flex flex-col sm:flex-row sm:justify-between items-center sm:items-start gap-3 w-full px-6 pt-3">
         {/* Video Reacts - Visible on sm screens and above */}
@@ -237,6 +241,9 @@ export function VideoControls({
               onReset={onReset}
               showReacts={showReacts ?? true}
               onToggleReacts={onToggleReacts || (() => {})}
+              maxReactsPerEmoji={maxReactsPerEmoji}
+              maxTotalReacts={maxTotalReacts}
+              allowAnon={allowAnon}
             />
           </div>
         )}
@@ -318,7 +325,7 @@ export function VideoControls({
                 "p-2 rounded-lg transition-colors",
                 canNavigateLeft
                   ? "hover:bg-white/10"
-                  : "opacity-50 cursor-not-allowed",
+                  : "opacity-50 cursor-not-allowed"
               )}
               aria-label="Previous section"
             >
@@ -327,7 +334,7 @@ export function VideoControls({
                   "h-6 w-6 transition-colors",
                   canNavigateLeft
                     ? "text-orange-400 hover:text-orange-300"
-                    : "text-gray-500",
+                    : "text-gray-500"
                 )}
               />
             </button>
@@ -339,7 +346,7 @@ export function VideoControls({
                 "p-2 rounded-lg transition-colors",
                 canNavigateUp
                   ? "hover:bg-white/10"
-                  : "opacity-50 cursor-not-allowed",
+                  : "opacity-50 cursor-not-allowed"
               )}
               aria-label="Previous video"
             >
@@ -348,7 +355,7 @@ export function VideoControls({
                   "h-6 w-6 transition-colors",
                   canNavigateUp
                     ? "text-yellow-400 hover:text-yellow-300"
-                    : "text-gray-500",
+                    : "text-gray-500"
                 )}
               />
             </button>
@@ -360,7 +367,7 @@ export function VideoControls({
                 "p-2 rounded-lg transition-colors",
                 canNavigateDown
                   ? "hover:bg-white/10"
-                  : "opacity-50 cursor-not-allowed",
+                  : "opacity-50 cursor-not-allowed"
               )}
               aria-label="Next video"
             >
@@ -369,7 +376,7 @@ export function VideoControls({
                   "h-6 w-6 transition-colors",
                   canNavigateDown
                     ? "text-yellow-400 hover:text-yellow-300"
-                    : "text-gray-500",
+                    : "text-gray-500"
                 )}
               />
             </button>
@@ -380,7 +387,7 @@ export function VideoControls({
                 "p-2 rounded-lg transition-colors",
                 canNavigateRight
                   ? "hover:bg-white/10"
-                  : "opacity-50 cursor-not-allowed",
+                  : "opacity-50 cursor-not-allowed"
               )}
               aria-label="Next section"
             >
@@ -389,7 +396,7 @@ export function VideoControls({
                   "h-6 w-6 transition-colors",
                   canNavigateRight
                     ? "text-orange-400 hover:text-orange-300"
-                    : "text-gray-500",
+                    : "text-gray-500"
                 )}
               />
             </button>
@@ -407,14 +414,14 @@ export function VideoControls({
               "p-3 rounded-lg transition-colors",
               canNavigateLeft
                 ? "bg-black/60 hover:bg-black/80"
-                : "bg-black/30 opacity-50 cursor-not-allowed",
+                : "bg-black/30 opacity-50 cursor-not-allowed"
             )}
             aria-label="Previous section"
           >
             <ArrowLeft
               className={cn(
                 "h-6 w-6",
-                canNavigateLeft ? "text-orange-400" : "text-gray-500",
+                canNavigateLeft ? "text-orange-400" : "text-gray-500"
               )}
             />
           </button>
@@ -425,14 +432,14 @@ export function VideoControls({
               "p-3 rounded-lg transition-colors",
               canNavigateUp
                 ? "bg-black/60 hover:bg-black/80"
-                : "bg-black/30 opacity-50 cursor-not-allowed",
+                : "bg-black/30 opacity-50 cursor-not-allowed"
             )}
             aria-label="Previous video"
           >
             <ArrowUp
               className={cn(
                 "h-6 w-6",
-                canNavigateUp ? "text-yellow-400" : "text-gray-500",
+                canNavigateUp ? "text-yellow-400" : "text-gray-500"
               )}
             />
           </button>
@@ -443,14 +450,14 @@ export function VideoControls({
               "p-3 rounded-lg transition-colors",
               canNavigateDown
                 ? "bg-black/60 hover:bg-black/80"
-                : "bg-black/30 opacity-50 cursor-not-allowed",
+                : "bg-black/30 opacity-50 cursor-not-allowed"
             )}
             aria-label="Next video"
           >
             <ArrowDown
               className={cn(
                 "h-6 w-6",
-                canNavigateDown ? "text-yellow-400" : "text-gray-500",
+                canNavigateDown ? "text-yellow-400" : "text-gray-500"
               )}
             />
           </button>
@@ -461,14 +468,14 @@ export function VideoControls({
               "p-3 rounded-lg transition-colors",
               canNavigateRight
                 ? "bg-black/60 hover:bg-black/80"
-                : "bg-black/30 opacity-50 cursor-not-allowed",
+                : "bg-black/30 opacity-50 cursor-not-allowed"
             )}
             aria-label="Next section"
           >
             <ArrowRight
               className={cn(
                 "h-6 w-6",
-                canNavigateRight ? "text-orange-400" : "text-gray-500",
+                canNavigateRight ? "text-orange-400" : "text-gray-500"
               )}
             />
           </button>

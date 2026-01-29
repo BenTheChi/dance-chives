@@ -213,12 +213,16 @@ export function VideoGallery({
       string,
       Array<{
         userId: string;
-        fire: number;
-        clap: number;
-        wow: number;
-        laugh: number;
+        fire: number[];
+        clap: number[];
+        wow: number[];
+        laugh: number[];
       }>
     >
+  >(new Map());
+  /** Anon reactions per video (browsing session). Only used when !session. */
+  const [anonReactsByVideo, setAnonReactsByVideo] = useState<
+    Map<string, { fire: number[]; clap: number[]; wow: number[]; laugh: number[] }>
   >(new Map());
   const triggeredReacts = useRef<Map<string, Set<string>>>(new Map());
 
@@ -519,60 +523,70 @@ export function VideoGallery({
     videoExistsInEvent,
   ]);
 
-  // Memoize user reacts for current video
+  // Memoize user reacts for current video (logged-in user or anon session state)
   const userReacts = useMemo(() => {
-    if (!currentVideo || !session?.user?.id) return null;
-    const allReacts = videoReacts.get(currentVideo.video.id) || [];
-    const userReact = allReacts.find((r) => r.userId === session.user.id);
-    if (!userReact) return null;
-    return {
-      fire: userReact.fire,
-      clap: userReact.clap,
-      wow: userReact.wow,
-      laugh: userReact.laugh,
-    };
-  }, [videoReacts, currentVideo?.video.id, session?.user?.id]);
+    if (!currentVideo) return null;
+    const videoId = currentVideo.video.id;
+    if (session?.user?.id) {
+      const allReacts = videoReacts.get(videoId) || [];
+      const userReact = allReacts.find((r) => r.userId === session.user.id);
+      if (!userReact) return null;
+      return {
+        fire: userReact.fire,
+        clap: userReact.clap,
+        wow: userReact.wow,
+        laugh: userReact.laugh,
+      };
+    }
+    return anonReactsByVideo.get(videoId) ?? { fire: [], clap: [], wow: [], laugh: [] };
+  }, [videoReacts, currentVideo?.video.id, session?.user?.id, anonReactsByVideo]);
 
-  // Memoize sorted reacts for current video (for animation triggering)
+  // Memoize sorted reacts for current video (for animation triggering). Use local anon state when not logged in so anon reacts play back.
   const sortedReacts = useMemo(() => {
     if (!currentVideo) return [];
-    const allReacts = videoReacts.get(currentVideo.video.id) || [];
+    const videoId = currentVideo.video.id;
+    let allReacts = videoReacts.get(videoId) || [];
+    if (!session?.user?.id && anonReactsByVideo.has(videoId)) {
+      const anonPayload = anonReactsByVideo.get(videoId)!;
+      allReacts = allReacts.filter((r) => r.userId !== "anon");
+      allReacts = [...allReacts, { userId: "anon", ...anonPayload }];
+    }
     const reactItems: Array<{ type: string; timestamp: number; id: string }> =
       [];
 
     for (const react of allReacts) {
-      if (react.fire > 0) {
+      react.fire.forEach((ts, i) =>
         reactItems.push({
           type: "fire",
-          timestamp: react.fire,
-          id: `${react.userId}-fire`,
-        });
-      }
-      if (react.clap > 0) {
+          timestamp: ts,
+          id: `${react.userId}-fire-${i}`,
+        })
+      );
+      react.clap.forEach((ts, i) =>
         reactItems.push({
           type: "clap",
-          timestamp: react.clap,
-          id: `${react.userId}-clap`,
-        });
-      }
-      if (react.wow > 0) {
+          timestamp: ts,
+          id: `${react.userId}-clap-${i}`,
+        })
+      );
+      react.wow.forEach((ts, i) =>
         reactItems.push({
           type: "wow",
-          timestamp: react.wow,
-          id: `${react.userId}-wow`,
-        });
-      }
-      if (react.laugh > 0) {
+          timestamp: ts,
+          id: `${react.userId}-wow-${i}`,
+        })
+      );
+      react.laugh.forEach((ts, i) =>
         reactItems.push({
           type: "laugh",
-          timestamp: react.laugh,
-          id: `${react.userId}-laugh`,
-        });
-      }
+          timestamp: ts,
+          id: `${react.userId}-laugh-${i}`,
+        })
+      );
     }
 
     return reactItems.sort((a, b) => a.timestamp - b.timestamp);
-  }, [videoReacts, currentVideo?.video.id]);
+  }, [videoReacts, currentVideo?.video.id, session?.user?.id, anonReactsByVideo]);
 
   // Fetch reacts for a video
   const fetchReacts = useCallback(async (videoId: string) => {
@@ -620,79 +634,162 @@ export function VideoGallery({
     }
   }, [currentVideo?.video.id, fetchReacts]);
 
-  // Handle user react
+  // Under 3 minutes: 2 per emoji; 3 minutes or more: 3 per emoji. Unknown duration defaults to 3. Anon: 1 per emoji, 2 total.
+  const maxReactsPerEmoji = session?.user?.id
+    ? duration > 0 && duration < 180
+      ? 2
+      : 3
+    : 1;
+  const maxTotalReacts = session?.user?.id ? undefined : 2;
+  const allowAnon = true;
+
+  // Handle user react: add timestamp to type array (cap by duration/anon), optimistic update, POST full object
   const handleReact = useCallback(
     async (type: string, timestamp: number) => {
-      if (!currentVideo || !session?.user?.id) return;
+      if (!currentVideo) return;
 
       const videoId = currentVideo.video.id;
-      const userId = session.user.id;
+      const ts = Number.isFinite(timestamp) ? Math.floor(Number(timestamp)) : 0;
+      const safeTs = Math.max(0, ts);
 
-      // Optimistic update
+      if (session?.user?.id) {
+        const userId = session.user.id;
+        setVideoReacts((prev) => {
+          const newMap = new Map(prev);
+          const existingReacts = newMap.get(videoId) || [];
+          const existingUserReact = existingReacts.find(
+            (r) => r.userId === userId
+          );
+
+          const base = existingUserReact
+            ? {
+                fire: [...existingUserReact.fire],
+                clap: [...existingUserReact.clap],
+                wow: [...existingUserReact.wow],
+                laugh: [...existingUserReact.laugh],
+              }
+            : { fire: [] as number[], clap: [] as number[], wow: [] as number[], laugh: [] as number[] };
+
+          const arr = base[type as keyof typeof base];
+          arr.push(safeTs);
+          arr.sort((a, b) => a - b);
+          base[type as keyof typeof base] = arr.slice(0, maxReactsPerEmoji);
+
+          const updatedReacts = existingUserReact
+            ? existingReacts.map((r) =>
+                r.userId === userId
+                  ? { ...r, fire: base.fire, clap: base.clap, wow: base.wow, laugh: base.laugh }
+                  : r
+              )
+            : [
+                ...existingReacts,
+                {
+                  userId,
+                  fire: base.fire,
+                  clap: base.clap,
+                  wow: base.wow,
+                  laugh: base.laugh,
+                },
+              ];
+          newMap.set(videoId, updatedReacts);
+
+          fetch(`/api/watch/videos/${videoId}/reacts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(base),
+          }).catch((error) => {
+            console.error("Error saving react:", error);
+          });
+
+          return newMap;
+        });
+      } else {
+        // Anon: 1 per emoji, 2 total — use functional updates to read latest state
+        setAnonReactsByVideo((prev) => {
+          const base = prev.get(videoId) ?? {
+            fire: [] as number[],
+            clap: [] as number[],
+            wow: [] as number[],
+            laugh: [] as number[],
+          };
+          const total =
+            base.fire.length +
+            base.clap.length +
+            base.wow.length +
+            base.laugh.length;
+          if (total >= 2) return prev;
+          const arr = base[type as keyof typeof base];
+          if (arr.length >= 1) return prev;
+          const next = {
+            fire: [...base.fire],
+            clap: [...base.clap],
+            wow: [...base.wow],
+            laugh: [...base.laugh],
+          };
+          next[type as keyof typeof next].push(safeTs);
+          next[type as keyof typeof next].sort((a, b) => a - b);
+          const newMap = new Map(prev);
+          newMap.set(videoId, next);
+
+          setVideoReacts((vPrev) => {
+            const vMap = new Map(vPrev);
+            const list = vPrev.get(videoId) || [];
+            const rest = list.filter((r) => r.userId !== "anon");
+            vMap.set(videoId, [...rest, { userId: "anon", ...next }]);
+            return vMap;
+          });
+          fetch(`/api/watch/videos/${videoId}/reacts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(next),
+          }).catch((error) => {
+            console.error("Error saving react:", error);
+          });
+
+          return newMap;
+        });
+      }
+    },
+    [currentVideo, session?.user?.id, maxReactsPerEmoji]
+  );
+
+  // Handle reset: optimistic empty arrays, DELETE (batched for logged-in; immediate for anon)
+  const handleReset = useCallback(async () => {
+    if (!currentVideo) return;
+
+    const videoId = currentVideo.video.id;
+
+    if (session?.user?.id) {
+      const userId = session.user.id;
       setVideoReacts((prev) => {
         const newMap = new Map(prev);
         const existingReacts = newMap.get(videoId) || [];
-        const existingUserReact = existingReacts.find(
-          (r) => r.userId === userId
+        const updatedReacts = existingReacts.map((r) =>
+          r.userId === userId
+            ? { ...r, fire: [], clap: [], wow: [], laugh: [] }
+            : r
         );
-
-        if (existingUserReact) {
-          const updatedReacts = existingReacts.map((r) =>
-            r.userId === userId ? { ...r, [type]: timestamp } : r
-          );
-          newMap.set(videoId, updatedReacts);
-        } else {
-          newMap.set(videoId, [
-            ...existingReacts,
-            {
-              userId,
-              fire: type === "fire" ? timestamp : 0,
-              clap: type === "clap" ? timestamp : 0,
-              wow: type === "wow" ? timestamp : 0,
-              laugh: type === "laugh" ? timestamp : 0,
-            },
-          ]);
-        }
-
+        newMap.set(videoId, updatedReacts);
         return newMap;
       });
-
-      // Fire and forget API call
-      fetch(`/api/watch/videos/${videoId}/reacts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, timestamp }),
-      }).catch((error) => {
-        console.error("Error saving react:", error);
+    } else {
+      setAnonReactsByVideo((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(videoId);
+        return newMap;
       });
-    },
-    [currentVideo, session?.user?.id]
-  );
+      setVideoReacts((prev) => {
+        const newMap = new Map(prev);
+        const existingReacts = newMap.get(videoId) || [];
+        const updatedReacts = existingReacts.filter((r) => r.userId !== "anon");
+        newMap.set(videoId, updatedReacts);
+        return newMap;
+      });
+    }
 
-  // Handle reset
-  const handleReset = useCallback(async () => {
-    if (!currentVideo || !session?.user?.id) return;
-
-    const videoId = currentVideo.video.id;
-    const userId = session.user.id;
-
-    // Optimistic update
-    setVideoReacts((prev) => {
-      const newMap = new Map(prev);
-      const existingReacts = newMap.get(videoId) || [];
-      const updatedReacts = existingReacts.map((r) =>
-        r.userId === userId ? { ...r, fire: 0, clap: 0, wow: 0, laugh: 0 } : r
-      );
-      newMap.set(videoId, updatedReacts);
-      return newMap;
-    });
-
-    // Fire and forget API call
-    fetch(`/api/watch/videos/${videoId}/reacts`, {
-      method: "DELETE",
-    }).catch((error) => {
-      console.error("Error resetting react:", error);
-    });
+    fetch(`/api/watch/videos/${videoId}/reacts`, { method: "DELETE" }).catch(
+      (error) => console.error("Error resetting react:", error)
+    );
   }, [currentVideo, session?.user?.id]);
 
   // Load more sections when near bottom (only for multi-event view)
@@ -1464,6 +1561,9 @@ export function VideoGallery({
             onReset={handleReset}
             showReacts={showReacts}
             onToggleReacts={() => setShowReacts(!showReacts)}
+            maxReactsPerEmoji={maxReactsPerEmoji}
+            maxTotalReacts={maxTotalReacts}
+            allowAnon={allowAnon}
             onToggleFullscreen={toggleFullscreen}
             isFullscreen={isFullscreen}
             showFullscreenButton={!isMobile && !isLandscape}
@@ -1487,6 +1587,9 @@ export function VideoGallery({
                 onReset={handleReset}
                 showReacts={showReacts}
                 onToggleReacts={() => setShowReacts(!showReacts)}
+                maxReactsPerEmoji={maxReactsPerEmoji}
+                maxTotalReacts={maxTotalReacts}
+                allowAnon={allowAnon}
               />
             </div>
           )}
@@ -1565,6 +1668,9 @@ export function VideoGallery({
             onReset={handleReset}
             showReacts={showReacts}
             onToggleReacts={() => setShowReacts(!showReacts)}
+            maxReactsPerEmoji={maxReactsPerEmoji}
+            maxTotalReacts={maxTotalReacts}
+            allowAnon={allowAnon}
             isFullscreen={isFullscreen}
           />
         </div>
