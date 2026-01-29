@@ -205,22 +205,33 @@ export async function generateMetadata({
     keywords.push(eventDetails.city.region);
   }
 
+  // Use event poster when available; otherwise default site share image (not event-specific artwork)
+  const shareImageUrl =
+    posterUrl ?? `${baseUrl}/DanceChivesShareable.png`;
+
   // Build image metadata
-  const imageMetadata = posterUrl
-    ? {
-        url: posterUrl,
-        secureUrl: posterUrl.startsWith("https")
-          ? posterUrl
-          : posterUrl.replace("http://", "https://"),
-        type: posterUrl.endsWith(".png")
-          ? "image/png"
-          : posterUrl.endsWith(".jpg") || posterUrl.endsWith(".jpeg")
-            ? "image/jpeg"
-            : posterUrl.endsWith(".webp")
-              ? "image/webp"
-              : "image/png",
-      }
-    : undefined;
+  const imageMetadata =
+    shareImageUrl === posterUrl && posterUrl
+      ? {
+          url: posterUrl,
+          secureUrl: posterUrl.startsWith("https")
+            ? posterUrl
+            : posterUrl.replace("http://", "https://"),
+          type: posterUrl.endsWith(".png")
+            ? "image/png"
+            : posterUrl.endsWith(".jpg") || posterUrl.endsWith(".jpeg")
+              ? "image/jpeg"
+              : posterUrl.endsWith(".webp")
+                ? "image/webp"
+                : "image/png",
+        }
+      : {
+          url: shareImageUrl,
+          secureUrl: shareImageUrl.startsWith("https")
+            ? shareImageUrl
+            : shareImageUrl.replace("http://", "https://"),
+          type: "image/png" as const,
+        };
 
   return {
     title,
@@ -241,7 +252,7 @@ export async function generateMetadata({
     openGraph: {
       title,
       description: enhancedDescription,
-      images: posterUrl ? [posterUrl] : undefined,
+      images: [shareImageUrl],
       type: "website",
       url: `${baseUrl}/events/${paramResult.event}`,
       siteName: "Dance Chives",
@@ -263,16 +274,17 @@ export async function generateMetadata({
         eventDetails.styles.length > 0 && {
           "article:tag": eventDetails.styles.join(", "),
         }),
-      ...(imageMetadata && {
-        "og:image:type": imageMetadata.type,
-        "og:image:secure_url": imageMetadata.secureUrl,
-      }),
+      "og:image:type": imageMetadata.type,
+      "og:image:secure_url":
+        shareImageUrl.startsWith("https")
+          ? shareImageUrl
+          : shareImageUrl.replace("http://", "https://"),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description: enhancedDescription,
-      images: posterUrl ? [posterUrl] : undefined,
+      images: [shareImageUrl],
     },
     alternates: {
       canonical: `${baseUrl}/events/${paramResult.event}`,

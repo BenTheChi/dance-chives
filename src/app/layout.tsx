@@ -28,7 +28,7 @@ const rubikMonoOne = Rubik_Mono_One({
 const baseUrl =
   process.env.NEXT_PUBLIC_BASE_URL || "https://www.dancechives.com";
 
-const defaultImageUrl = `${baseUrl}/mascot/Dancechives_MainLogo_Color_onLight.png`;
+const defaultImageUrl = `${baseUrl}/DanceChivesShareable.png`;
 
 export const metadata: Metadata = {
   title: "Dance Chives",
@@ -89,6 +89,13 @@ export const metadata: Metadata = {
       },
     ],
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dance Chives",
+    description:
+      "The free community archive for street dance events and battle videos",
+    images: [defaultImageUrl],
   },
   other: {
     "article:author": "Ben Chi - Heartbreaker",

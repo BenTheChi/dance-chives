@@ -5,10 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { EventCard } from "@/components/EventCard";
 import { TEventCard, EventType } from "@/types/event";
 import { City } from "@/types/city";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { EventFilters } from "@/components/events/EventFilters";
 
@@ -28,7 +26,7 @@ export function EventsClient({
   const { data: session, status } = useSession();
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
   const [canCreateEvents, setCanCreateEvents] = useState(false);
-  
+
   // Applied filter values (used for actual filtering)
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
@@ -39,7 +37,7 @@ export function EventsClient({
   const [endDate, setEndDate] = useState("");
   const [hasVideos, setHasVideos] = useState(false);
   const [hasPoster, setHasPoster] = useState(false);
-  
+
   // Draft filter values (used in the UI, not applied until save)
   const [draftCityId, setDraftCityId] = useState<string | null>(null);
   const [draftStyles, setDraftStyles] = useState<string[]>([]);
@@ -48,7 +46,7 @@ export function EventsClient({
   const [draftEndDate, setDraftEndDate] = useState("");
   const [draftHasVideos, setDraftHasVideos] = useState(false);
   const [draftHasPoster, setDraftHasPoster] = useState(false);
-  
+
   const [isMobile, setIsMobile] = useState(false);
 
   // Default to showing future events if there are any
@@ -150,7 +148,15 @@ export function EventsClient({
     setDraftEndDate(endDate);
     setDraftHasVideos(hasVideos);
     setDraftHasPoster(hasPoster);
-  }, [selectedCityId, selectedStyles, selectedEventType, startDate, endDate, hasVideos, hasPoster]);
+  }, [
+    selectedCityId,
+    selectedStyles,
+    selectedEventType,
+    startDate,
+    endDate,
+    hasVideos,
+    hasPoster,
+  ]);
 
   // Reset selectedCityId if it's no longer in available cities
   useEffect(() => {

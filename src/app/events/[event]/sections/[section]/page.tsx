@@ -154,14 +154,17 @@ export async function generateMetadata({
       : `${baseUrl}${section.poster.url}`
     : undefined;
 
-  // Fallback to event poster if section poster isn't set
+  // Fallback to event poster if section poster isn't set; then to default site share image
   const eventPosterUrl = event.eventDetails.poster?.url
     ? event.eventDetails.poster.url.startsWith("http")
       ? event.eventDetails.poster.url
       : `${baseUrl}${event.eventDetails.poster.url}`
     : undefined;
 
-  const shareImageUrl = sectionPosterUrl || eventPosterUrl;
+  const shareImageUrl =
+    sectionPosterUrl ||
+    eventPosterUrl ||
+    `${baseUrl}/DanceChivesShareable.png`;
 
   return {
     title,
@@ -172,13 +175,13 @@ export async function generateMetadata({
       type: "website",
       url: `${baseUrl}/events/${paramResult.event}/sections/${paramResult.section}`,
       siteName: "Dance Chives",
-      images: shareImageUrl ? [shareImageUrl] : undefined,
+      images: [shareImageUrl],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: shareImageUrl ? [shareImageUrl] : undefined,
+      images: [shareImageUrl],
     },
   };
 }

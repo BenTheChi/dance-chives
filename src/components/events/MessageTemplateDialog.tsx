@@ -26,13 +26,7 @@ I added your event [EVENT TITLE] to the site, with credit and links back to the 
 
 [LINK HERE]
 
-Totally optional but if you'd like, you can:
-
-Tag yourself on the site
-https://www.dancechives.com/help/role-tagging
-
-Claim the page as the owner
-https://www.dancechives.com/help/page-ownership
+With your permission I would also like to download your IG posts for this event and others to give it an event poster and fill out the event information.
 
 And if you'd rather it not be listed, just let me know and I'll happily take it down right away.
 
@@ -45,13 +39,7 @@ I added your event [EVENT TITLE] to our site, with credit and links back to the 
 
 [LINK HERE]
 
-Totally optional but if you'd like, you can:
-
-Tag yourself on the site
-https://www.dancechives.com/help/role-tagging
-
-Claim the page as the owner
-https://www.dancechives.com/help/page-ownership
+With your permission I would also like to download your IG posts for this event and others to give it an event poster and fill out the event information.
 
 And if you'd rather it not be listed, just let me know and I'll happily take it down right away.
 
@@ -62,17 +50,11 @@ I added your event [EVENT TITLE] to our site, with credit and links back to the 
 
 [LINK HERE]
 
-Totally optional but if you'd like, you can:
+With your permission I would also like to download your IG posts for this event and others to give it an event poster and fill out the event information.
 
-Tag yourself on the site
-https://www.dancechives.com/help/role-tagging
+If you'd rather it not be listed, just let me know and I'll happily take it down right away.
 
-Claim the page as the owner
-https://www.dancechives.com/help/page-ownership
-
-And if you'd rather it not be listed, just let me know and I'll happily take it down right away.
-
-Thank you for your leadership and dedication the to dance scene 🙏`,
+Thank you for your leadership and dedication to the dance scene 🙏`,
   "Videographer familiar": `Hey! It's Ben (Heartbreaker). It's been a bit since we last connected. Hope you've been well.
 
 I wanted to share something I've been working on called Dance Chives. I built it as a way to support the work you do and help preserve the events, battles, and moments that shape our scene.
@@ -82,13 +64,6 @@ I added your event footage [EVENT TITLE] to Dance Chives, with credit and links 
 [LINK HERE]
 
 Totally optional but if you'd like, you can:
-
-Tag yourself on the event as a videographer
-https://www.dancechives.com/help/role-tagging
-
-Become an event page team member to help edit event details and manage footage
-https://www.dancechives.com/help/page-ownership#team-membership
-
 And if you'd rather it not be listed, just let me know and I'll happily take it down right away.
 
 Thank you for your leadership and dedication the to dance scene 🙏`,
@@ -99,14 +74,6 @@ I wanted to share something I've been working on called Dance Chives. I built it
 I added your event footage [EVENT TITLE] to Dance Chives, with credit and links back to the original event and YouTube account.
 
 [LINK HERE]
-
-Totally optional but if you'd like, you can:
-
-Tag yourself on the event as a videographer
-https://www.dancechives.com/help/role-tagging
-
-Become an event page team member to help edit event details and manage footage
-https://www.dancechives.com/help/page-ownership#team-membership
 
 And if you'd rather it not be listed, just let me know and I'll happily take it down right away.
 
@@ -134,7 +101,12 @@ export function MessageTemplateDialog({
       typeof window !== "undefined"
         ? window.location.origin
         : "https://www.dancechives.com";
-    const eventUrl = `${baseUrl}/events/${eventId}`;
+    const isVideographer =
+      templateKey === "Videographer familiar" ||
+      templateKey === "Videographer new";
+    const eventUrl = isVideographer
+      ? `${baseUrl}/watch/${eventId}`
+      : `${baseUrl}/events/${eventId}`;
 
     const finalTemplate = template
       .replace(/\[EVENT TITLE\]/g, eventTitle)
@@ -179,4 +151,3 @@ export function MessageTemplateDialog({
     </Dialog>
   );
 }
-
