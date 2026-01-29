@@ -7,7 +7,10 @@ import {
   validateReactionsPayload,
   validateReactionsPayloadAnon,
 } from "@/lib/reactions-batch";
-import { writeReactionsImmediate } from "@/lib/reactions-write";
+import {
+  writeReactionsImmediate,
+  writeReactionsImmediateAnonMerge,
+} from "@/lib/reactions-write";
 
 const ANON_USER_ID = "anon";
 
@@ -73,7 +76,7 @@ export async function POST(
       if (!result.ok) {
         return NextResponse.json({ error: result.error }, { status: result.status });
       }
-      await writeReactionsImmediate(videoId, ANON_USER_ID, result.payload);
+      await writeReactionsImmediateAnonMerge(videoId, result.payload);
     } else {
       const result = validateReactionsPayload(body);
       if (!result.ok) {

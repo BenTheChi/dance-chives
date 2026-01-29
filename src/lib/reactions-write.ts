@@ -41,8 +41,30 @@ function payloadEqualsDb(
   );
 }
 
+const MAX_PER_EMOJI = 3;
+
 /**
- * Write one user's reactions for a video immediately (no batching). Used for anon.
+ * Merge new payload into existing arrays (concat, sort, dedupe, cap at MAX_PER_EMOJI per type).
+ */
+function mergePayloads(
+  existing: ReactionsPayload | null,
+  incoming: ReactionsPayload
+): ReactionsPayload {
+  const merge = (a: number[], b: number[]): number[] => {
+    const combined = [...(a || []), ...b].sort((x, y) => x - y);
+    const deduped = [...new Set(combined)];
+    return deduped.slice(0, MAX_PER_EMOJI);
+  };
+  return {
+    fire: merge(existing?.fire ?? [], incoming.fire),
+    clap: merge(existing?.clap ?? [], incoming.clap),
+    wow: merge(existing?.wow ?? [], incoming.wow),
+    laugh: merge(existing?.laugh ?? [], incoming.laugh),
+  };
+}
+
+/**
+ * Write one user's reactions for a video immediately (no batching). Used for logged-in users' immediate path.
  */
 export async function writeReactionsImmediate(
   videoId: string,
@@ -54,6 +76,41 @@ export async function writeReactionsImmediate(
     where: { userId_videoId: { userId, videoId } },
     create: {
       userId,
+      videoId,
+      fire: sorted.fire,
+      clap: sorted.clap,
+      wow: sorted.wow,
+      laugh: sorted.laugh,
+    },
+    update: {
+      fire: sorted.fire,
+      clap: sorted.clap,
+      wow: sorted.wow,
+      laugh: sorted.laugh,
+    },
+  });
+}
+
+/**
+ * Anon: merge incoming payload with existing anon row for this video (aggregate instead of overwrite).
+ */
+export async function writeReactionsImmediateAnonMerge(
+  videoId: string,
+  payload: ReactionsPayload
+): Promise<void> {
+  const existing = await prisma.react.findUnique({
+    where: { userId_videoId: { userId: "anon", videoId } },
+    select: { fire: true, clap: true, wow: true, laugh: true },
+  });
+  const merged = mergePayloads(
+    existing,
+    payload
+  );
+  const sorted = sortArrays(merged);
+  await prisma.react.upsert({
+    where: { userId_videoId: { userId: "anon", videoId } },
+    create: {
+      userId: "anon",
       videoId,
       fire: sorted.fire,
       clap: sorted.clap,
