@@ -4,6 +4,22 @@ import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { PageSkeleton } from "./PageSkeleton";
 
+// Paths where we should not show the loading skeleton (e.g. signup and its policy links)
+const SKIP_LOADING_PATHS = [
+  "/signup",
+  "/login",
+  "/terms",
+  "/privacy",
+  "/content-usage",
+];
+
+function shouldSkipLoading(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return SKIP_LOADING_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
 export function PageLoadingProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
@@ -20,8 +36,12 @@ export function PageLoadingProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    // If pathname changed, show loading skeleton
+    // If pathname changed, show loading skeleton (unless navigating to a skip path)
     if (prevPathnameRef.current !== pathname) {
+      if (shouldSkipLoading(pathname)) {
+        prevPathnameRef.current = pathname;
+        return;
+      }
       // Clear any existing timeouts
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
