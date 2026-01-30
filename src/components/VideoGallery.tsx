@@ -184,6 +184,7 @@ export function VideoGallery({
   const [isMuted, setIsMuted] = useState(true); // Start muted for first video to comply with autoplay policies
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreSections, setHasMoreSections] = useState(true); // false when last fetch returned < limit
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSliderVisible, setIsSliderVisible] = useState(true);
@@ -203,7 +204,11 @@ export function VideoGallery({
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  const sectionsRef = useRef<CombinedSectionData[]>(sections);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Keep sectionsRef in sync so handlers can read latest without triggering effect re-runs when loading more
+  sectionsRef.current = sections;
 
   // React state management
   const { data: session } = useSession();
@@ -492,7 +497,10 @@ export function VideoGallery({
 
   // Calculate navigation disabled states
   const canNavigateLeft = currentSectionIndex > 0;
-  const canNavigateRight = currentSectionIndex < sections.length - 1;
+  // Disable right when at end, or when one-before-end and loading more (so we don't jump while list is updating)
+  const canNavigateRight =
+    currentSectionIndex < sections.length - 1 &&
+    !(currentSectionIndex >= sections.length - 2 && isLoadingMore);
   const currentSection = sections[currentSectionIndex];
   const currentVideoCount = currentSection?.section.videos.length || 0;
   // Disable up/down only if there's only 1 video (looping works for 2+)
@@ -823,6 +831,8 @@ export function VideoGallery({
     );
   }, [currentVideo, session?.user?.id]);
 
+  const SECTIONS_PAGE_SIZE = 10;
+
   // Load more sections when near bottom (only for multi-event view)
   const loadMoreSections = useCallback(async () => {
     if (isLoadingMore || enableUrlRouting) return; // Don't load more for event-specific view
@@ -830,15 +840,22 @@ export function VideoGallery({
 
     try {
       const response = await fetch(
-        `/api/watch/sections?offset=${allLoadedSections.length}&limit=10`
+        `/api/watch/sections?offset=${allLoadedSections.length}&limit=${SECTIONS_PAGE_SIZE}`
       );
       if (response.ok) {
         const newSections = await response.json();
+        if (newSections.length < SECTIONS_PAGE_SIZE) {
+          setHasMoreSections(false);
+        }
         // Add new sections to the loaded list
         const updatedLoadedSections = [...allLoadedSections, ...newSections];
         setAllLoadedSections(updatedLoadedSections);
-        // Recombine all sections (this will merge brackets properly)
-        setSections(combineBracketSections(updatedLoadedSections));
+        const newCombined = combineBracketSections(updatedLoadedSections);
+        setSections(newCombined);
+        // Clamp section index so we never point past the end after list updates
+        setCurrentSectionIndex((prev) =>
+          Math.min(prev, Math.max(0, newCombined.length - 1))
+        );
       }
     } catch (error) {
       console.error("Error loading more sections:", error);
@@ -847,13 +864,15 @@ export function VideoGallery({
     }
   }, [allLoadedSections.length, isLoadingMore, enableUrlRouting]);
 
-  // Handle section change - called when section index changes
+  // Handle section change - called when section index changes (user navigated)
+  // Reads sections from ref so loading more in background doesn't change this callback and reload the video
   const handleSectionChange = useCallback(
     (newIndex: number) => {
       showSlider(); // Show slider when navigating
 
+      const currentSections = sectionsRef.current;
       // Load more if near end (only for multi-event view)
-      if (!enableUrlRouting && newIndex >= sections.length - 3) {
+      if (!enableUrlRouting && newIndex >= currentSections.length - 2) {
         loadMoreSections();
       }
 
@@ -867,8 +886,8 @@ export function VideoGallery({
         });
       }
 
-      // Get the video for this section and index
-      const section = sections[newIndex];
+      // Get the video for this section and index (from ref so we don't depend on sections)
+      const section = currentSections[newIndex];
       if (section && section.section.videos.length > 0) {
         const video = section.section.videos[videoIndex];
         if (video && playerRef.current) {
@@ -890,22 +909,17 @@ export function VideoGallery({
         }
       }
     },
-    [
-      sections,
-      currentVideoIndex,
-      loadMoreSections,
-      showSlider,
-      enableUrlRouting,
-      isMuted,
-    ]
+    [currentVideoIndex, loadMoreSections, showSlider, enableUrlRouting, isMuted]
   );
 
-  // Handle video change - called when video index changes
+  // Handle video change - called when video index changes (user navigated)
+  // Reads sections from ref so loading more in background doesn't change this callback and reload the video
   const handleVideoChange = useCallback(
     (sectionIndex: number, newVideoIndex: number) => {
       showSlider(); // Show slider when navigating
 
-      const section = sections[sectionIndex];
+      const currentSections = sectionsRef.current;
+      const section = currentSections[sectionIndex];
       if (section && section.section.videos.length > newVideoIndex) {
         const video = section.section.videos[newVideoIndex];
         if (video && playerRef.current) {
@@ -939,14 +953,7 @@ export function VideoGallery({
         }
       }
     },
-    [
-      sections,
-      showSlider,
-      enableUrlRouting,
-      eventId,
-      videoExistsInEvent,
-      isMuted,
-    ]
+    [showSlider, enableUrlRouting, eventId, videoExistsInEvent, isMuted]
   );
 
   // Track previous values to avoid unnecessary calls
