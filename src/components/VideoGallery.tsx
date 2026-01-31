@@ -205,6 +205,8 @@ export function VideoGallery({
   const abortControllerRef = useRef<AbortController | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<CombinedSectionData[]>(sections);
+  /** Stable video src for the player; only updated on user navigation so load-more doesn't change prop and restart video */
+  const displayedVideoSrcRef = useRef<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Keep sectionsRef in sync so handlers can read latest without triggering effect re-runs when loading more
@@ -360,6 +362,13 @@ export function VideoGallery({
 
   const currentVideo = getCurrentVideo();
 
+  // Initialize displayed video ref on first load so we have a stable value before any navigation
+  useEffect(() => {
+    if (currentVideo?.video.src && displayedVideoSrcRef.current == null) {
+      displayedVideoSrcRef.current = currentVideo.video.src;
+    }
+  }, [currentVideo?.video.src]);
+
   // Optimistically remove user from video when tag is removed
   // Note: removeTagFromVideo removes all roles, so we remove from all arrays
   const handleVideoRemove = useCallback(
@@ -501,9 +510,9 @@ export function VideoGallery({
   const canNavigateRight =
     currentSectionIndex < sections.length - 1 &&
     !(currentSectionIndex >= sections.length - 2 && isLoadingMore);
-  // Show spinner on right arrow when on last section and fetching more sections
+  // Show spinner on right arrow when near end and fetching more sections (last or second-to-last)
   const showRightLoading =
-    isLoadingMore && currentSectionIndex === sections.length - 1;
+    isLoadingMore && currentSectionIndex >= sections.length - 2;
   const currentSection = sections[currentSectionIndex];
   const currentVideoCount = currentSection?.section.videos.length || 0;
   // Disable up/down only if there's only 1 video (looping works for 2+)
@@ -894,6 +903,7 @@ export function VideoGallery({
       if (section && section.section.videos.length > 0) {
         const video = section.section.videos[videoIndex];
         if (video && playerRef.current) {
+          displayedVideoSrcRef.current = video.src;
           playerRef.current.loadVideoById(video.src);
           // Always autoplay after manual navigation
           setTimeout(() => {
@@ -938,6 +948,7 @@ export function VideoGallery({
             }
           }
 
+          displayedVideoSrcRef.current = video.src;
           playerRef.current.loadVideoById(video.src);
           // Always autoplay after manual navigation
           // Apply mute state after a short delay
@@ -1539,7 +1550,10 @@ export function VideoGallery({
                               >
                                 <VideoPlayer
                                   ref={playerRef}
-                                  videoId={currentVideo.video.src}
+                                  videoId={
+                                    displayedVideoSrcRef.current ??
+                                    currentVideo.video.src
+                                  }
                                   autoplay={true}
                                   muted={isMuted}
                                   onReady={handlePlayerReady}

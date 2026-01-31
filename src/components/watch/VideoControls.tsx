@@ -161,7 +161,9 @@ export function VideoControls({
               ? "hover:bg-white/10"
               : "opacity-50 cursor-not-allowed"
           )}
-          aria-label={showRightLoading ? "Loading more sections" : "Next section"}
+          aria-label={
+            showRightLoading ? "Loading more sections" : "Next section"
+          }
         >
           {showRightLoading ? (
             <Loader2
@@ -402,7 +404,9 @@ export function VideoControls({
                   ? "hover:bg-white/10"
                   : "opacity-50 cursor-not-allowed"
               )}
-              aria-label={showRightLoading ? "Loading more sections" : "Next section"}
+              aria-label={
+                showRightLoading ? "Loading more sections" : "Next section"
+              }
             >
               {showRightLoading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
@@ -487,7 +491,9 @@ export function VideoControls({
                 ? "bg-black/60 hover:bg-black/80"
                 : "bg-black/30 opacity-50 cursor-not-allowed"
             )}
-            aria-label={showRightLoading ? "Loading more sections" : "Next section"}
+            aria-label={
+              showRightLoading ? "Loading more sections" : "Next section"
+            }
           >
             {showRightLoading ? (
               <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
