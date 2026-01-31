@@ -104,6 +104,17 @@ export interface Bracket {
   position?: number; // 0-based position for ordering
 }
 
+/** Server payload: one full section per item (brackets combined), with optional video→bracket mapping for display */
+export interface CombinedSectionPayload {
+  section: Section;
+  eventId: string;
+  eventTitle: string;
+  city?: string;
+  eventDate?: string; // Formatted as "Mar 2026"
+  /** Serializable map: video ID → bracket (for showing bracket title per video) */
+  videoToBracket?: Array<{ videoId: string; bracket: Bracket }>;
+}
+
 // TEventCard for display purposes
 export interface TEventCard {
   id: string;

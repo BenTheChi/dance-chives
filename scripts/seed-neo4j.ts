@@ -566,8 +566,185 @@ async function seedNeo4j() {
       ],
     };
 
+    // Battle event video URLs (user-provided)
+    const hipHopBattleVideos = [
+      "https://www.youtube.com/watch?v=1TjFteUOLFc&list=PLKraJk6LBH-07ttjSl1b7Rqh66X4dvwAf&index=1&pp=iAQB",
+      "https://www.youtube.com/watch?v=K3HCYIOu5_w&list=PLKraJk6LBH-07ttjSl1b7Rqh66X4dvwAf&index=2&pp=iAQB",
+      "https://www.youtube.com/watch?v=fwm3a-XS4qs&list=PLKraJk6LBH-07ttjSl1b7Rqh66X4dvwAf&index=4&pp=iAQB",
+      "https://www.youtube.com/watch?v=uZ9udw5u4Mg&list=PLKraJk6LBH-07ttjSl1b7Rqh66X4dvwAf&index=19&pp=iAQB",
+      "https://www.youtube.com/watch?v=MQ14S47gzNQ&list=PLKraJk6LBH-07ttjSl1b7Rqh66X4dvwAf&index=20&pp=iAQB",
+    ];
+    const waackingBattleVideos = [
+      "https://www.youtube.com/watch?v=GWIxJuCFlHk&list=PLKraJk6LBH-24Wk-l4vSk3VAwUS_M5YQa&index=1&pp=iAQB",
+      "https://www.youtube.com/watch?v=Or5Ou33R13I&list=PLKraJk6LBH-24Wk-l4vSk3VAwUS_M5YQa&index=3&pp=iAQB",
+      "https://www.youtube.com/watch?v=Ll6vEAq5Q1A&list=PLKraJk6LBH-24Wk-l4vSk3VAwUS_M5YQa&index=17&pp=iAQB",
+      "https://www.youtube.com/watch?v=91tIFI6vp2g&list=PLKraJk6LBH-24Wk-l4vSk3VAwUS_M5YQa&index=22&pp=iAQB",
+      "https://www.youtube.com/watch?v=9MIRgKlj-6c&list=PLKraJk6LBH-24Wk-l4vSk3VAwUS_M5YQa&index=23&pp=iAQB",
+    ];
+    const allStyleBattleVideos = [
+      "https://www.youtube.com/watch?v=E55KBjw0Og0&list=PLU7C2aCZMSZmEY6Uy-EYlxKrDuO0rXz_N&index=2&pp=iAQB",
+      "https://www.youtube.com/watch?v=yLWs9NCX-R0&list=PLU7C2aCZMSZmEY6Uy-EYlxKrDuO0rXz_N&index=13&pp=iAQB",
+      "https://www.youtube.com/watch?v=ANY6hOz2XAI&list=PLU7C2aCZMSZmEY6Uy-EYlxKrDuO0rXz_N&index=19&pp=iAQB",
+      "https://www.youtube.com/watch?v=HbR_Clxst6s&list=PLU7C2aCZMSZmEY6Uy-EYlxKrDuO0rXz_N&index=32&pp=iAQB",
+      "https://www.youtube.com/watch?v=iJA_4bQrzpE&list=PLU7C2aCZMSZmEY6Uy-EYlxKrDuO0rXz_N&index=33&pp=iAQB",
+    ];
+    const poppingBattleVideos = [
+      "https://www.youtube.com/watch?v=bTqWvXTIdaw&list=PLU7C2aCZMSZnulgE0tkci0itAmCXx8_aJ&index=2&pp=iAQB8AUB",
+      "https://www.youtube.com/watch?v=vN_klV2RGgY&list=PLU7C2aCZMSZnulgE0tkci0itAmCXx8_aJ&index=9&pp=iAQB8AUB",
+      "https://www.youtube.com/watch?v=waRLb63LkiU&list=PLU7C2aCZMSZnulgE0tkci0itAmCXx8_aJ&index=17&pp=iAQB8AUB0gcJCZEKAYcqIYzv",
+      "https://www.youtube.com/watch?v=HapPT148uUQ&list=PLU7C2aCZMSZnulgE0tkci0itAmCXx8_aJ&index=28&pp=iAQB8AUB",
+      "https://www.youtube.com/watch?v=MPeSrGqoDHk&list=PLU7C2aCZMSZnulgE0tkci0itAmCXx8_aJ&index=36&pp=iAQB8AUB",
+    ];
+    const lockingBattleVideos = [
+      "https://www.youtube.com/watch?v=HKHQEb9Xazo&list=PLSdbWKBxNJL_UDmLcd04nyyXWCWwJAEwx&index=11&pp=iAQB",
+      "https://www.youtube.com/watch?v=9-3xWnLYfrw&list=PLSdbWKBxNJL_UDmLcd04nyyXWCWwJAEwx&index=15&pp=iAQB",
+      "https://www.youtube.com/watch?v=ALp9XM_lJYE&list=PLSdbWKBxNJL_UDmLcd04nyyXWCWwJAEwx&index=3&pp=iAQB",
+      "https://www.youtube.com/watch?v=3dtEZ2HwRtA&list=PLSdbWKBxNJL_UDmLcd04nyyXWCWwJAEwx&index=6&pp=iAQB",
+      "https://www.youtube.com/watch?v=wmjx5um2CNk&list=PLSdbWKBxNJL_UDmLcd04nyyXWCWwJAEwx&index=8&pp=iAQB",
+    ];
+
+    // Helper to build a battle event with 2 battle sections (3 videos in section 1, 2 in section 2)
+    function makeBattleEvent(
+      title: string,
+      slugSeed: string,
+      style: string,
+      videos: string[],
+      baseDate: string
+    ): Event {
+      const eventId = generateSlugId(slugSeed);
+      return {
+        id: eventId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        eventDetails: {
+          title,
+          description: `${title} – ${style} battles from prelims to finals.`,
+          location: "Venue TBA",
+          cost: "$20",
+          prize: "$2,000",
+          creatorId: "test-user-1",
+          dates: [{ date: baseDate, startTime: "18:00", endTime: "23:00" }],
+          schedule:
+            "6:00 PM - Doors\n7:00 PM - Prelims\n8:30 PM - Semi-Finals\n9:30 PM - Finals",
+          city: {
+            id: "ChIJOwg_06VPwokRYv534QaPC8g",
+            name: "New York City",
+            countryCode: "US",
+            region: "New York",
+            timezone: "America/New_York",
+            latitude: 40.7128,
+            longitude: -74.006,
+          },
+          styles: [style],
+          eventType: "Battle",
+          status: "visible",
+          poster: null,
+          originalPoster: null,
+        },
+        roles: [],
+        gallery: [],
+        sections: [
+          {
+            id: randomUUID(),
+            title: "Prelims",
+            description: `${style} preliminary battles`,
+            sectionType: "Battle",
+            hasBrackets: true,
+            videos: [],
+            brackets: [
+              {
+                id: randomUUID(),
+                title: "Prelims Round",
+                videos: [0, 1, 2].map((i) => ({
+                  id: randomUUID(),
+                  title: `Battle ${i + 1}`,
+                  src: videos[i],
+                  type: "battle" as const,
+                  styles: [style],
+                  taggedDancers: [
+                    { id: "test-user-0", displayName: "Base User", username: "baseuser" },
+                    { id: "test-user-1", displayName: "Creator", username: "creator" },
+                  ],
+                })),
+              },
+            ],
+          },
+          {
+            id: randomUUID(),
+            title: "Finals",
+            description: `${style} final battles`,
+            sectionType: "Battle",
+            hasBrackets: true,
+            videos: [],
+            brackets: [
+              {
+                id: randomUUID(),
+                title: "Finals Round",
+                videos: [3, 4].map((i) => ({
+                  id: randomUUID(),
+                  title: `Final Battle ${i - 2}`,
+                  src: videos[i],
+                  type: "battle" as const,
+                  styles: [style],
+                  taggedDancers: [
+                    { id: "test-user-1", displayName: "Creator", username: "creator" },
+                    { id: "test-user-3", displayName: "Admin", username: "admin" },
+                  ],
+                })),
+              },
+            ],
+          },
+        ],
+      };
+    }
+
+    const hipHopBattleEvent = makeBattleEvent(
+      "Hip Hop Battle Event",
+      "Hip Hop Battle Event",
+      "Hip-Hop",
+      hipHopBattleVideos,
+      "09/14/2025"
+    );
+    const waackingBattleEvent = makeBattleEvent(
+      "Waacking Battle Event",
+      "Waacking Battle Event",
+      "Waacking",
+      waackingBattleVideos,
+      "09/21/2025"
+    );
+    const allStyleBattleEvent = makeBattleEvent(
+      "All Style Battle Event",
+      "All Style Battle Event",
+      "All Style",
+      allStyleBattleVideos,
+      "09/28/2025"
+    );
+    const poppingBattleEvent = makeBattleEvent(
+      "Popping Battle Event",
+      "Popping Battle Event",
+      "Popping",
+      poppingBattleVideos,
+      "10/05/2025"
+    );
+    const lockingBattleEvent = makeBattleEvent(
+      "Locking Battle Event",
+      "Locking Battle Event",
+      "Locking",
+      lockingBattleVideos,
+      "10/12/2025"
+    );
+
     // Create all events (check if they already exist first)
-    const events = [event1, event2, event3];
+    const events = [
+      event1,
+      event2,
+      event3,
+      hipHopBattleEvent,
+      waackingBattleEvent,
+      allStyleBattleEvent,
+      poppingBattleEvent,
+      lockingBattleEvent,
+    ];
     for (const event of events) {
       try {
         // Check if event already exists in Neo4j
