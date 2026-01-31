@@ -107,10 +107,14 @@ export function VideoGallery({
   const abortControllerRef = useRef<AbortController | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<CombinedSectionData[]>(sections);
+  const currentSectionIndexRef = useRef(currentSectionIndex);
+  const currentVideoIndexRef = useRef(currentVideoIndex);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Keep sectionsRef in sync so handlers can read latest without triggering effect re-runs when loading more
+  // Keep refs in sync so handlers can read latest without being in callback deps (avoids player reload on load-more)
   sectionsRef.current = sections;
+  currentSectionIndexRef.current = currentSectionIndex;
+  currentVideoIndexRef.current = currentVideoIndex;
 
   // React state management
   const { data: session } = useSession();
@@ -138,13 +142,14 @@ export function VideoGallery({
 
   const MAX_CACHED_VIDEOS = 10;
 
-  // Helper function to check if video exists in current event's sections
+  // Helper function to check if video exists in current event's sections.
+  // Uses sectionsRef so load-more (setSections) doesn't recreate this and thus handleVideoChange/navigateVideo/player.
   const videoExistsInEvent = useCallback(
     (videoId: string): { sectionIndex: number; videoIndex: number } | null => {
       if (!eventId) return null;
-
-      for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
-        const section = sections[sectionIdx];
+      const secs = sectionsRef.current;
+      for (let sectionIdx = 0; sectionIdx < secs.length; sectionIdx++) {
+        const section = secs[sectionIdx];
         if (section.eventId !== eventId) continue;
 
         const videoIdx = section.section.videos.findIndex(
@@ -156,7 +161,7 @@ export function VideoGallery({
       }
       return null;
     },
-    [sections, eventId]
+    [eventId]
   );
 
   // Initialize from URL parameter on mount
@@ -845,14 +850,16 @@ export function VideoGallery({
   );
 
   // Navigation functions - call load handlers directly so we only load on user action, not when state updates (e.g. load more)
-  // Read sections from ref so load-more (setSections) doesn't recreate this callback and retrigger the player init effect
+  // Read sections/sectionIndex/videoIndex from refs so load-more never recreates this callback and retriggers the player init effect
   const navigateVideo = useCallback(
     (direction: number, circular: boolean = false) => {
       const currentSections = sectionsRef.current;
-      const section = currentSections[currentSectionIndex];
+      const sectionIdx = currentSectionIndexRef.current;
+      const section = currentSections[sectionIdx];
       if (!section) return;
 
-      const currentIdx = currentVideoIndex.get(currentSectionIndex) || 0;
+      const videoIndexMap = currentVideoIndexRef.current;
+      const currentIdx = videoIndexMap.get(sectionIdx) || 0;
       const videos = section.section.videos;
       if (videos.length === 0) return;
 
@@ -870,12 +877,12 @@ export function VideoGallery({
 
       setCurrentVideoIndex((prev) => {
         const newMap = new Map(prev);
-        newMap.set(currentSectionIndex, newIndex);
+        newMap.set(sectionIdx, newIndex);
         return newMap;
       });
-      handleVideoChange(currentSectionIndex, newIndex);
+      handleVideoChange(sectionIdx, newIndex);
     },
-    [currentSectionIndex, currentVideoIndex, handleVideoChange]
+    [handleVideoChange]
   );
 
   const navigateSection = useCallback(
