@@ -845,9 +845,11 @@ export function VideoGallery({
   );
 
   // Navigation functions - call load handlers directly so we only load on user action, not when state updates (e.g. load more)
+  // Read sections from ref so load-more (setSections) doesn't recreate this callback and retrigger the player init effect
   const navigateVideo = useCallback(
     (direction: number, circular: boolean = false) => {
-      const section = sections[currentSectionIndex];
+      const currentSections = sectionsRef.current;
+      const section = currentSections[currentSectionIndex];
       if (!section) return;
 
       const currentIdx = currentVideoIndex.get(currentSectionIndex) || 0;
@@ -873,7 +875,7 @@ export function VideoGallery({
       });
       handleVideoChange(currentSectionIndex, newIndex);
     },
-    [sections, currentSectionIndex, currentVideoIndex, handleVideoChange]
+    [currentSectionIndex, currentVideoIndex, handleVideoChange]
   );
 
   const navigateSection = useCallback(
