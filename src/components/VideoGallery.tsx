@@ -1198,6 +1198,15 @@ export function VideoGallery({
       // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
       if (state === 1) {
         setIsPlaying(true);
+        // Apply user's mute preference whenever a video starts playing (initial load or after navigation).
+        // YouTube often starts new videos muted; applying here ensures only the first load is auto-muted.
+        if (playerRef.current) {
+          if (isMutedRef.current) {
+            playerRef.current.mute();
+          } else {
+            playerRef.current.unmute();
+          }
+        }
         // Track that first video has played (for autoplay policy compliance)
         if (!hasPlayedFirstVideoRef.current) {
           hasPlayedFirstVideoRef.current = true;
