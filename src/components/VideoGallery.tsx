@@ -51,14 +51,6 @@ function payloadToCombinedSectionData(
   };
 }
 
-// Format seconds to MM:SS
-function formatTime(seconds: number): string {
-  if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
 export function VideoGallery({
   initialSections,
   eventId,
@@ -111,7 +103,6 @@ export function VideoGallery({
   const currentVideoIndexRef = useRef(currentVideoIndex);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Keep refs in sync so handlers can read latest without being in callback deps (avoids player reload on load-more)
   sectionsRef.current = sections;
   currentSectionIndexRef.current = currentSectionIndex;
   currentVideoIndexRef.current = currentVideoIndex;
@@ -142,8 +133,6 @@ export function VideoGallery({
 
   const MAX_CACHED_VIDEOS = 10;
 
-  // Helper function to check if video exists in current event's sections.
-  // Uses sectionsRef so load-more (setSections) doesn't recreate this and thus handleVideoChange/navigateVideo/player.
   const videoExistsInEvent = useCallback(
     (videoId: string): { sectionIndex: number; videoIndex: number } | null => {
       if (!eventId) return null;
@@ -209,7 +198,6 @@ export function VideoGallery({
     }
   }, [enableUrlRouting, videoIdFromUrl, eventId, videoExistsInEvent]);
 
-  // Get current video (reads sectionsRef so callback identity is stable when only sections update)
   const getCurrentVideo = useCallback((): {
     video: Video;
     eventId: string;
@@ -743,10 +731,6 @@ export function VideoGallery({
         const newCombined = updatedLoadedSections.map(
           payloadToCombinedSectionData
         );
-        console.log("[VideoGallery] loadMoreSections: calling setSections", {
-          prevCount: sections.length,
-          newCount: newCombined.length,
-        });
         setSections(newCombined);
         // Clamp section index so we never point past the end after list updates
         setCurrentSectionIndex((prev) =>
@@ -760,8 +744,27 @@ export function VideoGallery({
     }
   }, [allLoadedSections.length, isLoadingMore, enableUrlRouting]);
 
-  // Handle section change - called when section index changes (user navigated)
-  // Reads sections from ref so loading more in background doesn't change this callback and reload the video
+  const applyMuteFromRef = useCallback(() => {
+    if (playerRef.current) {
+      if (isMutedRef.current) playerRef.current.mute();
+      else playerRef.current.unmute();
+    }
+  }, []);
+
+  const applyMuteAndPlayAfterLoad = useCallback(
+    (videoId: string, delayMs: number) => {
+      setTimeout(() => {
+        if (playerRef.current) {
+          applyMuteFromRef();
+          playerRef.current.playVideo();
+          setIsPlaying(true);
+          lastAutoplayedVideoRef.current = videoId;
+        }
+      }, delayMs);
+    },
+    [applyMuteFromRef]
+  );
+
   const handleSectionChange = useCallback(
     (newIndex: number) => {
       const currentSections = sectionsRef.current;
@@ -786,28 +789,13 @@ export function VideoGallery({
         const video = section.section.videos[videoIndex];
         if (video && playerRef.current) {
           playerRef.current.loadVideoById(video.src);
-          // Always autoplay after manual navigation
-          setTimeout(() => {
-            if (playerRef.current) {
-              // Apply mute state from ref so isMuted in deps doesn't recreate this callback and reload the player
-              if (isMutedRef.current) {
-                playerRef.current.mute();
-              } else {
-                playerRef.current.unmute();
-              }
-              playerRef.current.playVideo();
-              setIsPlaying(true);
-              lastAutoplayedVideoRef.current = video.id;
-            }
-          }, 300);
+          applyMuteAndPlayAfterLoad(video.id, 300);
         }
       }
     },
-    [currentVideoIndex, loadMoreSections, enableUrlRouting]
+    [currentVideoIndex, loadMoreSections, enableUrlRouting, applyMuteAndPlayAfterLoad]
   );
 
-  // Handle video change - called when video index changes (user navigated)
-  // Reads sections from ref so loading more in background doesn't change this callback and reload the video
   const handleVideoChange = useCallback(
     (sectionIndex: number, newVideoIndex: number) => {
       const currentSections = sectionsRef.current;
@@ -828,29 +816,13 @@ export function VideoGallery({
           }
 
           playerRef.current.loadVideoById(video.src);
-          // Always autoplay after manual navigation
-          // Apply mute state after a short delay
-          setTimeout(() => {
-            if (playerRef.current) {
-              // Apply mute state from ref so isMuted in deps doesn't recreate this callback and reload the player
-              if (isMutedRef.current) {
-                playerRef.current.mute();
-              } else {
-                playerRef.current.unmute();
-              }
-              playerRef.current.playVideo();
-              setIsPlaying(true);
-              lastAutoplayedVideoRef.current = video.id;
-            }
-          }, 100);
+          applyMuteAndPlayAfterLoad(video.id, 100);
         }
       }
     },
-    [enableUrlRouting, eventId, videoExistsInEvent]
+    [enableUrlRouting, eventId, videoExistsInEvent, applyMuteAndPlayAfterLoad]
   );
 
-  // Navigation functions - call load handlers directly so we only load on user action, not when state updates (e.g. load more)
-  // Read sections/sectionIndex/videoIndex from refs so load-more never recreates this callback and retriggers the player init effect
   const navigateVideo = useCallback(
     (direction: number, circular: boolean = false) => {
       const currentSections = sectionsRef.current;
@@ -898,43 +870,30 @@ export function VideoGallery({
   );
 
   const togglePlayPause = useCallback(() => {
-    if (playerRef.current) {
-      // Get actual player state instead of relying on local state
-      const playerState = playerRef.current.getPlayerState();
-      // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
-      if (playerState === 1) {
-        // Currently playing, so pause
-        playerRef.current.pauseVideo();
-      } else {
-        // Not playing (paused, ended, unstarted, etc.), so play
-        playerRef.current.playVideo();
-      }
-      // Don't set state here - let handlePlayerStateChange update it based on actual player state
-    }
+    if (!playerRef.current) return;
+    const state = playerRef.current.getPlayerState();
+    if (state === 1) playerRef.current.pauseVideo();
+    else playerRef.current.playVideo();
   }, []);
 
   const toggleMute = useCallback(() => {
-    if (playerRef.current) {
-      if (isMuted) {
-        playerRef.current.unmute();
-        setIsMuted(false);
-      } else {
-        playerRef.current.mute();
-        setIsMuted(true);
-      }
+    if (!playerRef.current) return;
+    if (isMuted) {
+      playerRef.current.unmute();
+      setIsMuted(false);
+    } else {
+      playerRef.current.mute();
+      setIsMuted(true);
     }
   }, [isMuted]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
-      ) {
-        return; // Don't handle if typing in input
-      }
-
+      )
+        return;
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault();
@@ -968,114 +927,58 @@ export function VideoGallery({
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [navigateVideo, navigateSection, togglePlayPause, toggleMute]);
 
-  // Auto-play when video enters center - only on first appearance
   useEffect(() => {
-    if (currentVideo && playerRef.current) {
-      const videoId = currentVideo.video.id;
-
-      // Only autoplay if this video hasn't been autoplayed before
-      if (lastAutoplayedVideoRef.current !== videoId) {
-        const timer = setTimeout(() => {
-          if (playerRef.current && lastAutoplayedVideoRef.current !== videoId) {
-            playerRef.current.playVideo();
-            setIsPlaying(true);
-            lastAutoplayedVideoRef.current = videoId;
-          }
-        }, 500); // Small delay for smooth transition
-
-        return () => {
-          clearTimeout(timer);
-        };
+    if (!currentVideo || !playerRef.current) return;
+    const videoId = currentVideo.video.id;
+    if (lastAutoplayedVideoRef.current === videoId) return;
+    const timer = setTimeout(() => {
+      if (playerRef.current && lastAutoplayedVideoRef.current !== videoId) {
+        playerRef.current.playVideo();
+        setIsPlaying(true);
+        lastAutoplayedVideoRef.current = videoId;
       }
-    }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [currentVideo?.video.id]);
 
-  // Update playing state based on player state
-  // Track video time and duration
-  useEffect(() => {
-    if (!playerRef.current || !currentVideo) return;
-
-    const interval = setInterval(() => {
-      if (playerRef.current) {
-        try {
-          const time = playerRef.current.getCurrentTime();
-          const dur = playerRef.current.getDuration();
-          const muted = playerRef.current.isMuted();
-
-          // Only update if we have valid values
-          if (time >= 0 && isFinite(time) && !isNaN(time)) {
-            setCurrentTime(time);
-          }
-          if (dur > 0 && isFinite(dur) && !isNaN(dur)) {
-            setDuration(dur);
-          }
-
-          if (!playerRef.current.isLoading()) {
-            // Sync mute state with actual player state
-            setIsMuted(muted);
-          }
-        } catch (e) {
-          // Ignore errors (player might not be ready)
-        }
-      }
-    }, 250); // Update 4 times per second for smooth slider
-
-    return () => clearInterval(interval);
-  }, [currentVideo?.video.id]);
-
-  // Track video loading state
   useEffect(() => {
     if (!playerRef.current || !currentVideo) {
       setIsVideoLoading(false);
       return;
     }
-
     const interval = setInterval(() => {
-      if (playerRef.current) {
-        try {
-          const loading = playerRef.current.isLoading();
-          setIsVideoLoading(loading);
-        } catch (e) {
-          // Ignore errors
-        }
+      if (!playerRef.current) return;
+      try {
+        const time = playerRef.current.getCurrentTime();
+        const dur = playerRef.current.getDuration();
+        const muted = playerRef.current.isMuted();
+        const loading = playerRef.current.isLoading();
+        if (time >= 0 && isFinite(time) && !isNaN(time)) setCurrentTime(time);
+        if (dur > 0 && isFinite(dur) && !isNaN(dur)) setDuration(dur);
+        if (!loading) setIsMuted(muted);
+        setIsVideoLoading(loading);
+      } catch {
+        // Player may not be ready
       }
-    }, 250); // Check loading state frequently
-
+    }, 250);
     return () => clearInterval(interval);
   }, [currentVideo?.video.id]);
 
-  // Reset time when video changes
   useEffect(() => {
     setCurrentTime(0);
     setDuration(0);
   }, [currentVideo?.video.id]);
 
-  // Update slider visibility based on playing state and loading state
   useEffect(() => {
-    isPlayingRef.current = isPlaying; // Keep ref in sync
-    if (!isPlaying || isVideoLoading) {
-      // Always show when paused or loading
-      if (sliderTimeoutRef.current) {
-        clearTimeout(sliderTimeoutRef.current);
-        sliderTimeoutRef.current = null;
-      }
-    } else {
-      // If playing and not loading, fade out immediately
-      if (sliderTimeoutRef.current) {
-        clearTimeout(sliderTimeoutRef.current);
-        sliderTimeoutRef.current = null;
-      }
+    isPlayingRef.current = isPlaying;
+    if (sliderTimeoutRef.current) {
+      clearTimeout(sliderTimeoutRef.current);
+      sliderTimeoutRef.current = null;
     }
-  }, [isPlaying, isVideoLoading]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
     return () => {
-      if (sliderTimeoutRef.current) {
-        clearTimeout(sliderTimeoutRef.current);
-      }
+      if (sliderTimeoutRef.current) clearTimeout(sliderTimeoutRef.current);
     };
-  }, []);
+  }, [isPlaying, isVideoLoading]);
 
   // Detect landscape mode
   useEffect(() => {
@@ -1124,7 +1027,6 @@ export function VideoGallery({
     }
   }, []);
 
-  // Listen for fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -1153,19 +1055,17 @@ export function VideoGallery({
   }, []);
 
   const handleRewind = useCallback(() => {
-    if (playerRef.current) {
-      const newTime = Math.max(0, currentTime - 10);
-      playerRef.current.seekTo(newTime);
-      setCurrentTime(newTime);
-    }
+    if (!playerRef.current) return;
+    const t = Math.max(0, currentTime - 10);
+    playerRef.current.seekTo(t);
+    setCurrentTime(t);
   }, [currentTime]);
 
   const handleFastForward = useCallback(() => {
-    if (playerRef.current) {
-      const newTime = Math.min(duration, currentTime + 10);
-      playerRef.current.seekTo(newTime);
-      setCurrentTime(newTime);
-    }
+    if (!playerRef.current) return;
+    const t = Math.min(duration, currentTime + 10);
+    playerRef.current.seekTo(t);
+    setCurrentTime(t);
   }, [currentTime, duration]);
 
   const handleRestart = useCallback(() => {
@@ -1175,60 +1075,33 @@ export function VideoGallery({
     }
   }, []);
 
-  // Keep isMutedRef in sync so handlePlayerReady can read current mute without being in its deps
   isMutedRef.current = isMuted;
 
   const handlePlayerReady = useCallback(() => {
     if (playerRef.current) {
       const dur = playerRef.current.getDuration();
-      if (dur > 0) {
-        setDuration(dur);
-      }
-      // Apply gallery mute state imperatively so we never pass muted as a prop or reload the player
-      if (isMutedRef.current) {
-        playerRef.current.mute();
-      } else {
-        playerRef.current.unmute();
-      }
+      if (dur > 0) setDuration(dur);
+      applyMuteFromRef();
     }
-  }, []);
+  }, [applyMuteFromRef]);
 
   const handlePlayerStateChange = useCallback(
     (state: number) => {
-      // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
       if (state === 1) {
         setIsPlaying(true);
-        // Apply user's mute preference whenever a video starts playing (initial load or after navigation).
-        // YouTube often starts new videos muted; applying here ensures only the first load is auto-muted.
-        if (playerRef.current) {
-          if (isMutedRef.current) {
-            playerRef.current.mute();
-          } else {
-            playerRef.current.unmute();
-          }
-        }
-        // Track that first video has played (for autoplay policy compliance)
+        applyMuteFromRef();
         if (!hasPlayedFirstVideoRef.current) {
           hasPlayedFirstVideoRef.current = true;
         }
       } else if (state === 2 || state === 0) {
         setIsPlaying(false);
-
-        // Auto-advance to next video when current video ends (state 0)
-        if (state === 0) {
-          // Use a small delay to ensure state is properly updated
-          setTimeout(() => {
-            navigateVideo(1, true); // Navigate down with circular navigation
-          }, 500);
-        }
+        if (state === 0) setTimeout(() => navigateVideo(1, true), 500);
       }
     },
-    [navigateVideo]
+    [navigateVideo, applyMuteFromRef]
   );
 
-  // Memoize player props so VideoPlayer only re-renders when current video (by src) or callbacks change.
-  // Mute is not passed; the player creates muted by default and we apply mute state imperatively
-  // via playerRef in handlePlayerReady and toggleMute so mute never affects player init or reload.
+  // Memoized so player only re-renders when video src or callbacks change; mute is applied via ref.
   const memoizedPlayerProps = useMemo(
     () => ({
       videoId: currentVideo?.video.src ?? null,
@@ -1239,22 +1112,6 @@ export function VideoGallery({
     }),
     [currentVideo?.video.src, handlePlayerReady, handlePlayerStateChange]
   );
-
-  // DEBUG: trace when callbacks passed to the player are recreated (can trigger player init effect)
-  useEffect(() => {
-    console.log("[VideoGallery] navigateVideo recreated");
-  }, [navigateVideo]);
-  useEffect(() => {
-    console.log("[VideoGallery] handlePlayerStateChange recreated");
-  }, [handlePlayerStateChange]);
-  useEffect(() => {
-    console.log("[VideoGallery] handlePlayerReady recreated");
-  }, [handlePlayerReady]);
-  useEffect(() => {
-    console.log("[VideoGallery] memoizedPlayerProps deps changed", {
-      videoSrc: currentVideo?.video.src?.slice(-20),
-    });
-  }, [currentVideo?.video.src, handlePlayerReady, handlePlayerStateChange]);
 
   return (
     <div

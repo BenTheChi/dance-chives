@@ -67,14 +67,6 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     const currentTimeRef = useRef<number>(0);
     const [isMobile, setIsMobile] = useState(false);
 
-    // DEBUG: trace mount/unmount
-    useEffect(() => {
-      console.log("[VideoPlayer] MOUNTED");
-      return () => {
-        console.log("[VideoPlayer] UNMOUNTED");
-      };
-    }, []);
-
     // Check if mobile device
     useEffect(() => {
       const checkMobile = () => {
@@ -153,12 +145,6 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
     // Initialize player when API is ready and component is visible
     useEffect(() => {
-      console.log("[VideoPlayer] init effect RUNNING", {
-        isApiReady,
-        currentVideoId: currentVideoId?.slice(-12),
-        isVisible,
-        hadPlayer: !!playerRef.current,
-      });
       if (!isApiReady || !containerRef.current || !currentVideoId || !isVisible)
         return;
 
@@ -170,7 +156,6 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
       // Destroy existing player if any
       if (playerRef.current) {
-        console.log("[VideoPlayer] init effect - DESTROYING existing player");
         try {
           playerRef.current.destroy();
         } catch (e) {
@@ -179,7 +164,6 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         playerRef.current = null;
       }
 
-      console.log("[VideoPlayer] init effect - CREATING new player");
       setIsPlayerReady(false);
       setPlayerState(-1); // Reset to unstarted state
 
@@ -218,7 +202,6 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       });
 
       return () => {
-        console.log("[VideoPlayer] init effect CLEANUP - destroying player");
         if (playerRef.current) {
           try {
             playerRef.current.destroy();
@@ -240,11 +223,6 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     // Update video when videoId prop changes
     useEffect(() => {
       if (videoId !== currentVideoId) {
-        console.log("[VideoPlayer] videoId prop changed effect - updating currentVideoId", {
-          from: currentVideoId?.slice(-12),
-          to: videoId?.slice(-12),
-          willCallLoadVideoById: !!(playerRef.current && videoId),
-        });
         setCurrentVideoId(videoId);
         if (playerRef.current && videoId) {
           const youtubeId = extractYouTubeVideoId(videoId);
@@ -258,8 +236,7 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       }
     }, [videoId, currentVideoId]);
 
-    // Mute state is controlled by the parent via ref (mute/unmute). We do not sync
-    // from the muted prop here so that changing mute never triggers effects or reloads.
+    // Mute is controlled by parent via ref; we don't sync from muted prop to avoid effects/reloads.
 
     // Track current time periodically - this keeps the ref updated
     useEffect(() => {
@@ -280,12 +257,11 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         } catch (e) {
           // Ignore errors
         }
-      }, 250); // Update 4 times per second for smooth tracking
+      }, 250);
 
       return () => clearInterval(interval);
     }, [isPlayerReady]);
 
-    // Expose player methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -415,13 +391,12 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                 startSeconds: 0,
               });
               setCurrentVideoId(newVideoId);
-              setIsPlayerReady(false); // Reset ready state when loading new video
-              setPlayerState(-1); // Reset to unstarted state
+              setIsPlayerReady(false);
+              setPlayerState(-1);
             } catch (e) {
               console.error("Error loading video:", e);
             }
           } else if (youtubeId) {
-            // If player not ready, just update the video ID and let the effect handle it
             setCurrentVideoId(newVideoId);
           }
         },
