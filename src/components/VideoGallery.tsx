@@ -501,6 +501,9 @@ export function VideoGallery({
   const canNavigateRight =
     currentSectionIndex < sections.length - 1 &&
     !(currentSectionIndex >= sections.length - 2 && isLoadingMore);
+  // Show spinner on right arrow when on last section and fetching more sections
+  const showRightLoading =
+    isLoadingMore && currentSectionIndex === sections.length - 1;
   const currentSection = sections[currentSectionIndex];
   const currentVideoCount = currentSection?.section.videos.length || 0;
   // Disable up/down only if there's only 1 video (looping works for 2+)
@@ -1609,6 +1612,7 @@ export function VideoGallery({
             canNavigateRight={canNavigateRight}
             canNavigateUp={canNavigateUp}
             canNavigateDown={canNavigateDown}
+            showRightLoading={showRightLoading}
             isMobile={isMobile}
             isLandscape={isLandscape}
             showMobileNavigation={isMobile}
@@ -1683,6 +1687,7 @@ export function VideoGallery({
             canNavigateRight={canNavigateRight}
             canNavigateUp={canNavigateUp}
             canNavigateDown={canNavigateDown}
+            showRightLoading={showRightLoading}
             isMobile={isMobile}
             isLandscape={isLandscape}
             showMobileNavigation={false}
