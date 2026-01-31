@@ -738,6 +738,10 @@ export function VideoGallery({
         const newCombined = updatedLoadedSections.map(
           payloadToCombinedSectionData
         );
+        console.log("[VideoGallery] loadMoreSections: calling setSections", {
+          prevCount: sections.length,
+          newCount: newCombined.length,
+        });
         setSections(newCombined);
         // Clamp section index so we never point past the end after list updates
         setCurrentSectionIndex((prev) =>
@@ -841,11 +845,9 @@ export function VideoGallery({
   );
 
   // Navigation functions - call load handlers directly so we only load on user action, not when state updates (e.g. load more)
-  // Read sections from ref so load-more (setSections) doesn't recreate this callback and reload the player
   const navigateVideo = useCallback(
     (direction: number, circular: boolean = false) => {
-      const currentSections = sectionsRef.current;
-      const section = currentSections[currentSectionIndex];
+      const section = sections[currentSectionIndex];
       if (!section) return;
 
       const currentIdx = currentVideoIndex.get(currentSectionIndex) || 0;
@@ -871,7 +873,7 @@ export function VideoGallery({
       });
       handleVideoChange(currentSectionIndex, newIndex);
     },
-    [currentSectionIndex, currentVideoIndex, handleVideoChange]
+    [sections, currentSectionIndex, currentVideoIndex, handleVideoChange]
   );
 
   const navigateSection = useCallback(
@@ -1220,6 +1222,22 @@ export function VideoGallery({
     [currentVideo?.video.src, handlePlayerReady, handlePlayerStateChange]
   );
 
+  // DEBUG: trace when callbacks passed to the player are recreated (can trigger player init effect)
+  useEffect(() => {
+    console.log("[VideoGallery] navigateVideo recreated");
+  }, [navigateVideo]);
+  useEffect(() => {
+    console.log("[VideoGallery] handlePlayerStateChange recreated");
+  }, [handlePlayerStateChange]);
+  useEffect(() => {
+    console.log("[VideoGallery] handlePlayerReady recreated");
+  }, [handlePlayerReady]);
+  useEffect(() => {
+    console.log("[VideoGallery] memoizedPlayerProps deps changed", {
+      videoSrc: currentVideo?.video.src?.slice(-20),
+    });
+  }, [currentVideo?.video.src, handlePlayerReady, handlePlayerStateChange]);
+
   return (
     <div
       ref={fullscreenContainerRef}
@@ -1353,10 +1371,7 @@ export function VideoGallery({
         >
           {/* Player layer - single stable instance on top */}
           <div className="absolute inset-0 z-10">
-            <div
-              ref={videoContainerRef}
-              className="relative w-full h-full"
-            >
+            <div ref={videoContainerRef} className="relative w-full h-full">
               <VideoPlayer
                 key="main-player"
                 ref={playerRef}
