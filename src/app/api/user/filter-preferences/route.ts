@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/primsa";
@@ -126,7 +127,7 @@ export async function DELETE() {
   try {
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { filterPreferences: null },
+      data: { filterPreferences: Prisma.DbNull },
     });
     return NextResponse.json({ success: true });
   } catch (error) {
