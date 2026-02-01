@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
+  Loader2,
   Play,
   Pause,
   Volume2,
@@ -65,6 +66,8 @@ interface VideoControlsProps {
   showMobileNavigation?: boolean;
   // Landscape/fullscreen navigation props
   showLandscapeNavigation?: boolean;
+  // Show loading spinner instead of right arrow when fetching more sections at last section
+  showRightLoading?: boolean;
 }
 
 export function VideoControls({
@@ -101,6 +104,7 @@ export function VideoControls({
   isLandscape = false,
   showMobileNavigation = false,
   showLandscapeNavigation = false,
+  showRightLoading = false,
 }: VideoControlsProps) {
   // If showing landscape navigation, only render that
   if (showLandscapeNavigation) {
@@ -157,15 +161,26 @@ export function VideoControls({
               ? "hover:bg-white/10"
               : "opacity-50 cursor-not-allowed"
           )}
-          aria-label="Next section"
+          aria-label={
+            showRightLoading ? "Loading more sections" : "Next section"
+          }
         >
-          <ArrowRight
-            className={cn(
-              "h-6 w-6",
-              isFullscreen && "h-12 w-12",
-              canNavigateRight ? "text-orange-400" : "text-gray-500"
-            )}
-          />
+          {showRightLoading ? (
+            <Loader2
+              className={cn(
+                "h-6 w-6 animate-spin text-orange-400",
+                isFullscreen && "h-12 w-12"
+              )}
+            />
+          ) : (
+            <ArrowRight
+              className={cn(
+                "h-6 w-6",
+                isFullscreen && "h-12 w-12",
+                canNavigateRight ? "text-orange-400" : "text-gray-500"
+              )}
+            />
+          )}
         </button>
         <button
           onClick={onLeft}
@@ -389,16 +404,22 @@ export function VideoControls({
                   ? "hover:bg-white/10"
                   : "opacity-50 cursor-not-allowed"
               )}
-              aria-label="Next section"
+              aria-label={
+                showRightLoading ? "Loading more sections" : "Next section"
+              }
             >
-              <ArrowRight
-                className={cn(
-                  "h-6 w-6 transition-colors",
-                  canNavigateRight
-                    ? "text-orange-400 hover:text-orange-300"
-                    : "text-gray-500"
-                )}
-              />
+              {showRightLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
+              ) : (
+                <ArrowRight
+                  className={cn(
+                    "h-6 w-6 transition-colors",
+                    canNavigateRight
+                      ? "text-orange-400 hover:text-orange-300"
+                      : "text-gray-500"
+                  )}
+                />
+              )}
             </button>
           </div>
         </div>
@@ -470,14 +491,20 @@ export function VideoControls({
                 ? "bg-black/60 hover:bg-black/80"
                 : "bg-black/30 opacity-50 cursor-not-allowed"
             )}
-            aria-label="Next section"
+            aria-label={
+              showRightLoading ? "Loading more sections" : "Next section"
+            }
           >
-            <ArrowRight
-              className={cn(
-                "h-6 w-6",
-                canNavigateRight ? "text-orange-400" : "text-gray-500"
-              )}
-            />
+            {showRightLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin text-orange-400" />
+            ) : (
+              <ArrowRight
+                className={cn(
+                  "h-6 w-6",
+                  canNavigateRight ? "text-orange-400" : "text-gray-500"
+                )}
+              />
+            )}
           </button>
         </div>
       )}

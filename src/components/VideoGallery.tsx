@@ -7,11 +7,10 @@ import { VideoInfoDialog } from "@/components/watch/VideoInfoDialog";
 import { VideoReacts } from "@/components/watch/VideoReacts";
 import { Button } from "@/components/ui/button";
 import { ReactAnimation } from "@/components/watch/ReactAnimation";
-import { Section, Bracket } from "@/types/event";
+import { Section, Bracket, CombinedSectionPayload } from "@/types/event";
 import { Video } from "@/types/video";
 import { UserSearchItem } from "@/types/user";
-import { Info, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -19,144 +18,37 @@ import { StyleBadge } from "@/components/ui/style-badge";
 import { cn } from "@/lib/utils";
 
 interface VideoGalleryProps {
-  initialSections: Array<{
-    section: Section;
-    eventId: string;
-    eventTitle: string;
-    bracket?: Bracket;
-    city?: string;
-    eventDate?: string; // Formatted as "Mar 2026"
-  }>;
+  /** Server returns one full section per item (brackets already combined) */
+  initialSections: CombinedSectionPayload[];
   eventId?: string; // If provided, enables URL routing
   enableUrlRouting?: boolean; // Only true for event-specific views
 }
 
-// Extended section type with video-to-bracket mapping
+// Client-side shape: payload + Map for bracket lookup per video
 interface CombinedSectionData {
   section: Section;
   eventId: string;
   eventTitle: string;
-  bracket?: Bracket;
   city?: string;
   eventDate?: string; // Formatted as "Mar 2026"
-  videoToBracketMap: Map<string, Bracket>; // Map video ID to bracket
+  videoToBracketMap: Map<string, Bracket>;
 }
 
-// Combine brackets within the same section
-// The backend splits brackets into separate section entries, we need to combine them back
-function combineBracketSections(
-  sections: Array<{
-    section: Section;
-    eventId: string;
-    eventTitle: string;
-    bracket?: Bracket;
-    city?: string;
-    eventDate?: string; // Formatted as "Mar 2026"
-  }>
-): CombinedSectionData[] {
-  const result: CombinedSectionData[] = [];
-  // Group by original section (eventId + original section ID)
-  // The backend creates section IDs like `${sectionId}-${bracket.id}`, so we extract the original section ID
-  const sectionGroups = new Map<
-    string,
-    Array<{
-      section: Section;
-      eventId: string;
-      eventTitle: string;
-      bracket?: Bracket;
-      city?: string;
-      eventDate?: string; // Formatted as "Mar 2026"
-    }>
-  >();
-
-  // Group sections by their original section (before bracket split)
-  // Store original section ID with each group
-  const sectionIdMap = new Map<string, string>(); // sectionKey -> originalSectionId
-
-  for (const sectionData of sections) {
-    // Extract original section ID by removing the bracket suffix
-    // Format is usually `${sectionId}-${bracket.id}`
-    let originalSectionId = sectionData.section.id;
-    if (sectionData.bracket) {
-      // Try to extract original section ID
-      const bracketSuffix = `-${sectionData.bracket.id}`;
-      if (originalSectionId.endsWith(bracketSuffix)) {
-        originalSectionId = originalSectionId.slice(0, -bracketSuffix.length);
-      }
-    }
-
-    // Create a key that identifies the original section
-    const sectionKey = `${sectionData.eventId}-${originalSectionId}`;
-
-    if (!sectionGroups.has(sectionKey)) {
-      sectionGroups.set(sectionKey, []);
-      sectionIdMap.set(sectionKey, originalSectionId);
-    }
-    sectionGroups.get(sectionKey)!.push(sectionData);
+function payloadToCombinedSectionData(
+  payload: CombinedSectionPayload
+): CombinedSectionData {
+  const videoToBracketMap = new Map<string, Bracket>();
+  for (const { videoId, bracket } of payload.videoToBracket ?? []) {
+    videoToBracketMap.set(videoId, bracket);
   }
-
-  // Combine all brackets within each section
-  for (const [sectionKey, groupSections] of sectionGroups.entries()) {
-    if (groupSections.length === 0) continue;
-
-    // Use the first section as the base
-    const firstSection = groupSections[0];
-    const combinedVideos: Video[] = [];
-    const videoToBracketMap = new Map<string, Bracket>();
-
-    // Check if any section has brackets
-    const hasBrackets = groupSections.some((s) => s.bracket !== undefined);
-
-    // Combine all videos from all brackets in this section
-    for (const sectionData of groupSections) {
-      for (const video of sectionData.section.videos) {
-        combinedVideos.push(video);
-        // Map each video to its bracket
-        if (sectionData.bracket) {
-          videoToBracketMap.set(video.id, sectionData.bracket);
-        }
-      }
-    }
-
-    // Extract original section title (remove bracket suffix if present)
-    let originalTitle = firstSection.section.title;
-    if (firstSection.bracket) {
-      // Title format is usually `${sectionTitle} - ${bracketTitle}`
-      const bracketSuffix = ` - ${firstSection.bracket.title}`;
-      if (originalTitle.endsWith(bracketSuffix)) {
-        originalTitle = originalTitle.slice(0, -bracketSuffix.length);
-      }
-    }
-
-    // Create combined section with all brackets' videos
-    const originalSectionId =
-      sectionIdMap.get(sectionKey) || firstSection.section.id;
-    result.push({
-      section: {
-        ...firstSection.section,
-        id: originalSectionId, // Use original section ID
-        title: originalTitle,
-        videos: combinedVideos,
-        hasBrackets: hasBrackets,
-      },
-      eventId: firstSection.eventId,
-      eventTitle: firstSection.eventTitle,
-      bracket: undefined, // Section-level bracket is undefined since we have multiple brackets
-      city: firstSection.city,
-      eventDate: firstSection.eventDate, // Pass through eventDate
-      videoToBracketMap,
-    });
-  }
-
-  return result;
-}
-
-// Format seconds to MM:SS
-function formatTime(seconds: number): string {
-  if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  return {
+    section: payload.section,
+    eventId: payload.eventId,
+    eventTitle: payload.eventTitle,
+    city: payload.city,
+    eventDate: payload.eventDate,
+    videoToBracketMap,
+  };
 }
 
 export function VideoGallery({
@@ -168,12 +60,14 @@ export function VideoGallery({
   const searchParams = useSearchParams();
   const videoIdFromUrl = enableUrlRouting ? searchParams.get("video") : null;
 
-  // Combine bracket sections on initialization and when new sections are loaded
+  // Server sends one full section per item; build Map for bracket display per video
   const [sections, setSections] = useState<CombinedSectionData[]>(() =>
-    combineBracketSections(initialSections)
+    initialSections.map(payloadToCombinedSectionData)
   );
-  // Track all loaded sections (before combining) for pagination
-  const [allLoadedSections, setAllLoadedSections] = useState(initialSections);
+
+  // Track all loaded section payloads for pagination
+  const [allLoadedSections, setAllLoadedSections] =
+    useState<CombinedSectionPayload[]>(initialSections);
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentVideoIndex, setCurrentVideoIndex] = useState<
@@ -187,7 +81,6 @@ export function VideoGallery({
   const [hasMoreSections, setHasMoreSections] = useState(true); // false when last fetch returned < limit
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isSliderVisible, setIsSliderVisible] = useState(true);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -197,6 +90,7 @@ export function VideoGallery({
   const lastAutoplayedVideoRef = useRef<string | null>(null);
   const sliderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isPlayingRef = useRef(isPlaying);
+  const isMutedRef = useRef(isMuted);
   const hasInitializedFromUrlRef = useRef(false);
   const hasPlayedFirstVideoRef = useRef(false);
 
@@ -205,10 +99,13 @@ export function VideoGallery({
   const abortControllerRef = useRef<AbortController | null>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const sectionsRef = useRef<CombinedSectionData[]>(sections);
+  const currentSectionIndexRef = useRef(currentSectionIndex);
+  const currentVideoIndexRef = useRef(currentVideoIndex);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Keep sectionsRef in sync so handlers can read latest without triggering effect re-runs when loading more
   sectionsRef.current = sections;
+  currentSectionIndexRef.current = currentSectionIndex;
+  currentVideoIndexRef.current = currentVideoIndex;
 
   // React state management
   const { data: session } = useSession();
@@ -236,13 +133,12 @@ export function VideoGallery({
 
   const MAX_CACHED_VIDEOS = 10;
 
-  // Helper function to check if video exists in current event's sections
   const videoExistsInEvent = useCallback(
     (videoId: string): { sectionIndex: number; videoIndex: number } | null => {
       if (!eventId) return null;
-
-      for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
-        const section = sections[sectionIdx];
+      const secs = sectionsRef.current;
+      for (let sectionIdx = 0; sectionIdx < secs.length; sectionIdx++) {
+        const section = secs[sectionIdx];
         if (section.eventId !== eventId) continue;
 
         const videoIdx = section.section.videos.findIndex(
@@ -254,7 +150,7 @@ export function VideoGallery({
       }
       return null;
     },
-    [sections, eventId]
+    [eventId]
   );
 
   // Initialize from URL parameter on mount
@@ -302,28 +198,6 @@ export function VideoGallery({
     }
   }, [enableUrlRouting, videoIdFromUrl, eventId, videoExistsInEvent]);
 
-  // Clamp currentTime to valid range and ensure slider value is always valid
-  const clampedTime = Math.max(
-    0,
-    Math.min(currentTime, duration > 0 ? duration : currentTime)
-  );
-
-  // Show slider and reset fade-out timer
-  const showSlider = useCallback(() => {
-    setIsSliderVisible(true);
-    if (sliderTimeoutRef.current) {
-      clearTimeout(sliderTimeoutRef.current);
-      sliderTimeoutRef.current = null;
-    }
-    // Only auto-hide if playing (use ref to avoid dependency)
-    if (isPlayingRef.current) {
-      sliderTimeoutRef.current = setTimeout(() => {
-        setIsSliderVisible(false);
-      }, 2000);
-    }
-  }, []);
-
-  // Get current video
   const getCurrentVideo = useCallback((): {
     video: Video;
     eventId: string;
@@ -333,8 +207,9 @@ export function VideoGallery({
     city?: string;
     eventDate?: string; // Formatted as "Mar 2026"
   } | null => {
-    if (sections.length === 0) return null;
-    const section = sections[currentSectionIndex];
+    const secs = sectionsRef.current;
+    if (secs.length === 0) return null;
+    const section = secs[currentSectionIndex];
     if (!section) return null;
 
     const videoIndex = currentVideoIndex.get(currentSectionIndex) || 0;
@@ -356,7 +231,7 @@ export function VideoGallery({
       city: section.city,
       eventDate: section.eventDate,
     };
-  }, [sections, currentSectionIndex, currentVideoIndex]);
+  }, [currentSectionIndex, currentVideoIndex]);
 
   const currentVideo = getCurrentVideo();
 
@@ -501,6 +376,9 @@ export function VideoGallery({
   const canNavigateRight =
     currentSectionIndex < sections.length - 1 &&
     !(currentSectionIndex >= sections.length - 2 && isLoadingMore);
+  // Show spinner on right arrow when near end and fetching more sections (last or second-to-last)
+  const showRightLoading =
+    isLoadingMore && currentSectionIndex >= sections.length - 2;
   const currentSection = sections[currentSectionIndex];
   const currentVideoCount = currentSection?.section.videos.length || 0;
   // Disable up/down only if there's only 1 video (looping works for 2+)
@@ -831,7 +709,7 @@ export function VideoGallery({
     );
   }, [currentVideo, session?.user?.id]);
 
-  const SECTIONS_PAGE_SIZE = 10;
+  const SECTIONS_PAGE_SIZE = 2;
 
   // Load more sections when near bottom (only for multi-event view)
   const loadMoreSections = useCallback(async () => {
@@ -847,10 +725,12 @@ export function VideoGallery({
         if (newSections.length < SECTIONS_PAGE_SIZE) {
           setHasMoreSections(false);
         }
-        // Add new sections to the loaded list
+        // Add new sections to the loaded list (API returns same CombinedSectionPayload shape)
         const updatedLoadedSections = [...allLoadedSections, ...newSections];
         setAllLoadedSections(updatedLoadedSections);
-        const newCombined = combineBracketSections(updatedLoadedSections);
+        const newCombined = updatedLoadedSections.map(
+          payloadToCombinedSectionData
+        );
         setSections(newCombined);
         // Clamp section index so we never point past the end after list updates
         setCurrentSectionIndex((prev) =>
@@ -864,12 +744,29 @@ export function VideoGallery({
     }
   }, [allLoadedSections.length, isLoadingMore, enableUrlRouting]);
 
-  // Handle section change - called when section index changes (user navigated)
-  // Reads sections from ref so loading more in background doesn't change this callback and reload the video
+  const applyMuteFromRef = useCallback(() => {
+    if (playerRef.current) {
+      if (isMutedRef.current) playerRef.current.mute();
+      else playerRef.current.unmute();
+    }
+  }, []);
+
+  const applyMuteAndPlayAfterLoad = useCallback(
+    (videoId: string, delayMs: number) => {
+      setTimeout(() => {
+        if (playerRef.current) {
+          applyMuteFromRef();
+          playerRef.current.playVideo();
+          setIsPlaying(true);
+          lastAutoplayedVideoRef.current = videoId;
+        }
+      }, delayMs);
+    },
+    [applyMuteFromRef]
+  );
+
   const handleSectionChange = useCallback(
     (newIndex: number) => {
-      showSlider(); // Show slider when navigating
-
       const currentSections = sectionsRef.current;
       // Load more if near end (only for multi-event view)
       if (!enableUrlRouting && newIndex >= currentSections.length - 2) {
@@ -892,32 +789,15 @@ export function VideoGallery({
         const video = section.section.videos[videoIndex];
         if (video && playerRef.current) {
           playerRef.current.loadVideoById(video.src);
-          // Always autoplay after manual navigation
-          setTimeout(() => {
-            if (playerRef.current) {
-              // Apply mute state after player is ready
-              if (isMuted) {
-                playerRef.current.mute();
-              } else {
-                playerRef.current.unmute();
-              }
-              playerRef.current.playVideo();
-              setIsPlaying(true);
-              lastAutoplayedVideoRef.current = video.id;
-            }
-          }, 300);
+          applyMuteAndPlayAfterLoad(video.id, 300);
         }
       }
     },
-    [currentVideoIndex, loadMoreSections, showSlider, enableUrlRouting, isMuted]
+    [currentVideoIndex, loadMoreSections, enableUrlRouting, applyMuteAndPlayAfterLoad]
   );
 
-  // Handle video change - called when video index changes (user navigated)
-  // Reads sections from ref so loading more in background doesn't change this callback and reload the video
   const handleVideoChange = useCallback(
     (sectionIndex: number, newVideoIndex: number) => {
-      showSlider(); // Show slider when navigating
-
       const currentSections = sectionsRef.current;
       const section = currentSections[sectionIndex];
       if (section && section.section.videos.length > newVideoIndex) {
@@ -936,60 +816,22 @@ export function VideoGallery({
           }
 
           playerRef.current.loadVideoById(video.src);
-          // Always autoplay after manual navigation
-          // Apply mute state after a short delay
-          setTimeout(() => {
-            if (playerRef.current) {
-              if (isMuted) {
-                playerRef.current.mute();
-              } else {
-                playerRef.current.unmute();
-              }
-              playerRef.current.playVideo();
-              setIsPlaying(true);
-              lastAutoplayedVideoRef.current = video.id;
-            }
-          }, 100);
+          applyMuteAndPlayAfterLoad(video.id, 100);
         }
       }
     },
-    [showSlider, enableUrlRouting, eventId, videoExistsInEvent, isMuted]
+    [enableUrlRouting, eventId, videoExistsInEvent, applyMuteAndPlayAfterLoad]
   );
 
-  // Track previous values to avoid unnecessary calls
-  const prevSectionIndexRef = useRef(currentSectionIndex);
-  const prevVideoIndexRef = useRef<Map<number, number>>(new Map());
-
-  // Effect to handle section changes
-  useEffect(() => {
-    if (prevSectionIndexRef.current !== currentSectionIndex) {
-      prevSectionIndexRef.current = currentSectionIndex;
-      handleSectionChange(currentSectionIndex);
-    }
-  }, [currentSectionIndex, handleSectionChange]);
-
-  // Effect to handle video changes
-  useEffect(() => {
-    const videoIndex = currentVideoIndex.get(currentSectionIndex) ?? 0;
-    const prevVideoIndex =
-      prevVideoIndexRef.current.get(currentSectionIndex) ?? -1;
-
-    if (
-      prevVideoIndex !== videoIndex ||
-      prevSectionIndexRef.current !== currentSectionIndex
-    ) {
-      prevVideoIndexRef.current.set(currentSectionIndex, videoIndex);
-      handleVideoChange(currentSectionIndex, videoIndex);
-    }
-  }, [currentVideoIndex, currentSectionIndex, handleVideoChange]);
-
-  // Navigation functions
   const navigateVideo = useCallback(
     (direction: number, circular: boolean = false) => {
-      const section = sections[currentSectionIndex];
+      const currentSections = sectionsRef.current;
+      const sectionIdx = currentSectionIndexRef.current;
+      const section = currentSections[sectionIdx];
       if (!section) return;
 
-      const currentIdx = currentVideoIndex.get(currentSectionIndex) || 0;
+      const videoIndexMap = currentVideoIndexRef.current;
+      const currentIdx = videoIndexMap.get(sectionIdx) || 0;
       const videos = section.section.videos;
       if (videos.length === 0) return;
 
@@ -1007,11 +849,12 @@ export function VideoGallery({
 
       setCurrentVideoIndex((prev) => {
         const newMap = new Map(prev);
-        newMap.set(currentSectionIndex, newIndex);
+        newMap.set(sectionIdx, newIndex);
         return newMap;
       });
+      handleVideoChange(sectionIdx, newIndex);
     },
-    [sections, currentSectionIndex, currentVideoIndex]
+    [handleVideoChange]
   );
 
   const navigateSection = useCallback(
@@ -1021,48 +864,36 @@ export function VideoGallery({
         Math.min(sections.length - 1, currentSectionIndex + direction)
       );
       setCurrentSectionIndex(newIndex);
+      handleSectionChange(newIndex);
     },
-    [sections.length, currentSectionIndex]
+    [sections.length, currentSectionIndex, handleSectionChange]
   );
 
   const togglePlayPause = useCallback(() => {
-    if (playerRef.current) {
-      // Get actual player state instead of relying on local state
-      const playerState = playerRef.current.getPlayerState();
-      // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
-      if (playerState === 1) {
-        // Currently playing, so pause
-        playerRef.current.pauseVideo();
-      } else {
-        // Not playing (paused, ended, unstarted, etc.), so play
-        playerRef.current.playVideo();
-      }
-      // Don't set state here - let handlePlayerStateChange update it based on actual player state
-    }
+    if (!playerRef.current) return;
+    const state = playerRef.current.getPlayerState();
+    if (state === 1) playerRef.current.pauseVideo();
+    else playerRef.current.playVideo();
   }, []);
 
   const toggleMute = useCallback(() => {
-    if (playerRef.current) {
-      if (isMuted) {
-        playerRef.current.unmute();
-        setIsMuted(false);
-      } else {
-        playerRef.current.mute();
-        setIsMuted(true);
-      }
+    if (!playerRef.current) return;
+    if (isMuted) {
+      playerRef.current.unmute();
+      setIsMuted(false);
+    } else {
+      playerRef.current.mute();
+      setIsMuted(true);
     }
   }, [isMuted]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement
-      ) {
-        return; // Don't handle if typing in input
-      }
-
+      )
+        return;
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault();
@@ -1096,117 +927,58 @@ export function VideoGallery({
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [navigateVideo, navigateSection, togglePlayPause, toggleMute]);
 
-  // Auto-play when video enters center - only on first appearance
   useEffect(() => {
-    if (currentVideo && playerRef.current) {
-      const videoId = currentVideo.video.id;
-
-      // Only autoplay if this video hasn't been autoplayed before
-      if (lastAutoplayedVideoRef.current !== videoId) {
-        const timer = setTimeout(() => {
-          if (playerRef.current && lastAutoplayedVideoRef.current !== videoId) {
-            playerRef.current.playVideo();
-            setIsPlaying(true);
-            lastAutoplayedVideoRef.current = videoId;
-          }
-        }, 500); // Small delay for smooth transition
-
-        return () => {
-          clearTimeout(timer);
-        };
+    if (!currentVideo || !playerRef.current) return;
+    const videoId = currentVideo.video.id;
+    if (lastAutoplayedVideoRef.current === videoId) return;
+    const timer = setTimeout(() => {
+      if (playerRef.current && lastAutoplayedVideoRef.current !== videoId) {
+        playerRef.current.playVideo();
+        setIsPlaying(true);
+        lastAutoplayedVideoRef.current = videoId;
       }
-    }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [currentVideo?.video.id]);
 
-  // Update playing state based on player state
-  // Track video time and duration
-  useEffect(() => {
-    if (!playerRef.current || !currentVideo) return;
-
-    const interval = setInterval(() => {
-      if (playerRef.current) {
-        try {
-          const time = playerRef.current.getCurrentTime();
-          const dur = playerRef.current.getDuration();
-          const muted = playerRef.current.isMuted();
-
-          // Only update if we have valid values
-          if (time >= 0 && isFinite(time) && !isNaN(time)) {
-            setCurrentTime(time);
-          }
-          if (dur > 0 && isFinite(dur) && !isNaN(dur)) {
-            setDuration(dur);
-          }
-
-          if (!playerRef.current.isLoading()) {
-            // Sync mute state with actual player state
-            setIsMuted(muted);
-          }
-        } catch (e) {
-          // Ignore errors (player might not be ready)
-        }
-      }
-    }, 250); // Update 4 times per second for smooth slider
-
-    return () => clearInterval(interval);
-  }, [currentVideo?.video.id]);
-
-  // Track video loading state
   useEffect(() => {
     if (!playerRef.current || !currentVideo) {
       setIsVideoLoading(false);
       return;
     }
-
     const interval = setInterval(() => {
-      if (playerRef.current) {
-        try {
-          const loading = playerRef.current.isLoading();
-          setIsVideoLoading(loading);
-        } catch (e) {
-          // Ignore errors
-        }
+      if (!playerRef.current) return;
+      try {
+        const time = playerRef.current.getCurrentTime();
+        const dur = playerRef.current.getDuration();
+        const muted = playerRef.current.isMuted();
+        const loading = playerRef.current.isLoading();
+        if (time >= 0 && isFinite(time) && !isNaN(time)) setCurrentTime(time);
+        if (dur > 0 && isFinite(dur) && !isNaN(dur)) setDuration(dur);
+        if (!loading) setIsMuted(muted);
+        setIsVideoLoading(loading);
+      } catch {
+        // Player may not be ready
       }
-    }, 250); // Check loading state frequently
-
+    }, 250);
     return () => clearInterval(interval);
   }, [currentVideo?.video.id]);
 
-  // Reset time when video changes
   useEffect(() => {
     setCurrentTime(0);
     setDuration(0);
-    showSlider(); // Show slider when video changes
-  }, [currentVideo?.video.id, showSlider]);
+  }, [currentVideo?.video.id]);
 
-  // Update slider visibility based on playing state and loading state
   useEffect(() => {
-    isPlayingRef.current = isPlaying; // Keep ref in sync
-    if (!isPlaying || isVideoLoading) {
-      // Always show when paused or loading
-      setIsSliderVisible(true);
-      if (sliderTimeoutRef.current) {
-        clearTimeout(sliderTimeoutRef.current);
-        sliderTimeoutRef.current = null;
-      }
-    } else {
-      // If playing and not loading, fade out immediately
-      if (sliderTimeoutRef.current) {
-        clearTimeout(sliderTimeoutRef.current);
-        sliderTimeoutRef.current = null;
-      }
-      setIsSliderVisible(false);
+    isPlayingRef.current = isPlaying;
+    if (sliderTimeoutRef.current) {
+      clearTimeout(sliderTimeoutRef.current);
+      sliderTimeoutRef.current = null;
     }
-  }, [isPlaying, isVideoLoading]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
     return () => {
-      if (sliderTimeoutRef.current) {
-        clearTimeout(sliderTimeoutRef.current);
-      }
+      if (sliderTimeoutRef.current) clearTimeout(sliderTimeoutRef.current);
     };
-  }, []);
+  }, [isPlaying, isVideoLoading]);
 
   // Detect landscape mode
   useEffect(() => {
@@ -1255,7 +1027,6 @@ export function VideoGallery({
     }
   }, []);
 
-  // Listen for fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -1283,81 +1054,63 @@ export function VideoGallery({
     };
   }, []);
 
-  const handleSeek = useCallback(
-    (value: number[]) => {
-      if (playerRef.current && value.length > 0) {
-        const seekTime = Math.max(0, value[0]);
-        playerRef.current.seekTo(seekTime);
-        setCurrentTime(seekTime);
-        showSlider(); // Show slider when interacting
-
-        // Clear triggered reacts to allow retriggering when seeking
-        if (currentVideo?.video.id) {
-          triggeredReacts.current.delete(currentVideo.video.id);
-        }
-      }
-    },
-    [showSlider, currentVideo?.video.id]
-  );
-
   const handleRewind = useCallback(() => {
-    if (playerRef.current) {
-      const newTime = Math.max(0, currentTime - 10);
-      playerRef.current.seekTo(newTime);
-      setCurrentTime(newTime);
-      showSlider(); // Show slider when rewinding
-    }
-  }, [currentTime, showSlider]);
+    if (!playerRef.current) return;
+    const t = Math.max(0, currentTime - 10);
+    playerRef.current.seekTo(t);
+    setCurrentTime(t);
+  }, [currentTime]);
 
   const handleFastForward = useCallback(() => {
-    if (playerRef.current) {
-      const newTime = Math.min(duration, currentTime + 10);
-      playerRef.current.seekTo(newTime);
-      setCurrentTime(newTime);
-      showSlider(); // Show slider when fast forwarding
-    }
-  }, [currentTime, duration, showSlider]);
+    if (!playerRef.current) return;
+    const t = Math.min(duration, currentTime + 10);
+    playerRef.current.seekTo(t);
+    setCurrentTime(t);
+  }, [currentTime, duration]);
 
   const handleRestart = useCallback(() => {
     if (playerRef.current) {
       playerRef.current.seekTo(0);
       setCurrentTime(0);
-      showSlider(); // Show slider when restarting
     }
-  }, [showSlider]);
+  }, []);
+
+  isMutedRef.current = isMuted;
 
   const handlePlayerReady = useCallback(() => {
     if (playerRef.current) {
       const dur = playerRef.current.getDuration();
-      if (dur > 0) {
-        setDuration(dur);
-      }
+      if (dur > 0) setDuration(dur);
+      applyMuteFromRef();
     }
-  }, []);
+  }, [applyMuteFromRef]);
 
   const handlePlayerStateChange = useCallback(
     (state: number) => {
-      // YouTube Player States: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
       if (state === 1) {
         setIsPlaying(true);
-        // Track that first video has played (for autoplay policy compliance)
+        applyMuteFromRef();
         if (!hasPlayedFirstVideoRef.current) {
           hasPlayedFirstVideoRef.current = true;
         }
       } else if (state === 2 || state === 0) {
         setIsPlaying(false);
-        showSlider(); // Show slider when paused or ended
-
-        // Auto-advance to next video when current video ends (state 0)
-        if (state === 0) {
-          // Use a small delay to ensure state is properly updated
-          setTimeout(() => {
-            navigateVideo(1, true); // Navigate down with circular navigation
-          }, 500);
-        }
+        if (state === 0) setTimeout(() => navigateVideo(1, true), 500);
       }
     },
-    [showSlider, navigateVideo]
+    [navigateVideo, applyMuteFromRef]
+  );
+
+  // Memoized so player only re-renders when video src or callbacks change; mute is applied via ref.
+  const memoizedPlayerProps = useMemo(
+    () => ({
+      videoId: currentVideo?.video.src ?? null,
+      autoplay: true as const,
+      onReady: handlePlayerReady,
+      onStateChange: handlePlayerStateChange,
+      className: "w-full h-full",
+    }),
+    [currentVideo?.video.src, handlePlayerReady, handlePlayerStateChange]
   );
 
   return (
@@ -1491,9 +1244,31 @@ export function VideoGallery({
             isFullscreen ? "h-full flex-1" : "aspect-video"
           )}
         >
-          {/* Sections Container - Horizontal */}
+          {/* Player layer - single stable instance on top */}
+          <div className="absolute inset-0 z-10">
+            <div ref={videoContainerRef} className="relative w-full h-full">
+              <VideoPlayer
+                key="main-player"
+                ref={playerRef}
+                {...memoizedPlayerProps}
+              />
+            </div>
+            {/* React Animation Overlay - when in landscape or fullscreen */}
+            {currentVideo &&
+              (isLandscape || !isMobile || isFullscreen) &&
+              showReacts && (
+                <ReactAnimation
+                  reacts={sortedReacts}
+                  currentTime={currentTime}
+                  videoContainerRef={videoContainerRef as any}
+                  isPlaying={isPlaying}
+                  useLargeEmojis={useLargeEmojis}
+                />
+              )}
+          </div>
+          {/* Carousel layer - placeholders only, behind */}
           <div
-            className="w-full h-full flex transition-transform duration-300 ease-in-out"
+            className="absolute inset-0 z-0 w-full h-full flex transition-transform duration-300 ease-in-out"
             style={{
               transform: `translateX(-${currentSectionIndex * 100}%)`,
             }}
@@ -1509,64 +1284,24 @@ export function VideoGallery({
                   key={sectionData.section.id}
                   className="flex-shrink-0 w-full h-full flex items-center justify-center"
                 >
-                  {/* Videos Container - Vertical */}
                   <div
                     className="w-full h-full flex flex-col transition-transform duration-300 ease-in-out"
                     style={{
                       transform: `translateY(-${currentVideoIdx * 100}%)`,
                     }}
                   >
-                    {videos.map((video, videoIdx) => {
-                      // Only render VideoPlayer for the current video to enable lazy loading
-                      const isCurrentVideo =
-                        currentVideo &&
-                        currentVideo.video.id === video.id &&
-                        sectionIdx === currentSectionIndex &&
-                        videoIdx === currentVideoIdx;
-                      return (
-                        <div
-                          key={video.id}
-                          className="flex-shrink-0 w-full h-full relative"
-                        >
-                          {isCurrentVideo ? (
-                            <>
-                              <div
-                                ref={videoContainerRef}
-                                className="relative w-full h-full"
-                              >
-                                <VideoPlayer
-                                  ref={playerRef}
-                                  videoId={currentVideo.video.src}
-                                  autoplay={true}
-                                  muted={isMuted}
-                                  onReady={handlePlayerReady}
-                                  onStateChange={handlePlayerStateChange}
-                                  className="w-full h-full"
-                                />
-                              </div>
-
-                              {/* React Animation Overlay - Inside when in landscape or fullscreen */}
-                              {(isLandscape || !isMobile || isFullscreen) &&
-                                showReacts && (
-                                  <ReactAnimation
-                                    reacts={sortedReacts}
-                                    currentTime={currentTime}
-                                    videoContainerRef={videoContainerRef as any}
-                                    isPlaying={isPlaying}
-                                    useLargeEmojis={useLargeEmojis}
-                                  />
-                                )}
-                            </>
-                          ) : (
-                            <div className="w-full h-full bg-black flex items-center justify-center">
-                              <p className="text-white text-sm opacity-50">
-                                {video.title}
-                              </p>
-                            </div>
-                          )}
+                    {videos.map((video) => (
+                      <div
+                        key={video.id}
+                        className="flex-shrink-0 w-full h-full relative"
+                      >
+                        <div className="w-full h-full bg-black flex items-center justify-center">
+                          <p className="text-white text-sm opacity-50">
+                            {video.title}
+                          </p>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -1609,6 +1344,7 @@ export function VideoGallery({
             canNavigateRight={canNavigateRight}
             canNavigateUp={canNavigateUp}
             canNavigateDown={canNavigateDown}
+            showRightLoading={showRightLoading}
             isMobile={isMobile}
             isLandscape={isLandscape}
             showMobileNavigation={isMobile}
@@ -1683,6 +1419,7 @@ export function VideoGallery({
             canNavigateRight={canNavigateRight}
             canNavigateUp={canNavigateUp}
             canNavigateDown={canNavigateDown}
+            showRightLoading={showRightLoading}
             isMobile={isMobile}
             isLandscape={isLandscape}
             showMobileNavigation={false}

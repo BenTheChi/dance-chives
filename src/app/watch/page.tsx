@@ -16,13 +16,13 @@ async function getCachedSections(limit: number, offset: number) {
     {
       revalidate: 3600,
       tags: ["watch-sections"],
-    },
+    }
   )();
 }
 
 export default async function WatchPage() {
-  // Fetch initial sections server-side
-  const initialSections = await getCachedSections(10, 0);
+  // Fetch initial sections server-side (up to 5 sections; API returns one section per item with brackets already flattened)
+  const initialSections = await getCachedSections(5, 0);
 
   return (
     <>

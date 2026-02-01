@@ -7,6 +7,7 @@ import {
   TEventCard,
   EventType,
   Role,
+  CombinedSectionPayload,
 } from "../../types/event";
 import {
   Video,
@@ -4846,16 +4847,7 @@ export async function getEventsWithVideosForWatch(
 export async function getAllBattleSections(
   limit: number = 10,
   offset: number = 0,
-): Promise<
-  Array<{
-    section: Section;
-    eventId: string;
-    eventTitle: string;
-    bracket?: Bracket;
-    city?: string;
-    eventDate?: string; // Formatted as "Mar 2026"
-  }>
-> {
+): Promise<CombinedSectionPayload[]> {
   const session = driver.session();
 
   try {
@@ -4867,6 +4859,7 @@ export async function getAllBattleSections(
     // Get battle sections - we'll sort by event date in JS
     // Fetch more than needed since we'll sort and paginate in JS
     const fetchLimit = Math.max(limit + offset, 100); // Fetch at least 100 or enough for pagination
+    // One row per section: WITH e, s first so ORDER BY + LIMIT apply to unique sections; then get city
     const sectionsResult = await session.run(
       `
       MATCH (e:Event)
@@ -4877,30 +4870,25 @@ export async function getAllBattleSections(
       } OR EXISTS {
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
       }
-      OPTIONAL MATCH (e)-[:IN]->(c:City)
-      WITH e, s, c
+      WITH e, s
       ORDER BY e.updatedAt DESC, e.createdAt DESC, COALESCE(s.position, 999999) ASC
       LIMIT $limit
+      OPTIONAL MATCH (e)-[:IN]->(c:City)
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as eventStartDate, e.dates as eventDates, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription, c.name as cityName
       `,
       { limit: int(fetchLimit) },
     );
 
-    type ResultItem = {
-      section: Section;
-      eventId: string;
-      eventTitle: string;
-      bracket?: Bracket;
+    type ResultItem = CombinedSectionPayload & {
       _sortKey?: {
         eventStartDate: string | null;
         eventUpdatedAt: string | null;
         eventCreatedAt: string | null;
       };
-      city?: string;
-      eventDate?: string; // Formatted as "Mar 2026"
     };
 
     const result: ResultItem[] = [];
+    const seenSectionIds = new Set<string>();
 
     // Helper function to format event date as "Mar 2026"
     const formatEventDate = (
@@ -4956,13 +4944,16 @@ export async function getAllBattleSections(
     };
 
     for (const record of sectionsResult.records) {
+      const sectionId = record.get("sectionId");
+      if (seenSectionIds.has(sectionId)) continue;
+      seenSectionIds.add(sectionId);
+
       const eventId = record.get("eventId");
       const eventTitle = record.get("eventTitle");
       const eventStartDate = record.get("eventStartDate") as string | null;
       const eventDates = record.get("eventDates") as string | null;
       const eventUpdatedAt = record.get("eventUpdatedAt") as string | null;
       const eventCreatedAt = record.get("eventCreatedAt") as string | null;
-      const sectionId = record.get("sectionId");
       const sectionTitle = record.get("sectionTitle");
       const sectionDescription = record.get("sectionDescription");
       const cityName = record.get("cityName") as string | null;
@@ -4970,7 +4961,7 @@ export async function getAllBattleSections(
       // Format event date
       const formattedEventDate = formatEventDate(eventDates);
 
-      // Get section with videos and brackets
+      // Get section with videos and brackets (one section → combine all its brackets)
       const sectionDataResult = await session.run(
         `
         MATCH (s:Section {id: $sectionId})
@@ -5250,58 +5241,47 @@ export async function getAllBattleSections(
         }
       }
 
-      // Build section object
+      // Build one full section per column (brackets combined server-side)
+      const combinedVideos: Video[] = [];
+      const videoToBracket: Array<{ videoId: string; bracket: Bracket }> = [];
+      if (hasBrackets && bracketList.length > 0) {
+        for (const bracket of bracketList) {
+          for (const v of bracket.videos) {
+            combinedVideos.push(v);
+            videoToBracket.push({ videoId: v.id, bracket });
+          }
+        }
+      }
+      if (sectionVideos.length > 0) {
+        combinedVideos.push(...sectionVideos);
+      }
+
       const section: Section = {
         id: sectionId,
         title: sectionTitle,
         description: sectionDescription as string | undefined,
         sectionType: "Battle",
         hasBrackets,
-        videos: sectionVideos,
+        videos: combinedVideos,
         brackets: bracketList,
         styles: styles.length > 0 ? styles : undefined,
         applyStylesToVideos: sectionRecord.get("applyStylesToVideos") || false,
       };
 
-      // For TV, we want to flatten sections with brackets into individual entries
-      // Each bracket becomes a separate "section" entry
-      if (hasBrackets && bracketList.length > 0) {
-        for (const bracket of bracketList) {
-          result.push({
-            section: {
-              ...section,
-              id: `${sectionId}-${bracket.id}`,
-              title: `${sectionTitle} - ${bracket.title}`,
-              hasBrackets: false,
-              videos: bracket.videos,
-              brackets: [],
-            },
-            eventId,
-            eventTitle,
-            bracket,
-            city: cityName || undefined,
-            eventDate: formattedEventDate,
-            _sortKey: {
-              eventStartDate,
-              eventUpdatedAt,
-              eventCreatedAt,
-            },
-          });
-        }
-      } else {
-        result.push({
-          section,
-          eventId,
-          eventTitle,
-          city: cityName || undefined,
-          eventDate: formattedEventDate,
-          _sortKey: {
-            eventStartDate,
-            eventUpdatedAt,
-            eventCreatedAt,
-          },
-        });
-      }
+      result.push({
+        section,
+        eventId,
+        eventTitle,
+        city: cityName || undefined,
+        eventDate: formattedEventDate,
+        videoToBracket:
+          videoToBracket.length > 0 ? videoToBracket : undefined,
+        _sortKey: {
+          eventStartDate,
+          eventUpdatedAt,
+          eventCreatedAt,
+        },
+      });
     }
 
     // Helper function to convert MM/DD/YYYY to YYYY-MM-DD for sorting
@@ -5362,16 +5342,9 @@ export async function getAllBattleSections(
  * Includes all section types (not just BattleSection) that have videos
  * Loads ALL sections regardless of count (no pagination)
  */
-export async function getEventSections(eventId: string): Promise<
-  Array<{
-    section: Section;
-    eventId: string;
-    eventTitle: string;
-    bracket?: Bracket;
-    city?: string;
-    eventDate?: string; // Formatted as "Mar 2026"
-  }>
-> {
+export async function getEventSections(
+  eventId: string,
+): Promise<CombinedSectionPayload[]> {
   const session = driver.session();
 
   try {
@@ -5471,23 +5444,18 @@ export async function getEventSections(eventId: string): Promise<
       { eventId },
     );
 
-    type ResultItem = {
-      section: Section;
-      eventId: string;
-      eventTitle: string;
-      bracket?: Bracket;
-      city?: string;
-      eventDate?: string;
-    };
-
-    const result: ResultItem[] = [];
+    const result: CombinedSectionPayload[] = [];
+    const seenSectionIds = new Set<string>();
 
     for (const record of sectionsResult.records) {
       const sectionId = record.get("sectionId");
+      if (seenSectionIds.has(sectionId)) continue;
+      seenSectionIds.add(sectionId);
+
       const sectionTitle = record.get("sectionTitle");
       const sectionDescription = record.get("sectionDescription");
 
-      // Get section with videos and brackets
+      // Get section with videos and brackets (one section → combine all its brackets)
       const sectionDataResult = await session.run(
         `
         MATCH (s:Section {id: $sectionId})
@@ -5788,62 +5756,42 @@ export async function getEventSections(eventId: string): Promise<
         }
       }
 
-      // Build section object
+      // Build one full section per column (brackets combined server-side)
+      const combinedVideos: Video[] = [];
+      const videoToBracket: Array<{ videoId: string; bracket: Bracket }> = [];
+      if (hasBrackets && bracketList.length > 0) {
+        for (const bracket of bracketList) {
+          for (const v of bracket.videos) {
+            combinedVideos.push(v);
+            videoToBracket.push({ videoId: v.id, bracket });
+          }
+        }
+      }
+      if (sectionVideos.length > 0) {
+        combinedVideos.push(...sectionVideos);
+      }
+
       const section: Section = {
         id: sectionId,
         title: sectionTitle,
         description: sectionDescription as string | undefined,
         sectionType: sectionType as any,
         hasBrackets,
-        videos: sectionVideos,
+        videos: combinedVideos,
         brackets: bracketList,
         styles: styles.length > 0 ? styles : undefined,
         applyStylesToVideos: sectionRecord.get("applyStylesToVideos") || false,
       };
 
-      // For TV, we want to flatten sections with brackets into individual entries
-      // Each bracket becomes a separate "section" entry (like getAllBattleSections)
-      if (hasBrackets && bracketList.length > 0) {
-        for (const bracket of bracketList) {
-          result.push({
-            section: {
-              ...section,
-              id: `${sectionId}-${bracket.id}`,
-              title: `${sectionTitle} - ${bracket.title}`,
-              hasBrackets: false,
-              videos: bracket.videos,
-              brackets: [],
-            },
-            eventId,
-            eventTitle,
-            bracket,
-            city: cityName || undefined,
-            eventDate: formattedEventDate,
-          });
-        }
-        // Also include direct videos (videos not in brackets) if any exist
-        if (sectionVideos.length > 0) {
-          result.push({
-            section: {
-              ...section,
-              videos: sectionVideos,
-              brackets: [],
-            },
-            eventId,
-            eventTitle,
-            city: cityName || undefined,
-            eventDate: formattedEventDate,
-          });
-        }
-      } else {
-        result.push({
-          section,
-          eventId,
-          eventTitle,
-          city: cityName || undefined,
-          eventDate: formattedEventDate,
-        });
-      }
+      result.push({
+        section,
+        eventId,
+        eventTitle,
+        city: cityName || undefined,
+        eventDate: formattedEventDate,
+        videoToBracket:
+          videoToBracket.length > 0 ? videoToBracket : undefined,
+      });
     }
 
     return result;

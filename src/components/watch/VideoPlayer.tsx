@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
   useEffect,
   useRef,
   useState,
@@ -42,7 +42,7 @@ interface VideoPlayerProps {
   className?: string;
 }
 
-export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
+const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
   (
     {
       videoId,
@@ -53,14 +53,14 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       muted = true,
       className,
     },
-    ref,
+    ref
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null);
     const [isApiReady, setIsApiReady] = useState(false);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [currentVideoId, setCurrentVideoId] = useState<string | null>(
-      videoId,
+      videoId
     );
     const [isVisible, setIsVisible] = useState(false);
     const [playerState, setPlayerState] = useState<number>(-1); // -1 = unstarted
@@ -99,7 +99,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         {
           rootMargin: "50px", // Start loading 50px before entering viewport
           threshold: 0.1,
-        },
+        }
       );
 
       observer.observe(containerRef.current);
@@ -236,20 +236,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       }
     }, [videoId, currentVideoId]);
 
-    // Sync mute state when muted prop changes (without recreating player)
-    useEffect(() => {
-      if (playerRef.current && isPlayerReady) {
-        try {
-          if (muted) {
-            playerRef.current.mute();
-          } else {
-            playerRef.current.unMute();
-          }
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    }, [muted, isPlayerReady]);
+    // Mute is controlled by parent via ref; we don't sync from muted prop to avoid effects/reloads.
 
     // Track current time periodically - this keeps the ref updated
     useEffect(() => {
@@ -270,12 +257,11 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         } catch (e) {
           // Ignore errors
         }
-      }, 250); // Update 4 times per second for smooth tracking
+      }, 250);
 
       return () => clearInterval(interval);
     }, [isPlayerReady]);
 
-    // Expose player methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -405,13 +391,12 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
                 startSeconds: 0,
               });
               setCurrentVideoId(newVideoId);
-              setIsPlayerReady(false); // Reset ready state when loading new video
-              setPlayerState(-1); // Reset to unstarted state
+              setIsPlayerReady(false);
+              setPlayerState(-1);
             } catch (e) {
               console.error("Error loading video:", e);
             }
           } else if (youtubeId) {
-            // If player not ready, just update the video ID and let the effect handle it
             setCurrentVideoId(newVideoId);
           }
         },
@@ -438,7 +423,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           );
         },
       }),
-      [isPlayerReady, playerState],
+      [isPlayerReady, playerState]
     );
 
     if (!currentVideoId) {
@@ -492,7 +477,9 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         </div>
       </div>
     );
-  },
+  }
 );
 
-VideoPlayer.displayName = "VideoPlayer";
+VideoPlayerInner.displayName = "VideoPlayer";
+
+export const VideoPlayer = React.memo(VideoPlayerInner);
