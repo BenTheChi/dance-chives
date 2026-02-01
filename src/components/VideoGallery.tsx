@@ -12,16 +12,23 @@ import { Video } from "@/types/video";
 import { UserSearchItem } from "@/types/user";
 import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { VideoFilterDialog } from "@/components/watch/VideoFilterDialog";
+import { VideoFilters, DEFAULT_VIDEO_FILTERS } from "@/types/video-filter";
+import { WATCH_SECTIONS_FETCH_LIMIT } from "@/constants/watch-sections";
 
 interface VideoGalleryProps {
   /** Server returns one full section per item (brackets already combined) */
   initialSections: CombinedSectionPayload[];
   eventId?: string; // If provided, enables URL routing
   enableUrlRouting?: boolean; // Only true for event-specific views
+  /** Filter options from server (multi-event view). Omit or pass [] for event-specific view. */
+  availableCities?: string[];
+  availableStyles?: string[];
 }
 
 // Client-side shape: payload + Map for bracket lookup per video
@@ -51,13 +58,148 @@ function payloadToCombinedSectionData(
   };
 }
 
+const FILTER_PARAM_KEYS = [
+  "yearFrom",
+  "yearTo",
+  "cities",
+  "styles",
+  "finalsOnly",
+  "noPrelims",
+  "sortOrder",
+] as const;
+
+const normalizeFilters = (filters: VideoFilters): VideoFilters => {
+  const normalized: VideoFilters = {};
+  if (typeof filters.yearFrom === "number") {
+    normalized.yearFrom = filters.yearFrom;
+  }
+  if (typeof filters.yearTo === "number") {
+    normalized.yearTo = filters.yearTo;
+  }
+  if (filters.cities && filters.cities.length > 0) {
+    normalized.cities = Array.from(
+      new Set(filters.cities.map((city) => city.trim()).filter(Boolean))
+    ).sort();
+  }
+  if (filters.styles && filters.styles.length > 0) {
+    normalized.styles = Array.from(
+      new Set(filters.styles.map((style) => style.trim()).filter(Boolean))
+    ).sort();
+  }
+  if (filters.finalsOnly) {
+    normalized.finalsOnly = true;
+  }
+  if (filters.noPrelims) {
+    normalized.noPrelims = true;
+  }
+  if (filters.sortOrder) {
+    normalized.sortOrder = filters.sortOrder;
+  }
+  return normalized;
+};
+
+const filtersAreEqual = (a: VideoFilters, b: VideoFilters): boolean => {
+  const sanitizedA = normalizeFilters(a);
+  const sanitizedB = normalizeFilters(b);
+  return JSON.stringify(sanitizedA) === JSON.stringify(sanitizedB);
+};
+
+const parseFiltersFromSearchParams = (
+  params: URLSearchParams
+): VideoFilters => {
+  const filters: VideoFilters = {};
+
+  const yearFrom = params.get("yearFrom");
+  if (yearFrom && /^\d{4}$/.test(yearFrom)) {
+    filters.yearFrom = Number(yearFrom);
+  }
+
+  const yearTo = params.get("yearTo");
+  if (yearTo && /^\d{4}$/.test(yearTo)) {
+    filters.yearTo = Number(yearTo);
+  }
+
+  const cities = params.get("cities");
+  if (cities) {
+    const list = cities
+      .split(",")
+      .map((city) => city.trim())
+      .filter((city) => city.length > 0);
+    if (list.length > 0) {
+      filters.cities = list;
+    }
+  }
+
+  const styles = params.get("styles");
+  if (styles) {
+    const list = styles
+      .split(",")
+      .map((style) => style.trim())
+      .filter((style) => style.length > 0);
+    if (list.length > 0) {
+      filters.styles = list;
+    }
+  }
+
+  if (params.get("finalsOnly") === "true") {
+    filters.finalsOnly = true;
+  }
+
+  if (params.get("noPrelims") === "true") {
+    filters.noPrelims = true;
+  }
+
+  const sortOrder = params.get("sortOrder");
+  if (sortOrder === "asc" || sortOrder === "desc") {
+    filters.sortOrder = sortOrder;
+  }
+
+  return filters;
+};
+
+const buildFilterParams = (filters: VideoFilters): URLSearchParams => {
+  const params = new URLSearchParams();
+  const normalized = normalizeFilters(filters);
+
+  if (typeof normalized.yearFrom === "number") {
+    params.set("yearFrom", String(normalized.yearFrom));
+  }
+  if (typeof normalized.yearTo === "number") {
+    params.set("yearTo", String(normalized.yearTo));
+  }
+  if (normalized.cities && normalized.cities.length > 0) {
+    params.set("cities", normalized.cities.join(","));
+  }
+  if (normalized.styles && normalized.styles.length > 0) {
+    params.set("styles", normalized.styles.join(","));
+  }
+  if (normalized.finalsOnly) {
+    params.set("finalsOnly", "true");
+  }
+  if (normalized.noPrelims) {
+    params.set("noPrelims", "true");
+  }
+  if (normalized.sortOrder) {
+    params.set("sortOrder", normalized.sortOrder);
+  }
+
+  return params;
+};
+
+const hasFilterParams = (params: URLSearchParams) =>
+  FILTER_PARAM_KEYS.some((key) => params.has(key));
+
 export function VideoGallery({
   initialSections,
   eventId,
   enableUrlRouting = false,
+  availableCities = [],
+  availableStyles = [],
 }: VideoGalleryProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const searchParamsString = searchParams.toString();
   const videoIdFromUrl = enableUrlRouting ? searchParams.get("video") : null;
 
   // Server sends one full section per item; build Map for bracket display per video
@@ -79,6 +221,47 @@ export function VideoGallery({
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreSections, setHasMoreSections] = useState(true); // false when last fetch returned < limit
+  const [filters, setFilters] = useState<VideoFilters>(() => ({
+    ...DEFAULT_VIDEO_FILTERS,
+  }));
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [savedFilterPreferences, setSavedFilterPreferences] =
+    useState<VideoFilters | null>(null);
+  const [hasAppliedSavedFilters, setHasAppliedSavedFilters] = useState(false);
+  const [isSavingFilters, setIsSavingFilters] = useState(false);
+  const [isFiltersRefreshing, setIsFiltersRefreshing] = useState(false);
+  const updateUrlFromFilters = useCallback(
+    (targetFilters: VideoFilters) => {
+      if (enableUrlRouting) return;
+      const params = buildFilterParams(targetFilters);
+      const query = params.toString();
+      const currentPath = pathname ?? "/watch";
+      const nextPath = query ? `${currentPath}?${query}` : currentPath;
+      router.replace(nextPath, { scroll: false });
+    },
+    [enableUrlRouting, router]
+  );
+
+  const applyFilters = useCallback(
+    (newFilters: VideoFilters, options?: { updateUrl?: boolean }) => {
+      if (enableUrlRouting) return;
+      setIsFiltersRefreshing(true);
+      setFilters(newFilters);
+      setHasMoreSections(true);
+      setCurrentSectionIndex(0);
+      setCurrentVideoIndex(new Map());
+      if (options?.updateUrl) {
+        updateUrlFromFilters(newFilters);
+      }
+      // Trigger single fetch with new filters (called from Filter dialog Apply)
+      fetchSectionsRef.current?.({
+        offset: 0,
+        replace: true,
+        filters: newFilters,
+      });
+    },
+    [enableUrlRouting, updateUrlFromFilters]
+  );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
@@ -93,6 +276,15 @@ export function VideoGallery({
   const isMutedRef = useRef(isMuted);
   const hasInitializedFromUrlRef = useRef(false);
   const hasPlayedFirstVideoRef = useRef(false);
+  const initialFetchDoneRef = useRef(false);
+  const fetchSectionsRef =
+    useRef<
+      (opts: {
+        offset: number;
+        replace: boolean;
+        filters: VideoFilters;
+      }) => Promise<void>
+    >(null);
 
   const playerRef = useRef<VideoPlayerRef>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -130,6 +322,102 @@ export function VideoGallery({
     >
   >(new Map());
   const triggeredReacts = useRef<Map<string, Set<string>>>(new Map());
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setSavedFilterPreferences(null);
+      setHasAppliedSavedFilters(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    fetch("/api/user/filter-preferences")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load preferences");
+        }
+        const data = await response.json();
+        if (isCancelled) return;
+        if (data && typeof data === "object") {
+          setSavedFilterPreferences(data as VideoFilters);
+          setHasAppliedSavedFilters(false);
+        } else {
+          setSavedFilterPreferences(null);
+        }
+      })
+      .catch((error) => {
+        if (isCancelled) return;
+        console.error("Error loading saved filters:", error);
+        setSavedFilterPreferences(null);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (enableUrlRouting) return;
+
+    const hasParams = hasFilterParams(searchParams);
+
+    if (hasParams) {
+      const parsedFilters = parseFiltersFromSearchParams(searchParams);
+      if (!filtersAreEqual(parsedFilters, filters)) {
+        setFilters(parsedFilters);
+        setHasAppliedSavedFilters(false);
+        fetchSectionsRef.current?.({
+          offset: 0,
+          replace: true,
+          filters: parsedFilters,
+        });
+      }
+      return;
+    }
+
+    if (savedFilterPreferences && !hasAppliedSavedFilters) {
+      setFilters(savedFilterPreferences);
+      setHasAppliedSavedFilters(true);
+      updateUrlFromFilters(savedFilterPreferences);
+      fetchSectionsRef.current?.({
+        offset: 0,
+        replace: true,
+        filters: savedFilterPreferences,
+      });
+      return;
+    }
+
+    if (
+      !savedFilterPreferences &&
+      !filtersAreEqual(filters, DEFAULT_VIDEO_FILTERS)
+    ) {
+      setFilters({ ...DEFAULT_VIDEO_FILTERS });
+      fetchSectionsRef.current?.({
+        offset: 0,
+        replace: true,
+        filters: DEFAULT_VIDEO_FILTERS,
+      });
+      return;
+    }
+    // No URL params, no saved prefs, filters already default: single initial fetch
+    if (!initialFetchDoneRef.current && fetchSectionsRef.current) {
+      initialFetchDoneRef.current = true;
+      fetchSectionsRef.current({
+        offset: 0,
+        replace: true,
+        filters,
+      });
+    }
+  }, [
+    enableUrlRouting,
+    filters,
+    savedFilterPreferences,
+    hasAppliedSavedFilters,
+    searchParams,
+    searchParamsString,
+    updateUrlFromFilters,
+  ]);
 
   const MAX_CACHED_VIDEOS = 10;
 
@@ -709,40 +997,136 @@ export function VideoGallery({
     );
   }, [currentVideo, session?.user?.id]);
 
-  const SECTIONS_PAGE_SIZE = 2;
+  const SECTIONS_PAGE_SIZE = WATCH_SECTIONS_FETCH_LIMIT;
 
-  // Load more sections when near bottom (only for multi-event view)
-  const loadMoreSections = useCallback(async () => {
-    if (isLoadingMore || enableUrlRouting) return; // Don't load more for event-specific view
-    setIsLoadingMore(true);
+  const buildSectionRequestParams = useCallback(
+    (targetFilters: VideoFilters, offset: number) => {
+      const params = buildFilterParams(targetFilters);
+      params.set("offset", offset.toString());
+      return params;
+    },
+    []
+  );
 
-    try {
-      const response = await fetch(
-        `/api/watch/sections?offset=${allLoadedSections.length}&limit=${SECTIONS_PAGE_SIZE}`
-      );
-      if (response.ok) {
-        const newSections = await response.json();
-        if (newSections.length < SECTIONS_PAGE_SIZE) {
-          setHasMoreSections(false);
+  const fetchSections = useCallback(
+    async ({
+      offset,
+      replace,
+      filters: targetFilters,
+    }: {
+      offset: number;
+      replace: boolean;
+      filters: VideoFilters;
+    }) => {
+      if (enableUrlRouting) return;
+      if (isLoadingMore && !replace) return;
+      setIsLoadingMore(true);
+
+      try {
+        const params = buildSectionRequestParams(targetFilters, offset);
+        const response = await fetch(
+          `/api/watch/sections?${params.toString()}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to load sections");
         }
-        // Add new sections to the loaded list (API returns same CombinedSectionPayload shape)
-        const updatedLoadedSections = [...allLoadedSections, ...newSections];
+        const newSections: CombinedSectionPayload[] = await response.json();
+        const updatedLoadedSections = replace
+          ? newSections
+          : [...allLoadedSections, ...newSections];
         setAllLoadedSections(updatedLoadedSections);
         const newCombined = updatedLoadedSections.map(
           payloadToCombinedSectionData
         );
         setSections(newCombined);
-        // Clamp section index so we never point past the end after list updates
+        setHasMoreSections(newSections.length >= SECTIONS_PAGE_SIZE);
         setCurrentSectionIndex((prev) =>
           Math.min(prev, Math.max(0, newCombined.length - 1))
         );
+      } catch (error) {
+        console.error("Error loading sections:", error);
+      } finally {
+        setIsLoadingMore(false);
+        if (replace) {
+          setIsFiltersRefreshing(false);
+        }
       }
-    } catch (error) {
-      console.error("Error loading more sections:", error);
-    } finally {
-      setIsLoadingMore(false);
+    },
+    [
+      allLoadedSections,
+      buildSectionRequestParams,
+      enableUrlRouting,
+      isLoadingMore,
+    ]
+  );
+  fetchSectionsRef.current = fetchSections;
+
+  const loadMoreSections = useCallback(() => {
+    if (isLoadingMore || enableUrlRouting || !hasMoreSections) return;
+    fetchSections({
+      offset: allLoadedSections.length,
+      replace: false,
+      filters,
+    });
+  }, [
+    allLoadedSections.length,
+    enableUrlRouting,
+    fetchSections,
+    filters,
+    hasMoreSections,
+    isLoadingMore,
+  ]);
+
+  const clearSavedPreferences = useCallback(async () => {
+    if (!session?.user?.id) {
+      return;
     }
-  }, [allLoadedSections.length, isLoadingMore, enableUrlRouting]);
+    try {
+      const response = await fetch("/api/user/filter-preferences", {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to clear preferences");
+      }
+      setSavedFilterPreferences(null);
+      setHasAppliedSavedFilters(false);
+      toast.success("Filter preferences cleared");
+    } catch (error) {
+      console.error("Error clearing saved filters:", error);
+      toast.error("Unable to clear saved filters");
+    }
+  }, [session?.user?.id]);
+
+  const handleSaveFilters = useCallback(
+    async (filtersToSave: VideoFilters) => {
+      if (!session?.user?.id) return;
+      setIsSavingFilters(true);
+      try {
+        const response = await fetch("/api/user/filter-preferences", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(filtersToSave),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to save preferences");
+        }
+        setSavedFilterPreferences(filtersToSave);
+        setHasAppliedSavedFilters(true);
+        toast.success("Filter preferences saved");
+      } catch (error) {
+        console.error("Error saving filters:", error);
+        toast.error("Unable to save filters");
+      } finally {
+        setIsSavingFilters(false);
+      }
+    },
+    [session?.user?.id]
+  );
+
+  const handleClearFilters = useCallback(() => {
+    clearSavedPreferences();
+    applyFilters({ ...DEFAULT_VIDEO_FILTERS }, { updateUrl: true });
+  }, [applyFilters, clearSavedPreferences]);
 
   const applyMuteFromRef = useCallback(() => {
     if (playerRef.current) {
@@ -793,7 +1177,12 @@ export function VideoGallery({
         }
       }
     },
-    [currentVideoIndex, loadMoreSections, enableUrlRouting, applyMuteAndPlayAfterLoad]
+    [
+      currentVideoIndex,
+      loadMoreSections,
+      enableUrlRouting,
+      applyMuteAndPlayAfterLoad,
+    ]
   );
 
   const handleVideoChange = useCallback(
@@ -1186,16 +1575,15 @@ export function VideoGallery({
             >
               <Info className="h-5 w-5" />
             </Button>
-            <Link
-              href="#"
-              className="text-white/70 hover:text-white underline text-sm"
-              onClick={(e) => {
-                e.preventDefault();
-                // Placeholder for future filters
-              }}
-            >
-              Filters
-            </Link>
+            {!enableUrlRouting && (
+              <button
+                type="button"
+                className="text-white/70 hover:text-white underline text-sm"
+                onClick={() => setIsFilterDialogOpen(true)}
+              >
+                Filters
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1307,6 +1695,12 @@ export function VideoGallery({
               );
             })}
           </div>
+          {isFiltersRefreshing && (
+            <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-black/70 text-white">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-white border-t-transparent" />
+              <p className="text-sm tracking-wide">Refreshing filters...</p>
+            </div>
+          )}
         </div>
 
         {/* Controls */}
@@ -1449,6 +1843,27 @@ export function VideoGallery({
             isFullscreen={isFullscreen}
           />
         </div>
+      )}
+
+      {!enableUrlRouting && (
+        <VideoFilterDialog
+          isOpen={isFilterDialogOpen}
+          onClose={() => setIsFilterDialogOpen(false)}
+          filters={filters}
+          defaultFilters={DEFAULT_VIDEO_FILTERS}
+          availableCities={availableCities}
+          availableStyles={availableStyles}
+          onApply={(newFilters) => {
+            setIsFilterDialogOpen(false);
+            applyFilters(newFilters, { updateUrl: true });
+          }}
+          onSave={handleSaveFilters}
+          onClear={() => {
+            setIsFilterDialogOpen(false);
+            handleClearFilters();
+          }}
+          isSaving={isSavingFilters}
+        />
       )}
 
       {/* Info Dialog */}

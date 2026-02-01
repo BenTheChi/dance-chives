@@ -1,0 +1,2 @@
+export const WATCH_SECTIONS_FETCH_LIMIT = 2;
+export const WATCH_INITIAL_SECTION_LIMIT = 5;

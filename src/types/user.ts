@@ -29,4 +29,5 @@ export interface UserSearchItem {
   role?: string; // Optional role property (e.g., "DANCER" for video tags)
   city?: string; // User's city
   styles?: string[]; // User's dance styles
+  isUserItem?: boolean;
 }

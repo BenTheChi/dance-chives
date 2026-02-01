@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +11,9 @@ interface UserBadgeProps {
   image?: string | null;
   className?: string;
   onRemove?: () => void;
+  showAvatar?: boolean;
+  showSecondaryLabel?: boolean;
+  usernameParentheses?: boolean;
 }
 
 export function UserBadge({
@@ -23,12 +25,13 @@ export function UserBadge({
   image,
   className,
   onRemove,
+  showAvatar,
+  showSecondaryLabel,
+  usernameParentheses,
 }: UserBadgeProps) {
   const badgeClasses = cn(
     "text-black border border-black font-semibold text-xs px-1 py-1 rounded flex items-center justify-center leading-none gap-1.5",
-    claimed
-      ? "bg-fog-white"
-      : "bg-neutral-200 italic",
+    claimed ? "bg-fog-white" : "bg-neutral-200 italic",
     className
   );
 
@@ -42,29 +45,37 @@ export function UserBadge({
         .slice(0, 2)
     : username[0]?.toUpperCase() || "U";
 
+  const avatarVisible = showAvatar ?? true;
+  const secondaryLabelVisible = showSecondaryLabel ?? true;
+  const wrapUsername = usernameParentheses ?? true;
+
   const showInstagramAsPrimary = !claimed && !!instagram;
   const primaryLabel = showInstagramAsPrimary ? `@${instagram}` : displayName;
-  const secondaryLabel = instagram ? `@${instagram}` : `(${username})`;
-  const showSecondary = claimed || !showInstagramAsPrimary;
+  const usernameDisplay = wrapUsername ? `(${username})` : username;
+  const secondaryLabel = instagram ? `@${instagram}` : usernameDisplay;
+  const showSecondary =
+    secondaryLabelVisible && (claimed || !showInstagramAsPrimary);
 
   return (
     <span className={badgeClasses}>
-      <div className="relative w-[30px] h-[30px] rounded-full overflow-hidden border border-black">
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt={displayName || username}
-            width={30}
-            height={30}
-            className="object-cover w-full h-full"
-            unoptimized
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-600 text-xs font-semibold leading-none">
-            {initials}
-          </div>
-        )}
-      </div>
+      {avatarVisible && (
+        <div className="relative w-[30px] h-[30px] rounded-full overflow-hidden border border-black">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt={displayName || username}
+              width={30}
+              height={30}
+              className="object-cover w-full h-full"
+              unoptimized
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-600 text-xs font-semibold leading-none">
+              {initials}
+            </div>
+          )}
+        </div>
+      )}
       <span className="text-sm">{primaryLabel}</span>
       {showSecondary && (
         <span className="text-gray-600 text-sm">{secondaryLabel}</span>

@@ -25,6 +25,7 @@ model User {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   auth             Int?
+  filterPreferences Json?
 
   events          Event[]
 
