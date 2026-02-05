@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       {
         revalidate: 3600, // 1 hour
         tags: ["watch-sections"],
-      },
+      }
     );
 
     const sections = await getCachedSections(offset);
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching battle sections:", error);
     return NextResponse.json(
       { error: "Failed to fetch sections" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

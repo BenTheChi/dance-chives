@@ -16,7 +16,7 @@ export async function GET() {
     console.error("Error fetching watch filter styles:", error);
     return NextResponse.json(
       { error: "Failed to load styles" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

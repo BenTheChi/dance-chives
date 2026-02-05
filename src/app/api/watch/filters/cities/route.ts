@@ -16,7 +16,7 @@ export async function GET() {
     console.error("Error fetching watch filter cities:", error);
     return NextResponse.json(
       { error: "Failed to load cities" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

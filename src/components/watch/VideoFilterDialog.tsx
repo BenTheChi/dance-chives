@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -75,16 +75,24 @@ export function VideoFilterDialog({
     filters.sortOrder ?? "desc"
   );
   const [yearError, setYearError] = useState<string | null>(null);
+  const latestFiltersRef = useRef(filters);
 
   useEffect(() => {
-    setYearFromText(filters.yearFrom ? String(filters.yearFrom) : "");
-    setYearToText(filters.yearTo ? String(filters.yearTo) : "");
-    setSelectedCities(filters.cities ?? []);
-    setSelectedStyles(filters.styles ?? []);
-    setFinalsOnly(filters.finalsOnly ?? false);
-    setNoPrelims(filters.noPrelims ?? false);
-    setSortOrder(filters.sortOrder ?? "desc");
-  }, [filters, isOpen]);
+    latestFiltersRef.current = filters;
+  }, [filters]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const nextFilters = latestFiltersRef.current;
+    setYearFromText(nextFilters.yearFrom ? String(nextFilters.yearFrom) : "");
+    setYearToText(nextFilters.yearTo ? String(nextFilters.yearTo) : "");
+    setSelectedCities(nextFilters.cities ?? []);
+    setSelectedStyles(nextFilters.styles ?? []);
+    setFinalsOnly(nextFilters.finalsOnly ?? false);
+    setNoPrelims(nextFilters.noPrelims ?? false);
+    setSortOrder(nextFilters.sortOrder ?? "desc");
+    setYearError(null);
+  }, [isOpen]);
 
   const citySearch = useCallback(
     async (query: string) => {
@@ -131,6 +139,8 @@ export function VideoFilterDialog({
     const trimmed = yearToText.trim();
     return fourDigitPattern.test(trimmed) ? Number(trimmed) : undefined;
   }, [yearToText]);
+  const yearFromInputId = "video-filter-year-from";
+  const yearToInputId = "video-filter-year-to";
 
   const validateYears = () => {
     setYearError(null);
@@ -198,26 +208,40 @@ export function VideoFilterDialog({
           <DialogTitle className="text-lg font-bold">Filters</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <p className="!font-bold mb-1">Date</p>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="YYYY"
-                value={yearFromText}
-                onChange={(event) => setYearFromText(event.target.value)}
-                maxLength={4}
-                className="w-full max-w-[120px]"
-              />
-              <span className="text-lg font-semibold text-muted-foreground">
-                &lt;
-              </span>
-              <Input
-                placeholder="YYYY"
-                value={yearToText}
-                onChange={(event) => setYearToText(event.target.value)}
-                maxLength={4}
-                className="w-full max-w-[120px]"
-              />
+          <div className="space-y-2">
+            <div className="flex flex-row gap-4">
+              <div className="flex flex-col gap-1">
+                <Label
+                  htmlFor={yearFromInputId}
+                  className="text-[13px] font-bold text-muted-foreground"
+                >
+                  From
+                </Label>
+                <Input
+                  id={yearFromInputId}
+                  placeholder="YYYY"
+                  value={yearFromText}
+                  onChange={(event) => setYearFromText(event.target.value)}
+                  maxLength={4}
+                  className="w-full max-w-[120px]"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label
+                  htmlFor={yearToInputId}
+                  className="text-[13px] font-bold text-muted-foreground"
+                >
+                  To
+                </Label>
+                <Input
+                  id={yearToInputId}
+                  placeholder="YYYY"
+                  value={yearToText}
+                  onChange={(event) => setYearToText(event.target.value)}
+                  maxLength={4}
+                  className="w-full max-w-[120px]"
+                />
+              </div>
             </div>
             {yearError && (
               <p className="text-xs text-destructive-foreground">{yearError}</p>

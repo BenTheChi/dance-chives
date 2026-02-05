@@ -3621,7 +3621,7 @@ export const getStylesWithVideos = async (): Promise<string[]> => {
       }
       RETURN DISTINCT style.name as styleName
       ORDER BY styleName ASC
-      `,
+      `
     );
 
     const styles = result.records
@@ -3856,7 +3856,7 @@ export const getFilterOptionsFromEvents = async (): Promise<{
       WITH DISTINCT c.name AS cityName, st.name AS style1, st2.name AS style2
       UNWIND [style1, style2] AS styleName
       RETURN DISTINCT cityName, styleName
-      `,
+      `
     );
 
     const citySet = new Set<string>();
@@ -4956,9 +4956,7 @@ export async function getAllBattleSections(
         ?.map((style) => style.trim())
         .filter((style) => style.length > 0) ?? [];
 
-    const eventConditions = [
-      "(e.status = 'visible' OR e.status IS NULL)",
-    ];
+    const eventConditions = ["(e.status = 'visible' OR e.status IS NULL)"];
     if (typeof filters?.yearFrom === "number") {
       eventConditions.push(
         `e.startDate IS NOT NULL AND size(e.startDate) >= 4 AND toInteger(substring(e.startDate, size(e.startDate) - 4, 4)) >= $yearFrom`
