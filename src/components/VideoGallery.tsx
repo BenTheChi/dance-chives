@@ -14,6 +14,7 @@ import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { cn } from "@/lib/utils";
 import { VideoFilterDialog } from "@/components/watch/VideoFilterDialog";
@@ -77,6 +78,7 @@ export function VideoGallery({
   const {
     sections: sectionPayloads,
     isLoadingMore,
+    isValidating,
     loadMore,
   } = useWatchSections(filters, {
     initialSections,
@@ -105,6 +107,11 @@ export function VideoGallery({
 
   useEffect(() => {
     if (enableUrlRouting) return;
+    // Pause video immediately when filters change
+    if (playerRef.current) {
+      playerRef.current.pauseVideo();
+    }
+    setIsPlaying(false);
     setCurrentSectionIndex(0);
     setCurrentVideoIndex(new Map());
   }, [enableUrlRouting, filters]);
@@ -117,6 +124,9 @@ export function VideoGallery({
   const [duration, setDuration] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
+  
+  // Unified loading state: show loading when fetching filtered sections or when video is loading
+  const isFilteringOrLoading = !enableUrlRouting && (isValidating || isVideoLoading);
   const [isMobile, setIsMobile] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
@@ -1264,6 +1274,18 @@ export function VideoGallery({
                 />
               )}
           </div>
+          {/* Unified Loading Overlay - covers API fetch and video loading */}
+          {isFilteringOrLoading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-secondary-dark transition-opacity duration-700">
+              <Image
+                src="/Dancechives_Icon_Color_onDark.svg"
+                alt="Loading"
+                width={250}
+                height={250}
+                className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
+              />
+            </div>
+          )}
           {/* Carousel layer - placeholders only, behind */}
           <div
             className="absolute inset-0 z-0 w-full h-full flex transition-transform duration-300 ease-in-out"

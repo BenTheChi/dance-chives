@@ -4991,22 +4991,6 @@ export async function getAllBattleSections(
         }`
       );
     }
-    if (filters?.finalsOnly) {
-      sectionConditions.push(
-        `EXISTS {
-          MATCH (s)<-[:IN]-(b:Bracket)
-          WHERE toLower(b.title) CONTAINS 'final'
-        }`
-      );
-    }
-    if (filters?.noPrelims) {
-      sectionConditions.push(
-        `NOT EXISTS {
-          MATCH (s)<-[:IN]-(b:Bracket)
-          WHERE toLower(b.title) CONTAINS 'pre'
-        }`
-      );
-    }
 
     const params: Record<string, unknown> = {
       limit: int(fetchLimit),
@@ -5150,7 +5134,7 @@ export async function getAllBattleSections(
       const directVideos = sectionRecord.get("directVideos") as any[];
       const brackets = sectionRecord.get("brackets") as any[];
       const bracketVideos = sectionRecord.get("bracketVideos") as any[];
-      const hasBrackets = brackets.length > 0;
+      const hasAnyBrackets = brackets.length > 0;
 
       // Get section styles
       const stylesResult = await session.run(
@@ -5274,13 +5258,25 @@ export async function getAllBattleSections(
       }
 
       // Get bracket videos with full data
+      const bracketConditions: string[] = [];
+      if (filters?.finalsOnly) {
+        bracketConditions.push(`toLower(b.title) CONTAINS 'final'`);
+      }
+      if (filters?.noPrelims) {
+        bracketConditions.push(`NOT toLower(b.title) CONTAINS 'pre'`);
+      }
+
       const bracketList: Bracket[] = [];
-      if (hasBrackets && brackets.length > 0) {
+      if (hasAnyBrackets && brackets.length > 0) {
         const bracketIds = brackets.map((b) => b.properties.id);
+        const bracketConditionSql =
+          bracketConditions.length > 0
+            ? ` AND ${bracketConditions.join(" AND ")}`
+            : "";
         const bracketDataResult = await session.run(
           `
           MATCH (b:Bracket)
-          WHERE b.id IN $bracketIds
+          WHERE b.id IN $bracketIds${bracketConditionSql}
           RETURN b.id as id, b.title as title
           ORDER BY COALESCE(b.position, 999999) ASC
           `,
@@ -5409,7 +5405,8 @@ export async function getAllBattleSections(
       // Build one full section per column (brackets combined server-side)
       const combinedVideos: Video[] = [];
       const videoToBracket: Array<{ videoId: string; bracket: Bracket }> = [];
-      if (hasBrackets && bracketList.length > 0) {
+      const hasBrackets = bracketList.length > 0;
+      if (hasBrackets) {
         for (const bracket of bracketList) {
           for (const v of bracket.videos) {
             combinedVideos.push(v);
@@ -5419,6 +5416,10 @@ export async function getAllBattleSections(
       }
       if (sectionVideos.length > 0) {
         combinedVideos.push(...sectionVideos);
+      }
+
+      if ((filters?.finalsOnly || filters?.noPrelims) && combinedVideos.length === 0) {
+        continue;
       }
 
       const section: Section = {

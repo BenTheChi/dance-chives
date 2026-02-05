@@ -100,6 +100,7 @@ export const useWatchSections = (
     hasMore,
     isLoading,
     isLoadingMore,
+    isValidating,
     loadMore,
     error,
   };
