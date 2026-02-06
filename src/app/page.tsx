@@ -188,8 +188,25 @@ export default async function Home() {
               </div>
             </section> */}
 
-            {/* Battle TV Promotion */}
-            <section className="max-w-6xl mx-auto w-full bg-primary rounded-sm py-12 px-4 sm:px-8 border-4 border-primary-light">
+            {/* Mobile Calendar CTA - Only visible on mobile */}
+            <section className="md:hidden max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-12 px-4 border-4 border-secondary-light">
+              <div className="flex flex-col items-center gap-6">
+                <h2 className="!text-4xl text-center !font-rubik-mono-one text-outline">
+                  Never Miss an Event
+                </h2>
+                <Link href="/calendar">
+                  <Button
+                    size="xl"
+                    className="font-rubik-mono-one text-xl text-charcoal !bg-accent-blue px-8 py-6 mt-4 hover:scale-105 transition-transform shadow-hover"
+                  >
+                    View Calendar
+                  </Button>
+                </Link>
+              </div>
+            </section>
+
+            {/* Battle TV Promotion - Hidden on mobile */}
+            <section className="hidden md:flex max-w-6xl mx-auto w-full bg-primary rounded-sm py-12 px-4 sm:px-8 border-4 border-primary-light">
               <div className="flex flex-col items-center gap-10">
                 <div className="text-center space-y-4">
                   <h2
