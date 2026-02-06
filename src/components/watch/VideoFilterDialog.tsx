@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { VideoFilters } from "@/types/video-filter";
 import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
 
@@ -24,9 +25,7 @@ interface VideoFilterDialogProps {
   availableCities: string[];
   availableStyles: string[];
   onApply: (filters: VideoFilters) => void;
-  onSave?: (filters: VideoFilters) => void;
   onClear: () => void;
-  isSaving?: boolean;
 }
 
 const fourDigitPattern = /^\d{4}$/;
@@ -52,11 +51,10 @@ export function VideoFilterDialog({
   availableCities,
   availableStyles,
   onApply,
-  onSave,
   onClear,
-  isSaving = false,
 }: VideoFilterDialogProps) {
   const { data: session } = useSession();
+  const [isSaving, setIsSaving] = useState(false);
   const [yearFromText, setYearFromText] = useState(
     filters.yearFrom ? String(filters.yearFrom) : ""
   );
@@ -180,11 +178,28 @@ export function VideoFilterDialog({
     onApply(selectedFilters);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateYears()) {
       return;
     }
-    onSave?.(selectedFilters);
+    if (!session?.user?.id) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/user/filter-preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(selectedFilters),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to save preferences");
+      }
+      toast.success("Filter preferences saved");
+    } catch (error) {
+      console.error("Error saving filters:", error);
+      toast.error("Unable to save filters");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClear = () => {

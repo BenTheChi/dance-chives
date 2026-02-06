@@ -3,6 +3,7 @@ import { HideFooterOnMobile } from "../hide-footer";
 import { getEventSections } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
+import { DEFAULT_VIDEO_FILTERS } from "@/types/video-filter";
 
 // ISR configuration: revalidate every 1 hour
 export const revalidate = 3600;
@@ -46,8 +47,8 @@ export default async function WatchEventPage({
         <div className="relative w-full flex flex-col items-center justify-center bg-black">
           <VideoGallery
             initialSections={sections}
+            filters={DEFAULT_VIDEO_FILTERS}
             eventId={eventId}
-            enableUrlRouting={true}
           />
         </div>
       </div>

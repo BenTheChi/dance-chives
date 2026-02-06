@@ -40,6 +40,15 @@ import { generateCitySlug } from "@/lib/utils/city-slug";
 import { prisma } from "@/lib/primsa";
 import { VideoFilters } from "@/types/video-filter";
 
+export async function getSavedFilterPreferences(
+  userId: string
+): Promise<VideoFilters | null> {
+  const user = (await prisma.user.findUnique({
+    where: { id: userId },
+  })) as { filterPreferences?: VideoFilters | null } | null;
+  return user?.filterPreferences ?? null;
+}
+
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
  * This prevents label conflicts (e.g., Battle can be Event, Section, or Video type)
@@ -4951,10 +4960,11 @@ export async function getAllBattleSections(
       filters?.cities
         ?.map((city) => city.trim())
         .filter((city) => city.length > 0) ?? [];
-    const styleNames =
+    const styleNames = (
       filters?.styles
-        ?.map((style) => style.trim())
-        .filter((style) => style.length > 0) ?? [];
+        ?.map((style) => normalizeStyleName(style.trim()))
+        .filter((style) => style.length > 0) ?? []
+    );
 
     const eventConditions = ["(e.status = 'visible' OR e.status IS NULL)"];
     if (typeof filters?.yearFrom === "number") {
@@ -4985,10 +4995,20 @@ export async function getAllBattleSections(
     ];
     if (styleNames.length > 0) {
       sectionConditions.push(
-        `EXISTS {
-          MATCH (s)-[:STYLE]->(style:Style)
-          WHERE style.name IN $styleNames
-        }`
+        `(
+          EXISTS {
+            MATCH (s)-[:STYLE]->(style:Style)
+            WHERE toLower(style.name) IN $styleNamesLower
+          }
+          OR EXISTS {
+            MATCH (s)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+            WHERE toLower(style.name) IN $styleNamesLower
+          }
+          OR EXISTS {
+            MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+            WHERE toLower(style.name) IN $styleNamesLower
+          }
+        )`
       );
     }
 
@@ -4999,7 +5019,7 @@ export async function getAllBattleSections(
       params.cityNames = cityNames;
     }
     if (styleNames.length > 0) {
-      params.styleNames = styleNames;
+      params.styleNamesLower = styleNames;
     }
     if (typeof filters?.yearFrom === "number") {
       params.yearFrom = Math.floor(filters.yearFrom);

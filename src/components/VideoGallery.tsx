@@ -18,16 +18,15 @@ import Image from "next/image";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { cn } from "@/lib/utils";
 import { VideoFilterDialog } from "@/components/watch/VideoFilterDialog";
-import { DEFAULT_VIDEO_FILTERS } from "@/types/video-filter";
-import { filtersAreEqual } from "@/lib/utils/video-filters";
-import { useVideoFilters } from "../hooks/use-video-filters";
+import { DEFAULT_VIDEO_FILTERS, VideoFilters } from "@/types/video-filter";
+import { buildFilterParams } from "@/lib/utils/video-filters";
 import { useWatchSections } from "@/hooks/use-watch-sections";
 
 interface VideoGalleryProps {
   /** Server returns one full section per item (brackets already combined) */
   initialSections: CombinedSectionPayload[];
+  filters: VideoFilters;
   eventId?: string; // If provided, enables URL routing
-  enableUrlRouting?: boolean; // Only true for event-specific views
   /** Filter options from server (multi-event view). Omit or pass [] for event-specific view. */
   availableCities?: string[];
   availableStyles?: string[];
@@ -62,28 +61,23 @@ function payloadToCombinedSectionData(
 
 export function VideoGallery({
   initialSections,
+  filters,
   eventId,
-  enableUrlRouting = false,
   availableCities = [],
   availableStyles = [],
 }: VideoGalleryProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const videoIdFromUrl = enableUrlRouting ? searchParams.get("video") : null;
+  const isEventView = Boolean(eventId);
+  const videoIdFromUrl = isEventView ? searchParams.get("video") : null;
 
-  const { filters, applyFilters, saveFilters, clearFilters, isSaving } =
-    useVideoFilters({ enableUrlRouting });
-  const useInitialData =
-    !enableUrlRouting && filtersAreEqual(filters, DEFAULT_VIDEO_FILTERS);
   const {
     sections: sectionPayloads,
     isLoadingMore,
     isValidating,
     loadMore,
-  } = useWatchSections(filters, {
-    initialSections,
-    useInitialData,
-    disabled: enableUrlRouting,
+  } = useWatchSections(filters, initialSections, {
+    disabled: isEventView,
   });
 
   // Server sends one full section per item; build Map for bracket display per video
@@ -97,16 +91,16 @@ export function VideoGallery({
   >(new Map());
 
   useEffect(() => {
-    const payloads = enableUrlRouting ? initialSections : sectionPayloads;
+    const payloads = isEventView ? initialSections : sectionPayloads;
     const combined = payloads.map(payloadToCombinedSectionData);
     setSections(combined);
     setCurrentSectionIndex((prev) =>
       Math.min(prev, Math.max(0, combined.length - 1))
     );
-  }, [enableUrlRouting, initialSections, sectionPayloads]);
+  }, [isEventView, initialSections, sectionPayloads]);
 
   useEffect(() => {
-    if (enableUrlRouting) return;
+    if (isEventView) return;
     // Pause video immediately when filters change
     if (playerRef.current) {
       playerRef.current.pauseVideo();
@@ -114,7 +108,7 @@ export function VideoGallery({
     setIsPlaying(false);
     setCurrentSectionIndex(0);
     setCurrentVideoIndex(new Map());
-  }, [enableUrlRouting, filters]);
+  }, [filters, isEventView]);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true); // Start muted for first video to comply with autoplay policies
@@ -126,7 +120,8 @@ export function VideoGallery({
   const [isLandscape, setIsLandscape] = useState(false);
   
   // Unified loading state: show loading when fetching filtered sections or when video is loading
-  const isFilteringOrLoading = !enableUrlRouting && (isValidating || isVideoLoading);
+  const isFilteringOrLoading =
+    !isEventView && (isValidating || isVideoLoading);
   const [isMobile, setIsMobile] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
@@ -200,7 +195,7 @@ export function VideoGallery({
   // Initialize from URL parameter on mount
   useEffect(() => {
     if (
-      !enableUrlRouting ||
+      !isEventView ||
       !videoIdFromUrl ||
       hasInitializedFromUrlRef.current ||
       !eventId
@@ -240,7 +235,7 @@ export function VideoGallery({
       );
       hasInitializedFromUrlRef.current = true;
     }
-  }, [enableUrlRouting, videoIdFromUrl, eventId, videoExistsInEvent]);
+  }, [isEventView, videoIdFromUrl, eventId, videoExistsInEvent]);
 
   const getCurrentVideo = useCallback((): {
     video: Video;
@@ -432,7 +427,7 @@ export function VideoGallery({
   // Update URL when video changes (if URL routing is enabled)
   useEffect(() => {
     if (
-      !enableUrlRouting ||
+      !isEventView ||
       !eventId ||
       !currentVideo ||
       !hasInitializedFromUrlRef.current
@@ -448,7 +443,7 @@ export function VideoGallery({
       });
     }
   }, [
-    enableUrlRouting,
+    isEventView,
     eventId,
     currentVideo?.video.id,
     currentSectionIndex,
@@ -778,7 +773,7 @@ export function VideoGallery({
     (newIndex: number) => {
       const currentSections = sectionsRef.current;
       // Load more if near end (only for multi-event view)
-      if (!enableUrlRouting && newIndex >= currentSections.length - 2) {
+      if (!isEventView && newIndex >= currentSections.length - 2) {
         loadMore();
       }
 
@@ -802,7 +797,7 @@ export function VideoGallery({
         }
       }
     },
-    [currentVideoIndex, loadMore, enableUrlRouting, applyMuteAndPlayAfterLoad]
+    [currentVideoIndex, loadMore, isEventView, applyMuteAndPlayAfterLoad]
   );
 
   const handleVideoChange = useCallback(
@@ -813,7 +808,7 @@ export function VideoGallery({
         const video = section.section.videos[newVideoIndex];
         if (video && playerRef.current) {
           // Validate video belongs to event if URL routing is enabled
-          if (enableUrlRouting && eventId) {
+          if (isEventView && eventId) {
             const videoLocation = videoExistsInEvent(video.id);
             if (!videoLocation || videoLocation.sectionIndex !== sectionIndex) {
               // Video doesn't belong to this event, prevent navigation
@@ -829,7 +824,7 @@ export function VideoGallery({
         }
       }
     },
-    [enableUrlRouting, eventId, videoExistsInEvent, applyMuteAndPlayAfterLoad]
+    [isEventView, eventId, videoExistsInEvent, applyMuteAndPlayAfterLoad]
   );
 
   const navigateVideo = useCallback(
@@ -1195,7 +1190,7 @@ export function VideoGallery({
             >
               <Info className="h-5 w-5" />
             </Button>
-            {!enableUrlRouting && (
+            {!isEventView && (
               <button
                 type="button"
                 className="text-white/70 hover:text-white underline text-sm"
@@ -1471,7 +1466,7 @@ export function VideoGallery({
         </div>
       )}
 
-      {!enableUrlRouting && (
+      {!isEventView && (
         <VideoFilterDialog
           isOpen={isFilterDialogOpen}
           onClose={() => setIsFilterDialogOpen(false)}
@@ -1481,14 +1476,17 @@ export function VideoGallery({
           availableStyles={availableStyles}
           onApply={(newFilters) => {
             setIsFilterDialogOpen(false);
-            applyFilters(newFilters);
+            const params = buildFilterParams(newFilters);
+            const query = params.toString();
+            const nextPath = query ? `/watch?${query}` : "/watch";
+            // Force navigation even if URL is the same
+            window.location.href = nextPath;
           }}
-          onSave={saveFilters}
           onClear={() => {
             setIsFilterDialogOpen(false);
-            clearFilters();
+            // Force navigation to reload
+            window.location.href = "/watch";
           }}
-          isSaving={isSaving}
         />
       )}
 

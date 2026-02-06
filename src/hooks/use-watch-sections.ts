@@ -8,34 +8,20 @@ import { VideoFilters } from "@/types/video-filter";
 import { CombinedSectionPayload } from "@/types/event";
 
 type UseWatchSectionsOptions = {
-  initialSections?: CombinedSectionPayload[];
-  useInitialData?: boolean;
   disabled?: boolean;
-};
-
-const fetchSectionsPage = async (url: string) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error("Failed to load sections");
-  }
-  return (await response.json()) as CombinedSectionPayload[];
 };
 
 export const useWatchSections = (
   filters: VideoFilters,
+  initialSections: CombinedSectionPayload[],
   options: UseWatchSectionsOptions = {}
 ) => {
-  const {
-    initialSections = [],
-    useInitialData = false,
-    disabled = false,
-  } = options;
-  const serializedFilters = JSON.stringify(filters);
-  const initialOffset = useInitialData ? initialSections.length : 0;
+  const { disabled = false } = options;
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: CombinedSectionPayload[] | null) => {
       if (disabled) return null;
+      if (pageIndex === 0) return "initial";
       if (
         previousPageData &&
         previousPageData.length < WATCH_SECTIONS_FETCH_LIMIT
@@ -43,14 +29,26 @@ export const useWatchSections = (
         return null;
       }
       const offset =
-        pageIndex === 0
-          ? 0
-          : initialOffset + (pageIndex - 1) * WATCH_SECTIONS_FETCH_LIMIT;
+        initialSections.length + (pageIndex - 1) * WATCH_SECTIONS_FETCH_LIMIT;
       const params = buildFilterParams(filters);
       params.set("offset", offset.toString());
       return `/api/watch/sections?${params.toString()}`;
     },
-    [filters, initialOffset]
+    [disabled, filters, initialSections.length]
+  );
+
+  const fetchSectionsPage = useCallback(
+    async (key: string) => {
+      if (key === "initial") {
+        return initialSections;
+      }
+      const response = await fetch(key);
+      if (!response.ok) {
+        throw new Error("Failed to load sections");
+      }
+      return (await response.json()) as CombinedSectionPayload[];
+    },
+    [initialSections]
   );
 
   const { data, error, isValidating, size, setSize } = useSWRInfinite(
@@ -58,33 +56,23 @@ export const useWatchSections = (
     fetchSectionsPage,
     {
       keepPreviousData: true,
-      fallbackData:
-        !disabled && useInitialData && initialSections.length > 0
-          ? [initialSections]
-          : undefined,
     }
   );
 
   useEffect(() => {
     if (disabled) return;
     setSize(1);
-  }, [disabled, serializedFilters, setSize]);
+  }, [disabled, filters, setSize]);
 
-  const sections = useMemo(
-    () =>
-      disabled
-        ? initialSections
-        : data
-          ? data.flat()
-          : useInitialData
-            ? initialSections
-            : [],
-    [data, disabled, initialSections, useInitialData]
-  );
+  const sections = useMemo(() => {
+    if (disabled) return initialSections;
+    if (!data) return initialSections;
+    return data.flat();
+  }, [data, disabled, initialSections]);
   const lastPage = data?.[data.length - 1];
   const hasMore = disabled
     ? false
-    : (lastPage?.length ?? (useInitialData ? initialSections.length : 0)) >=
+    : (lastPage?.length ?? initialSections.length) >=
       WATCH_SECTIONS_FETCH_LIMIT;
   const isLoading = disabled ? false : !data && !error;
   const isLoadingMore =
