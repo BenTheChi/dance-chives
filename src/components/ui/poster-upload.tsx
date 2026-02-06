@@ -346,25 +346,23 @@ export function PosterUpload({
 
     setIsLoadingFromUrl(true);
     try {
-      const response = await fetch(url);
+      // Use server-side proxy to bypass CORS restrictions
+      const response = await fetch("/api/fetch-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      });
+
       if (!response.ok) {
-        toast.error("Could not load image from URL.");
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.error || "Could not load image from URL.");
         return;
       }
 
       const contentType = response.headers.get("content-type") || "";
-      if (!contentType.startsWith("image/")) {
-        toast.error("URL must point to an image.");
-        return;
-      }
-
       const blob = await response.blob();
-      if (blob.size > MAX_FILE_SIZE) {
-        toast.error(
-          "Image is too large. Maximum file size is 8MB. Please use a smaller image."
-        );
-        return;
-      }
 
       let filename = "poster-from-url";
       try {
