@@ -219,7 +219,7 @@ export function VideoFilterDialog({
                   value={yearFromText}
                   onChange={(event) => setYearFromText(event.target.value)}
                   maxLength={4}
-                  className="w-full max-w-[120px]"
+                  className="w-full max-w-[120px] bg-muted-foreground"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -235,7 +235,7 @@ export function VideoFilterDialog({
                   value={yearToText}
                   onChange={(event) => setYearToText(event.target.value)}
                   maxLength={4}
-                  className="w-full max-w-[120px]"
+                  className="w-full max-w-[120px] bg-muted-foreground"
                 />
               </div>
             </div>
@@ -246,10 +246,7 @@ export function VideoFilterDialog({
 
           <div>
             <p className="!font-bold">City</p>
-            <Popover
-              open={cityPopoverOpen}
-              onOpenChange={setCityPopoverOpen}
-            >
+            <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -263,7 +260,7 @@ export function VideoFilterDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="w-full max-w-[320px] p-0"
+                className="z-[110] w-full max-w-[320px] p-0"
                 align="start"
               >
                 <Command>
@@ -285,7 +282,7 @@ export function VideoFilterDialog({
                               onSelect={() => toggleCity(city)}
                             >
                               <Check
-                                className={`mr-2 h-4 w-4 transition-opacity ${
+                                className={`mr-2 h-4 w-4 shrink-0 text-green-600 transition-opacity ${
                                   isSelected ? "opacity-100" : "opacity-0"
                                 }`}
                               />
@@ -303,10 +300,7 @@ export function VideoFilterDialog({
 
           <div>
             <p className="!font-bold">Style</p>
-            <Popover
-              open={stylePopoverOpen}
-              onOpenChange={setStylePopoverOpen}
-            >
+            <Popover open={stylePopoverOpen} onOpenChange={setStylePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -320,7 +314,7 @@ export function VideoFilterDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="w-full max-w-[320px] p-0"
+                className="z-[110] w-full max-w-[320px] p-0"
                 align="start"
               >
                 <Command>
@@ -342,7 +336,7 @@ export function VideoFilterDialog({
                               onSelect={() => toggleStyle(style)}
                             >
                               <Check
-                                className={`mr-2 h-4 w-4 transition-opacity ${
+                                className={`mr-2 h-4 w-4 shrink-0 text-green-600 transition-opacity ${
                                   isSelected ? "opacity-100" : "opacity-0"
                                 }`}
                               />
