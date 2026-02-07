@@ -1186,7 +1186,7 @@ export function VideoGallery({
     <div
       ref={fullscreenContainerRef}
       className={cn(
-        "relative w-full flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0",
+        "relative w-full flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0 min-h-0 max-h-full",
         !isFullscreen && "max-w-[1200px]",
         isFullscreen && "w-screen h-screen max-w-none"
       )}
@@ -1307,14 +1307,14 @@ export function VideoGallery({
       {/* Main Content Area - Flex layout */}
       <div
         className={cn(
-          "flex flex-col items-center relative z-30",
+          "flex flex-col items-center relative z-30 w-full min-h-0",
           isFullscreen ? "flex-1 h-full" : "flex-1"
         )}
       >
         <div
           className={cn(
-            "w-full relative overflow-hidden",
-            isFullscreen ? "h-full flex-1" : "aspect-video"
+            "w-full relative overflow-hidden flex-1 min-h-0",
+            isFullscreen ? "h-full" : "aspect-video max-h-full"
           )}
         >
           {/* Player layer - single stable instance on top */}
