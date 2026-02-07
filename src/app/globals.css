@@ -667,54 +667,6 @@ span {
     transform-origin: center center;
   }
 
-  /* TV page height - only apply in portrait mode */
-  .tv-container-height {
-    height: 100%;
-  }
-
-  @media (orientation: landscape) {
-    .tv-container-height {
-      height: 100vh;
-    }
-  }
-
-  /* Fullscreen styles */
-  .tv-container-height:fullscreen {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .tv-container-height:-webkit-fullscreen {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .tv-container-height:-moz-fullscreen {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .tv-container-height:-ms-fullscreen {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
   /* Fix mobile Chrome landscape zoom issue */
   @media (orientation: landscape) and (max-height: 500px) {
     /* Prevent zoom on mobile Chrome in landscape */
@@ -723,12 +675,6 @@ span {
       -moz-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
       text-size-adjust: 100%;
-    }
-
-    /* Ensure video container doesn't zoom */
-    .tv-container-height {
-      transform: scale(1);
-      -webkit-transform: scale(1);
     }
 
     /* Fix aspect-video containers in landscape on mobile Chrome */

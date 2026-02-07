@@ -6,10 +6,7 @@ import {
 } from "@/db/queries/event";
 import { unstable_cache } from "next/cache";
 import { WATCH_INITIAL_SECTION_LIMIT } from "@/constants/watch-sections";
-import {
-  DEFAULT_VIDEO_FILTERS,
-  VideoFilters,
-} from "@/types/video-filter";
+import { DEFAULT_VIDEO_FILTERS, VideoFilters } from "@/types/video-filter";
 import {
   normalizeFilters,
   parseFiltersFromSearchParams,
@@ -89,7 +86,7 @@ export default async function WatchPage({
   return (
     <>
       <HideFooterOnMobile />
-      <div className="flex flex-col justify-center items-center bg-black min-h-[100svh] w-full">
+      <div className="flex flex-col sm:justify-center items-center bg-black min-h-[100svh] w-full">
         <div className="relative w-full flex flex-col items-center justify-center bg-black">
           <VideoGallery
             initialSections={initialSections}

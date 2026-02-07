@@ -220,7 +220,9 @@ export function VideoGallery({
       return;
     }
     try {
-      const stored = window.localStorage.getItem(FILTER_PREFERENCES_STORAGE_KEY);
+      const stored = window.localStorage.getItem(
+        FILTER_PREFERENCES_STORAGE_KEY
+      );
       if (!stored) return;
       const parsed = JSON.parse(stored) as VideoFilters;
       const normalized = normalizeFilters(parsed);
@@ -1186,7 +1188,7 @@ export function VideoGallery({
     <div
       ref={fullscreenContainerRef}
       className={cn(
-        "relative w-full flex flex-col justify-center overflow-hidden bg-black tv-container-height landscape:pt-0 min-h-0 max-h-full",
+        "relative w-full flex flex-col justify-center overflow-hidden bg-black  landscape:pt-0 min-h-0 max-h-full",
         !isFullscreen && "max-w-[1200px]",
         isFullscreen && "w-screen h-screen max-w-none"
       )}
