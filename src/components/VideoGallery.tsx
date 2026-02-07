@@ -14,14 +14,22 @@ import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { cn } from "@/lib/utils";
+import { VideoFilterDialog } from "@/components/watch/VideoFilterDialog";
+import { DEFAULT_VIDEO_FILTERS, VideoFilters } from "@/types/video-filter";
+import { buildFilterParams } from "@/lib/utils/video-filters";
+import { useWatchSections } from "@/hooks/use-watch-sections";
 
 interface VideoGalleryProps {
   /** Server returns one full section per item (brackets already combined) */
   initialSections: CombinedSectionPayload[];
+  filters: VideoFilters;
   eventId?: string; // If provided, enables URL routing
-  enableUrlRouting?: boolean; // Only true for event-specific views
+  /** Filter options from server (multi-event view). Omit or pass [] for event-specific view. */
+  availableCities?: string[];
+  availableStyles?: string[];
 }
 
 // Client-side shape: payload + Map for bracket lookup per video
@@ -53,36 +61,67 @@ function payloadToCombinedSectionData(
 
 export function VideoGallery({
   initialSections,
+  filters,
   eventId,
-  enableUrlRouting = false,
+  availableCities = [],
+  availableStyles = [],
 }: VideoGalleryProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const videoIdFromUrl = enableUrlRouting ? searchParams.get("video") : null;
+  const isEventView = Boolean(eventId);
+  const videoIdFromUrl = isEventView ? searchParams.get("video") : null;
+
+  const {
+    sections: sectionPayloads,
+    isLoadingMore,
+    isValidating,
+    loadMore,
+  } = useWatchSections(filters, initialSections, {
+    disabled: isEventView,
+  });
 
   // Server sends one full section per item; build Map for bracket display per video
   const [sections, setSections] = useState<CombinedSectionData[]>(() =>
     initialSections.map(payloadToCombinedSectionData)
   );
 
-  // Track all loaded section payloads for pagination
-  const [allLoadedSections, setAllLoadedSections] =
-    useState<CombinedSectionPayload[]>(initialSections);
-
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentVideoIndex, setCurrentVideoIndex] = useState<
     Map<number, number>
   >(new Map());
 
+  useEffect(() => {
+    const payloads = isEventView ? initialSections : sectionPayloads;
+    const combined = payloads.map(payloadToCombinedSectionData);
+    setSections(combined);
+    setCurrentSectionIndex((prev) =>
+      Math.min(prev, Math.max(0, combined.length - 1))
+    );
+  }, [isEventView, initialSections, sectionPayloads]);
+
+  useEffect(() => {
+    if (isEventView) return;
+    // Pause video immediately when filters change
+    if (playerRef.current) {
+      playerRef.current.pauseVideo();
+    }
+    setIsPlaying(false);
+    setCurrentSectionIndex(0);
+    setCurrentVideoIndex(new Map());
+  }, [filters, isEventView]);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true); // Start muted for first video to comply with autoplay policies
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMoreSections, setHasMoreSections] = useState(true); // false when last fetch returned < limit
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
+  
+  // Unified loading state: show loading when fetching filtered sections or when video is loading
+  const isFilteringOrLoading =
+    !isEventView && (isValidating || isVideoLoading);
   const [isMobile, setIsMobile] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
@@ -156,7 +195,7 @@ export function VideoGallery({
   // Initialize from URL parameter on mount
   useEffect(() => {
     if (
-      !enableUrlRouting ||
+      !isEventView ||
       !videoIdFromUrl ||
       hasInitializedFromUrlRef.current ||
       !eventId
@@ -196,7 +235,7 @@ export function VideoGallery({
       );
       hasInitializedFromUrlRef.current = true;
     }
-  }, [enableUrlRouting, videoIdFromUrl, eventId, videoExistsInEvent]);
+  }, [isEventView, videoIdFromUrl, eventId, videoExistsInEvent]);
 
   const getCurrentVideo = useCallback((): {
     video: Video;
@@ -388,7 +427,7 @@ export function VideoGallery({
   // Update URL when video changes (if URL routing is enabled)
   useEffect(() => {
     if (
-      !enableUrlRouting ||
+      !isEventView ||
       !eventId ||
       !currentVideo ||
       !hasInitializedFromUrlRef.current
@@ -404,7 +443,7 @@ export function VideoGallery({
       });
     }
   }, [
-    enableUrlRouting,
+    isEventView,
     eventId,
     currentVideo?.video.id,
     currentSectionIndex,
@@ -709,41 +748,6 @@ export function VideoGallery({
     );
   }, [currentVideo, session?.user?.id]);
 
-  const SECTIONS_PAGE_SIZE = 2;
-
-  // Load more sections when near bottom (only for multi-event view)
-  const loadMoreSections = useCallback(async () => {
-    if (isLoadingMore || enableUrlRouting) return; // Don't load more for event-specific view
-    setIsLoadingMore(true);
-
-    try {
-      const response = await fetch(
-        `/api/watch/sections?offset=${allLoadedSections.length}&limit=${SECTIONS_PAGE_SIZE}`
-      );
-      if (response.ok) {
-        const newSections = await response.json();
-        if (newSections.length < SECTIONS_PAGE_SIZE) {
-          setHasMoreSections(false);
-        }
-        // Add new sections to the loaded list (API returns same CombinedSectionPayload shape)
-        const updatedLoadedSections = [...allLoadedSections, ...newSections];
-        setAllLoadedSections(updatedLoadedSections);
-        const newCombined = updatedLoadedSections.map(
-          payloadToCombinedSectionData
-        );
-        setSections(newCombined);
-        // Clamp section index so we never point past the end after list updates
-        setCurrentSectionIndex((prev) =>
-          Math.min(prev, Math.max(0, newCombined.length - 1))
-        );
-      }
-    } catch (error) {
-      console.error("Error loading more sections:", error);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [allLoadedSections.length, isLoadingMore, enableUrlRouting]);
-
   const applyMuteFromRef = useCallback(() => {
     if (playerRef.current) {
       if (isMutedRef.current) playerRef.current.mute();
@@ -769,8 +773,8 @@ export function VideoGallery({
     (newIndex: number) => {
       const currentSections = sectionsRef.current;
       // Load more if near end (only for multi-event view)
-      if (!enableUrlRouting && newIndex >= currentSections.length - 2) {
-        loadMoreSections();
+      if (!isEventView && newIndex >= currentSections.length - 2) {
+        loadMore();
       }
 
       // Ensure video index is set for this section (default to 0 if not set)
@@ -793,7 +797,7 @@ export function VideoGallery({
         }
       }
     },
-    [currentVideoIndex, loadMoreSections, enableUrlRouting, applyMuteAndPlayAfterLoad]
+    [currentVideoIndex, loadMore, isEventView, applyMuteAndPlayAfterLoad]
   );
 
   const handleVideoChange = useCallback(
@@ -804,7 +808,7 @@ export function VideoGallery({
         const video = section.section.videos[newVideoIndex];
         if (video && playerRef.current) {
           // Validate video belongs to event if URL routing is enabled
-          if (enableUrlRouting && eventId) {
+          if (isEventView && eventId) {
             const videoLocation = videoExistsInEvent(video.id);
             if (!videoLocation || videoLocation.sectionIndex !== sectionIndex) {
               // Video doesn't belong to this event, prevent navigation
@@ -820,7 +824,7 @@ export function VideoGallery({
         }
       }
     },
-    [enableUrlRouting, eventId, videoExistsInEvent, applyMuteAndPlayAfterLoad]
+    [isEventView, eventId, videoExistsInEvent, applyMuteAndPlayAfterLoad]
   );
 
   const navigateVideo = useCallback(
@@ -1186,16 +1190,15 @@ export function VideoGallery({
             >
               <Info className="h-5 w-5" />
             </Button>
-            <Link
-              href="#"
-              className="text-white/70 hover:text-white underline text-sm"
-              onClick={(e) => {
-                e.preventDefault();
-                // Placeholder for future filters
-              }}
-            >
-              Filters
-            </Link>
+            {!isEventView && (
+              <button
+                type="button"
+                className="text-white/70 hover:text-white underline text-sm"
+                onClick={() => setIsFilterDialogOpen(true)}
+              >
+                Filters
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1266,6 +1269,18 @@ export function VideoGallery({
                 />
               )}
           </div>
+          {/* Unified Loading Overlay - covers API fetch and video loading */}
+          {isFilteringOrLoading && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-secondary-dark transition-opacity duration-700">
+              <Image
+                src="/Dancechives_Icon_Color_onDark.svg"
+                alt="Loading"
+                width={250}
+                height={250}
+                className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
+              />
+            </div>
+          )}
           {/* Carousel layer - placeholders only, behind */}
           <div
             className="absolute inset-0 z-0 w-full h-full flex transition-transform duration-300 ease-in-out"
@@ -1278,10 +1293,11 @@ export function VideoGallery({
               if (videos.length === 0) return null;
 
               const currentVideoIdx = currentVideoIndex.get(sectionIdx) ?? 0;
+              const sectionKey = `${sectionData.section.id}-${sectionIdx}`;
 
               return (
                 <div
-                  key={sectionData.section.id}
+                  key={sectionKey}
                   className="flex-shrink-0 w-full h-full flex items-center justify-center"
                 >
                   <div
@@ -1290,9 +1306,9 @@ export function VideoGallery({
                       transform: `translateY(-${currentVideoIdx * 100}%)`,
                     }}
                   >
-                    {videos.map((video) => (
+                    {videos.map((video, videoIdx) => (
                       <div
-                        key={video.id}
+                        key={`${sectionKey}-${video.id}-${videoIdx}`}
                         className="flex-shrink-0 w-full h-full relative"
                       >
                         <div className="w-full h-full bg-black flex items-center justify-center">
@@ -1449,6 +1465,30 @@ export function VideoGallery({
             isFullscreen={isFullscreen}
           />
         </div>
+      )}
+
+      {!isEventView && (
+        <VideoFilterDialog
+          isOpen={isFilterDialogOpen}
+          onClose={() => setIsFilterDialogOpen(false)}
+          filters={filters}
+          defaultFilters={DEFAULT_VIDEO_FILTERS}
+          availableCities={availableCities}
+          availableStyles={availableStyles}
+          onApply={(newFilters) => {
+            setIsFilterDialogOpen(false);
+            const params = buildFilterParams(newFilters);
+            const query = params.toString();
+            const nextPath = query ? `/watch?${query}` : "/watch";
+            // Force navigation even if URL is the same
+            window.location.href = nextPath;
+          }}
+          onClear={() => {
+            setIsFilterDialogOpen(false);
+            // Force navigation to reload
+            window.location.href = "/watch";
+          }}
+        />
       )}
 
       {/* Info Dialog */}

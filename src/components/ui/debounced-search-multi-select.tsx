@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { UserBadge } from "@/components/ui/user-badge";
@@ -20,6 +20,7 @@ interface SearchItem {
   displayName: string;
   username: string;
   instagram?: string | null;
+  isUserItem?: boolean;
 }
 
 interface DebouncedSearchMultiSelectProps<T extends SearchItem> {
@@ -36,6 +37,12 @@ interface DebouncedSearchMultiSelectProps<T extends SearchItem> {
   debounceDelay?: number;
   getDisplayValue: (item: T) => string;
   getItemId: (item: T) => string;
+  dialogIsOpen?: boolean;
+  userBadgeOptions?: {
+    showAvatar?: boolean;
+    showSecondaryLabel?: boolean;
+    usernameParentheses?: boolean;
+  };
 }
 
 function DebouncedSearchMultiSelect<T extends SearchItem>(
@@ -55,6 +62,8 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     debounceDelay = 300,
     getDisplayValue,
     getItemId,
+    dialogIsOpen,
+    userBadgeOptions,
   } = props;
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -77,6 +86,12 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
     return Array.from(seen.values());
   }, [value, getItemId]);
 
+  const openRef = useRef(open);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -87,6 +102,20 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (dialogIsOpen === false) {
+      setOpen(false);
+    }
+  }, [dialogIsOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (openRef.current) {
+        setOpen(false);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -124,6 +153,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
       onChange(deduplicated);
     }
     setInputValue("");
+    setOpen(false);
   };
 
   const removeItem = (itemId: string) => {
@@ -142,14 +172,13 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
       <div className="flex flex-wrap gap-1 mb-2">
         {deduplicatedValue.map((item) => {
           const itemId = getItemId(item);
-          // Check if item is a user item (has username and displayName)
+          const searchItem = item as SearchItem;
           const isUserItem =
-            "username" in item &&
-            "displayName" in item &&
-            typeof item.username === "string" &&
-            typeof item.displayName === "string";
+            typeof searchItem.isUserItem === "boolean"
+              ? searchItem.isUserItem
+              : typeof item.username === "string" &&
+                typeof item.displayName === "string";
 
-          // itemId is guaranteed to be unique after deduplication
           if (isUserItem) {
             return (
               <UserBadge
@@ -162,6 +191,9 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
                 image={"image" in item ? (item.image as string | null) : null}
                 onRemove={() => removeItem(itemId)}
                 instagram={item.instagram}
+                showAvatar={userBadgeOptions?.showAvatar}
+                showSecondaryLabel={userBadgeOptions?.showSecondaryLabel}
+                usernameParentheses={userBadgeOptions?.usernameParentheses}
               />
             );
           }
@@ -170,7 +202,7 @@ function DebouncedSearchMultiSelect<T extends SearchItem>(
             <Badge
               key={itemId}
               variant="secondary"
-              className="flex items-center gap-1 hover:bg-secondary/80 transition-colors"
+              className="flex items-center gap-1 hover:bg-secondary/80 transition-colors bg-neutral-100"
             >
               {getDisplayValue(item)}
               <button

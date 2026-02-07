@@ -38,6 +38,16 @@ import { Image } from "../../types/image";
 import { type Record as Neo4jRecord, int } from "neo4j-driver";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { prisma } from "@/lib/primsa";
+import { VideoFilters } from "@/types/video-filter";
+
+export async function getSavedFilterPreferences(
+  userId: string
+): Promise<VideoFilters | null> {
+  const user = (await prisma.user.findUnique({
+    where: { id: userId },
+  })) as { filterPreferences?: VideoFilters | null } | null;
+  return user?.filterPreferences ?? null;
+}
 
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
@@ -86,7 +96,7 @@ export function getSectionTypeLabel(
     | "Class"
     | "Session"
     | "Party"
-    | "Other",
+    | "Other"
 ): string | null {
   if (!sectionType) return null;
   const labelMap: Record<string, string> = {
@@ -120,7 +130,7 @@ export function getSectionTypeFromLabel(label: string): string | null {
 
 // Video type label translation
 export function getVideoTypeLabel(
-  videoType: "battle" | "freestyle" | "choreography" | "class" | "other",
+  videoType: "battle" | "freestyle" | "choreography" | "class" | "other"
 ): string {
   const labelMap: Record<string, string> = {
     battle: "BattleVideo",
@@ -133,7 +143,7 @@ export function getVideoTypeLabel(
 }
 
 export function getVideoTypeFromLabel(
-  label: string,
+  label: string
 ): "battle" | "freestyle" | "choreography" | "class" | "other" {
   const reverseMap: Record<
     string,
@@ -224,7 +234,7 @@ interface SearchParams {
 export const getEvent = async (
   id: string,
   userId?: string,
-  authLevel?: number,
+  authLevel?: number
 ): Promise<Event | null> => {
   const session = driver.session();
 
@@ -234,7 +244,7 @@ export const getEvent = async (
     MATCH (e:Event {id: $id})
     RETURN e IS NOT NULL as exists
     `,
-    { id },
+    { id }
   );
 
   if (
@@ -272,7 +282,7 @@ export const getEvent = async (
              isTeamMember,
              $isModOrAdmin as isModOrAdmin
       `,
-      { id, userId, isModOrAdmin },
+      { id, userId, isModOrAdmin }
     );
 
     if (accessCheck.records.length > 0) {
@@ -294,7 +304,7 @@ export const getEvent = async (
       // If event is hidden and user is not authorized, return null
       if (!isVisible && !isCreator && !isTeamMember && !isModOrAdmin) {
         console.log(
-          `❌ [getEvent] Access denied - event is hidden and user is not authorized`,
+          `❌ [getEvent] Access denied - event is hidden and user is not authorized`
         );
         await session.close();
         return null;
@@ -311,7 +321,7 @@ export const getEvent = async (
       MATCH (e:Event {id: $id})
       RETURN e.status as eventStatus, (e.status = 'visible' OR e.status IS NULL) as isVisible
       `,
-      { id },
+      { id }
     );
 
     if (visibilityCheck.records.length > 0) {
@@ -396,12 +406,12 @@ export const getEvent = async (
       timezone: c.timezone
     } as city
   `,
-    { id },
+    { id }
   );
 
   // Get roles (exclude TEAM_MEMBER - team members are shown separately)
   const validRoleFormats = getNeo4jRoleFormats().filter(
-    (role) => role !== "TEAM_MEMBER",
+    (role) => role !== "TEAM_MEMBER"
   );
   const rolesResult = await session.run(
     `
@@ -419,7 +429,7 @@ export const getEvent = async (
       }
     }) as roles
   `,
-    { id, validRoles: validRoleFormats },
+    { id, validRoles: validRoleFormats }
   );
 
   // Get sections with video and bracket counts
@@ -500,7 +510,7 @@ export const getEvent = async (
       }]
     }) as sections
   `,
-    { id },
+    { id }
   );
 
   // Get bracket videos separately
@@ -523,7 +533,7 @@ export const getEvent = async (
       END
     }) as videos
   `,
-    { id },
+    { id }
   );
 
   // Get tagged users for bracket videos using relationship types
@@ -584,7 +594,7 @@ export const getEvent = async (
            teachers as taggedTeachers,
            videoType
   `,
-    { id },
+    { id }
   );
 
   // Get tagged users for direct section videos
@@ -645,7 +655,7 @@ export const getEvent = async (
            teachers as taggedTeachers,
            videoType
   `,
-    { id },
+    { id }
   );
 
   // Get section winners using :WINNER relationship type
@@ -660,7 +670,7 @@ export const getEvent = async (
       image: u.image
     }) as winners
   `,
-    { id },
+    { id }
   );
 
   // Get section judges using :JUDGE relationship type
@@ -675,7 +685,7 @@ export const getEvent = async (
       image: u.image
     }) as judges
   `,
-    { id },
+    { id }
   );
 
   // Get section styles
@@ -684,7 +694,7 @@ export const getEvent = async (
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)-[:STYLE]->(style:Style)
     RETURN s.id as sectionId, collect(style.name) as styles
   `,
-    { id },
+    { id }
   );
 
   // Get video styles (direct section videos)
@@ -693,7 +703,7 @@ export const getEvent = async (
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
     RETURN s.id as sectionId, v.id as videoId, collect(style.name) as styles
   `,
-    { id },
+    { id }
   );
 
   // Get video styles (bracket videos)
@@ -702,7 +712,7 @@ export const getEvent = async (
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
     RETURN s.id as sectionId, b.id as bracketId, v.id as videoId, collect(style.name) as styles
   `,
-    { id },
+    { id }
   );
 
   // Get section applyStylesToVideos property
@@ -711,7 +721,7 @@ export const getEvent = async (
     MATCH (e:Event {id: $id})<-[:IN]-(s:Section)
     RETURN s.id as sectionId, s.applyStylesToVideos as applyStylesToVideos
   `,
-    { id },
+    { id }
   );
 
   // Get event styles
@@ -720,7 +730,7 @@ export const getEvent = async (
     MATCH (e:Event {id: $id})-[:STYLE]->(style:Style)
     RETURN collect(style.name) as styles
   `,
-    { id },
+    { id }
   );
 
   // Get gallery
@@ -735,7 +745,7 @@ export const getEvent = async (
       type: "gallery"
     }) as gallery
   `,
-    { id },
+    { id }
   );
 
   session.close();
@@ -761,7 +771,7 @@ export const getEvent = async (
       sectionId: record.get("sectionId"),
       bracketId: record.get("bracketId"),
       videos: record.get("videos"),
-    }),
+    })
   );
 
   const bracketVideoUsers = bracketVideoUsersResult.records.map(
@@ -774,7 +784,7 @@ export const getEvent = async (
       taggedDancers: record.get("taggedDancers") || [],
       taggedChoreographers: record.get("taggedChoreographers") || [],
       taggedTeachers: record.get("taggedTeachers") || [],
-    }),
+    })
   );
 
   // Create maps for styles
@@ -792,7 +802,7 @@ export const getEvent = async (
   const bracketVideoStylesMap = new Map<string, string[]>();
   bracketVideoStylesResult.records.forEach((record) => {
     const key = `${record.get("sectionId")}:${record.get(
-      "bracketId",
+      "bracketId"
     )}:${record.get("videoId")}`;
     bracketVideoStylesMap.set(key, record.get("styles") || []);
   });
@@ -801,7 +811,7 @@ export const getEvent = async (
   sectionApplyStylesResult.records.forEach((record) => {
     sectionApplyStylesMap.set(
       record.get("sectionId"),
-      record.get("applyStylesToVideos") || false,
+      record.get("applyStylesToVideos") || false
     );
   });
 
@@ -810,7 +820,7 @@ export const getEvent = async (
   sectionWinnersResult.records.forEach((record) => {
     const sectionId = record.get("sectionId");
     const winners = (record.get("winners") || []).filter(
-      (w: UserSearchItem) => w.id !== null && w.id !== undefined,
+      (w: UserSearchItem) => w.id !== null && w.id !== undefined
     );
     sectionWinnersMap.set(sectionId, winners);
   });
@@ -820,7 +830,7 @@ export const getEvent = async (
   sectionJudgesResult.records.forEach((record) => {
     const sectionId = record.get("sectionId");
     const judges = (record.get("judges") || []).filter(
-      (j: UserSearchItem) => j.id !== null && j.id !== undefined,
+      (j: UserSearchItem) => j.id !== null && j.id !== undefined
     );
     sectionJudgesMap.set(sectionId, judges);
   });
@@ -839,7 +849,7 @@ export const getEvent = async (
       const userData = sectionVideoUsersResult.records.find(
         (record) =>
           record.get("sectionId") === section.id &&
-          record.get("videoId") === video.id,
+          record.get("videoId") === video.id
       );
       const videoType = video.type || "battle";
 
@@ -871,7 +881,7 @@ export const getEvent = async (
     // Add videos and tagged users to brackets
     section.brackets.forEach((bracket: Bracket) => {
       const bracketVideoData = bracketVideos.find(
-        (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id,
+        (bv) => bv.sectionId === section.id && bv.bracketId === bracket.id
       );
       if (bracketVideoData) {
         bracket.videos = bracketVideoData.videos;
@@ -881,7 +891,7 @@ export const getEvent = async (
             (bvu: BracketVideoUserRecord) =>
               bvu.sectionId === section.id &&
               bvu.bracketId === bracket.id &&
-              bvu.videoId === video.id,
+              bvu.videoId === video.id
           );
           const videoType = video.type || "battle";
 
@@ -1027,7 +1037,7 @@ export const getEvent = async (
       video.taggedDancers?.forEach(applyEnrichment);
       video.taggedWinners?.forEach(applyEnrichment);
       (video as ChoreographyVideo).taggedChoreographers?.forEach(
-        applyEnrichment,
+        applyEnrichment
       );
       (video as ClassVideo).taggedTeachers?.forEach(applyEnrichment);
     });
@@ -1036,7 +1046,7 @@ export const getEvent = async (
         video.taggedDancers?.forEach(applyEnrichment);
         video.taggedWinners?.forEach(applyEnrichment);
         (video as ChoreographyVideo).taggedChoreographers?.forEach(
-          applyEnrichment,
+          applyEnrichment
         );
         (video as ClassVideo).taggedTeachers?.forEach(applyEnrichment);
       });
@@ -1071,7 +1081,7 @@ export const deleteEvent = async (eventId: string): Promise<boolean> => {
       MATCH (e:Event {id: $id})
       DETACH DELETE e
     `,
-      { id: eventId },
+      { id: eventId }
     );
 
     // Delete from PostgreSQL (cascades to EventDate and SectionCard)
@@ -1094,7 +1104,7 @@ export const deleteEvent = async (eventId: string): Promise<boolean> => {
  * Throws error if user not found.
  */
 async function getUserIdFromUserSearchItem(
-  user: UserSearchItem,
+  user: UserSearchItem
 ): Promise<string> {
   if (user.id) {
     return user.id;
@@ -1102,7 +1112,7 @@ async function getUserIdFromUserSearchItem(
 
   if (!user.username) {
     throw new Error(
-      `User must have either id or username. Got: ${JSON.stringify(user)}`,
+      `User must have either id or username. Got: ${JSON.stringify(user)}`
     );
   }
 
@@ -1119,7 +1129,7 @@ async function getUserIdFromUserSearchItem(
  */
 async function createVideoUserRelationships(
   video: Video,
-  videoId: string,
+  videoId: string
 ): Promise<void> {
   const session = driver.session();
   try {
@@ -1133,7 +1143,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1145,7 +1155,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:WINNER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1162,7 +1172,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1179,7 +1189,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:CHOREOGRAPHER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1194,7 +1204,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1208,7 +1218,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:TEACHER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1220,7 +1230,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1234,7 +1244,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:DANCER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1246,7 +1256,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:WINNER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1261,7 +1271,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:CHOREOGRAPHER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1273,7 +1283,7 @@ async function createVideoUserRelationships(
             `MATCH (v:Video {id: $videoId})
              MERGE (u:User {id: $userId})
              MERGE (u)-[:TEACHER]->(v)`,
-            { videoId, userId },
+            { videoId, userId }
           );
         }
       }
@@ -1312,7 +1322,7 @@ const createGalleryPhotos = async (eventId: string, gallery: Image[]) => {
           title: pic.title,
           url: pic.url,
           caption: caption,
-        },
+        }
       );
     }
   } finally {
@@ -1331,11 +1341,11 @@ const createSections = async (eventId: string, sections: Section[]) => {
     const existingSections = await session.run(
       `MATCH (e:Event {id: $eventId})<-[:IN]-(s:Section)
        RETURN s.title as title`,
-      { eventId },
+      { eventId }
     );
 
     const existingTitles = new Set(
-      existingSections.records.map((r) => r.get("title").toLowerCase().trim()),
+      existingSections.records.map((r) => r.get("title").toLowerCase().trim())
     );
 
     // Validate uniqueness before creating
@@ -1343,7 +1353,7 @@ const createSections = async (eventId: string, sections: Section[]) => {
       const normalizedTitle = sec.title.toLowerCase().trim();
       if (existingTitles.has(normalizedTitle)) {
         throw new Error(
-          `Section title "${sec.title}" already exists in this event. Section titles must be unique within an event.`,
+          `Section title "${sec.title}" already exists in this event. Section titles must be unique within an event.`
         );
       }
       existingTitles.add(normalizedTitle);
@@ -1394,7 +1404,7 @@ const createSections = async (eventId: string, sections: Section[]) => {
           endTime: sec.endTime || null,
           position: int(index),
           sectionTypeLabels: getAllSectionTypeLabels(),
-        },
+        }
       );
 
       // Add section type label if provided
@@ -1406,7 +1416,7 @@ const createSections = async (eventId: string, sections: Section[]) => {
           {
             sectionId: sec.id,
             sectionTypeLabel: sectionTypeLabel,
-          },
+          }
         );
       }
 
@@ -1429,14 +1439,14 @@ const createSections = async (eventId: string, sections: Section[]) => {
         {
           sectionId: sec.id,
           poster: sec.poster || null,
-        },
+        }
       );
 
       // Update section style relationships - delete old ones first
       await session.run(
         `MATCH (s:Section {id: $sectionId})-[r:STYLE]->(:Style)
          DELETE r`,
-        { sectionId: sec.id },
+        { sectionId: sec.id }
       );
 
       // Create section style relationships if applyStylesToVideos is true
@@ -1450,7 +1460,7 @@ const createSections = async (eventId: string, sections: Section[]) => {
           MERGE (style:Style {name: styleName})
           MERGE (s)-[:STYLE]->(style)
           `,
-          { sectionId: sec.id, styles: normalizedStyles },
+          { sectionId: sec.id, styles: normalizedStyles }
         );
       }
     }
@@ -1464,14 +1474,18 @@ const createSections = async (eventId: string, sections: Section[]) => {
  */
 const createBrackets = async (sections: Section[]) => {
   const sectionsWithBrackets = sections.filter(
-    (s) => s.hasBrackets && s.brackets?.length > 0,
+    (s) => s.hasBrackets && s.brackets?.length > 0
   );
   if (sectionsWithBrackets.length === 0) return;
 
   const session = driver.session();
   try {
     for (const sec of sectionsWithBrackets) {
-      for (let bracketIndex = 0; bracketIndex < sec.brackets.length; bracketIndex++) {
+      for (
+        let bracketIndex = 0;
+        bracketIndex < sec.brackets.length;
+        bracketIndex++
+      ) {
         const br = sec.brackets[bracketIndex];
         await session.run(
           `MATCH (s:Section {id: $sectionId})
@@ -1483,12 +1497,12 @@ const createBrackets = async (sections: Section[]) => {
              b.title = $title,
              b.position = $position
            MERGE (b)-[:IN]->(s)`,
-          { 
-            sectionId: sec.id, 
-            bracketId: br.id, 
+          {
+            sectionId: sec.id,
+            bracketId: br.id,
             title: br.title,
             position: int(bracketIndex),
-          },
+          }
         );
       }
     }
@@ -1502,7 +1516,7 @@ const createBrackets = async (sections: Section[]) => {
  */
 const createBracketVideos = async (sections: Section[]) => {
   const sectionsWithBrackets = sections.filter(
-    (s) => s.hasBrackets && s.brackets?.length > 0,
+    (s) => s.hasBrackets && s.brackets?.length > 0
   );
   if (sectionsWithBrackets.length === 0) return;
 
@@ -1510,7 +1524,11 @@ const createBracketVideos = async (sections: Section[]) => {
   try {
     for (const sec of sectionsWithBrackets) {
       for (const br of sec.brackets) {
-        for (let videoIndex = 0; videoIndex < (br.videos || []).length; videoIndex++) {
+        for (
+          let videoIndex = 0;
+          videoIndex < (br.videos || []).length;
+          videoIndex++
+        ) {
           const vid = br.videos[videoIndex];
           // Get video type label
           const videoType = vid.type || "battle";
@@ -1529,7 +1547,7 @@ const createBracketVideos = async (sections: Section[]) => {
                v.position = $position
              WITH v, b
              CALL apoc.create.removeLabels(v, ${JSON.stringify(
-               getAllVideoTypeLabels(),
+               getAllVideoTypeLabels()
              )}) YIELD node as removedNode
              WITH removedNode as v, b
              CALL apoc.create.addLabels(v, ['Video', $videoLabel]) YIELD node
@@ -1541,7 +1559,7 @@ const createBracketVideos = async (sections: Section[]) => {
               src: vid.src,
               videoLabel: videoLabel,
               position: int(videoIndex),
-            },
+            }
           );
 
           // Create user relationships based on video type
@@ -1551,7 +1569,7 @@ const createBracketVideos = async (sections: Section[]) => {
           await session.run(
             `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)
              DELETE r`,
-            { videoId: vid.id },
+            { videoId: vid.id }
           );
 
           // Create new video style relationships
@@ -1566,7 +1584,7 @@ const createBracketVideos = async (sections: Section[]) => {
               MERGE (style:Style {name: styleName})
               MERGE (v)-[:STYLE]->(style)
               `,
-              { videoId: vid.id, styles: normalizedStyles },
+              { videoId: vid.id, styles: normalizedStyles }
             );
           }
         }
@@ -1582,7 +1600,7 @@ const createBracketVideos = async (sections: Section[]) => {
  */
 const createSectionVideos = async (sections: Section[]) => {
   const sectionsWithVideos = sections.filter(
-    (s) => !s.hasBrackets && s.videos?.length > 0,
+    (s) => !s.hasBrackets && s.videos?.length > 0
   );
   if (sectionsWithVideos.length === 0) return;
 
@@ -1608,7 +1626,7 @@ const createSectionVideos = async (sections: Section[]) => {
              v.position = $position
            WITH v, s
            CALL apoc.create.removeLabels(v, ${JSON.stringify(
-             getAllVideoTypeLabels(),
+             getAllVideoTypeLabels()
            )}) YIELD node as removedNode
            WITH removedNode as v, s
            CALL apoc.create.addLabels(v, ['Video', $videoLabel]) YIELD node
@@ -1620,7 +1638,7 @@ const createSectionVideos = async (sections: Section[]) => {
             src: vid.src,
             videoLabel: videoLabel,
             position: int(videoIndex),
-          },
+          }
         );
 
         // Create user relationships based on video type
@@ -1630,7 +1648,7 @@ const createSectionVideos = async (sections: Section[]) => {
         await session.run(
           `MATCH (v:Video {id: $videoId})-[r:STYLE]->(:Style)
            DELETE r`,
-          { videoId: vid.id },
+          { videoId: vid.id }
         );
 
         // Create new video style relationships
@@ -1645,7 +1663,7 @@ const createSectionVideos = async (sections: Section[]) => {
             MERGE (style:Style {name: styleName})
             MERGE (v)-[:STYLE]->(style)
             `,
-            { videoId: vid.id, styles: normalizedStyles },
+            { videoId: vid.id, styles: normalizedStyles }
           );
         }
       }
@@ -1663,7 +1681,7 @@ const createSectionVideos = async (sections: Section[]) => {
  */
 export const insertEvent = async (
   event: Event,
-  teamMembers?: Array<{ id: string; username: string; displayName: string }>,
+  teamMembers?: Array<{ id: string; username: string; displayName: string }>
 ): Promise<Event> => {
   // Validate all roles before inserting
   if (event.roles && event.roles.length > 0) {
@@ -1671,8 +1689,8 @@ export const insertEvent = async (
       if (!isValidRole(role.title)) {
         throw new Error(
           `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
-            ", ",
-          )}`,
+            ", "
+          )}`
         );
       }
     }
@@ -1691,7 +1709,7 @@ export const insertEvent = async (
             id: userId,
           },
         };
-      }),
+      })
     );
     event = {
       ...event,
@@ -1753,7 +1771,7 @@ export const insertEvent = async (
 
       WITH e
       CALL apoc.create.removeLabels(e, ${JSON.stringify(
-        getAllEventTypeLabels(),
+        getAllEventTypeLabels()
       )}) YIELD node
       RETURN node as e
     `,
@@ -1779,7 +1797,7 @@ export const insertEvent = async (
         facebook: eventDetails.facebook || null,
         createdAt: event.createdAt.toISOString(),
         updatedAt: event.updatedAt.toISOString(),
-      },
+      }
     );
 
     // Add event type label if specified
@@ -1788,7 +1806,7 @@ export const insertEvent = async (
         `MATCH (e:Event {id: $eventId})
          CALL apoc.create.addLabels(e, [$eventTypeLabel]) YIELD node
          RETURN node`,
-        { eventId: event.id, eventTypeLabel: eventTypeLabel },
+        { eventId: event.id, eventTypeLabel: eventTypeLabel }
       );
     }
 
@@ -1905,7 +1923,7 @@ export const insertEvent = async (
         originalPoster: eventDetails.originalPoster,
         city: eventDetails.city,
         roles: event.roles,
-      },
+      }
     );
 
     // Check if query returned results
@@ -1913,7 +1931,7 @@ export const insertEvent = async (
     if (!result.records || result.records.length === 0) {
       await session.close();
       throw new Error(
-        `Failed to create event ${event.id}: No records returned from query. User with ID ${eventDetails.creatorId} may not exist in Neo4j.`,
+        `Failed to create event ${event.id}: No records returned from query. User with ID ${eventDetails.creatorId} may not exist in Neo4j.`
       );
     }
 
@@ -1928,7 +1946,7 @@ export const insertEvent = async (
         MERGE (style:Style {name: styleName})
         MERGE (e)-[:STYLE]->(style)
         `,
-        { eventId: event.id, styles: normalizedStyles },
+        { eventId: event.id, styles: normalizedStyles }
       );
     }
 
@@ -1952,7 +1970,7 @@ export const insertEvent = async (
               `MATCH (s:Section {id: $sectionId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:WINNER]->(s)`,
-              { sectionId: section.id, userId },
+              { sectionId: section.id, userId }
             );
           }
         } finally {
@@ -1972,7 +1990,7 @@ export const insertEvent = async (
               `MATCH (s:Section {id: $sectionId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:JUDGE]->(s)`,
-              { sectionId: section.id, userId },
+              { sectionId: section.id, userId }
             );
           }
         } finally {
@@ -1996,7 +2014,7 @@ export const insertEvent = async (
  */
 export const editEvent = async (
   event: Event,
-  teamMembers?: Array<{ id: string; username: string; displayName: string }>,
+  teamMembers?: Array<{ id: string; username: string; displayName: string }>
 ): Promise<Event> => {
   const { id } = event;
   const eventDetails = event.eventDetails;
@@ -2007,8 +2025,8 @@ export const editEvent = async (
       if (!isValidRole(role.title)) {
         throw new Error(
           `Invalid role: ${role.title}. Must be one of: ${AVAILABLE_ROLES.join(
-            ", ",
-          )}`,
+            ", "
+          )}`
         );
       }
     }
@@ -2027,7 +2045,7 @@ export const editEvent = async (
             id: userId,
           },
         };
-      }),
+      })
     );
     event = {
       ...event,
@@ -2053,13 +2071,13 @@ export const editEvent = async (
     const currentLabelsResult = await tx.run(
       `MATCH (e:Event {id: $id})
        RETURN labels(e) as labels`,
-      { id },
+      { id }
     );
 
     const currentLabels = currentLabelsResult.records[0]?.get("labels") || [];
     const allEventTypeLabels = getAllEventTypeLabels();
     const currentEventTypeLabels = currentLabels.filter((label: string) =>
-      allEventTypeLabels.includes(label),
+      allEventTypeLabels.includes(label)
     );
 
     // Update event properties
@@ -2099,7 +2117,7 @@ export const editEvent = async (
         youtube: eventDetails.youtube || null,
         facebook: eventDetails.facebook || null,
         updatedAt: event.updatedAt.toISOString(),
-      },
+      }
     );
 
     // Remove old event type labels and add new one
@@ -2108,7 +2126,7 @@ export const editEvent = async (
         `MATCH (e:Event {id: $id})
          CALL apoc.create.removeLabels(e, $oldLabels) YIELD node
          RETURN node`,
-        { id, oldLabels: currentEventTypeLabels },
+        { id, oldLabels: currentEventTypeLabels }
       );
     }
 
@@ -2118,7 +2136,7 @@ export const editEvent = async (
         `MATCH (e:Event {id: $id})
          CALL apoc.create.addLabels(e, [$eventTypeLabel]) YIELD node
          RETURN node`,
-        { id, eventTypeLabel: eventTypeLabel },
+        { id, eventTypeLabel: eventTypeLabel }
       );
     }
 
@@ -2143,7 +2161,7 @@ export const editEvent = async (
          c.latitude = $city.latitude,
          c.longitude = $city.longitude
        MERGE (e)-[:IN]->(c)`,
-      { id, city: eventDetails.city },
+      { id, city: eventDetails.city }
     );
 
     // Update poster
@@ -2162,7 +2180,7 @@ export const editEvent = async (
            newPoster.url = poster.url
          MERGE (newPoster)-[:POSTER_OF]->(e)
        )`,
-      { id, poster: eventDetails.poster },
+      { id, poster: eventDetails.poster }
     );
 
     // Update originalPoster
@@ -2181,14 +2199,14 @@ export const editEvent = async (
            newOriginalPoster.url = originalPoster.url
          MERGE (newOriginalPoster)-[:ORIGINAL_POSTER_OF]->(e)
        )`,
-      { id, originalPoster: eventDetails.originalPoster },
+      { id, originalPoster: eventDetails.originalPoster }
     );
 
     // Update event styles
     await tx.run(
       `MATCH (e:Event {id: $id})-[r:STYLE]->(:Style)
        DELETE r`,
-      { id },
+      { id }
     );
 
     if (eventDetails.styles && eventDetails.styles.length > 0) {
@@ -2201,16 +2219,16 @@ export const editEvent = async (
         MERGE (style:Style {name: styleName})
         MERGE (e)-[:STYLE]->(style)
         `,
-        { id, styles: normalizedStyles },
+        { id, styles: normalizedStyles }
       );
     }
 
     // Update roles (exclude TEAM_MEMBER - team members are handled separately)
     const validRoleFormats = getNeo4jRoleFormats().filter(
-      (r) => r !== "TEAM_MEMBER",
+      (r) => r !== "TEAM_MEMBER"
     );
     const regularRoles = event.roles.filter(
-      (r) => r.user && r.title !== "TEAM_MEMBER",
+      (r) => r.user && r.title !== "TEAM_MEMBER"
     );
 
     // Handle regular roles
@@ -2224,7 +2242,7 @@ export const editEvent = async (
          YIELD rel
          RETURN e, u
          `,
-        { id, roles: regularRoles },
+        { id, roles: regularRoles }
       );
     }
 
@@ -2235,7 +2253,7 @@ export const editEvent = async (
          MATCH (u:User)-[r]->(e)
          WHERE type(r) IN $validRoles AND NOT u.id IN [role IN $roles | role.user.id]
          DELETE r`,
-        { id, roles: regularRoles, validRoles: validRoleFormats },
+        { id, roles: regularRoles, validRoles: validRoleFormats }
       );
     } else {
       await tx.run(
@@ -2243,7 +2261,7 @@ export const editEvent = async (
          MATCH (u:User)-[r]->(e)
          WHERE type(r) IN $validRoles
          DELETE r`,
-        { id, validRoles: validRoleFormats },
+        { id, validRoles: validRoleFormats }
       );
     }
 
@@ -2257,7 +2275,7 @@ export const editEvent = async (
          MERGE (u)-[:TEAM_MEMBER]->(e)
          RETURN e, u
          `,
-        { id, teamMembers },
+        { id, teamMembers }
       );
 
       // Delete team members not in the new list
@@ -2266,7 +2284,7 @@ export const editEvent = async (
          MATCH (u:User)-[r:TEAM_MEMBER]->(e)
          WHERE NOT u.id IN [member IN $teamMembers | member.id]
          DELETE r`,
-        { id, teamMembers },
+        { id, teamMembers }
       );
     } else {
       // Remove all team members if none provided
@@ -2274,7 +2292,7 @@ export const editEvent = async (
         `MATCH (e:Event {id: $id})
          MATCH (u:User)-[r:TEAM_MEMBER]->(e)
          DELETE r`,
-        { id },
+        { id }
       );
     }
 
@@ -2295,7 +2313,7 @@ export const editEvent = async (
          WHERE finalCreatorId IS NOT NULL
          MATCH (finalCreator:User {id: finalCreatorId})
          MERGE (finalCreator)-[:CREATED]->(e)`,
-        { id, creatorId: eventDetails.creatorId, fallbackCreatorId },
+        { id, creatorId: eventDetails.creatorId, fallbackCreatorId }
       );
     }
 
@@ -2304,14 +2322,14 @@ export const editEvent = async (
     await tx.run(
       `MATCH (e:Event {id: $id})<-[:IN]-(s:Section)-[:IN]-(b:Bracket)<-[r:IN]-(v:Video)
        DELETE r`,
-      { id },
+      { id }
     );
 
     // Delete all existing sections and their relationships
     await tx.run(
       `MATCH (e:Event {id: $id})<-[:IN]-(s:Section)
        DETACH DELETE s`,
-      { id },
+      { id }
     );
 
     // Commit transaction
@@ -2336,7 +2354,7 @@ export const editEvent = async (
               `MATCH (s:Section {id: $sectionId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:WINNER]->(s)`,
-              { sectionId: section.id, userId },
+              { sectionId: section.id, userId }
             );
           }
         } finally {
@@ -2356,7 +2374,7 @@ export const editEvent = async (
               `MATCH (s:Section {id: $sectionId})
                MERGE (u:User {id: $userId})
                MERGE (u)-[:JUDGE]->(s)`,
-              { sectionId: section.id, userId },
+              { sectionId: section.id, userId }
             );
           }
         } finally {
@@ -2382,7 +2400,7 @@ export async function saveEventForUser(userId: string, eventId: string) {
       MATCH (e:Event {id: $eventId})
       MERGE (u)-[:SAVE]->(e)
       `,
-      { userId, eventId },
+      { userId, eventId }
     );
   } finally {
     await session.close();
@@ -2398,7 +2416,7 @@ export async function unsaveEventForUser(userId: string, eventId: string) {
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
       DELETE r
       `,
-      { userId, eventId },
+      { userId, eventId }
     );
   } finally {
     await session.close();
@@ -2414,7 +2432,7 @@ export async function isEventSavedByUser(userId: string, eventId: string) {
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
       RETURN COUNT(r) > 0 AS saved
       `,
-      { userId, eventId },
+      { userId, eventId }
     );
 
     return result.records[0].get("saved");
@@ -2428,7 +2446,7 @@ export async function isEventSavedByUser(userId: string, eventId: string) {
 // If not → create it with createdAt and return { saved: true }
 export async function toggleSaveCypher(
   userId: string,
-  eventId: string,
+  eventId: string
 ): Promise<{ saved: boolean }> {
   const session = driver.session();
   try {
@@ -2438,7 +2456,7 @@ export async function toggleSaveCypher(
       MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
       RETURN r
       `,
-      { userId, eventId },
+      { userId, eventId }
     );
 
     const relationshipExists = checkResult.records.length > 0;
@@ -2450,7 +2468,7 @@ export async function toggleSaveCypher(
         MATCH (u:User {id: $userId})-[r:SAVE]->(e:Event {id: $eventId})
         DELETE r
         `,
-        { userId, eventId },
+        { userId, eventId }
       );
       return { saved: false };
     } else {
@@ -2463,7 +2481,7 @@ export async function toggleSaveCypher(
         MERGE (u)-[r:SAVE]->(e)
         ON CREATE SET r.createdAt = $createdAt
         `,
-        { userId, eventId, createdAt },
+        { userId, eventId, createdAt }
       );
       return { saved: true };
     }
@@ -2513,7 +2531,7 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
              END as eventType
       ORDER BY e.startDate ASC, e.createdAt ASC
       `,
-      {},
+      {}
     );
 
     // Get all styles for each hidden event
@@ -2538,7 +2556,7 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
       RETURN eventId, 
              filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
       `,
-      {},
+      {}
     );
 
     // Create a map of eventId -> styles
@@ -2549,9 +2567,9 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
       const uniqueStyles = Array.from(
         new Set(
           allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null,
-          ),
-        ),
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
       );
       stylesMap.set(eventId, uniqueStyles);
     });
@@ -2604,7 +2622,7 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
 export async function canAccessHiddenEvent(
   eventId: string,
   userId: string,
-  authLevel?: number,
+  authLevel?: number
 ): Promise<boolean> {
   const session = driver.session();
   try {
@@ -2621,7 +2639,7 @@ export async function canAccessHiddenEvent(
       OPTIONAL MATCH (u)-[:TEAM_MEMBER]->(e)
       RETURN count(u) > 0 as canAccess
       `,
-      { eventId, userId },
+      { eventId, userId }
     );
 
     return result.records[0]?.get("canAccess") || false;
@@ -2633,7 +2651,7 @@ export async function canAccessHiddenEvent(
 // Get all saved event IDs for a user
 export async function getSavedEventIds(
   userId: string,
-  authLevel?: number,
+  authLevel?: number
 ): Promise<string[]> {
   const session = driver.session();
   try {
@@ -2657,7 +2675,7 @@ export async function getSavedEventIds(
       {
         userId,
         isModOrAdmin: isModOrAdmin,
-      },
+      }
     );
 
     return result.records.map((record) => record.get("eventId") as string);
@@ -2671,7 +2689,7 @@ export async function getSavedEventIds(
  * Includes hidden events (since user is the creator)
  */
 export async function getUserCreatedEventCards(
-  userId: string,
+  userId: string
 ): Promise<TEventCard[]> {
   const session = driver.session();
 
@@ -2709,7 +2727,7 @@ export async function getUserCreatedEventCards(
              END as eventType
       ORDER BY e.startDate ASC, e.createdAt ASC
       `,
-      { userId },
+      { userId }
     );
 
     // Get all styles for each event
@@ -2733,7 +2751,7 @@ export async function getUserCreatedEventCards(
       RETURN eventId, 
              filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
       `,
-      { userId },
+      { userId }
     );
 
     // Create a map of eventId -> styles
@@ -2744,9 +2762,9 @@ export async function getUserCreatedEventCards(
       const uniqueStyles = Array.from(
         new Set(
           allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null,
-          ),
-        ),
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
       );
       stylesMap.set(eventId, uniqueStyles);
     });
@@ -2795,7 +2813,7 @@ export async function getUserCreatedEventCards(
 // Get all saved events for a user with full EventCard data
 export async function getSavedEventsForUser(
   userId: string,
-  authLevel?: number,
+  authLevel?: number
 ): Promise<TEventCard[]> {
   const session = driver.session();
 
@@ -2846,7 +2864,7 @@ export async function getSavedEventsForUser(
       {
         userId,
         isModOrAdmin: isModOrAdmin,
-      },
+      }
     );
 
     // Get all styles for each saved event (from event, sections, and videos)
@@ -2878,7 +2896,7 @@ export async function getSavedEventsForUser(
       RETURN eventId, 
              filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles
       `,
-      { userId, isModOrAdmin: isModOrAdmin },
+      { userId, isModOrAdmin: isModOrAdmin }
     );
 
     // Create a map of eventId -> styles
@@ -2890,9 +2908,9 @@ export async function getSavedEventsForUser(
       const uniqueStyles = Array.from(
         new Set(
           allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null,
-          ),
-        ),
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
       );
       stylesMap.set(eventId, uniqueStyles);
     });
@@ -2956,7 +2974,7 @@ export async function searchCitiesInNeo4j(keyword: string): Promise<City[]> {
               c.latitude as latitude, c.longitude as longitude
        ORDER BY c.name ASC
        LIMIT 5`,
-      { keyword },
+      { keyword }
     );
 
     return result.records.map((record) => ({
@@ -2993,7 +3011,7 @@ export async function getCityFromNeo4j(placeId: string): Promise<City | null> {
        RETURN c.id as id, c.name as name, c.region as region,
               c.countryCode as countryCode, c.timezone as timezone,
               c.latitude as latitude, c.longitude as longitude`,
-      { placeId },
+      { placeId }
     );
 
     if (result.records.length === 0) {
@@ -3054,7 +3072,7 @@ export async function storeCityData(cityData: City): Promise<void> {
         latitude: cityData.latitude ?? null,
         longitude: cityData.longitude ?? null,
         timezone: cityData.timezone || null,
-      },
+      }
     );
   } catch (error) {
     console.error("Error storing city data in Neo4j:", error);
@@ -3169,7 +3187,7 @@ export interface CityScheduleData {
 
 export const getStyleData = async (
   styleName: string,
-  cityId?: string,
+  cityId?: string
 ): Promise<StyleData | null> => {
   const session = driver.session();
 
@@ -3181,7 +3199,7 @@ export const getStyleData = async (
     const styleCheckResult = await session.run(
       `MATCH (s:Style {name: $styleName})
        RETURN s.name as styleName`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     if (styleCheckResult.records.length === 0) {
@@ -3221,7 +3239,7 @@ export const getStyleData = async (
                ELSE null 
              END as eventType
       ORDER BY event.startDate DESC`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     // Get sections with this style
@@ -3230,7 +3248,7 @@ export const getStyleData = async (
        WHERE (e.status = 'visible' OR e.status IS NULL)
        RETURN s.id as sectionId, s.title as sectionTitle, e.id as eventId, e.title as eventTitle
        ORDER BY e.startDate DESC, s.title`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     // Get videos with this style (from sections and brackets)
@@ -3246,7 +3264,7 @@ export const getStyleData = async (
               section.id as sectionId, section.title as sectionTitle,
               event.id as eventId, event.title as eventTitle
        ORDER BY event.startDate DESC, section.title, v.title`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     // Get all styles for each event
@@ -3272,7 +3290,7 @@ export const getStyleData = async (
             [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
        RETURN eventId,
               filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     // Create styles map for events
@@ -3283,9 +3301,9 @@ export const getStyleData = async (
       const uniqueStyles = Array.from(
         new Set(
           allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null,
-          ),
-        ),
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
       );
       eventStylesMap.set(eventId, uniqueStyles);
     });
@@ -3303,7 +3321,7 @@ export const getStyleData = async (
        WHERE section IS NOT NULL AND event IS NOT NULL
        RETURN v.id as videoId, 
               [style IN videoStyles WHERE style IS NOT NULL] as styles`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     const videoStylesMap = new Map<string, string[]>();
@@ -3323,7 +3341,7 @@ export const getStyleData = async (
          avatar: u.avatar,
          image: u.image
        }) as taggedUsers`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     const videoUsersMap = new Map<string, UserSearchItem[]>();
@@ -3340,7 +3358,7 @@ export const getStyleData = async (
        RETURN u.id as id, u.displayName as displayName, u.username as username,
               u.image as image, collect(DISTINCT s.name) as styles
        ORDER BY u.displayName ASC, u.username ASC`,
-      { styleName: normalizedStyleName },
+      { styleName: normalizedStyleName }
     );
 
     // Get city-filtered events with this style (if cityId is provided)
@@ -3383,7 +3401,7 @@ export const getStyleData = async (
                   ELSE null 
                 END as eventType
          ORDER BY event.startDate DESC`,
-        { styleName: normalizedStyleName, cityId },
+        { styleName: normalizedStyleName, cityId }
       );
 
       // Get all styles for city-filtered events
@@ -3410,7 +3428,7 @@ export const getStyleData = async (
               [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
          RETURN eventId,
                 filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-        { styleName: normalizedStyleName, cityId },
+        { styleName: normalizedStyleName, cityId }
       );
     }
 
@@ -3425,7 +3443,7 @@ export const getStyleData = async (
          RETURN u.id as id, u.displayName as displayName, u.username as username,
                 u.image as image, collect(DISTINCT s.name) as styles
          ORDER BY u.displayName ASC, u.username ASC`,
-        { styleName: normalizedStyleName, cityId },
+        { styleName: normalizedStyleName, cityId }
       );
     }
 
@@ -3489,7 +3507,7 @@ export const getStyleData = async (
       image: record.get("image"),
       styles: (record.get("styles") || []).filter(
         (s: unknown): s is string =>
-          s !== null && s !== undefined && typeof s === "string",
+          s !== null && s !== undefined && typeof s === "string"
       ) as string[],
     }));
 
@@ -3505,12 +3523,12 @@ export const getStyleData = async (
           const uniqueStyles = Array.from(
             new Set(
               allStyles.filter(
-                (s): s is string => typeof s === "string" && s !== null,
-              ),
-            ),
+                (s): s is string => typeof s === "string" && s !== null
+              )
+            )
           );
           cityFilteredEventStylesMap.set(eventId, uniqueStyles);
-        },
+        }
       );
 
       cityFilteredEvents = cityFilteredEventsResult.records
@@ -3556,9 +3574,9 @@ export const getStyleData = async (
           image: record.get("image"),
           styles: (record.get("styles") || []).filter(
             (s: unknown): s is string =>
-              s !== null && s !== undefined && typeof s === "string",
+              s !== null && s !== undefined && typeof s === "string"
           ) as string[],
-        }),
+        })
       );
     }
 
@@ -3587,7 +3605,7 @@ export const getAllStyles = async (): Promise<string[]> => {
     const result = await session.run(
       `MATCH (s:Style)
        RETURN DISTINCT s.name as styleName
-       ORDER BY s.name ASC`,
+       ORDER BY s.name ASC`
     );
 
     await session.close();
@@ -3595,6 +3613,34 @@ export const getAllStyles = async (): Promise<string[]> => {
     return result.records.map((record) => record.get("styleName") as string);
   } catch (error) {
     console.error("Error fetching all styles:", error);
+    await session.close();
+    return [];
+  }
+};
+
+export const getStylesWithVideos = async (): Promise<string[]> => {
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (style:Style)<-[:STYLE]-(v:Video)
+      WHERE EXISTS {
+        MATCH (v)<-[:IN]-(s:Section)
+      }
+      RETURN DISTINCT style.name as styleName
+      ORDER BY styleName ASC
+      `
+    );
+
+    const styles = result.records
+      .map((record) => record.get("styleName") as string)
+      .filter((name): name is string => Boolean(name));
+
+    await session.close();
+    return styles;
+  } catch (error) {
+    console.error("Error fetching styles with videos:", error);
     await session.close();
     return [];
   }
@@ -3612,7 +3658,7 @@ export const getEventImages = async (eventId: string) => {
     `,
     {
       eventId,
-    },
+    }
   );
   await session.close();
 
@@ -3639,7 +3685,7 @@ export const getAllCities = async (): Promise<City[]> => {
        RETURN DISTINCT c.id as id, c.name as name, c.region as region, 
               c.countryCode as countryCode, c.timezone as timezone,
               c.latitude as latitude, c.longitude as longitude
-       ORDER BY c.name ASC`,
+       ORDER BY c.name ASC`
     );
 
     await session.close();
@@ -3690,7 +3736,7 @@ export const getCitiesWithFutureEvents = async (): Promise<City[]> => {
        RETURN DISTINCT c.id as id, c.name as name, c.region as region, 
               c.countryCode as countryCode, c.timezone as timezone,
               c.latitude as latitude, c.longitude as longitude`,
-      { today },
+      { today }
     );
 
     const citiesFromStartDate = result.records.map((record) => ({
@@ -3718,12 +3764,12 @@ export const getCitiesWithFutureEvents = async (): Promise<City[]> => {
               c.countryCode as countryCode, c.timezone as timezone,
               c.latitude as latitude, c.longitude as longitude,
               e.dates as dates`,
-      { today },
+      { today }
     );
 
     // Parse dates arrays and check for future dates
     const cityMap = new Map<string, City>();
-    
+
     // Add cities from startDate query
     citiesFromStartDate.forEach((city) => {
       cityMap.set(city.id, city);
@@ -3733,7 +3779,7 @@ export const getCitiesWithFutureEvents = async (): Promise<City[]> => {
     eventsWithDatesArray.records.forEach((record) => {
       const cityId = String(record.get("cityId"));
       const dates = record.get("dates");
-      
+
       if (dates) {
         try {
           const parsedDates =
@@ -3750,7 +3796,7 @@ export const getCitiesWithFutureEvents = async (): Promise<City[]> => {
               }
               return false;
             });
-            
+
             if (hasFutureDate && !cityMap.has(cityId)) {
               // Add city if it has future dates and isn't already in the map
               cityMap.set(cityId, {
@@ -3788,6 +3834,61 @@ export const getCitiesWithFutureEvents = async (): Promise<City[]> => {
   }
 };
 
+export const getCitiesWithEvents = async (): Promise<string[]> => {
+  const { cities } = await getFilterOptionsFromEvents();
+  return cities;
+};
+
+/**
+ * Returns cities and styles from the same event set: events that have sections
+ * with videos (visible). Styles are only those attached to videos in those events.
+ */
+export const getFilterOptionsFromEvents = async (): Promise<{
+  cities: string[];
+  styles: string[];
+}> => {
+  const session = driver.session();
+
+  try {
+    const result = await session.run(
+      `
+      MATCH (c:City)<-[:IN]-(e:Event)
+      WHERE (e.status = 'visible' OR e.status IS NULL)
+        AND EXISTS {
+          MATCH (e)<-[:IN]-(s:Section)
+          WHERE EXISTS { (s)<-[:IN]-(v:Video) }
+             OR EXISTS { (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video) }
+        }
+      MATCH (e)<-[:IN]-(sec:Section)
+      OPTIONAL MATCH (sec)<-[:IN]-(vid:Video)-[:STYLE]->(st:Style)
+      OPTIONAL MATCH (sec)<-[:IN]-(b:Bracket)<-[:IN]-(vid2:Video)-[:STYLE]->(st2:Style)
+      WITH DISTINCT c.name AS cityName, st.name AS style1, st2.name AS style2
+      UNWIND [style1, style2] AS styleName
+      RETURN DISTINCT cityName, styleName
+      `
+    );
+
+    const citySet = new Set<string>();
+    const styleSet = new Set<string>();
+    for (const record of result.records) {
+      const cityName = record.get("cityName");
+      const styleName = record.get("styleName");
+      if (typeof cityName === "string" && cityName) citySet.add(cityName);
+      if (typeof styleName === "string" && styleName) styleSet.add(styleName);
+    }
+
+    await session.close();
+    return {
+      cities: Array.from(citySet).sort(),
+      styles: Array.from(styleSet).sort(),
+    };
+  } catch (error) {
+    console.error("Error fetching filter options from events:", error);
+    await session.close();
+    return { cities: [], styles: [] };
+  }
+};
+
 export const getCityData = async (cityId: string): Promise<CityData | null> => {
   const session = driver.session();
 
@@ -3798,7 +3899,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
        RETURN c.id as id, c.name as name, c.region as region,
               c.countryCode as countryCode, c.timezone as timezone,
               c.latitude as latitude, c.longitude as longitude`,
-      { cityId },
+      { cityId }
     );
 
     if (cityCheckResult.records.length === 0) {
@@ -3846,7 +3947,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
                 ELSE null 
               END as eventType
        ORDER BY e.startDate DESC`,
-      { cityId },
+      { cityId }
     );
 
     // Get all styles for each event
@@ -3865,7 +3966,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
             [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
        RETURN eventId,
               filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-      { cityId },
+      { cityId }
     );
 
     // Create styles map for events
@@ -3876,9 +3977,9 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
       const uniqueStyles = Array.from(
         new Set(
           allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null,
-          ),
-        ),
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
       );
       eventStylesMap.set(eventId, uniqueStyles);
     });
@@ -3905,7 +4006,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
        RETURN u.id as id, u.displayName as displayName, u.username as username,
               u.image as image, collect(DISTINCT s.name) as styles
        ORDER BY u.displayName ASC, u.username ASC`,
-      { cityId },
+      { cityId }
     );
 
     const users = usersResult.records.map((record) => ({
@@ -3915,7 +4016,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
       image: record.get("image"),
       styles: (record.get("styles") || []).filter(
         (s: unknown): s is string =>
-          s !== null && s !== undefined && typeof s === "string",
+          s !== null && s !== undefined && typeof s === "string"
       ) as string[],
     }));
 
@@ -3936,7 +4037,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
 export const getCitySchedule = async (
   cityId: string,
   startDate?: string,
-  endDate?: string,
+  endDate?: string
 ): Promise<CityScheduleData | null> => {
   const session = driver.session();
 
@@ -3974,7 +4075,7 @@ export const getCitySchedule = async (
                 url: poster.url,
                 type: poster.type
               } ELSE null END as poster`,
-      params,
+      params
     );
 
     // Get event styles (including event-level styles)
@@ -3997,7 +4098,7 @@ export const getCitySchedule = async (
             [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
        RETURN eventId,
               filteredEventStyles + filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-      params,
+      params
     );
 
     // Create styles map for events
@@ -4008,9 +4109,9 @@ export const getCitySchedule = async (
       const uniqueStyles = Array.from(
         new Set(
           allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null,
-          ),
-        ),
+            (s): s is string => typeof s === "string" && s !== null
+          )
+        )
       );
       eventStylesMap.set(eventId, uniqueStyles);
     });
@@ -4098,7 +4199,7 @@ export const getCitySchedule = async (
                 url: wPoster.url,
                 type: wPoster.type
               } ELSE null END as poster`,
-      params,
+      params
     );
 
     // Get workshop styles
@@ -4108,7 +4209,7 @@ export const getCitySchedule = async (
        OPTIONAL MATCH (w)-[:STYLE]->(style:Style)
        WITH w.id as workshopId, collect(DISTINCT style.name) as styles
        RETURN workshopId, styles`,
-      params,
+      params
     );
 
     // Get video styles for workshops
@@ -4117,7 +4218,7 @@ export const getCitySchedule = async (
        WHERE 1=1${workshopDateFilter}
        WITH w.id as workshopId, collect(DISTINCT style.name) as styles
        RETURN workshopId, styles`,
-      params,
+      params
     );
 
     // Create styles maps for workshops
@@ -4125,7 +4226,7 @@ export const getCitySchedule = async (
     workshopStylesResult.records.forEach((record) => {
       workshopStylesMap.set(
         record.get("workshopId"),
-        record.get("styles") || [],
+        record.get("styles") || []
       );
     });
 
@@ -4133,7 +4234,7 @@ export const getCitySchedule = async (
     workshopVideoStylesResult.records.forEach((record) => {
       workshopVideoStylesMap.set(
         record.get("workshopId"),
-        record.get("styles") || [],
+        record.get("styles") || []
       );
     });
 
@@ -4144,7 +4245,7 @@ export const getCitySchedule = async (
         const workshopStyles = workshopStylesMap.get(workshopId) || [];
         const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
         const allStyles = Array.from(
-          new Set([...workshopStyles, ...videoStyles]),
+          new Set([...workshopStyles, ...videoStyles])
         );
 
         return {
@@ -4183,7 +4284,7 @@ export const getCitySchedule = async (
         const workshopStyles = workshopStylesMap.get(workshopId) || [];
         const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
         const allStyles = Array.from(
-          new Set([...workshopStyles, ...videoStyles]),
+          new Set([...workshopStyles, ...videoStyles])
         );
 
         return {
@@ -4195,7 +4296,7 @@ export const getCitySchedule = async (
           poster: record.get("poster") || null,
           styles: allStyles,
         };
-      },
+      }
     );
 
     // Get sessions in this city (sessions use dates array, so we filter in code)
@@ -4209,7 +4310,7 @@ export const getCitySchedule = async (
                 url: sPoster.url,
                 type: sPoster.type
               } ELSE null END as poster`,
-      { cityId },
+      { cityId }
     );
 
     // Get session styles
@@ -4218,7 +4319,7 @@ export const getCitySchedule = async (
        OPTIONAL MATCH (s)-[:STYLE]->(style:Style)
        WITH s.id as sessionId, collect(DISTINCT style.name) as styles
        RETURN sessionId, styles`,
-      { cityId },
+      { cityId }
     );
 
     // Get video styles for sessions
@@ -4226,7 +4327,7 @@ export const getCitySchedule = async (
       `MATCH (c:City {id: $cityId})<-[:IN]-(s:Session)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
        WITH s.id as sessionId, collect(DISTINCT style.name) as styles
        RETURN sessionId, styles`,
-      { cityId },
+      { cityId }
     );
 
     // Create styles maps for sessions
@@ -4239,7 +4340,7 @@ export const getCitySchedule = async (
     sessionVideoStylesResult.records.forEach((record) => {
       sessionVideoStylesMap.set(
         record.get("sessionId"),
-        record.get("styles") || [],
+        record.get("styles") || []
       );
     });
 
@@ -4250,7 +4351,7 @@ export const getCitySchedule = async (
         const sessionStyles = sessionStylesMap.get(sessionId) || [];
         const videoStyles = sessionVideoStylesMap.get(sessionId) || [];
         const allStyles = Array.from(
-          new Set([...sessionStyles, ...videoStyles]),
+          new Set([...sessionStyles, ...videoStyles])
         );
 
         const datesStr = record.get("dates") || "[]";
@@ -4279,7 +4380,7 @@ export const getCitySchedule = async (
           poster: record.get("poster") || null,
           styles: allStyles,
         };
-      },
+      }
     );
 
     // Build sessions array for backward compatibility
@@ -4289,7 +4390,7 @@ export const getCitySchedule = async (
         const sessionStyles = sessionStylesMap.get(sessionId) || [];
         const videoStyles = sessionVideoStylesMap.get(sessionId) || [];
         const allStyles = Array.from(
-          new Set([...sessionStyles, ...videoStyles]),
+          new Set([...sessionStyles, ...videoStyles])
         );
 
         return {
@@ -4299,7 +4400,7 @@ export const getCitySchedule = async (
           poster: record.get("poster") || null,
           styles: allStyles,
         };
-      },
+      }
     );
 
     await session.close();
@@ -4371,7 +4472,7 @@ export const getCalendarEvents = async (
   style?: string,
   startDate?: string,
   endDate?: string,
-  cities?: City[],
+  cities?: City[]
 ): Promise<CalendarEventData[]> => {
   // Use provided cities or fetch if not provided
   const citiesList = cities || (await getAllCities());
@@ -4399,7 +4500,7 @@ export const getCalendarEvents = async (
     events = events.filter((event) => {
       const eventStyles = event.styles || [];
       return eventStyles.some(
-        (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle,
+        (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle
       );
     });
   }
@@ -4408,7 +4509,7 @@ export const getCalendarEvents = async (
 };
 
 export const searchEvents = async (
-  keyword?: string,
+  keyword?: string
 ): Promise<Array<{ id: string; title: string }>> => {
   const session = driver.session();
 
@@ -4442,7 +4543,7 @@ export const searchEvents = async (
 export const searchAccessibleEvents = async (
   userId: string,
   authLevel: number,
-  keyword?: string,
+  keyword?: string
 ): Promise<Array<{ id: string; title: string }>> => {
   const session = driver.session();
 
@@ -4516,7 +4617,7 @@ export async function getLatestBattleSections(): Promise<
       WITH e, collect(s)[0] as firstSection, c
       RETURN e.id as eventId, e.title as eventTitle, firstSection.id as sectionId, firstSection.title as sectionTitle, c.name as cityName
       LIMIT 6
-      `,
+      `
     );
 
     const result: Array<{
@@ -4558,7 +4659,7 @@ export async function getLatestBattleSections(): Promise<
                size(brackets) as bracketCount,
                size(bracketVideos) as bracketVideoCount
         `,
-        { sectionId },
+        { sectionId }
       );
 
       if (sectionResult.records.length === 0) continue;
@@ -4576,7 +4677,7 @@ export async function getLatestBattleSections(): Promise<
         MATCH (s:Section {id: $sectionId})-[:STYLE]->(style:Style)
         RETURN collect(style.name) as styles
         `,
-        { sectionId },
+        { sectionId }
       );
 
       const styles =
@@ -4602,7 +4703,7 @@ export async function getLatestBattleSections(): Promise<
             .map((_, i) => {
               // Distribute videos evenly, with remainder going to first brackets
               const videosPerBracket = Math.floor(
-                bracketVideoCount / bracketCount,
+                bracketVideoCount / bracketCount
               );
               const remainder = bracketVideoCount % bracketCount;
               const videoCount = videosPerBracket + (i < remainder ? 1 : 0);
@@ -4655,7 +4756,7 @@ export async function getLatestBattleSections(): Promise<
  * Used for "Watch Past Events" section on homepage
  */
 export async function getEventsWithVideosForWatch(
-  limit: number = 6,
+  limit: number = 6
 ): Promise<TEventCard[]> {
   const session = driver.session();
 
@@ -4700,10 +4801,12 @@ export async function getEventsWithVideosForWatch(
                ELSE null 
              END as eventType
       `,
-      { limit: int(limit) },
+      { limit: int(limit) }
     );
 
-    const eventIds = eventsResult.records.map((r) => r.get("eventId") as string);
+    const eventIds = eventsResult.records.map(
+      (r) => r.get("eventId") as string
+    );
 
     if (eventIds.length === 0) {
       return [];
@@ -4719,14 +4822,14 @@ export async function getEventsWithVideosForWatch(
       WITH eventId, collect(DISTINCT style.name) + collect(DISTINCT sectionStyle.name) as allStyles
       RETURN eventId, allStyles
       `,
-      { eventIds },
+      { eventIds }
     );
 
     const stylesMap = new Map<string, string[]>();
     for (const record of stylesResult.records) {
       const eventId = record.get("eventId") as string;
       const styles = (record.get("allStyles") as string[]).filter(
-        (s) => s !== null,
+        (s) => s !== null
       );
       stylesMap.set(eventId, styles);
     }
@@ -4734,7 +4837,7 @@ export async function getEventsWithVideosForWatch(
     // Helper function to format date for display (MM/DD/YY format)
     const formatDisplayDate = (
       dates: string | null | undefined,
-      startDate: string | null | undefined,
+      startDate: string | null | undefined
     ): string => {
       if (dates) {
         try {
@@ -4788,9 +4891,7 @@ export async function getEventsWithVideosForWatch(
     };
 
     // Helper function to count additional dates
-    const countAdditionalDates = (
-      dates: string | null | undefined,
-    ): number => {
+    const countAdditionalDates = (dates: string | null | undefined): number => {
       if (!dates) return 0;
       try {
         const parsedDates: EventDate[] =
@@ -4847,36 +4948,104 @@ export async function getEventsWithVideosForWatch(
 export async function getAllBattleSections(
   limit: number = 10,
   offset: number = 0,
+  filters?: VideoFilters
 ): Promise<CombinedSectionPayload[]> {
   const session = driver.session();
 
   try {
-    // Ensure limit and offset are integers (Neo4j requires integers for SKIP and LIMIT)
-    // Use Neo4j's int() function to create proper integer types
-    const limitInt = int(Math.floor(limit));
-    const offsetInt = int(Math.floor(offset));
+    const fetchLimit = limit + offset;
 
-    // Get battle sections - we'll sort by event date in JS
-    // Fetch more than needed since we'll sort and paginate in JS
-    const fetchLimit = Math.max(limit + offset, 100); // Fetch at least 100 or enough for pagination
-    // One row per section: WITH e, s first so ORDER BY + LIMIT apply to unique sections; then get city
-    const sectionsResult = await session.run(
-      `
-      MATCH (e:Event)
-      WHERE (e.status = 'visible' OR e.status IS NULL)
-      MATCH (e)<-[:IN]-(s:BattleSection)
-      WHERE EXISTS {
+    const sortDirection = filters?.sortOrder === "asc" ? "ASC" : "DESC";
+    const cityNames =
+      filters?.cities
+        ?.map((city) => city.trim())
+        .filter((city) => city.length > 0) ?? [];
+    const cityNamesLower = cityNames.map((c) => c.toLowerCase());
+    const styleNames =
+      filters?.styles
+        ?.map((style) => normalizeStyleName(style.trim()))
+        .filter((style) => style.length > 0) ?? [];
+
+    const eventConditions = ["(e.status = 'visible' OR e.status IS NULL)"];
+    if (typeof filters?.yearFrom === "number") {
+      eventConditions.push(
+        `e.startDate IS NOT NULL AND size(e.startDate) >= 4 AND toInteger(substring(e.startDate, size(e.startDate) - 4, 4)) >= $yearFrom`
+      );
+    }
+    if (typeof filters?.yearTo === "number") {
+      eventConditions.push(
+        `e.startDate IS NOT NULL AND size(e.startDate) >= 4 AND toInteger(substring(e.startDate, size(e.startDate) - 4, 4)) <= $yearTo`
+      );
+    }
+    if (cityNames.length > 0) {
+      eventConditions.push(
+        `EXISTS {
+          MATCH (e)-[:IN]->(c:City)
+          WHERE toLower(trim(c.name)) IN $cityNamesLower
+        }`
+      );
+    }
+
+    const sectionConditions = [
+      `EXISTS {
         MATCH (s)<-[:IN]-(v:Video)
       } OR EXISTS {
         MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
-      }
-      WITH e, s
-      ORDER BY e.updatedAt DESC, e.createdAt DESC, COALESCE(s.position, 999999) ASC
+      }`,
+    ];
+    if (styleNames.length > 0) {
+      sectionConditions.push(
+        `(
+          EXISTS {
+            MATCH (s)-[:STYLE]->(style:Style)
+            WHERE toLower(style.name) IN $styleNamesLower
+          }
+          OR EXISTS {
+            MATCH (s)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+            WHERE toLower(style.name) IN $styleNamesLower
+          }
+          OR EXISTS {
+            MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)-[:STYLE]->(style:Style)
+            WHERE toLower(style.name) IN $styleNamesLower
+          }
+        )`
+      );
+    }
+
+    const params: Record<string, unknown> = {
+      limit: int(fetchLimit),
+    };
+    if (cityNames.length > 0) {
+      params.cityNamesLower = cityNamesLower;
+    }
+    if (styleNames.length > 0) {
+      params.styleNamesLower = styleNames;
+    }
+    if (typeof filters?.yearFrom === "number") {
+      params.yearFrom = Math.floor(filters.yearFrom);
+    }
+    if (typeof filters?.yearTo === "number") {
+      params.yearTo = Math.floor(filters.yearTo);
+    }
+
+    const sectionsResult = await session.run(
+      `
+      MATCH (e:Event)
+      WHERE ${eventConditions.join(" AND ")}
+      MATCH (e)<-[:IN]-(s:BattleSection)
+      WHERE (${sectionConditions.join(" AND ")})
+      WITH e, s,
+           CASE
+             WHEN e.startDate IS NOT NULL AND size(e.startDate) >= 4 THEN
+               toInteger(substring(e.startDate, size(e.startDate) - 4, 4))
+             ELSE 0
+           END as eventYear
+      ORDER BY eventYear ${sortDirection}, e.updatedAt DESC, e.createdAt DESC, COALESCE(s.position, 999999) ASC
       LIMIT $limit
       OPTIONAL MATCH (e)-[:IN]->(c:City)
       RETURN e.id as eventId, e.title as eventTitle, e.startDate as eventStartDate, e.dates as eventDates, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription, c.name as cityName
       `,
-      { limit: int(fetchLimit) },
+      params
     );
 
     type ResultItem = CombinedSectionPayload & {
@@ -4892,7 +5061,7 @@ export async function getAllBattleSections(
 
     // Helper function to format event date as "Mar 2026"
     const formatEventDate = (
-      dates: string | null | undefined,
+      dates: string | null | undefined
     ): string | undefined => {
       if (!dates) return undefined;
       try {
@@ -4933,7 +5102,7 @@ export async function getAllBattleSections(
 
         // Find the latest date
         const latestDate = dateObjects.reduce((latest, current) =>
-          current > latest ? current : latest,
+          current > latest ? current : latest
         );
 
         // Format as "Mar 2026"
@@ -4942,6 +5111,301 @@ export async function getAllBattleSections(
         return undefined;
       }
     };
+
+    const getVideoType = (
+      labels: string[] | null | undefined
+    ): Video["type"] => {
+      if (!labels || labels.length === 0) return "battle";
+      if (labels.includes("FreestyleVideo")) return "freestyle";
+      if (labels.includes("ChoreographyVideo")) return "choreography";
+      if (labels.includes("ClassVideo")) return "class";
+      if (labels.includes("OtherVideo")) return "other";
+      return "battle";
+    };
+
+    const sectionIds: string[] = [];
+    for (const record of sectionsResult.records) {
+      const sectionId = record.get("sectionId");
+      if (sectionId && !sectionIds.includes(sectionId)) {
+        sectionIds.push(sectionId);
+      }
+    }
+
+    if (sectionIds.length === 0) {
+      return [];
+    }
+
+    const sectionDataResult = await session.run(
+      `
+      MATCH (s:Section)
+      WHERE s.id IN $sectionIds
+      OPTIONAL MATCH (s)<-[:IN]-(v:Video)
+      OPTIONAL MATCH (v)-[:STYLE]->(vStyle:Style)
+      WITH s, v, collect(DISTINCT vStyle.name) as videoStyles
+      ORDER BY s.id, COALESCE(v.position, 999999) ASC
+      RETURN s.id as sectionId,
+             s.applyStylesToVideos as applyStylesToVideos,
+             collect({
+               id: v.id,
+               title: v.title,
+               src: v.src,
+               labels: CASE WHEN v IS NULL THEN [] ELSE
+                 [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']]
+               END,
+               styles: videoStyles
+             }) as directVideos
+      `,
+      { sectionIds }
+    );
+
+    const directVideosBySectionId = new Map<string, Video[]>();
+    const applyStylesMap = new Map<string, boolean>();
+    const directVideoIds: string[] = [];
+
+    for (const record of sectionDataResult.records) {
+      const sectionId = record.get("sectionId") as string;
+      const applyStylesToVideos = Boolean(
+        record.get("applyStylesToVideos") ?? false
+      );
+      applyStylesMap.set(sectionId, applyStylesToVideos);
+
+      const rawVideos = (record.get("directVideos") as Array<{
+        id: string | null;
+        title: string | null;
+        src: string | null;
+        labels?: string[] | null;
+        styles?: string[] | null;
+      }>) || [];
+
+      const sectionVideos: Video[] = [];
+      for (const rawVideo of rawVideos) {
+        if (!rawVideo?.id) continue;
+        const videoStyles = Array.isArray(rawVideo.styles)
+          ? rawVideo.styles.filter(Boolean)
+          : [];
+        const video: Video = {
+          id: rawVideo.id,
+          title: rawVideo.title || "",
+          src: rawVideo.src || "",
+          type: getVideoType(rawVideo.labels || []),
+          styles: videoStyles.length > 0 ? videoStyles : undefined,
+        };
+        sectionVideos.push(video);
+        directVideoIds.push(rawVideo.id);
+      }
+
+      directVideosBySectionId.set(sectionId, sectionVideos);
+    }
+
+    const sectionStylesResult = await session.run(
+      `
+      MATCH (s:Section)-[:STYLE]->(style:Style)
+      WHERE s.id IN $sectionIds
+      RETURN s.id as sectionId, collect(style.name) as styles
+      `,
+      { sectionIds }
+    );
+
+    const sectionStylesMap = new Map<string, string[]>();
+    for (const record of sectionStylesResult.records) {
+      const sectionId = record.get("sectionId") as string;
+      const styles = ((record.get("styles") as string[] | null) || []).filter(
+        Boolean
+      );
+      sectionStylesMap.set(sectionId, styles);
+    }
+
+    const bracketConditions: string[] = [];
+    if (filters?.finalsOnly) {
+      bracketConditions.push(
+        `toLower(b.title) CONTAINS 'final' AND NOT toLower(b.title) CONTAINS 'semi'`
+      );
+    }
+    if (filters?.noPrelims) {
+      bracketConditions.push(`NOT toLower(b.title) CONTAINS 'pre'`);
+    }
+
+    const bracketConditionSql =
+      bracketConditions.length > 0
+        ? ` AND ${bracketConditions.join(" AND ")}`
+        : "";
+
+    const bracketsResult = await session.run(
+      `
+      MATCH (s:Section)<-[:IN]-(b:Bracket)
+      WHERE s.id IN $sectionIds${bracketConditionSql}
+      RETURN s.id as sectionId, b.id as bracketId, b.title as bracketTitle
+      ORDER BY s.id, COALESCE(b.position, 999999) ASC
+      `,
+      { sectionIds }
+    );
+
+    const bracketsBySectionId = new Map<string, Bracket[]>();
+    const bracketIds: string[] = [];
+
+    for (const record of bracketsResult.records) {
+      const sectionId = record.get("sectionId") as string;
+      const bracketId = record.get("bracketId") as string;
+      const bracketTitle = record.get("bracketTitle") as string;
+      if (!bracketId) continue;
+
+      const bracketList = bracketsBySectionId.get(sectionId) || [];
+      const bracket: Bracket = {
+        id: bracketId,
+        title: bracketTitle,
+        videos: [],
+      };
+      bracketList.push(bracket);
+      bracketsBySectionId.set(sectionId, bracketList);
+      bracketIds.push(bracketId);
+    }
+
+    const bracketVideosByBracketId = new Map<string, Video[]>();
+    const bracketVideoIds: string[] = [];
+
+    if (bracketIds.length > 0) {
+      const bracketVideosResult = await session.run(
+        `
+        MATCH (b:Bracket)<-[:IN]-(v:Video)
+        WHERE b.id IN $bracketIds
+        OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
+        WITH b, v, collect(DISTINCT style.name) as videoStyles
+        ORDER BY b.id, COALESCE(v.position, 999999) ASC
+        RETURN b.id as bracketId,
+               collect({
+                 id: v.id,
+                 title: v.title,
+                 src: v.src,
+                 labels: [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']],
+                 styles: videoStyles
+               }) as videos
+        `,
+        { bracketIds }
+      );
+
+      for (const record of bracketVideosResult.records) {
+        const bracketId = record.get("bracketId") as string;
+        const rawVideos = (record.get("videos") as Array<{
+          id: string | null;
+          title: string | null;
+          src: string | null;
+          labels?: string[] | null;
+          styles?: string[] | null;
+        }>) || [];
+        const bracketVideos: Video[] = [];
+
+        for (const rawVideo of rawVideos) {
+          if (!rawVideo?.id) continue;
+          const videoStyles = Array.isArray(rawVideo.styles)
+            ? rawVideo.styles.filter(Boolean)
+            : [];
+          const video: Video = {
+            id: rawVideo.id,
+            title: rawVideo.title || "",
+            src: rawVideo.src || "",
+            type: getVideoType(rawVideo.labels || []),
+            styles: videoStyles.length > 0 ? videoStyles : undefined,
+          };
+          bracketVideos.push(video);
+          bracketVideoIds.push(rawVideo.id);
+        }
+
+        bracketVideosByBracketId.set(bracketId, bracketVideos);
+      }
+    }
+
+    const buildTaggedUsersMap = async (videoIds: string[]) => {
+      const taggedUsersMap = new Map<string, any>();
+      if (videoIds.length === 0) return taggedUsersMap;
+
+      const taggedUsersResult = await session.run(
+        `
+        MATCH (v:Video)
+        WHERE v.id IN $videoIds
+        OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
+        OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
+        OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
+        OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
+        WITH v,
+             collect(DISTINCT {
+               id: winner.id,
+               displayName: winner.displayName,
+               username: winner.username,
+               avatar: winner.avatar,
+               image: winner.image
+             }) as allWinners,
+             collect(DISTINCT {
+               id: dancer.id,
+               displayName: dancer.displayName,
+               username: dancer.username,
+               avatar: dancer.avatar,
+               image: dancer.image
+             }) as allDancers,
+             collect(DISTINCT {
+               id: choreographer.id,
+               displayName: choreographer.displayName,
+               username: choreographer.username,
+               avatar: choreographer.avatar,
+               image: choreographer.image
+             }) as allChoreographers,
+             collect(DISTINCT {
+               id: teacher.id,
+               displayName: teacher.displayName,
+               username: teacher.username,
+               avatar: teacher.avatar,
+               image: teacher.image
+             }) as allTeachers
+        RETURN v.id as videoId,
+               [w in allWinners WHERE w.id IS NOT NULL] as taggedWinners,
+               [d in allDancers WHERE d.id IS NOT NULL] as taggedDancers,
+               [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
+               [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
+        `,
+        { videoIds }
+      );
+
+      for (const tagRecord of taggedUsersResult.records) {
+        const videoId = tagRecord.get("videoId");
+        taggedUsersMap.set(videoId, {
+          taggedWinners: tagRecord.get("taggedWinners"),
+          taggedDancers: tagRecord.get("taggedDancers"),
+          taggedChoreographers: tagRecord.get("taggedChoreographers"),
+          taggedTeachers: tagRecord.get("taggedTeachers"),
+        });
+      }
+
+      return taggedUsersMap;
+    };
+
+    const directTaggedUsersMap = await buildTaggedUsersMap(directVideoIds);
+    const bracketTaggedUsersMap = await buildTaggedUsersMap(bracketVideoIds);
+
+    const applyTaggedUsers = (
+      videos: Video[],
+      taggedUsersMap: Map<string, any>
+    ) => {
+      for (const video of videos) {
+        const taggedUsers = taggedUsersMap.get(video.id) || {};
+        video.taggedWinners = taggedUsers.taggedWinners || undefined;
+        video.taggedDancers = taggedUsers.taggedDancers || undefined;
+        video.taggedChoreographers = taggedUsers.taggedChoreographers || undefined;
+        video.taggedTeachers = taggedUsers.taggedTeachers || undefined;
+      }
+    };
+
+    for (const [sectionId, videos] of directVideosBySectionId.entries()) {
+      applyTaggedUsers(videos, directTaggedUsersMap);
+    }
+
+    for (const [bracketId, videos] of bracketVideosByBracketId.entries()) {
+      applyTaggedUsers(videos, bracketTaggedUsersMap);
+    }
+
+    for (const [sectionId, bracketList] of bracketsBySectionId.entries()) {
+      for (const bracket of bracketList) {
+        bracket.videos = bracketVideosByBracketId.get(bracket.id) || [];
+      }
+    }
 
     for (const record of sectionsResult.records) {
       const sectionId = record.get("sectionId");
@@ -4958,304 +5422,59 @@ export async function getAllBattleSections(
       const sectionDescription = record.get("sectionDescription");
       const cityName = record.get("cityName") as string | null;
 
-      // Format event date
       const formattedEventDate = formatEventDate(eventDates);
 
-      // Get section with videos and brackets (one section → combine all its brackets)
-      const sectionDataResult = await session.run(
-        `
-        MATCH (s:Section {id: $sectionId})
-        OPTIONAL MATCH (s)<-[:IN]-(v:Video)
-        OPTIONAL MATCH (s)<-[:IN]-(b:Bracket)
-        OPTIONAL MATCH (b)<-[:IN]-(v2:Video)
-        WITH s, 
-             collect(DISTINCT v) as directVideos,
-             collect(DISTINCT b) as brackets,
-             collect(DISTINCT v2) as bracketVideos
-        RETURN s.id as id, s.title as title, s.description as description,
-               s.applyStylesToVideos as applyStylesToVideos,
-               directVideos, brackets, bracketVideos
-        `,
-        { sectionId },
-      );
+      const sectionVideos = directVideosBySectionId.get(sectionId) || [];
+      const bracketList = bracketsBySectionId.get(sectionId) || [];
+      const hasBrackets = bracketList.length > 0;
 
-      if (sectionDataResult.records.length === 0) continue;
-
-      const sectionRecord = sectionDataResult.records[0];
-      const directVideos = sectionRecord.get("directVideos") as any[];
-      const brackets = sectionRecord.get("brackets") as any[];
-      const bracketVideos = sectionRecord.get("bracketVideos") as any[];
-      const hasBrackets = brackets.length > 0;
-
-      // Get section styles
-      const stylesResult = await session.run(
-        `
-        MATCH (s:Section {id: $sectionId})-[:STYLE]->(style:Style)
-        RETURN collect(style.name) as styles
-        `,
-        { sectionId },
-      );
-
-      const styles =
-        stylesResult.records.length > 0
-          ? (stylesResult.records[0].get("styles") as string[])
-          : [];
-
-      // Get direct section videos with full data
-      const sectionVideos: Video[] = [];
-      if (directVideos.length > 0) {
-        const videoIds = directVideos.map((v) => v.properties.id);
-        const videoDataResult = await session.run(
-          `
-          MATCH (v:Video)
-          WHERE v.id IN $videoIds
-          OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
-          WITH v, collect(style.name) as videoStyles
-          ORDER BY COALESCE(v.position, 999999) ASC
-          RETURN v.id as id, v.title as title, v.src as src,
-                 [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
-                 videoStyles
-          `,
-          { videoIds },
-        );
-
-        // Get tagged users for direct videos
-        const taggedUsersResult = await session.run(
-          `
-          MATCH (v:Video)
-          WHERE v.id IN $videoIds
-          OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
-          OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
-          OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
-          OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
-          WITH v,
-               collect(DISTINCT {
-                 id: winner.id,
-                 displayName: winner.displayName,
-                 username: winner.username,
-                 avatar: winner.avatar,
-                 image: winner.image
-               }) as allWinners,
-               collect(DISTINCT {
-                 id: dancer.id,
-                 displayName: dancer.displayName,
-                 username: dancer.username,
-                 avatar: dancer.avatar,
-                 image: dancer.image
-               }) as allDancers,
-               collect(DISTINCT {
-                 id: choreographer.id,
-                 displayName: choreographer.displayName,
-                 username: choreographer.username,
-                 avatar: choreographer.avatar,
-                 image: choreographer.image
-               }) as allChoreographers,
-               collect(DISTINCT {
-                 id: teacher.id,
-                 displayName: teacher.displayName,
-                 username: teacher.username,
-                 avatar: teacher.avatar,
-                 image: teacher.image
-               }) as allTeachers
-          RETURN v.id as videoId,
-                 [w in allWinners WHERE w.id IS NOT NULL] as taggedWinners,
-                 [d in allDancers WHERE d.id IS NOT NULL] as taggedDancers,
-                 [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
-                 [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
-          `,
-          { videoIds },
-        );
-
-        const taggedUsersMap = new Map<string, any>();
-        for (const tagRecord of taggedUsersResult.records) {
-          const videoId = tagRecord.get("videoId");
-          taggedUsersMap.set(videoId, {
-            taggedWinners: tagRecord.get("taggedWinners"),
-            taggedDancers: tagRecord.get("taggedDancers"),
-            taggedChoreographers: tagRecord.get("taggedChoreographers"),
-            taggedTeachers: tagRecord.get("taggedTeachers"),
-          });
-        }
-
-        for (const videoRecord of videoDataResult.records) {
-          const videoId = videoRecord.get("id");
-          const videoLabels = videoRecord.get("videoLabels") as string[];
-          let videoType: Video["type"] = "battle";
-          if (videoLabels.includes("FreestyleVideo")) {
-            videoType = "freestyle";
-          } else if (videoLabels.includes("ChoreographyVideo")) {
-            videoType = "choreography";
-          } else if (videoLabels.includes("ClassVideo")) {
-            videoType = "class";
-          } else if (videoLabels.includes("OtherVideo")) {
-            videoType = "other";
-          }
-
-          const videoStyles = videoRecord.get("videoStyles") as string[];
-          const taggedUsers = taggedUsersMap.get(videoId) || {};
-
-          sectionVideos.push({
-            id: videoId,
-            title: videoRecord.get("title"),
-            src: videoRecord.get("src"),
-            type: videoType,
-            styles: videoStyles.length > 0 ? videoStyles : undefined,
-            taggedWinners: taggedUsers.taggedWinners || undefined,
-            taggedDancers: taggedUsers.taggedDancers || undefined,
-            taggedChoreographers: taggedUsers.taggedChoreographers || undefined,
-            taggedTeachers: taggedUsers.taggedTeachers || undefined,
-          });
-        }
-      }
-
-      // Get bracket videos with full data
-      const bracketList: Bracket[] = [];
-      if (hasBrackets && brackets.length > 0) {
-        const bracketIds = brackets.map((b) => b.properties.id);
-        const bracketDataResult = await session.run(
-          `
-          MATCH (b:Bracket)
-          WHERE b.id IN $bracketIds
-          RETURN b.id as id, b.title as title
-          ORDER BY COALESCE(b.position, 999999) ASC
-          `,
-          { bracketIds },
-        );
-
-        // Get videos for each bracket
-        for (const bracketRecord of bracketDataResult.records) {
-          const bracketId = bracketRecord.get("id");
-          const bracketTitle = bracketRecord.get("title");
-
-          const bracketVideosResult = await session.run(
-            `
-            MATCH (b:Bracket {id: $bracketId})<-[:IN]-(v:Video)
-            OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
-            WITH v, collect(style.name) as videoStyles
-            ORDER BY COALESCE(v.position, 999999) ASC
-            RETURN v.id as id, v.title as title, v.src as src,
-                   [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
-                   videoStyles
-            `,
-            { bracketId },
-          );
-
-          // Get tagged users for bracket videos
-          const bracketVideoIds = bracketVideosResult.records.map((r) =>
-            r.get("id"),
-          );
-          const bracketTaggedUsersResult = await session.run(
-            `
-            MATCH (v:Video)
-            WHERE v.id IN $videoIds
-            OPTIONAL MATCH (v)<-[:WINNER]-(winner:User)
-            OPTIONAL MATCH (v)<-[:DANCER]-(dancer:User)
-            OPTIONAL MATCH (v)<-[:CHOREOGRAPHER]-(choreographer:User)
-            OPTIONAL MATCH (v)<-[:TEACHER]-(teacher:User)
-            WITH v,
-                 collect(DISTINCT {
-                   id: winner.id,
-                   displayName: winner.displayName,
-                   username: winner.username,
-                   avatar: winner.avatar,
-                   image: winner.image
-                 }) as allWinners,
-                 collect(DISTINCT {
-                   id: dancer.id,
-                   displayName: dancer.displayName,
-                   username: dancer.username,
-                   avatar: dancer.avatar,
-                   image: dancer.image
-                 }) as allDancers,
-                 collect(DISTINCT {
-                   id: choreographer.id,
-                   displayName: choreographer.displayName,
-                   username: choreographer.username,
-                   avatar: choreographer.avatar,
-                   image: choreographer.image
-                 }) as allChoreographers,
-                 collect(DISTINCT {
-                   id: teacher.id,
-                   displayName: teacher.displayName,
-                   username: teacher.username,
-                   avatar: teacher.avatar,
-                   image: teacher.image
-                 }) as allTeachers
-            RETURN v.id as videoId,
-                   [w in allWinners WHERE w.id IS NOT NULL] as taggedWinners,
-                   [d in allDancers WHERE d.id IS NOT NULL] as taggedDancers,
-                   [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
-                   [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
-            `,
-            { videoIds: bracketVideoIds },
-          );
-
-          const bracketTaggedUsersMap = new Map<string, any>();
-          for (const tagRecord of bracketTaggedUsersResult.records) {
-            const videoId = tagRecord.get("videoId");
-            bracketTaggedUsersMap.set(videoId, {
-              taggedWinners: tagRecord.get("taggedWinners"),
-              taggedDancers: tagRecord.get("taggedDancers"),
-              taggedChoreographers: tagRecord.get("taggedChoreographers"),
-              taggedTeachers: tagRecord.get("taggedTeachers"),
-            });
-          }
-
-          const bracketVideos: Video[] = [];
-          for (const videoRecord of bracketVideosResult.records) {
-            const videoId = videoRecord.get("id");
-            const videoLabels = videoRecord.get("videoLabels") as string[];
-            let videoType: Video["type"] = "battle";
-            if (videoLabels.includes("FreestyleVideo")) {
-              videoType = "freestyle";
-            } else if (videoLabels.includes("ChoreographyVideo")) {
-              videoType = "choreography";
-            } else if (videoLabels.includes("ClassVideo")) {
-              videoType = "class";
-            } else if (videoLabels.includes("OtherVideo")) {
-              videoType = "other";
-            }
-
-            const videoStyles = videoRecord.get("videoStyles") as string[];
-            const taggedUsers = bracketTaggedUsersMap.get(videoId) || {};
-
-            bracketVideos.push({
-              id: videoId,
-              title: videoRecord.get("title"),
-              src: videoRecord.get("src"),
-              type: videoType,
-              styles: videoStyles.length > 0 ? videoStyles : undefined,
-              taggedWinners: taggedUsers.taggedWinners || undefined,
-              taggedDancers: taggedUsers.taggedDancers || undefined,
-              taggedChoreographers:
-                taggedUsers.taggedChoreographers || undefined,
-              taggedTeachers: taggedUsers.taggedTeachers || undefined,
-            });
-          }
-
-          bracketList.push({
-            id: bracketId,
-            title: bracketTitle,
-            videos: bracketVideos,
-          });
-        }
-      }
-
-      // Build one full section per column (brackets combined server-side)
       const combinedVideos: Video[] = [];
+      const seenVideoIds = new Set<string>();
       const videoToBracket: Array<{ videoId: string; bracket: Bracket }> = [];
-      if (hasBrackets && bracketList.length > 0) {
+      if (hasBrackets) {
         for (const bracket of bracketList) {
           for (const v of bracket.videos) {
+            if (seenVideoIds.has(v.id)) continue;
+            seenVideoIds.add(v.id);
             combinedVideos.push(v);
             videoToBracket.push({ videoId: v.id, bracket });
           }
         }
       }
       if (sectionVideos.length > 0) {
-        combinedVideos.push(...sectionVideos);
+        for (const v of sectionVideos) {
+          if (seenVideoIds.has(v.id)) continue;
+          seenVideoIds.add(v.id);
+          combinedVideos.push(v);
+        }
       }
 
+      if (
+        (filters?.finalsOnly || filters?.noPrelims) &&
+        combinedVideos.length === 0
+      ) {
+        continue;
+      }
+
+      if (styleNames.length > 0) {
+        const filterStyleSet = new Set(styleNames);
+        const hasMatchingVideo =
+          combinedVideos.length > 0 &&
+          combinedVideos.some((v) =>
+            (v.styles || []).some((s) =>
+              filterStyleSet.has(normalizeStyleName(String(s)))
+            )
+          );
+        const sectionStyles = sectionStylesMap.get(sectionId) || [];
+        const sectionHasFilterStyle = sectionStyles.some((s) =>
+          filterStyleSet.has(normalizeStyleName(String(s)))
+        );
+        if (!hasMatchingVideo && !sectionHasFilterStyle) {
+          continue;
+        }
+      }
+
+      const styles = sectionStylesMap.get(sectionId) || [];
       const section: Section = {
         id: sectionId,
         title: sectionTitle,
@@ -5265,7 +5484,7 @@ export async function getAllBattleSections(
         videos: combinedVideos,
         brackets: bracketList,
         styles: styles.length > 0 ? styles : undefined,
-        applyStylesToVideos: sectionRecord.get("applyStylesToVideos") || false,
+        applyStylesToVideos: applyStylesMap.get(sectionId) || false,
       };
 
       result.push({
@@ -5274,8 +5493,7 @@ export async function getAllBattleSections(
         eventTitle,
         city: cityName || undefined,
         eventDate: formattedEventDate,
-        videoToBracket:
-          videoToBracket.length > 0 ? videoToBracket : undefined,
+        videoToBracket: videoToBracket.length > 0 ? videoToBracket : undefined,
         _sortKey: {
           eventStartDate,
           eventUpdatedAt,
@@ -5321,7 +5539,7 @@ export async function getAllBattleSections(
       // Fallback to createdAt
       if (a._sortKey.eventCreatedAt && b._sortKey.eventCreatedAt) {
         return (b._sortKey.eventCreatedAt as string).localeCompare(
-          a._sortKey.eventCreatedAt as string,
+          a._sortKey.eventCreatedAt as string
         );
       }
 
@@ -5343,7 +5561,7 @@ export async function getAllBattleSections(
  * Loads ALL sections regardless of count (no pagination)
  */
 export async function getEventSections(
-  eventId: string,
+  eventId: string
 ): Promise<CombinedSectionPayload[]> {
   const session = driver.session();
 
@@ -5358,7 +5576,7 @@ export async function getEventSections(
              e.dates as eventDates, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt,
              c.name as cityName
       `,
-      { eventId },
+      { eventId }
     );
 
     if (eventResult.records.length === 0) {
@@ -5375,7 +5593,7 @@ export async function getEventSections(
 
     // Helper function to format event date as "Mar 2026"
     const formatEventDate = (
-      dates: string | null | undefined,
+      dates: string | null | undefined
     ): string | undefined => {
       if (!dates) return undefined;
       try {
@@ -5416,7 +5634,7 @@ export async function getEventSections(
 
         // Find the latest date
         const latestDate = dateObjects.reduce((latest, current) =>
-          current > latest ? current : latest,
+          current > latest ? current : latest
         );
 
         // Format as "Mar 2026"
@@ -5441,7 +5659,7 @@ export async function getEventSections(
       RETURN s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription
       ORDER BY COALESCE(s.position, 999999) ASC
       `,
-      { eventId },
+      { eventId }
     );
 
     const result: CombinedSectionPayload[] = [];
@@ -5470,7 +5688,7 @@ export async function getEventSections(
                s.applyStylesToVideos as applyStylesToVideos,
                directVideos, brackets, bracketVideos
         `,
-        { sectionId },
+        { sectionId }
       );
 
       if (sectionDataResult.records.length === 0) continue;
@@ -5487,7 +5705,7 @@ export async function getEventSections(
         MATCH (s:Section {id: $sectionId})
         RETURN [label IN labels(s) WHERE label IN ['BattleSection', 'CompetitionSection', 'PerformanceSection', 'ExhibitionSection', 'ShowcaseSection', 'ClassSection', 'SessionSection', 'PartySection', 'OtherSection']] as sectionTypeLabels
         `,
-        { sectionId },
+        { sectionId }
       );
 
       const sectionTypeLabels =
@@ -5508,7 +5726,7 @@ export async function getEventSections(
         MATCH (s:Section {id: $sectionId})-[:STYLE]->(style:Style)
         RETURN collect(style.name) as styles
         `,
-        { sectionId },
+        { sectionId }
       );
 
       const styles =
@@ -5531,7 +5749,7 @@ export async function getEventSections(
                  [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                  videoStyles
           `,
-          { videoIds },
+          { videoIds }
         );
 
         // Get tagged users for direct videos
@@ -5578,7 +5796,7 @@ export async function getEventSections(
                  [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
                  [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
           `,
-          { videoIds },
+          { videoIds }
         );
 
         const taggedUsersMap = new Map<string, any>();
@@ -5634,7 +5852,7 @@ export async function getEventSections(
           RETURN b.id as id, b.title as title
           ORDER BY COALESCE(b.position, 999999) ASC
           `,
-          { bracketIds },
+          { bracketIds }
         );
 
         // Get videos for each bracket
@@ -5652,12 +5870,12 @@ export async function getEventSections(
                    [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                    videoStyles
             `,
-            { bracketId },
+            { bracketId }
           );
 
           // Get tagged users for bracket videos
           const bracketVideoIds = bracketVideosResult.records.map((r) =>
-            r.get("id"),
+            r.get("id")
           );
           const bracketTaggedUsersResult = await session.run(
             `
@@ -5702,7 +5920,7 @@ export async function getEventSections(
                    [c in allChoreographers WHERE c.id IS NOT NULL] as taggedChoreographers,
                    [t in allTeachers WHERE t.id IS NOT NULL] as taggedTeachers
             `,
-            { videoIds: bracketVideoIds },
+            { videoIds: bracketVideoIds }
           );
 
           const bracketTaggedUsersMap = new Map<string, any>();
@@ -5789,8 +6007,7 @@ export async function getEventSections(
         eventTitle,
         city: cityName || undefined,
         eventDate: formattedEventDate,
-        videoToBracket:
-          videoToBracket.length > 0 ? videoToBracket : undefined,
+        videoToBracket: videoToBracket.length > 0 ? videoToBracket : undefined,
       });
     }
 

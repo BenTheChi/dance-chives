@@ -426,30 +426,9 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       [isPlayerReady, playerState]
     );
 
-    if (!currentVideoId) {
-      return (
-        <div
-          className={`flex items-center justify-center bg-black ${
-            className || ""
-          }`}
-        >
-          <p className="text-white text-sm">No video selected</p>
-        </div>
-      );
-    }
-
-    const youtubeId = extractYouTubeVideoId(currentVideoId);
-    if (!youtubeId) {
-      return (
-        <div
-          className={`flex items-center justify-center bg-black ${
-            className || ""
-          }`}
-        >
-          <p className="text-white text-sm">Invalid YouTube URL</p>
-        </div>
-      );
-    }
+    const youtubeId = currentVideoId
+      ? extractYouTubeVideoId(currentVideoId)
+      : null;
 
     // Determine if we should show loading spinner
     // Show spinner when: player not ready, unstarted, buffering, or cued
@@ -458,23 +437,43 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
       playerState === -1 || // Unstarted
       playerState === 5; // Cued
 
+    const showNoVideo = !currentVideoId;
+    const showInvalidUrl = currentVideoId && !youtubeId;
+
+    // Always render the same DOM structure to avoid removeChild errors
+    // when YouTube API has manipulated the DOM
     return (
       <div className={`relative w-full h-full ${className || ""} `}>
-        <div ref={containerRef} className="w-full h-full pointer-events-auto" />
-        {/* Loading Spinner Overlay */}
         <div
-          className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-secondary-dark transition-opacity duration-700 ${
-            isLoading ? "opacity-100" : "opacity-0"
+          ref={containerRef}
+          className={`w-full h-full pointer-events-auto ${
+            showNoVideo || showInvalidUrl ? "invisible" : ""
           }`}
-        >
-          <Image
-            src="/Dancechives_Icon_Color_onDark.svg"
-            alt="Loading"
-            width={250}
-            height={250}
-            className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
-          />
-        </div>
+        />
+        {/* No video or invalid URL message */}
+        {(showNoVideo || showInvalidUrl) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <p className="text-white text-sm">
+              {showNoVideo ? "No video selected" : "Invalid YouTube URL"}
+            </p>
+          </div>
+        )}
+        {/* Loading Spinner Overlay */}
+        {!showNoVideo && !showInvalidUrl && (
+          <div
+            className={`absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-secondary-dark transition-opacity duration-700 ${
+              isLoading ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <Image
+              src="/Dancechives_Icon_Color_onDark.svg"
+              alt="Loading"
+              width={250}
+              height={250}
+              className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
+            />
+          </div>
+        )}
       </div>
     );
   }
