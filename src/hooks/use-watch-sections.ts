@@ -67,7 +67,15 @@ export const useWatchSections = (
   const sections = useMemo(() => {
     if (disabled) return initialSections;
     if (!data) return initialSections;
-    return data.flat();
+    const flat = data.flat();
+    const seen = new Set<string>();
+    return flat.filter((item) => {
+      const id = item.section?.id;
+      if (!id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }, [data, disabled, initialSections]);
   const lastPage = data?.[data.length - 1];
   const hasMore = disabled

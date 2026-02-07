@@ -1293,10 +1293,11 @@ export function VideoGallery({
               if (videos.length === 0) return null;
 
               const currentVideoIdx = currentVideoIndex.get(sectionIdx) ?? 0;
+              const sectionKey = `${sectionData.section.id}-${sectionIdx}`;
 
               return (
                 <div
-                  key={sectionData.section.id}
+                  key={sectionKey}
                   className="flex-shrink-0 w-full h-full flex items-center justify-center"
                 >
                   <div
@@ -1305,9 +1306,9 @@ export function VideoGallery({
                       transform: `translateY(-${currentVideoIdx * 100}%)`,
                     }}
                   >
-                    {videos.map((video) => (
+                    {videos.map((video, videoIdx) => (
                       <div
-                        key={video.id}
+                        key={`${sectionKey}-${video.id}-${videoIdx}`}
                         className="flex-shrink-0 w-full h-full relative"
                       >
                         <div className="w-full h-full bg-black flex items-center justify-center">

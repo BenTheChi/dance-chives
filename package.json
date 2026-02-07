@@ -12,7 +12,7 @@
     "build:staging": "npm run db:generate:staging && APP_ENV=staging dotenv -e .env.staging -- next build",
     "start": "next start",
     "start:staging": "APP_ENV=staging dotenv -e .env.staging -- next start",
-    "staging": "npm run build:staging && npm run start:staging",
+    "staging": "APP_ENV=staging dotenv -e .env.staging -- next dev --turbopack",
     "lint": "eslint .",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
