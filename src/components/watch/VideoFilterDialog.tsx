@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,21 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { VideoFilters } from "@/types/video-filter";
-import { DebouncedSearchMultiSelect } from "@/components/ui/debounced-search-multi-select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 
 interface VideoFilterDialogProps {
   isOpen: boolean;
@@ -27,19 +41,6 @@ interface VideoFilterDialogProps {
 }
 
 const fourDigitPattern = /^\d{4}$/;
-type TextSelectionItem = {
-  id: string;
-  displayName: string;
-  username: string;
-  isUserItem?: boolean;
-};
-
-const toSelectionItem = (value: string): TextSelectionItem => ({
-  id: value,
-  displayName: value,
-  username: value,
-  isUserItem: false,
-});
 
 export function VideoFilterDialog({
   isOpen,
@@ -69,6 +70,10 @@ export function VideoFilterDialog({
     filters.sortOrder ?? "desc"
   );
   const [yearError, setYearError] = useState<string | null>(null);
+  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+  const [stylePopoverOpen, setStylePopoverOpen] = useState(false);
+  const [styleSearch, setStyleSearch] = useState("");
   const latestFiltersRef = useRef(filters);
 
   useEffect(() => {
@@ -88,41 +93,45 @@ export function VideoFilterDialog({
     setYearError(null);
   }, [isOpen]);
 
-  const citySearch = useCallback(
-    async (query: string) => {
-      const trimmed = query.trim().toLowerCase();
-      if (!trimmed) {
-        return [];
-      }
-      return availableCities
-        .filter((city) => city.toLowerCase().includes(trimmed))
-        .map(toSelectionItem);
-    },
-    [availableCities]
-  );
+  useEffect(() => {
+    if (!cityPopoverOpen) setCitySearch("");
+  }, [cityPopoverOpen]);
 
-  const styleSearch = useCallback(
-    async (query: string) => {
-      const trimmed = query.trim().toLowerCase();
-      if (!trimmed) {
-        return [];
-      }
-      return availableStyles
-        .filter((style) => style.toLowerCase().includes(trimmed))
-        .map(toSelectionItem);
-    },
-    [availableStyles]
-  );
+  useEffect(() => {
+    if (!stylePopoverOpen) setStyleSearch("");
+  }, [stylePopoverOpen]);
 
-  const selectedCityItems = useMemo(
-    () => selectedCities.map(toSelectionItem),
-    [selectedCities]
-  );
+  const toggleCity = (city: string) => {
+    if (selectedCities.includes(city)) {
+      setSelectedCities(selectedCities.filter((c) => c !== city));
+    } else {
+      setSelectedCities([...selectedCities, city]);
+    }
+  };
 
-  const selectedStyleItems = useMemo(
-    () => selectedStyles.map(toSelectionItem),
-    [selectedStyles]
-  );
+  const toggleStyle = (style: string) => {
+    if (selectedStyles.includes(style)) {
+      setSelectedStyles(selectedStyles.filter((s) => s !== style));
+    } else {
+      setSelectedStyles([...selectedStyles, style]);
+    }
+  };
+
+  const displayedCities = useMemo(() => {
+    const search = citySearch.trim().toLowerCase();
+    if (!search) return availableCities;
+    return availableCities.filter((city) =>
+      city.toLowerCase().includes(search)
+    );
+  }, [availableCities, citySearch]);
+
+  const displayedStyles = useMemo(() => {
+    const search = styleSearch.trim().toLowerCase();
+    if (!search) return availableStyles;
+    return availableStyles.filter((style) =>
+      formatStyleNameForDisplay(style).toLowerCase().includes(search)
+    );
+  }, [availableStyles, styleSearch]);
 
   const parsedYearFrom = useMemo(() => {
     const trimmed = yearFromText.trim();
@@ -237,34 +246,116 @@ export function VideoFilterDialog({
 
           <div>
             <p className="!font-bold">City</p>
-            <DebouncedSearchMultiSelect
-              onSearch={citySearch}
-              placeholder="Search cities..."
-              value={selectedCityItems}
-              onChange={(items) =>
-                setSelectedCities(items.map((item) => item.displayName))
-              }
-              name="cities"
-              getDisplayValue={(item) => item.displayName}
-              getItemId={(item) => item.id}
-              disabled={availableCities.length === 0}
-            />
+            <Popover
+              open={cityPopoverOpen}
+              onOpenChange={setCityPopoverOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  disabled={availableCities.length === 0}
+                >
+                  {selectedCities.length > 0
+                    ? `${selectedCities.length} selected`
+                    : "Select cities"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-full max-w-[320px] p-0"
+                align="start"
+              >
+                <Command>
+                  <CommandInput
+                    placeholder="Search cities..."
+                    value={citySearch}
+                    onValueChange={setCitySearch}
+                  />
+                  <CommandList>
+                    {displayedCities.length === 0 ? (
+                      <CommandEmpty>No cities found.</CommandEmpty>
+                    ) : (
+                      <CommandGroup>
+                        {displayedCities.map((city) => {
+                          const isSelected = selectedCities.includes(city);
+                          return (
+                            <CommandItem
+                              key={city}
+                              onSelect={() => toggleCity(city)}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 transition-opacity ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {city}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
             <p className="!font-bold">Style</p>
-            <DebouncedSearchMultiSelect
-              onSearch={styleSearch}
-              placeholder="Search styles..."
-              value={selectedStyleItems}
-              onChange={(items) =>
-                setSelectedStyles(items.map((item) => item.displayName))
-              }
-              name="styles"
-              getDisplayValue={(item) => item.displayName}
-              getItemId={(item) => item.id}
-              disabled={availableStyles.length === 0}
-            />
+            <Popover
+              open={stylePopoverOpen}
+              onOpenChange={setStylePopoverOpen}
+            >
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between"
+                  disabled={availableStyles.length === 0}
+                >
+                  {selectedStyles.length > 0
+                    ? `${selectedStyles.length} selected`
+                    : "Select styles"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-full max-w-[320px] p-0"
+                align="start"
+              >
+                <Command>
+                  <CommandInput
+                    placeholder="Search styles..."
+                    value={styleSearch}
+                    onValueChange={setStyleSearch}
+                  />
+                  <CommandList>
+                    {displayedStyles.length === 0 ? (
+                      <CommandEmpty>No styles found.</CommandEmpty>
+                    ) : (
+                      <CommandGroup>
+                        {displayedStyles.map((style) => {
+                          const isSelected = selectedStyles.includes(style);
+                          return (
+                            <CommandItem
+                              key={style}
+                              onSelect={() => toggleStyle(style)}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 transition-opacity ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {formatStyleNameForDisplay(style)}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
