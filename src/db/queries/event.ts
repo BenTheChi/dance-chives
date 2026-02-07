@@ -40,15 +40,6 @@ import { generateCitySlug } from "@/lib/utils/city-slug";
 import { prisma } from "@/lib/primsa";
 import { VideoFilters } from "@/types/video-filter";
 
-export async function getSavedFilterPreferences(
-  userId: string
-): Promise<VideoFilters | null> {
-  const user = (await prisma.user.findUnique({
-    where: { id: userId },
-  })) as { filterPreferences?: VideoFilters | null } | null;
-  return user?.filterPreferences ?? null;
-}
-
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
  * This prevents label conflicts (e.g., Battle can be Event, Section, or Video type)

@@ -19,8 +19,14 @@ import { StyleBadge } from "@/components/ui/style-badge";
 import { cn } from "@/lib/utils";
 import { VideoFilterDialog } from "@/components/watch/VideoFilterDialog";
 import { DEFAULT_VIDEO_FILTERS, VideoFilters } from "@/types/video-filter";
-import { buildFilterParams } from "@/lib/utils/video-filters";
+import {
+  buildFilterParams,
+  normalizeFilters,
+  parseFiltersFromSearchParams,
+} from "@/lib/utils/video-filters";
 import { useWatchSections } from "@/hooks/use-watch-sections";
+
+const FILTER_PREFERENCES_STORAGE_KEY = "watchFilterPreferences";
 
 interface VideoGalleryProps {
   /** Server returns one full section per item (brackets already combined) */
@@ -142,6 +148,7 @@ export function VideoGallery({
   const isMutedRef = useRef(isMuted);
   const hasInitializedFromUrlRef = useRef(false);
   const hasPlayedFirstVideoRef = useRef(false);
+  const hasInitializedFromStorageRef = useRef(false);
 
   const playerRef = useRef<VideoPlayerRef>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -181,6 +188,54 @@ export function VideoGallery({
   const triggeredReacts = useRef<Map<string, Set<string>>>(new Map());
 
   const MAX_CACHED_VIDEOS = 10;
+
+  const saveFiltersToStorage = useCallback((nextFilters: VideoFilters) => {
+    try {
+      const normalized = normalizeFilters(nextFilters);
+      window.localStorage.setItem(
+        FILTER_PREFERENCES_STORAGE_KEY,
+        JSON.stringify(normalized)
+      );
+    } catch (error) {
+      console.error("Failed to save filter preferences locally:", error);
+    }
+  }, []);
+
+  const clearFiltersFromStorage = useCallback(() => {
+    try {
+      window.localStorage.removeItem(FILTER_PREFERENCES_STORAGE_KEY);
+    } catch (error) {
+      console.error("Failed to clear filter preferences locally:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isEventView || hasInitializedFromStorageRef.current) {
+      return;
+    }
+    hasInitializedFromStorageRef.current = true;
+    const currentParams = new URLSearchParams(searchParams.toString());
+    const urlFilters = parseFiltersFromSearchParams(currentParams);
+    if (Object.keys(urlFilters).length > 0) {
+      return;
+    }
+    try {
+      const stored = window.localStorage.getItem(FILTER_PREFERENCES_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as VideoFilters;
+      const normalized = normalizeFilters(parsed);
+      if (Object.keys(normalized).length === 0) {
+        return;
+      }
+      const params = buildFilterParams(normalized);
+      const query = params.toString();
+      if (query) {
+        window.location.href = `/watch?${query}`;
+      }
+    } catch (error) {
+      console.error("Failed to load local filter preferences:", error);
+    }
+  }, [isEventView, searchParams]);
 
   const videoExistsInEvent = useCallback(
     (videoId: string): { sectionIndex: number; videoIndex: number } | null => {
@@ -1492,6 +1547,7 @@ export function VideoGallery({
           availableStyles={availableStyles}
           onApply={(newFilters) => {
             setIsFilterDialogOpen(false);
+            saveFiltersToStorage(newFilters);
             const params = buildFilterParams(newFilters);
             const query = params.toString();
             const nextPath = query ? `/watch?${query}` : "/watch";
@@ -1500,6 +1556,7 @@ export function VideoGallery({
           }}
           onClear={() => {
             setIsFilterDialogOpen(false);
+            clearFiltersFromStorage();
             // Force navigation to reload
             window.location.href = "/watch";
           }}

@@ -3,11 +3,9 @@ import { HideFooterOnMobile } from "./hide-footer";
 import {
   getAllBattleSections,
   getFilterOptionsFromEvents,
-  getSavedFilterPreferences,
 } from "@/db/queries/event";
 import { unstable_cache } from "next/cache";
 import { WATCH_INITIAL_SECTION_LIMIT } from "@/constants/watch-sections";
-import { auth } from "@/auth";
 import {
   DEFAULT_VIDEO_FILTERS,
   VideoFilters,
@@ -77,19 +75,7 @@ export default async function WatchPage({
   const params = await searchParams;
   const urlSearchParams = toUrlSearchParams(params);
   const urlFilters = parseFiltersFromSearchParams(urlSearchParams);
-  const hasUrlFilters = Object.keys(urlFilters).length > 0;
-
-  let filters: VideoFilters = { ...DEFAULT_VIDEO_FILTERS, ...urlFilters };
-
-  if (!hasUrlFilters) {
-    const session = await auth();
-    if (session?.user?.id) {
-      const savedPrefs = await getSavedFilterPreferences(session.user.id);
-      if (savedPrefs) {
-        filters = { ...DEFAULT_VIDEO_FILTERS, ...savedPrefs };
-      }
-    }
-  }
+  const filters: VideoFilters = { ...DEFAULT_VIDEO_FILTERS, ...urlFilters };
 
   // Fetch initial sections and filter options server-side
   const [
