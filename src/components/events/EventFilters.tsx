@@ -115,7 +115,7 @@ export function EventFilters({
 
   return (
     <div
-      className={`flex flex-col w-full bg-secondary rounded-sm border-4 border-secondary-light max-w-[550px] mx-auto ${
+      className={`flex flex-col w-full bg-secondary sm:rounded-sm border-t-0 border-b-4 border-l-4 border-r-4 sm:border-t-4 border-secondary-light max-w-[550px] mx-auto ${
         isMobile ? "sticky top-0 z-50" : ""
       }`}
     >

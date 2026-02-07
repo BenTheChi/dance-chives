@@ -110,6 +110,17 @@ export function VideoGallery({
     setCurrentVideoIndex(new Map());
   }, [filters, isEventView]);
 
+  const hasNonSortFilters = useMemo(() => {
+    return (
+      typeof filters.yearFrom === "number" ||
+      typeof filters.yearTo === "number" ||
+      (filters.cities?.length ?? 0) > 0 ||
+      (filters.styles?.length ?? 0) > 0 ||
+      filters.finalsOnly === true ||
+      filters.noPrelims === true
+    );
+  }, [filters]);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true); // Start muted for first video to comply with autoplay policies
   const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
@@ -118,10 +129,9 @@ export function VideoGallery({
   const [duration, setDuration] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
-  
+
   // Unified loading state: show loading when fetching filtered sections or when video is loading
-  const isFilteringOrLoading =
-    !isEventView && (isValidating || isVideoLoading);
+  const isFilteringOrLoading = !isEventView && (isValidating || isVideoLoading);
   const [isMobile, setIsMobile] = useState(false);
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 0
@@ -1193,7 +1203,12 @@ export function VideoGallery({
             {!isEventView && (
               <button
                 type="button"
-                className="text-white/70 hover:text-white underline text-sm"
+                className={cn(
+                  "text-md",
+                  hasNonSortFilters
+                    ? "text-primary-light underline hover:text-primary-light/90"
+                    : "text-white/70 hover:text-white"
+                )}
                 onClick={() => setIsFilterDialogOpen(true)}
               >
                 Filters
