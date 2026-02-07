@@ -4977,12 +4977,33 @@ export async function getAllBattleSections(
       );
     }
 
+    // Build bracket filter conditions for finalsOnly/noPrelims so LIMIT
+    // counts only sections that will survive post-processing.
+    const bracketFilterParts: string[] = [];
+    if (filters?.finalsOnly) {
+      bracketFilterParts.push(
+        `toLower(b.title) CONTAINS 'final' AND NOT toLower(b.title) CONTAINS 'semi'`
+      );
+    }
+    if (filters?.noPrelims) {
+      bracketFilterParts.push(`NOT toLower(b.title) CONTAINS 'pre'`);
+    }
+
     const sectionConditions = [
-      `EXISTS {
-        MATCH (s)<-[:IN]-(v:Video)
-      } OR EXISTS {
-        MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
-      }`,
+      bracketFilterParts.length > 0
+        ? `(
+            EXISTS {
+              MATCH (s)<-[:IN]-(v:Video)
+            } OR EXISTS {
+              MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+              WHERE ${bracketFilterParts.join(" AND ")}
+            }
+          )`
+        : `EXISTS {
+            MATCH (s)<-[:IN]-(v:Video)
+          } OR EXISTS {
+            MATCH (s)<-[:IN]-(b:Bracket)<-[:IN]-(v:Video)
+          }`,
     ];
     if (styleNames.length > 0) {
       sectionConditions.push(

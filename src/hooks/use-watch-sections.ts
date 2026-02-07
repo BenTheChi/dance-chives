@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import useSWRInfinite from "swr/infinite";
-import { WATCH_SECTIONS_FETCH_LIMIT } from "@/constants/watch-sections";
+import {
+  WATCH_SECTIONS_FETCH_LIMIT,
+  WATCH_INITIAL_SECTION_LIMIT,
+} from "@/constants/watch-sections";
 import { buildFilterParams } from "@/lib/utils/video-filters";
 import { VideoFilters } from "@/types/video-filter";
 import { CombinedSectionPayload } from "@/types/event";
@@ -22,11 +25,19 @@ export const useWatchSections = (
     (pageIndex: number, previousPageData: CombinedSectionPayload[] | null) => {
       if (disabled) return null;
       if (pageIndex === 0) return "initial";
-      if (
-        previousPageData &&
-        previousPageData.length < WATCH_SECTIONS_FETCH_LIMIT
-      ) {
-        return null;
+      // For page 1, previous data is the initial page (fetched with
+      // WATCH_INITIAL_SECTION_LIMIT). For page 2+, it was fetched with
+      // WATCH_SECTIONS_FETCH_LIMIT. Compare against the correct limit so
+      // we don't prematurely stop when the initial page returns fewer items
+      // than WATCH_INITIAL_SECTION_LIMIT but more than WATCH_SECTIONS_FETCH_LIMIT.
+      if (previousPageData) {
+        const expectedLimit =
+          pageIndex === 1
+            ? WATCH_INITIAL_SECTION_LIMIT
+            : WATCH_SECTIONS_FETCH_LIMIT;
+        if (previousPageData.length < expectedLimit) {
+          return null;
+        }
       }
       const offset =
         initialSections.length + (pageIndex - 1) * WATCH_SECTIONS_FETCH_LIMIT;
@@ -78,10 +89,13 @@ export const useWatchSections = (
     });
   }, [data, disabled, initialSections]);
   const lastPage = data?.[data.length - 1];
+  const isFirstPageOnly = (data?.length ?? 0) <= 1;
+  const expectedPageSize = isFirstPageOnly
+    ? WATCH_INITIAL_SECTION_LIMIT
+    : WATCH_SECTIONS_FETCH_LIMIT;
   const hasMore = disabled
     ? false
-    : (lastPage?.length ?? initialSections.length) >=
-      WATCH_SECTIONS_FETCH_LIMIT;
+    : (lastPage?.length ?? initialSections.length) >= expectedPageSize;
   const isLoading = disabled ? false : !data && !error;
   const isLoadingMore =
     disabled ? false : isValidating && size > (data?.length ?? 0);
