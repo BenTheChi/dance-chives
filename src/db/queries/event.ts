@@ -4450,12 +4450,13 @@ export const getCitySchedule = async (
 };
 
 /**
- * Get calendar events for a city by slug, optionally filtered by style and date range
+ * Get calendar events for a city by slug, optionally filtered by style, event type, and date range
  * @param citySlug - The city slug (e.g., "vancouver-bc-ca")
  * @param style - Optional style name to filter events
  * @param startDate - Optional start date for filtering events (ISO string)
  * @param endDate - Optional end date for filtering events (ISO string)
  * @param cities - Optional array of cities to reuse instead of fetching (avoids redundant getAllCities call)
+ * @param eventType - Optional event type to filter events (e.g., "Battle", "Workshop")
  * @returns Array of CalendarEventData
  */
 export const getCalendarEvents = async (
@@ -4463,7 +4464,8 @@ export const getCalendarEvents = async (
   style?: string,
   startDate?: string,
   endDate?: string,
-  cities?: City[]
+  cities?: City[],
+  eventType?: string
 ): Promise<CalendarEventData[]> => {
   // Use provided cities or fetch if not provided
   const citiesList = cities || (await getAllCities());
@@ -4494,6 +4496,14 @@ export const getCalendarEvents = async (
         (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle
       );
     });
+  }
+
+  // Filter by event type if provided
+  if (eventType) {
+    events = events.filter(
+      (event) =>
+        event.eventType?.toLowerCase() === eventType.toLowerCase()
+    );
   }
 
   return events;

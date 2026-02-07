@@ -7,6 +7,7 @@ import { CalendarPageClient } from "@/components/CalendarPageClient";
 import {
   parseCityFromUrl,
   parseStyleFromUrl,
+  parseEventTypeFromUrl,
 } from "@/lib/utils/calendar-url-utils";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
@@ -17,13 +18,14 @@ import { unstable_cache } from "next/cache";
 export const revalidate = 43200; // Revalidate every 12 hours
 
 type PageProps = {
-  searchParams: Promise<{ city?: string; style?: string }>;
+  searchParams: Promise<{ city?: string; style?: string; eventType?: string }>;
 };
 
 export default async function CalendarPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const cityParam = params.city;
   const styleParam = params.style;
+  const eventTypeParam = params.eventType;
 
   // Cache future-event styles heavily (24h TTL + tag-based invalidation)
   const getCachedFutureEventStyles = unstable_cache(
@@ -51,6 +53,10 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     ? parseStyleFromUrl(styleParam, styles)
     : null;
 
+  const selectedEventType = eventTypeParam
+    ? parseEventTypeFromUrl(eventTypeParam)
+    : null;
+
   // Calculate 3-month date range: month before, current month, month after
   const currentDate = new Date();
   const startDate = startOfMonth(subMonths(currentDate, 1));
@@ -62,7 +68,8 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         selectedStyle || undefined,
         startDate.toISOString().split("T")[0],
         endDate.toISOString().split("T")[0],
-        citiesRaw // Reuse already-fetched cities to avoid redundant getAllCities call
+        citiesRaw, // Reuse already-fetched cities to avoid redundant getAllCities call
+        selectedEventType || undefined
       )
     : [];
 
@@ -73,6 +80,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         styles={styles}
         initialCity={selectedCity}
         initialStyle={selectedStyle}
+        initialEventType={selectedEventType}
         events={events}
       />
     </>

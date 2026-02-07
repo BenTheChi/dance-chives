@@ -1,5 +1,19 @@
 import { City } from "@/types/city";
+import { EventType } from "@/types/event";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+
+/** All valid EventType values for URL parsing */
+const VALID_EVENT_TYPES: EventType[] = [
+  "Battle",
+  "Competition",
+  "Class",
+  "Workshop",
+  "Session",
+  "Party",
+  "Festival",
+  "Performance",
+  "Other",
+];
 
 /**
  * Finds a city by slug from URL parameter
@@ -44,5 +58,30 @@ export function parseStyleFromUrl(
   );
 
   return normalizedStyle || null;
+}
+
+/**
+ * Parses an EventType from a URL parameter (case-insensitive match)
+ * @param eventTypeParam - The event type string from URL
+ * @returns Matching EventType or null if not found
+ */
+export function parseEventTypeFromUrl(
+  eventTypeParam: string
+): EventType | null {
+  if (!eventTypeParam) return null;
+
+  const decoded = decodeURIComponent(eventTypeParam).toLowerCase();
+  return (
+    VALID_EVENT_TYPES.find((t) => t.toLowerCase() === decoded) || null
+  );
+}
+
+/**
+ * Converts an EventType to a URL-safe string
+ * @param eventType - The EventType value
+ * @returns The event type string for URL (same casing as EventType)
+ */
+export function normalizeEventTypeForUrl(eventType: EventType): string {
+  return eventType;
 }
 

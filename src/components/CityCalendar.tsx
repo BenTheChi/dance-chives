@@ -56,6 +56,7 @@ interface CityCalendarProps {
   events: CalendarEventData[]; // Includes all event types (competitions, workshops, sessions, etc.)
   sessions?: CalendarSessionData[]; // Optional for backward compatibility, but events array should contain all
   onDateChange?: (date: Date) => void; // Callback when the calendar date changes
+  selectedEventType?: EventType | null; // Currently selected event type filter (null = all)
 }
 
 // Predefined colors for each event type
@@ -295,6 +296,7 @@ export function CityCalendar({
   events,
   sessions,
   onDateChange,
+  selectedEventType,
 }: CityCalendarProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
@@ -548,27 +550,42 @@ export function CityCalendar({
       ref={calendarRef}
       className="relative w-full bg-primary-dark p-4 rounded-sm border-4 border-primary-light"
     >
-      {/* Legend */}
-      <div className="mb-4 grid grid-cols-3 sm:flex sm:flex-wrap gap-1 sm:gap-4 items-center">
-        {(Object.keys(EVENT_TYPE_LABELS) as Array<EventType | "event">)
-          .filter(
-            (type) =>
-              type !== "event" && type !== "Competition" && type !== "Festival"
-          ) // Exclude "event", "Competition", and "Festival" from legend
-          .map((type) => (
-            <div key={type} className="flex items-center gap-1.5 sm:gap-2">
-              <div
-                className="w-3 h-3 sm:w-4 sm:h-4 rounded flex-shrink-0"
-                style={{
-                  backgroundColor: EVENT_COLORS[type],
-                }}
-              />
-              <span className="text-xs sm:text-sm">
-                {EVENT_TYPE_LABELS[type]}
-              </span>
-            </div>
-          ))}
-      </div>
+      {/* Legend - only show event types present in the current view */}
+      {(() => {
+        // Collect event types present in current events
+        const presentTypes = new Set<EventType>();
+        calendarEvents.forEach((evt) => {
+          const et = evt.resource.eventType;
+          if (et) presentTypes.add(et);
+        });
+
+        // If a specific event type is selected, only show that one
+        const typesToShow: EventType[] = selectedEventType
+          ? [selectedEventType]
+          : (Object.keys(EVENT_TYPE_LABELS) as EventType[]).filter((type) =>
+              presentTypes.has(type)
+            );
+
+        if (typesToShow.length === 0) return null;
+
+        return (
+          <div className="mb-4 grid grid-cols-3 sm:flex sm:flex-wrap gap-1 sm:gap-4 items-center">
+            {typesToShow.map((type) => (
+              <div key={type} className="flex items-center gap-1.5 sm:gap-2">
+                <div
+                  className="w-3 h-3 sm:w-4 sm:h-4 rounded flex-shrink-0"
+                  style={{
+                    backgroundColor: EVENT_COLORS[type],
+                  }}
+                />
+                <span className="text-xs sm:text-sm">
+                  {EVENT_TYPE_LABELS[type]}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
       <div className="w-full min-w-0 mx-0 sm:mx-0 overflow-x-auto">
         <div
           className={`px-0 sm:px-0 min-w-0 w-full ${

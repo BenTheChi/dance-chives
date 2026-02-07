@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { City } from "@/types/city";
+import { EventType } from "@/types/event";
 import { CalendarEventData } from "@/db/queries/event";
 import { CityCalendar } from "./CityCalendar";
 import {
@@ -13,16 +14,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { normalizeStyleForUrl } from "@/lib/utils/calendar-url-utils";
+import {
+  normalizeStyleForUrl,
+  normalizeEventTypeForUrl,
+} from "@/lib/utils/calendar-url-utils";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
+
+const EVENT_TYPE_OPTIONS: EventType[] = [
+  "Battle",
+  "Competition",
+  "Class",
+  "Workshop",
+  "Session",
+  "Party",
+  "Festival",
+  "Performance",
+  "Other",
+];
 
 interface CalendarPageClientProps {
   cities: City[];
   styles: string[];
   initialCity: City | null;
   initialStyle: string | null;
+  initialEventType: EventType | null;
   events: CalendarEventData[];
 }
 
@@ -31,6 +48,7 @@ export function CalendarPageClient({
   styles,
   initialCity,
   initialStyle,
+  initialEventType,
   events,
 }: CalendarPageClientProps) {
   const router = useRouter();
@@ -40,6 +58,8 @@ export function CalendarPageClient({
   const [selectedStyle, setSelectedStyle] = useState<string | null>(
     initialStyle
   );
+  const [selectedEventType, setSelectedEventType] =
+    useState<EventType | null>(initialEventType);
   const hasSetUserCity = useRef(false);
 
   const [currentEvents, setCurrentEvents] =
@@ -109,6 +129,10 @@ export function CalendarPageClient({
       params.set("style", normalizeStyleForUrl(selectedStyle));
     }
 
+    if (selectedEventType) {
+      params.set("eventType", normalizeEventTypeForUrl(selectedEventType));
+    }
+
     const newUrl = `/calendar${
       params.toString() ? `?${params.toString()}` : ""
     }`;
@@ -120,20 +144,27 @@ export function CalendarPageClient({
     if (newUrl !== currentUrl) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [selectedCity, selectedStyle, router, searchParams]);
+  }, [selectedCity, selectedStyle, selectedEventType, router, searchParams]);
 
-  // Fetch events when city, style, or date changes (3-month batches)
+  // Fetch events when city, style, event type, or date changes (3-month batches)
   useEffect(() => {
     if (selectedCity) {
       const citySlug = selectedCity.slug || generateCitySlug(selectedCity);
       const styleParam = selectedStyle
         ? normalizeStyleForUrl(selectedStyle)
         : "";
+      const eventTypeParam = selectedEventType
+        ? normalizeEventTypeForUrl(selectedEventType)
+        : "";
       const { startDate, endDate } = getDateRange(currentDate);
 
       fetch(
         `/api/calendar/events?city=${encodeURIComponent(citySlug)}${
           styleParam ? `&style=${encodeURIComponent(styleParam)}` : ""
+        }${
+          eventTypeParam
+            ? `&eventType=${encodeURIComponent(eventTypeParam)}`
+            : ""
         }&startDate=${startDate}&endDate=${endDate}`
       )
         .then((res) => res.json())
@@ -145,7 +176,7 @@ export function CalendarPageClient({
     } else {
       setCurrentEvents([]);
     }
-  }, [selectedCity, selectedStyle, currentDate]);
+  }, [selectedCity, selectedStyle, selectedEventType, currentDate]);
 
   const handleCityChange = (cityValue: string) => {
     // cityValue could be either a slug or an id
@@ -169,6 +200,14 @@ export function CalendarPageClient({
       if (style) {
         setSelectedStyle(style);
       }
+    }
+  };
+
+  const handleEventTypeChange = (value: string) => {
+    if (value === "all") {
+      setSelectedEventType(null);
+    } else {
+      setSelectedEventType(value as EventType);
     }
   };
 
@@ -242,6 +281,29 @@ export function CalendarPageClient({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Event Type Dropdown */}
+            <div>
+              <label className="block text-3xl font-medium mb-2 text-center">
+                Type
+              </label>
+              <Select
+                value={selectedEventType ?? "all"}
+                onValueChange={handleEventTypeChange}
+              >
+                <SelectTrigger className="w-full min-w-0">
+                  <SelectValue placeholder="All types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ALL</SelectItem>
+                  {EVENT_TYPE_OPTIONS.map((eventType) => (
+                    <SelectItem key={eventType} value={eventType}>
+                      {eventType}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Calendar - Only show if a city is selected */}
@@ -250,6 +312,7 @@ export function CalendarPageClient({
               <CityCalendar
                 events={currentEvents}
                 onDateChange={(date) => setCurrentDate(date)}
+                selectedEventType={selectedEventType}
               />
             </div>
           )}

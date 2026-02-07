@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const style = searchParams.get("style");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
+  const eventType = searchParams.get("eventType");
 
   if (!citySlug) {
     return NextResponse.json({ events: [] }, { status: 200 });
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
       citySlug,
       style || undefined,
       startDate || undefined,
-      endDate || undefined
+      endDate || undefined,
+      undefined, // cities - let the function fetch them
+      eventType || undefined
     );
     return NextResponse.json({ events });
   } catch (error) {
