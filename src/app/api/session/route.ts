@@ -95,6 +95,8 @@ export async function DELETE(request: NextRequest) {
     // Revalidate TV page
     revalidatePath("/watch");
     revalidateTag("watch-sections", "");
+    // Revalidate cached style filter lists
+    revalidateTag("event-styles", "");
 
     const citySlug = getCitySlug(
       eventData.eventDetails.city as City | undefined,

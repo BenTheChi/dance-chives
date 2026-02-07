@@ -1,8 +1,8 @@
 import {
   getCitiesWithFutureEvents,
-  getAllStyles,
   getCalendarEvents,
 } from "@/db/queries/event";
+import { getUsedStylesFromFutureEvents } from "@/db/queries/event-cards";
 import { CalendarPageClient } from "@/components/CalendarPageClient";
 import {
   parseCityFromUrl,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/utils/calendar-url-utils";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
+import { unstable_cache } from "next/cache";
 
 // Enable static generation with revalidation (ISR)
 // 12 hours - comprehensive on-demand revalidation covers most updates
@@ -24,10 +25,17 @@ export default async function CalendarPage({ searchParams }: PageProps) {
   const cityParam = params.city;
   const styleParam = params.style;
 
+  // Cache future-event styles heavily (24h TTL + tag-based invalidation)
+  const getCachedFutureEventStyles = unstable_cache(
+    () => getUsedStylesFromFutureEvents(),
+    ["calendar-filter-styles"],
+    { revalidate: 86400, tags: ["event-styles"] }
+  );
+
   // Fetch cities with future events and styles in parallel (no auth dependency - enables ISR)
   const [citiesRaw, styles] = await Promise.all([
     getCitiesWithFutureEvents(),
-    getAllStyles(),
+    getCachedFutureEventStyles(),
   ]);
   
   // Compute slugs for all cities

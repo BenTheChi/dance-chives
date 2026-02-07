@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/primsa";
+import { Prisma } from "@prisma/client";
 import { EventType, TEventCard } from "@/types/event";
 
 export async function getEventCards(): Promise<TEventCard[]> {
@@ -40,6 +41,43 @@ export async function getEventCards(): Promise<TEventCard[]> {
       hasVideos: eventIdsWithVideos.has(r.eventId),
     };
   });
+}
+
+/**
+ * Get distinct styles that appear on any visible event.
+ * Uses PostgreSQL unnest + GIN index on the styles array for efficiency.
+ */
+export async function getUsedStylesFromEvents(): Promise<string[]> {
+  const rows = await prisma.$queryRaw<{ style: string }[]>(
+    Prisma.sql`
+      SELECT DISTINCT unnest(styles) AS style
+      FROM "event_cards"
+      WHERE status = 'visible'
+        AND array_length(styles, 1) > 0
+      ORDER BY style ASC
+    `
+  );
+  return rows.map((r) => r.style);
+}
+
+/**
+ * Get distinct styles from visible events that have at least one future date.
+ * Joins EventCard with EventDate to filter for future occurrences only.
+ */
+export async function getUsedStylesFromFutureEvents(): Promise<string[]> {
+  const now = new Date();
+  const rows = await prisma.$queryRaw<{ style: string }[]>(
+    Prisma.sql`
+      SELECT DISTINCT unnest(ec.styles) AS style
+      FROM "event_cards" ec
+      INNER JOIN "event_dates" ed ON ec."eventId" = ed."eventId"
+      WHERE ec.status = 'visible'
+        AND array_length(ec.styles, 1) > 0
+        AND ed."startUtc" >= ${now}
+      ORDER BY style ASC
+    `
+  );
+  return rows.map((r) => r.style);
 }
 
 /**

@@ -1816,6 +1816,8 @@ export async function deleteUserAccount(
       // Revalidate TV page
       revalidatePath("/watch");
       revalidateTag("watch-sections", "");
+      // Revalidate cached style filter lists
+      revalidateTag("event-styles", "");
     } else {
       // Transfer events to admin user
       await transferUserEventsToAdmin(targetUserId);

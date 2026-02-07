@@ -1,8 +1,9 @@
-import { getEventCards } from "@/db/queries/event-cards";
-import { getAllCities, getAllStyles } from "@/db/queries/event";
+import { getEventCards, getUsedStylesFromEvents } from "@/db/queries/event-cards";
+import { getAllCities } from "@/db/queries/event";
 import { EventsClient } from "./events-client";
 import { prisma } from "@/lib/primsa";
 import { TEventCard } from "@/types/event";
+import { unstable_cache } from "next/cache";
 
 // Enable static generation with revalidation
 // 12 hours - comprehensive on-demand revalidation covers most updates
@@ -23,11 +24,18 @@ function parseEventDate(dateStr: string): Date | null {
 }
 
 export default async function EventsPage() {
+  // Cache styles from events heavily (24h TTL + tag-based invalidation)
+  const getCachedEventStyles = unstable_cache(
+    () => getUsedStylesFromEvents(),
+    ["event-filter-styles"],
+    { revalidate: 86400, tags: ["event-styles"] }
+  );
+
   // Fetch events and filter data without auth (static generation)
   const [events, cities, styles] = await Promise.all([
     getEventCards(),
     getAllCities(),
-    getAllStyles(),
+    getCachedEventStyles(),
   ]);
 
   const today = new Date();

@@ -889,6 +889,8 @@ export async function addEvent(props: addEventProps): Promise<response> {
     // Revalidate TV page
     revalidatePath("/watch");
     revalidateTag("watch-sections", "");
+    // Revalidate cached style filter lists
+    revalidateTag("event-styles", "");
 
     const newCitySlug = getCitySlug(props.eventDetails.city as City);
     revalidateCalendarForSlugs([newCitySlug]);
@@ -1682,6 +1684,8 @@ export async function editEvent(
       // Revalidate TV page
       revalidatePath("/watch");
       revalidateTag("watch-sections", "");
+      // Revalidate cached style filter lists
+      revalidateTag("event-styles", "");
 
       // Revalidate profiles for all users involved in role changes
       const allAffectedUserIds = new Set([
@@ -2397,6 +2401,8 @@ export async function updateEventTeamMembers(
     // Revalidate events list page and individual event page
     revalidatePath("/events");
     revalidatePath(`/events/${eventId}`);
+    // Revalidate cached style filter lists
+    revalidateTag("event-styles", "");
 
     return {
       status: 200,
@@ -2605,6 +2611,8 @@ export async function updateEventCreator(
     // Revalidate TV page
     revalidatePath("/watch");
     revalidateTag("watch-sections", "");
+    // Revalidate cached style filter lists
+    revalidateTag("event-styles", "");
 
     return {
       status: 200,
@@ -2686,6 +2694,8 @@ export async function updateEventStatus(
     // Revalidate TV page
     revalidatePath("/watch");
     revalidateTag("watch-sections", "");
+    // Revalidate cached style filter lists
+    revalidateTag("event-styles", "");
     const citySlug = getCitySlug(event.eventDetails.city as City | undefined);
     revalidateCalendarForSlugs([citySlug]);
 
