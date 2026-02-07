@@ -14,19 +14,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { VideoFilters } from "@/types/video-filter";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 
 interface VideoFilterDialogProps {
@@ -71,9 +63,7 @@ export function VideoFilterDialog({
   );
   const [yearError, setYearError] = useState<string | null>(null);
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
-  const [citySearch, setCitySearch] = useState("");
   const [stylePopoverOpen, setStylePopoverOpen] = useState(false);
-  const [styleSearch, setStyleSearch] = useState("");
   const latestFiltersRef = useRef(filters);
 
   useEffect(() => {
@@ -93,14 +83,6 @@ export function VideoFilterDialog({
     setYearError(null);
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!cityPopoverOpen) setCitySearch("");
-  }, [cityPopoverOpen]);
-
-  useEffect(() => {
-    if (!stylePopoverOpen) setStyleSearch("");
-  }, [stylePopoverOpen]);
-
   const toggleCity = (city: string) => {
     if (selectedCities.includes(city)) {
       setSelectedCities(selectedCities.filter((c) => c !== city));
@@ -116,22 +98,6 @@ export function VideoFilterDialog({
       setSelectedStyles([...selectedStyles, style]);
     }
   };
-
-  const displayedCities = useMemo(() => {
-    const search = citySearch.trim().toLowerCase();
-    if (!search) return availableCities;
-    return availableCities.filter((city) =>
-      city.toLowerCase().includes(search)
-    );
-  }, [availableCities, citySearch]);
-
-  const displayedStyles = useMemo(() => {
-    const search = styleSearch.trim().toLowerCase();
-    if (!search) return availableStyles;
-    return availableStyles.filter((style) =>
-      formatStyleNameForDisplay(style).toLowerCase().includes(search)
-    );
-  }, [availableStyles, styleSearch]);
 
   const parsedYearFrom = useMemo(() => {
     const trimmed = yearFromText.trim();
@@ -199,52 +165,54 @@ export function VideoFilterDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px] w-full">
+      <DialogContent className="!max-w-[350px]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Filters</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-center">
+            Filters
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex flex-row gap-4">
-              <div className="flex flex-col gap-1">
-                <Label
-                  htmlFor={yearFromInputId}
-                  className="text-[13px] font-bold text-muted-foreground"
-                >
-                  From
-                </Label>
-                <Input
-                  id={yearFromInputId}
-                  placeholder="YYYY"
-                  value={yearFromText}
-                  onChange={(event) => setYearFromText(event.target.value)}
-                  maxLength={4}
-                  className="w-full max-w-[120px] bg-muted-foreground"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label
-                  htmlFor={yearToInputId}
-                  className="text-[13px] font-bold text-muted-foreground"
-                >
-                  To
-                </Label>
-                <Input
-                  id={yearToInputId}
-                  placeholder="YYYY"
-                  value={yearToText}
-                  onChange={(event) => setYearToText(event.target.value)}
-                  maxLength={4}
-                  className="w-full max-w-[120px] bg-muted-foreground"
-                />
-              </div>
-            </div>
-            {yearError && (
-              <p className="text-xs text-destructive-foreground">{yearError}</p>
-            )}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+          {/* Row 1: From, To */}
+          <div className="flex flex-col gap-1">
+            <Label
+              htmlFor={yearFromInputId}
+              className="font-bold text-muted-foreground text-lg"
+            >
+              From
+            </Label>
+            <Input
+              id={yearFromInputId}
+              placeholder="YYYY"
+              value={yearFromText}
+              onChange={(event) => setYearFromText(event.target.value)}
+              maxLength={4}
+              className="w-full bg-muted-foreground"
+            />
           </div>
+          <div className="flex flex-col gap-1">
+            <Label
+              htmlFor={yearToInputId}
+              className="font-bold text-muted-foreground text-lg"
+            >
+              To
+            </Label>
+            <Input
+              id={yearToInputId}
+              placeholder="YYYY"
+              value={yearToText}
+              onChange={(event) => setYearToText(event.target.value)}
+              maxLength={4}
+              className="w-full bg-muted-foreground"
+            />
+          </div>
+          {yearError && (
+            <p className="col-span-2 text-xs text-destructive-foreground">
+              {yearError}
+            </p>
+          )}
 
-          <div>
+          {/* Row 2: City, Style */}
+          <div className="flex flex-col gap-1">
             <p className="!font-bold">City</p>
             <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
               <PopoverTrigger asChild>
@@ -263,42 +231,32 @@ export function VideoFilterDialog({
                 className="z-[110] w-full max-w-[320px] p-0"
                 align="start"
               >
-                <Command>
-                  <CommandInput
-                    placeholder="Search cities..."
-                    value={citySearch}
-                    onValueChange={setCitySearch}
-                  />
-                  <CommandList>
-                    {displayedCities.length === 0 ? (
-                      <CommandEmpty>No cities found.</CommandEmpty>
-                    ) : (
-                      <CommandGroup>
-                        {displayedCities.map((city) => {
-                          const isSelected = selectedCities.includes(city);
-                          return (
-                            <CommandItem
-                              key={city}
-                              onSelect={() => toggleCity(city)}
-                            >
-                              <Check
-                                className={`mr-2 h-4 w-4 shrink-0 text-green-600 transition-opacity ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {city}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </Command>
+                <div className="max-h-[280px] overflow-auto p-1">
+                  {availableCities.length === 0 ? (
+                    <p className="py-4 text-center text-sm text-muted-foreground">
+                      No cities
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      {availableCities.map((city) => (
+                        <label
+                          key={city}
+                          className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+                        >
+                          <Checkbox
+                            checked={selectedCities.includes(city)}
+                            onCheckedChange={() => toggleCity(city)}
+                          />
+                          <span className="!text-sm">{city}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </PopoverContent>
             </Popover>
           </div>
-
-          <div>
+          <div className="flex flex-col gap-1">
             <p className="!font-bold">Style</p>
             <Popover open={stylePopoverOpen} onOpenChange={setStylePopoverOpen}>
               <PopoverTrigger asChild>
@@ -317,48 +275,43 @@ export function VideoFilterDialog({
                 className="z-[110] w-full max-w-[320px] p-0"
                 align="start"
               >
-                <Command>
-                  <CommandInput
-                    placeholder="Search styles..."
-                    value={styleSearch}
-                    onValueChange={setStyleSearch}
-                  />
-                  <CommandList>
-                    {displayedStyles.length === 0 ? (
-                      <CommandEmpty>No styles found.</CommandEmpty>
-                    ) : (
-                      <CommandGroup>
-                        {displayedStyles.map((style) => {
-                          const isSelected = selectedStyles.includes(style);
-                          return (
-                            <CommandItem
-                              key={style}
-                              onSelect={() => toggleStyle(style)}
-                            >
-                              <Check
-                                className={`mr-2 h-4 w-4 shrink-0 text-green-600 transition-opacity ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {formatStyleNameForDisplay(style)}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </Command>
+                <div className="max-h-[280px] overflow-auto p-1">
+                  {availableStyles.length === 0 ? (
+                    <p className="py-4 text-center text-sm text-muted-foreground">
+                      No styles
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-0.5">
+                      {availableStyles.map((style) => (
+                        <label
+                          key={style}
+                          className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+                        >
+                          <Checkbox
+                            checked={selectedStyles.includes(style)}
+                            onCheckedChange={() => toggleStyle(style)}
+                          />
+                          <span className="!text-sm">
+                            {formatStyleNameForDisplay(style)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </PopoverContent>
             </Popover>
           </div>
 
-          <div>
-            <p className="!font-bold mb-1">Brackets</p>
-            <div className="flex flex-row gap-4">
+          {/* Row 3: Brackets + Finals only + No prelims */}
+          <div className="col-span-2 flex flex-col gap-1">
+            <p className="!font-bold">Brackets</p>
+            <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={finalsOnly}
                   onCheckedChange={(checked) => setFinalsOnly(checked === true)}
+                  className="bg-muted-foreground border-1"
                 />
                 <span>Finals only</span>
               </label>
@@ -366,15 +319,17 @@ export function VideoFilterDialog({
                 <Checkbox
                   checked={noPrelims}
                   onCheckedChange={(checked) => setNoPrelims(checked === true)}
+                  className="bg-muted-foreground border-none"
                 />
                 <span>No prelims</span>
               </label>
             </div>
           </div>
 
-          <div>
-            <p className="!font-bold mb-1">Order</p>
-            <div className="flex gap-2">
+          {/* Row 4: Order + Oldest / Newest switch */}
+          <div className="col-span-2 flex flex-col gap-1">
+            <p className="!font-bold">Order</p>
+            <div className="flex flex-wrap items-center gap-2">
               <Label
                 htmlFor="date-order-switch"
                 className="font-bold cursor-pointer text-[13px]"
