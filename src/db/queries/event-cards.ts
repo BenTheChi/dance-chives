@@ -57,7 +57,17 @@ export async function getUsedStylesFromEvents(): Promise<string[]> {
       ORDER BY style ASC
     `
   );
-  return rows.map((r) => r.style);
+  // Dedupe case-insensitively (DB DISTINCT is case-sensitive); keep first occurrence
+  const seen = new Set<string>();
+  return rows
+    .map((r) => r.style?.trim())
+    .filter((s): s is string => Boolean(s))
+    .filter((s) => {
+      const key = s.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 /**

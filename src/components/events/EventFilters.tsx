@@ -105,13 +105,23 @@ export function EventFilters({
     }
   };
 
+  const uniqueStyles = useMemo(() => {
+    const seen = new Set<string>();
+    return styles.filter((style) => {
+      const key = formatStyleNameForDisplay(style);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [styles]);
+
   const displayedStyles = useMemo(() => {
     const search = styleSearch.trim().toLowerCase();
-    if (!search) return styles;
-    return styles.filter((style) =>
+    if (!search) return uniqueStyles;
+    return uniqueStyles.filter((style) =>
       formatStyleNameForDisplay(style).toLowerCase().includes(search)
     );
-  }, [styles, styleSearch]);
+  }, [uniqueStyles, styleSearch]);
 
   return (
     <div
