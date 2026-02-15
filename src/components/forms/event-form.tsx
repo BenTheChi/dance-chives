@@ -27,6 +27,7 @@ import { PlaylistParser } from "./playlist-parser";
 import { useJobPolling } from "@/hooks/useJobPolling";
 import { mergeSections } from "@/lib/playlist-parser-utils";
 import { validateDanceStyles } from "@/lib/utils/dance-styles";
+import { canonicalizeInstagramPostOrReelUrl } from "@/lib/submissions/instagram-url";
 
 const CREATE_DRAFT_STORAGE_KEY = "event-form-draft";
 const getEditDraftStorageKey = (eventId: string) =>
@@ -152,6 +153,22 @@ const normalizeYouTube = (
   if (!username || username === "") return undefined;
   return `https://youtube.com/@${username}`;
 };
+
+/** Process raw IG input on save: post/reel → canonical URL, else → profile URL */
+function processInstagramForSubmit(
+  input: string | undefined | null
+): string | undefined {
+  if (!input || input.trim() === "") return undefined;
+  const trimmed = input.trim();
+  // Ensure URL-parseable for post/reel detection (add protocol if missing)
+  const urlLike =
+    trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`;
+  const postOrReel = canonicalizeInstagramPostOrReelUrl(urlLike);
+  if (postOrReel) return postOrReel.canonicalUrl;
+  return normalizeInstagram(trimmed);
+}
 
 const normalizeFacebook = (
   input: string | undefined | null
@@ -355,11 +372,8 @@ const eventDetailsSchema = z.object({
     z.string().url().optional().or(z.literal(""))
   ),
   instagram: z.preprocess(
-    (val) => {
-      const normalized = normalizeInstagram(val as string | null | undefined);
-      return normalized;
-    },
-    z.string().url().optional().or(z.literal(""))
+    (val) => (val === null ? undefined : val),
+    z.string().optional().or(z.literal(""))
   ),
   youtube: z.preprocess(
     (val) => {
@@ -1144,11 +1158,16 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       }
 
       // Ensure creatorId is a string (will be overridden by session in server action, but needed for type safety)
+      // Process Instagram on save: post/reel → canonical URL, profile → profile URL
+      const processedInstagram = processInstagramForSubmit(
+        validationResult.data.eventDetails.instagram
+      );
       const normalizedData = {
         ...validationResult.data,
         eventDetails: {
           ...validationResult.data.eventDetails,
           creatorId: validationResult.data.eventDetails.creatorId || "",
+          instagram: processedInstagram,
         },
       };
 

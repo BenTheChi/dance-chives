@@ -5,6 +5,7 @@ import { getEventsWithVideosForWatch } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
 import { EventCard } from "@/components/EventCard";
+import { HomeSubmissionForm } from "@/components/forms/home-submission-form";
 import {
   Info,
   ArrowLeft,
@@ -57,6 +58,10 @@ export default async function Home() {
                 for street dance events
               </h2>
             </div>
+          </section>
+
+          <section className="my-4 px-2 sm:px-6">
+            <HomeSubmissionForm />
           </section>
 
           <div className="flex flex-col items-center gap-20">

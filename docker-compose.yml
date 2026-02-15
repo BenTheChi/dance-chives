@@ -37,7 +37,7 @@ services:
       sh -c "
         npm install &&
         npx prisma generate &&
-        npx prisma db push &&
+        npx prisma migrate deploy &&
         npx prisma db seed &&
         npm run neo4j:seed &&
         echo 'Database setup completed!'

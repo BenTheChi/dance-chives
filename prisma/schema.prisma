@@ -138,7 +138,7 @@ model EventCard {
   eventTimezone String?
 
   posterUrl String?
-  igPostUrl String? @unique
+  ig        String? @unique @map("IG")
 
   // Denormalized tags for fast card rendering / filtering
   styles String[] @default([])
@@ -440,7 +440,6 @@ model Submission {
   igPostUrl String?
   blob      String?
   eventId   String?
-  rejectedReason String?
 
   reviewing Reviewing?
 

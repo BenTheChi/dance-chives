@@ -11,7 +11,6 @@ CREATE TABLE "submissions" (
     "igPostUrl" TEXT,
     "blob" TEXT,
     "eventId" TEXT,
-    "rejectedReason" TEXT,
 
     CONSTRAINT "submissions_pkey" PRIMARY KEY ("id")
 );
