@@ -395,7 +395,9 @@ enum JobStatus {
 
 enum SubmissionStatus {
   waiting
+  parsing
   reviewing
+  failed
   approved
   rejected
 }
@@ -435,6 +437,13 @@ model Submission {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   status    SubmissionStatus @default(waiting)
+  parseAttempts Int          @default(0)
+
+  lastParseStartedAt  DateTime?
+  lastParseFinishedAt DateTime?
+  lastParseErrorCode  String?
+  lastParseErrorMessage String?
+  lastParserProviders Json?
 
   email     String?
   igPostUrl String?
