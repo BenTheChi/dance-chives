@@ -138,6 +138,7 @@ model EventCard {
   eventTimezone String?
 
   posterUrl String?
+  igPostUrl String? @unique
 
   // Denormalized tags for fast card rendering / filtering
   styles String[] @default([])
@@ -392,6 +393,13 @@ enum JobStatus {
   failed
 }
 
+enum SubmissionStatus {
+  waiting
+  reviewing
+  approved
+  rejected
+}
+
 model Job {
   id          String    @id @default(cuid())
   status      JobStatus @default(pending)
@@ -420,4 +428,35 @@ model React {
   @@id([userId, videoId])
   @@index([videoId])
   @@map("reacts")
+}
+
+model Submission {
+  id        String           @id @default(cuid())
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  status    SubmissionStatus @default(waiting)
+
+  email     String?
+  igPostUrl String?
+  blob      String?
+  eventId   String?
+  rejectedReason String?
+
+  reviewing Reviewing?
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("submissions")
+}
+
+model Reviewing {
+  id           String     @id @default(cuid())
+  updatedAt    DateTime   @updatedAt
+  submissionId String     @unique @map("submission_id")
+  eventJson    Json       @map("event_json")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("reviewing")
 }
