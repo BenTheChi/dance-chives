@@ -45,7 +45,11 @@ import {
   createNotification,
 } from "@/lib/utils/request-utils";
 import { getEventTitle, getVideoTitle } from "@/db/queries/team-member";
-import { normalizeTime, isAllDayEvent } from "@/lib/utils/event-utils";
+import {
+  normalizeTime,
+  isAllDayEvent,
+  isTimeEmpty,
+} from "@/lib/utils/event-utils";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import {
   parseMmddyyyy,
@@ -1917,8 +1921,8 @@ async function upsertEventReadModels(input: {
       }
     });
     const dateRows = validDates.map((d) => {
-      const isAllDay =
-        !d.startTime || !d.endTime || d.startTime === "" || d.endTime === "";
+      // All-day only when both start and end time are missing
+      const isAllDay = isAllDayEvent(d.startTime, d.endTime);
       if (isAllDay) {
         const startUtc = zonedStartOfDayToUtc({
           dateMmddyyyy: d.date,
@@ -1938,19 +1942,25 @@ async function upsertEventReadModels(input: {
         };
       }
 
+      const startUtc = zonedDateTimeToUtc({
+        dateMmddyyyy: d.date,
+        timeHHmm: d.startTime!,
+        timeZone: eventTimezone,
+      });
+      const endUtc =
+        !isTimeEmpty(d.endTime) && d.endTime
+          ? zonedDateTimeToUtc({
+              dateMmddyyyy: d.date,
+              timeHHmm: d.endTime,
+              timeZone: eventTimezone,
+            })
+          : null;
+
       return {
         eventId,
         kind: "timed" as const,
-        startUtc: zonedDateTimeToUtc({
-          dateMmddyyyy: d.date,
-          timeHHmm: d.startTime!,
-          timeZone: eventTimezone,
-        }),
-        endUtc: zonedDateTimeToUtc({
-          dateMmddyyyy: d.date,
-          timeHHmm: d.endTime!,
-          timeZone: eventTimezone,
-        }),
+        startUtc,
+        endUtc,
         localDate: null,
       };
     });

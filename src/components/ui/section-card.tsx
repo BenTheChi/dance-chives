@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { Section, Video, Bracket } from "@/types/event";
 
 interface SectionCardProps {
@@ -40,17 +41,6 @@ const SECTION_TYPE_COLORS: Record<
   Other: { bg: "rgba(112, 128, 144, 0.85)", text: "white" },
 };
 
-const formatTime = (time: string) => {
-  const [hours, minutes] = time.split(":").map(Number);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return time;
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-};
-
 const hasSectionDateTime = (
   section: SectionCardProps["section"]
 ): section is Section & {
@@ -71,10 +61,10 @@ export function SectionCard({
   const sectionType = section.sectionType || "Other";
   const sectionWithDate = hasSectionDateTime(section) ? section : undefined;
   const formattedStart = sectionWithDate?.startTime
-    ? formatTime(sectionWithDate.startTime)
+    ? formatTimeToAMPM(sectionWithDate.startTime)
     : null;
   const formattedEnd = sectionWithDate?.endTime
-    ? formatTime(sectionWithDate.endTime)
+    ? formatTimeToAMPM(sectionWithDate.endTime)
     : null;
 
   // Calculate total video count (if videos/brackets are available)

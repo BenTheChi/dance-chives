@@ -4,18 +4,8 @@ import { Section } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { useEffect, useState } from "react";
 import { checkUserWinnerOfSection } from "@/lib/server_actions/request_actions";
+import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import Link from "next/link";
-
-const formatTime = (time: string) => {
-  const [hours, minutes] = time.split(":").map(Number);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return time;
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-};
 
 interface SectionDetailsProps {
   section: Section;
@@ -36,9 +26,11 @@ export function SectionDetails({
 }: SectionDetailsProps) {
   const [isUserWinner, setIsUserWinner] = useState(false);
   const formattedStart = section.startTime
-    ? formatTime(section.startTime)
+    ? formatTimeToAMPM(section.startTime)
     : null;
-  const formattedEnd = section.endTime ? formatTime(section.endTime) : null;
+  const formattedEnd = section.endTime
+    ? formatTimeToAMPM(section.endTime)
+    : null;
   const timeRange =
     formattedStart && formattedEnd
       ? `${formattedStart} - ${formattedEnd}`

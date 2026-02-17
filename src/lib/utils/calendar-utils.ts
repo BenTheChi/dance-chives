@@ -1,4 +1,4 @@
-import { parse, isValid } from "date-fns";
+import { parse, isValid, addHours, addDays } from "date-fns";
 import { CalendarEventData } from "@/db/queries/event";
 import { EventType, EventDate } from "@/types/event";
 
@@ -114,9 +114,15 @@ export function convertEventToCalendarEvents(
   if (event.dates && event.dates.length > 0) {
     return event.dates.map((dateEntry, index) => {
       const start = parseDateTime(dateEntry.date, dateEntry.startTime);
-      const end = dateEntry.endTime
+      let end = dateEntry.endTime
         ? parseDateTime(dateEntry.date, dateEntry.endTime)
-        : parseDateTime(dateEntry.date, "23:59");
+        : dateEntry.startTime
+          ? addHours(start, 1)
+          : parseDateTime(dateEntry.date, "23:59");
+      // If end is before start (overnight), extend into the next day
+      if (end <= start && dateEntry.endTime) {
+        end = addDays(end, 1);
+      }
 
       return {
         id: `${event.id}-${index}`,
@@ -139,9 +145,15 @@ export function convertEventToCalendarEvents(
   // Fallback: use startDate for backward compatibility (single date events)
   if (event.startDate) {
     const start = parseDateTime(event.startDate, event.startTime);
-    const end = event.endTime
+    let end = event.endTime
       ? parseDateTime(event.startDate, event.endTime)
-      : parseDateTime(event.startDate, "23:59");
+      : event.startTime
+        ? addHours(start, 1)
+        : parseDateTime(event.startDate, "23:59");
+    // If end is before start (overnight), extend into the next day
+    if (end <= start && event.endTime) {
+      end = addDays(end, 1);
+    }
 
     return [
       {

@@ -21,6 +21,7 @@ import { auth } from "@/auth";
 import { RequestTeamMemberButton } from "@/components/events/RequestTeamMemberButton";
 import { MessageTemplateDialog } from "@/components/events/MessageTemplateDialog";
 import { LinkifiedText } from "@/components/LinkifiedText";
+import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -110,9 +111,9 @@ export async function generateMetadata({
     if (upcomingDates.length > 0) {
       const nextDate = upcomingDates[0];
       const dateStr = nextDate.endTime
-        ? `${nextDate.date} (${nextDate.startTime} - ${nextDate.endTime})`
+        ? `${nextDate.date} (${formatTimeToAMPM(nextDate.startTime)} - ${formatTimeToAMPM(nextDate.endTime)})`
         : nextDate.startTime
-          ? `${nextDate.date} (${nextDate.startTime})`
+          ? `${nextDate.date} (${formatTimeToAMPM(nextDate.startTime)})`
           : nextDate.date;
       descriptionParts.push(`Next date: ${dateStr}`);
     }
@@ -454,15 +455,6 @@ export default async function EventPage({ params }: PageProps) {
   // Show "More dates" button if there are more than 3 upcoming OR more than 1 past
   const showMoreDatesButton = allUpcoming.length > 3 || allPast.length > 1;
 
-  // Convert 24-hour time (HH:mm) to 12-hour format with AM/PM
-  const convertTo12Hour = (time24: string): string => {
-    if (!time24) return "";
-    const [hours, minutes] = time24.split(":").map(Number);
-    const period = hours >= 12 ? "PM" : "AM";
-    const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
-  };
-
   // Check if any section has videos (direct videos or videos in brackets)
   const hasSectionsWithVideos = event.sections.some((section) => {
     const hasDirectVideos = section.videos && section.videos.length > 0;
@@ -565,10 +557,8 @@ export default async function EventPage({ params }: PageProps) {
                                       const isAllDay =
                                         !d.startTime && !d.endTime;
                                       const timeStr = d.endTime
-                                        ? `${convertTo12Hour(
-                                            d.startTime || ""
-                                          )} - ${convertTo12Hour(d.endTime)}`
-                                        : convertTo12Hour(d.startTime || "");
+                                        ? `${formatTimeToAMPM(d.startTime)} - ${formatTimeToAMPM(d.endTime)}`
+                                        : formatTimeToAMPM(d.startTime || "");
                                       return (
                                         <div
                                           key={`past-${d.date}-${idx}`}
@@ -596,10 +586,8 @@ export default async function EventPage({ params }: PageProps) {
                                       const isAllDay =
                                         !d.startTime && !d.endTime;
                                       const timeStr = d.endTime
-                                        ? `${convertTo12Hour(
-                                            d.startTime || ""
-                                          )} - ${convertTo12Hour(d.endTime)}`
-                                        : convertTo12Hour(d.startTime || "");
+                                        ? `${formatTimeToAMPM(d.startTime)} - ${formatTimeToAMPM(d.endTime)}`
+                                        : formatTimeToAMPM(d.startTime || "");
                                       return (
                                         <div
                                           key={`upcoming-${d.date}-${idx}`}

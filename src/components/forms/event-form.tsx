@@ -303,36 +303,17 @@ const eventDetailsSchema = z.object({
             if (data.isAllDay) {
               return true;
             }
-            // If not all-day, both times must be present and non-empty
-            if (isTimeEmpty(data.startTime) || isTimeEmpty(data.endTime)) {
-              return false;
-            }
-            // Validate that end time is after start time
-            const [startHours, startMinutes] = (data.startTime || "")
-              .split(":")
-              .map(Number);
-            const [endHours, endMinutes] = (data.endTime || "")
-              .split(":")
-              .map(Number);
-            const startTotal = startHours * 60 + startMinutes;
-            const endTotal = endHours * 60 + endMinutes;
-            return endTotal > startTotal;
+            // If not all-day, start time is required; end time is optional
+            // End time before start time is allowed (extends into next day)
+            return !isTimeEmpty(data.startTime);
           },
           (data) => {
-            // Custom error messages based on validation failure
             if (data.isAllDay) {
               return { message: "", path: [] };
             }
-            if (isTimeEmpty(data.startTime) || isTimeEmpty(data.endTime)) {
-              return {
-                message:
-                  "Both start time and end time are required when not all-day",
-                path: ["startTime"],
-              };
-            }
             return {
-              message: "End time must be after start time",
-              path: ["endTime"],
+              message: "Start time is required when not all-day",
+              path: ["startTime"],
             };
           }
         )
