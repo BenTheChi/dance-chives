@@ -14,9 +14,9 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const NEW_YORK_CITY = SEED_CITY_BY_NAME.newYork;
 const SEATTLE_CITY = SEED_CITY_BY_NAME.seattle;
-const LOS_ANGELES_CITY = SEED_CITY_BY_NAME.losAngeles;
+const VANCOUVER_CITY = SEED_CITY_BY_NAME.vancouver;
+const TORONTO_CITY = SEED_CITY_BY_NAME.toronto;
 
 // Helper function to sync event to PostgreSQL EventCard and Event
 async function syncEventToPostgreSQL(
@@ -121,7 +121,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Creator",
           username: "creator",
-          city: NEW_YORK_CITY,
+          city: VANCOUVER_CITY,
           date: "01/01/1990",
           bio: "Event creator and organizer",
           instagram: "@creator",
@@ -135,7 +135,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Moderator",
           username: "moderator",
-          city: NEW_YORK_CITY,
+          city: TORONTO_CITY,
           date: "01/01/1990",
           bio: "Community moderator",
           instagram: "",
@@ -163,7 +163,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Super Admin",
           username: "superadmin",
-          city: LOS_ANGELES_CITY,
+          city: VANCOUVER_CITY,
           date: "01/01/1990",
           bio: "Super administrator with full access",
           instagram: "@superadmin",
@@ -252,7 +252,7 @@ async function seedNeo4j() {
         ],
         schedule:
           "6:00 PM - Doors Open\n7:00 PM - Preliminaries\n8:00 PM - Semi-Finals\n9:00 PM - Finals\n10:00 PM - Awards",
-        city: NEW_YORK_CITY,
+        city: VANCOUVER_CITY,
         styles: ["Breaking", "Hip-Hop"],
         eventType: "Battle",
         status: "visible",
@@ -437,7 +437,7 @@ async function seedNeo4j() {
         ],
         schedule:
           "7:30 PM - Doors Open\n8:00 PM - Showcase Begins\n9:30 PM - Meet & Greet",
-        city: NEW_YORK_CITY,
+        city: TORONTO_CITY,
         styles: ["Hip-Hop"],
         eventType: "Performance",
         status: "visible",
@@ -567,7 +567,7 @@ async function seedNeo4j() {
           dates: [{ date: baseDate, startTime: "18:00", endTime: "23:00" }],
           schedule:
             "6:00 PM - Doors\n7:00 PM - Prelims\n8:30 PM - Semi-Finals\n9:30 PM - Finals",
-          city: NEW_YORK_CITY,
+          city: VANCOUVER_CITY,
           styles: [style],
           eventType: "Battle",
           status: "visible",

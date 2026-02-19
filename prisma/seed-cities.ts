@@ -5,16 +5,7 @@ import { City } from "../src/types/city";
 // replaced by production top-referenced cities via phase4 refresh tooling.
 export const SEED_CITIES: City[] = [
   {
-    id: "ChIJOwg_06VPwokRYv534QaPC8g",
-    name: "New York",
-    countryCode: "US",
-    region: "NY",
-    timezone: "America/New_York",
-    latitude: 40.7127753,
-    longitude: -74.0059728,
-  },
-  {
-    id: "ChIJVTPpYqBvqkARlBKGEkAs8BY",
+    id: "ChIJVTPokywQkFQRmtVEaUZlJRA",
     name: "Seattle",
     countryCode: "US",
     region: "WA",
@@ -23,18 +14,27 @@ export const SEED_CITIES: City[] = [
     longitude: -122.3328481,
   },
   {
-    id: "ChIJE9on3F3HwoAR9AhGJW_fL-I",
-    name: "Los Angeles",
-    countryCode: "US",
-    region: "CA",
-    timezone: "America/Los_Angeles",
-    latitude: 34.0549076,
-    longitude: -118.242643,
+    id: "ChIJs0-pQ_FzhlQRi_OBm-qWkbs",
+    name: "Vancouver",
+    countryCode: "CA",
+    region: "BC",
+    timezone: "America/Vancouver",
+    latitude: 49.2827291,
+    longitude: -123.1207375,
+  },
+  {
+    id: "ChIJpTvG15DL1IkRd8S0KlBVNTI",
+    name: "Toronto",
+    countryCode: "CA",
+    region: "ON",
+    timezone: "America/Toronto",
+    latitude: 43.6548253,
+    longitude: -79.388447,
   },
 ];
 
 export const SEED_CITY_BY_NAME = {
-  newYork: SEED_CITIES[0],
-  seattle: SEED_CITIES[1],
-  losAngeles: SEED_CITIES[2],
+  seattle: SEED_CITIES[0],
+  vancouver: SEED_CITIES[1],
+  toronto: SEED_CITIES[2],
 } as const;
