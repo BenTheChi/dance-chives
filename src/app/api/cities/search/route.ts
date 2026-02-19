@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCitiesInNeo4j } from "@/db/queries/event";
+import { searchCitiesInPostgres } from "@/db/queries/city";
 import { searchPlaces, getPlaceDetails } from "@/lib/google-places";
 import { CitySearchItem } from "@/types/city";
+import { cityReadSource, cityShadowCompare } from "@/lib/config";
 
 /**
- * Search cities - Neo4j first, optionally Google Places
+ * Search cities from configured read source, optionally Google Places
  * GET /api/cities/search?keyword=...&includeGoogle=true
  */
 export async function GET(request: NextRequest) {
@@ -20,11 +22,42 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Always search Neo4j first
-    const neo4jResults = await searchCitiesInNeo4j(keyword);
+    const primaryResults =
+      cityReadSource === "postgres"
+        ? await searchCitiesInPostgres(keyword)
+        : await searchCitiesInNeo4j(keyword);
+
+    const neo4jResults =
+      cityReadSource === "neo4j"
+        ? primaryResults
+        : cityShadowCompare
+          ? await searchCitiesInNeo4j(keyword)
+          : [];
+
+    const postgresResults =
+      cityReadSource === "postgres"
+        ? primaryResults
+        : cityShadowCompare
+          ? await searchCitiesInPostgres(keyword)
+          : [];
+
+    if (cityShadowCompare) {
+      const neo4jIds = new Set(neo4jResults.map((city) => city.id));
+      const postgresIds = new Set(postgresResults.map((city) => city.id));
+      const onlyInNeo4j = [...neo4jIds].filter((id) => !postgresIds.has(id));
+      const onlyInPostgres = [...postgresIds].filter((id) => !neo4jIds.has(id));
+
+      if (onlyInNeo4j.length > 0 || onlyInPostgres.length > 0) {
+        console.warn("[CITY_SHADOW_COMPARE] search parity mismatch", {
+          keyword,
+          onlyInNeo4j,
+          onlyInPostgres,
+        });
+      }
+    }
 
     // Convert to CitySearchItem format
-    const fromNeo4j: CitySearchItem[] = neo4jResults.map((city) => ({
+    const fromPrimary: CitySearchItem[] = primaryResults.map((city) => ({
       id: city.id,
       name: city.name,
       region: city.region,
@@ -34,9 +67,9 @@ export async function GET(request: NextRequest) {
     let fromGoogle: CitySearchItem[] = [];
 
     // Only search Google Places if:
-    // 1. Neo4j returned 0 results (auto-search), OR
+    // 1. Primary source returned 0 results (auto-search), OR
     // 2. includeGoogle=true (explicit request)
-    if (neo4jResults.length === 0 || includeGoogle) {
+    if (primaryResults.length === 0 || includeGoogle) {
       try {
         const googlePredictions = await searchPlaces(keyword);
 
@@ -82,22 +115,41 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge and deduplicate results (prioritize Neo4j results)
-    const allResults = [...fromNeo4j];
-    const neo4jIds = new Set(fromNeo4j.map((c) => c.id));
+    const allResults = [...fromPrimary];
+    const primaryIds = new Set(fromPrimary.map((c) => c.id));
 
-    // Add Google results that aren't already in Neo4j
+    // Add Google results that aren't already in primary source
     for (const googleCity of fromGoogle) {
-      if (!neo4jIds.has(googleCity.id)) {
+      if (!primaryIds.has(googleCity.id)) {
         allResults.push(googleCity);
       }
     }
 
     return NextResponse.json({
       results: allResults,
-      fromNeo4j,
+      fromPrimary,
+      fromNeo4j:
+        cityReadSource === "neo4j" || cityShadowCompare
+          ? neo4jResults.map((city) => ({
+              id: city.id,
+              name: city.name,
+              region: city.region,
+              countryCode: city.countryCode,
+            }))
+          : undefined,
+      fromPostgres:
+        cityReadSource === "postgres" || cityShadowCompare
+          ? postgresResults.map((city) => ({
+              id: city.id,
+              name: city.name,
+              region: city.region,
+              countryCode: city.countryCode,
+            }))
+          : undefined,
+      readSource: cityReadSource,
       fromGoogle:
-        includeGoogle || neo4jResults.length === 0 ? fromGoogle : undefined,
-      hasMore: fromGoogle.length > 0 && neo4jResults.length > 0,
+        includeGoogle || primaryResults.length === 0 ? fromGoogle : undefined,
+      hasMore: fromGoogle.length > 0 && primaryResults.length > 0,
     });
   } catch (error) {
     console.error("Error searching cities:", error);
