@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:17
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    image: dance-chives-postgres:17-postgis
     container_name: dance-chives-postgres
     environment:
       POSTGRES_DB: dance_chives_dev

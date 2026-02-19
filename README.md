@@ -79,6 +79,12 @@ The platform has evolved significantly with a comprehensive feature set includin
    npm run docker:up
    ```
 
+   If you previously started the old plain Postgres container, reset volumes once so the PostGIS-enabled image initializes cleanly:
+
+   ```bash
+   npm run docker:reset
+   ```
+
 5. **Run database migrations**
 
    ```bash
