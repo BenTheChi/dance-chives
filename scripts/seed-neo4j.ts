@@ -7,11 +7,16 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import driver from "../src/db/driver";
 import { randomUUID } from "crypto";
+import { SEED_CITY_BY_NAME } from "../prisma/seed-cities";
 
 // Create a Prisma client for scripts (without server-only import)
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+
+const NEW_YORK_CITY = SEED_CITY_BY_NAME.newYork;
+const SEATTLE_CITY = SEED_CITY_BY_NAME.seattle;
+const LOS_ANGELES_CITY = SEED_CITY_BY_NAME.losAngeles;
 
 // Helper function to sync event to PostgreSQL EventCard and Event
 async function syncEventToPostgreSQL(
@@ -102,15 +107,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Base User",
           username: "baseuser",
-          city: {
-            id: "ChIJVTPpYqBvqkARlBKGEkAs8BY", // Seattle place_id
-            name: "Seattle",
-            countryCode: "US",
-            region: "Washington",
-            timezone: "America/Los_Angeles",
-            latitude: 47.6062,
-            longitude: -122.3321,
-          },
+          city: SEATTLE_CITY,
           date: "01/01/1990",
           bio: "Dance enthusiast from Seattle",
           instagram: "@baseuser",
@@ -124,15 +121,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Creator",
           username: "creator",
-          city: {
-            id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
-            name: "New York City",
-            countryCode: "US",
-            region: "New York",
-            timezone: "America/New_York",
-            latitude: 40.7128,
-            longitude: -74.006,
-          },
+          city: NEW_YORK_CITY,
           date: "01/01/1990",
           bio: "Event creator and organizer",
           instagram: "@creator",
@@ -146,15 +135,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Moderator",
           username: "moderator",
-          city: {
-            id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
-            name: "New York City",
-            countryCode: "US",
-            region: "New York",
-            timezone: "America/New_York",
-            latitude: 40.7128,
-            longitude: -74.006,
-          },
+          city: NEW_YORK_CITY,
           date: "01/01/1990",
           bio: "Community moderator",
           instagram: "",
@@ -168,15 +149,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Admin",
           username: "admin",
-          city: {
-            id: "ChIJVTPpYqBvqkARlBKGEkAs8BY", // Seattle place_id
-            name: "Seattle",
-            countryCode: "US",
-            region: "Washington",
-            timezone: "America/Los_Angeles",
-            latitude: 47.6062,
-            longitude: -122.3321,
-          },
+          city: SEATTLE_CITY,
           date: "01/01/1990",
           bio: "Platform administrator",
           instagram: "@admin",
@@ -190,15 +163,7 @@ async function seedNeo4j() {
         profile: {
           displayName: "Super Admin",
           username: "superadmin",
-          city: {
-            id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
-            name: "New York City",
-            countryCode: "US",
-            region: "New York",
-            timezone: "America/New_York",
-            latitude: 40.7128,
-            longitude: -74.006,
-          },
+          city: LOS_ANGELES_CITY,
           date: "01/01/1990",
           bio: "Super administrator with full access",
           instagram: "@superadmin",
@@ -287,15 +252,7 @@ async function seedNeo4j() {
         ],
         schedule:
           "6:00 PM - Doors Open\n7:00 PM - Preliminaries\n8:00 PM - Semi-Finals\n9:00 PM - Finals\n10:00 PM - Awards",
-        city: {
-          id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
-          name: "New York City",
-          countryCode: "US",
-          region: "New York",
-          timezone: "America/New_York",
-          latitude: 40.7128,
-          longitude: -74.006,
-        },
+        city: NEW_YORK_CITY,
         styles: ["Breaking", "Hip-Hop"],
         eventType: "Battle",
         status: "visible",
@@ -416,15 +373,7 @@ async function seedNeo4j() {
         ],
         schedule:
           "7:00 PM - Open Cypher\n8:00 PM - Featured Performances\n9:00 PM - Open Freestyle",
-        city: {
-          id: "ChIJVTPpYqBvqkARlBKGEkAs8BY", // Seattle place_id
-          name: "Seattle",
-          countryCode: "US",
-          region: "Washington",
-          timezone: "America/Los_Angeles",
-          latitude: 47.6062,
-          longitude: -122.3321,
-        },
+        city: SEATTLE_CITY,
         styles: ["Hip-Hop"],
         eventType: "Session",
         status: "visible",
@@ -488,15 +437,7 @@ async function seedNeo4j() {
         ],
         schedule:
           "7:30 PM - Doors Open\n8:00 PM - Showcase Begins\n9:30 PM - Meet & Greet",
-        city: {
-          id: "ChIJOwg_06VPwokRYv534QaPC8g", // New York City place_id
-          name: "New York City",
-          countryCode: "US",
-          region: "New York",
-          timezone: "America/New_York",
-          latitude: 40.7128,
-          longitude: -74.006,
-        },
+        city: NEW_YORK_CITY,
         styles: ["Hip-Hop"],
         eventType: "Performance",
         status: "visible",
@@ -626,15 +567,7 @@ async function seedNeo4j() {
           dates: [{ date: baseDate, startTime: "18:00", endTime: "23:00" }],
           schedule:
             "6:00 PM - Doors\n7:00 PM - Prelims\n8:30 PM - Semi-Finals\n9:30 PM - Finals",
-          city: {
-            id: "ChIJOwg_06VPwokRYv534QaPC8g",
-            name: "New York City",
-            countryCode: "US",
-            region: "New York",
-            timezone: "America/New_York",
-            latitude: 40.7128,
-            longitude: -74.006,
-          },
+          city: NEW_YORK_CITY,
           styles: [style],
           eventType: "Battle",
           status: "visible",

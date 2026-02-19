@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import driver from "../src/db/driver";
 import { seedNeo4j } from "../scripts/seed-neo4j";
+import { SEED_CITIES } from "./seed-cities";
 
 // Create a Prisma client for scripts (with adapter for connection pooling)
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -62,6 +63,7 @@ async function main() {
   await safeDelete(prisma.eventCard, "EventCard");
   await safeDelete(prisma.event, "Event");
   await safeDelete(prisma.userCard, "UserCard");
+  await safeDelete((prisma as any).city, "City");
 
   // Delete request-related tables
   await safeDelete(prisma.requestApproval, "RequestApproval");
@@ -76,6 +78,50 @@ async function main() {
   await prisma.user.deleteMany();
 
   console.log("✅ Cleared all existing data");
+
+  console.log("🌆 Seeding canonical Postgres cities...");
+  for (const city of SEED_CITIES) {
+    await prisma.$executeRaw`
+      INSERT INTO "cities" (
+        "id",
+        "slug",
+        "name",
+        "countryCode",
+        "region",
+        "timezone",
+        "latitude",
+        "longitude",
+        "location",
+        "createdAt",
+        "updatedAt"
+      )
+      VALUES (
+        ${city.id},
+        ${city.slug || `${city.name.toLowerCase().replace(/\s+/g, "-")}-${city.region?.toLowerCase() || ""}-${city.countryCode.toLowerCase()}`},
+        ${city.name},
+        ${city.countryCode},
+        ${city.region || null},
+        ${city.timezone || "UTC"},
+        ${city.latitude || 0},
+        ${city.longitude || 0},
+        ST_SetSRID(ST_MakePoint(${city.longitude || 0}, ${city.latitude || 0}), 4326)::geography,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT ("id")
+      DO UPDATE SET
+        "name" = EXCLUDED."name",
+        "countryCode" = EXCLUDED."countryCode",
+        "region" = EXCLUDED."region",
+        "timezone" = EXCLUDED."timezone",
+        "latitude" = EXCLUDED."latitude",
+        "longitude" = EXCLUDED."longitude",
+        "location" = EXCLUDED."location",
+        "updatedAt" = NOW(),
+        "slug" = "cities"."slug"
+    `;
+  }
+  console.log(`✅ Seeded ${SEED_CITIES.length} canonical cities`);
 
   // Create Users (matching Neo4j seed data)
   console.log(`🌱 Creating test users...`);
