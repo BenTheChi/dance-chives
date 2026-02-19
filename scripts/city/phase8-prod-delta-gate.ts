@@ -173,12 +173,6 @@ async function main() {
       ) {
         highRiskReasons.push("name");
       }
-      if (!nearlyEqual(neo4jCity.latitude, postgresCity.latitude)) {
-        highRiskReasons.push("latitude");
-      }
-      if (!nearlyEqual(neo4jCity.longitude, postgresCity.longitude)) {
-        highRiskReasons.push("longitude");
-      }
 
       if (highRiskReasons.length > 0) {
         report.highRiskMismatches.push({
@@ -188,6 +182,12 @@ async function main() {
       }
 
       const lowRiskReasons: string[] = [];
+      if (!nearlyEqual(neo4jCity.latitude, postgresCity.latitude)) {
+        lowRiskReasons.push("latitude");
+      }
+      if (!nearlyEqual(neo4jCity.longitude, postgresCity.longitude)) {
+        lowRiskReasons.push("longitude");
+      }
       if ((neo4jCity.countryCode || "") !== (postgresCity.countryCode || "")) {
         lowRiskReasons.push("countryCode");
       }
