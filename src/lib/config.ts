@@ -39,6 +39,19 @@ export const isDevelopment = actualEnv === "development";
 export const isStaging = actualEnv === "staging";
 export const isProduction = actualEnv === "production";
 
+export type CityReadSource = "neo4j" | "postgres";
+
+const cityReadSourceEnv = (process.env.CITY_READ_SOURCE || "neo4j")
+  .toLowerCase()
+  .trim();
+
+export const cityReadSource: CityReadSource =
+  cityReadSourceEnv === "postgres" ? "postgres" : "neo4j";
+export const cityShadowCompare =
+  (process.env.CITY_SHADOW_COMPARE || "false").toLowerCase() === "true";
+export const cityAutofixLowRisk =
+  (process.env.CITY_AUTOFIX_LOW_RISK || "false").toLowerCase() === "true";
+
 // Database configuration detection
 export const isLocalDatabase = () => {
   const dbUrl = process.env.DATABASE_URL;
@@ -93,6 +106,11 @@ export const getEnvironmentInfo = () => {
     isProduction,
     isLocalDatabase: isLocalDatabase(),
     isCloudDatabase: isCloudDatabase(),
+    city: {
+      readSource: cityReadSource,
+      shadowCompare: cityShadowCompare,
+      autofixLowRisk: cityAutofixLowRisk,
+    },
     databases: {
       postgres: {
         configured: !!config.postgres.url,
