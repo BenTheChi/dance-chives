@@ -2,7 +2,7 @@ import { prisma } from "@/lib/primsa";
 import { getUserByUsername, signupUser } from "@/db/queries/user";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_USERNAME } from "./admin-user-constants";
-import driver from "@/db/driver";
+import { resolveAndUpsertCityForWrite } from "@/db/queries/city";
 // Re-export client-safe constants and functions
 export {
   SUPER_ADMIN_EMAIL,
@@ -40,16 +40,21 @@ export async function getSuperAdminUser(): Promise<string | null> {
   const neo4jUser = await getUserByUsername(SUPER_ADMIN_USERNAME);
   if (!neo4jUser || neo4jUser.id !== adminUser.id) {
     // Create or update Neo4j user profile if PostgreSQL user exists but Neo4j doesn't
+    const adminCity = await resolveAndUpsertCityForWrite({
+      id: "ChIJE9on3F3HwoAR9AhGJW_fL-I",
+      name: "Los Angeles",
+      region: "CA",
+      countryCode: "US",
+      timezone: "America/Los_Angeles",
+      latitude: 34.0522342,
+      longitude: -118.2436849,
+    });
+
     await signupUser(adminUser.id, {
       displayName: adminUser.name || "Admin",
       username: SUPER_ADMIN_USERNAME,
       date: "01/01/2000", // Default date
-      city: {
-        id: "",
-        name: "Unknown",
-        region: "",
-        countryCode: "",
-      },
+      city: adminCity,
       styles: [],
     });
   }
@@ -64,5 +69,3 @@ export async function getSuperAdminUser(): Promise<string | null> {
 export async function getOrCreateSuperAdminUser(): Promise<string | null> {
   return getSuperAdminUser();
 }
-
-

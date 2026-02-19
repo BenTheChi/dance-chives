@@ -46,6 +46,9 @@ import { deleteEvent, getEvent, getEventImages } from "@/db/queries/event";
 import { addMailerLiteSubscriber } from "@/lib/mailerlite";
 import { randomUUID } from "crypto";
 import { normalizeInstagramHandle } from "@/lib/utils/instagram";
+import {
+  resolveAndUpsertCityForWrite,
+} from "@/db/queries/city";
 
 export async function signInWithGoogle() {
   const result = (await signIn("google", { redirectTo: "/signup" })) as any;
@@ -268,12 +271,29 @@ export async function executeAccountMerge(params: {
     sourceProfile?.instagram ||
     null;
 
+  const transferCitySource =
+    sourceProfile && typeof sourceProfile.city === "object"
+      ? (sourceProfile.city as City)
+      : targetProfile && typeof targetProfile.city === "object"
+        ? (targetProfile.city as City)
+        : null;
+
+  if (sourceProfile && (!transferCitySource || !transferCitySource.id)) {
+    throw new Error(
+      "Cannot transfer profile because source city is unresolved. Resolve city first."
+    );
+  }
+
+  const transferCity = transferCitySource
+    ? await resolveAndUpsertCityForWrite(transferCitySource)
+    : null;
+
   // Build profile data from source profile to apply to target
   const profileData = sourceProfile
     ? {
         displayName: sourceProfile.displayName || sourceUser.name || "",
         username: sourceProfile.username || targetUser.email.split("@")[0],
-        city: sourceProfile.city || "",
+        city: transferCity as City,
         date: (sourceProfile.date as string) || "",
         styles: sourceProfile.styles || [],
         bio: sourceProfile.bio || null,
@@ -300,14 +320,8 @@ export async function executeAccountMerge(params: {
         username: profileData.username,
         displayName: profileData.displayName,
         imageUrl: profileData.image ?? null,
-        cityId:
-          typeof profileData.city === "object"
-            ? (profileData.city?.id ?? null)
-            : null,
-        cityName:
-          typeof profileData.city === "object"
-            ? (profileData.city?.name ?? null)
-            : ((profileData.city as string) ?? null),
+        cityId: profileData.city?.id ?? null,
+        cityName: profileData.city?.name ?? null,
         styles: (profileData.styles || []).map((s: string) =>
           s.toUpperCase().trim(),
         ),
@@ -317,14 +331,8 @@ export async function executeAccountMerge(params: {
         username: profileData.username,
         displayName: profileData.displayName,
         imageUrl: profileData.image ?? null,
-        cityId:
-          typeof profileData.city === "object"
-            ? (profileData.city?.id ?? null)
-            : null,
-        cityName:
-          typeof profileData.city === "object"
-            ? (profileData.city?.name ?? null)
-            : ((profileData.city as string) ?? null),
+        cityId: profileData.city?.id ?? null,
+        cityName: profileData.city?.name ?? null,
         styles: (profileData.styles || []).map((s: string) =>
           s.toUpperCase().trim(),
         ),
@@ -670,15 +678,17 @@ export async function signup(
       }
     }
 
-    // Parse city from formData (it's stored as JSON string)
-    let cityData: City | string;
+    // Parse and validate city from formData (stored as JSON string)
+    let cityData: City;
     const cityJson = formData.get("city") as string;
     if (cityJson) {
       try {
-        cityData = JSON.parse(cityJson);
-      } catch {
-        // Fallback to string if JSON parsing fails
-        cityData = cityJson;
+        const parsedCity = JSON.parse(cityJson);
+        cityData = await resolveAndUpsertCityForWrite(parsedCity);
+      } catch (error) {
+        throw new Error(
+          error instanceof Error ? error.message : "Invalid city payload"
+        );
       }
     } else {
       throw new Error("City is required");
@@ -687,7 +697,7 @@ export async function signup(
     type ProfileData = {
       displayName: string;
       username: string;
-      city: City | string;
+      city: City;
       date: string;
       styles: string[];
       bio: string | null;
@@ -739,9 +749,7 @@ export async function signup(
         displayName: profileData.displayName,
         imageUrl: profileData.image ?? null,
         cityId: cityObj?.id ?? null,
-        cityName:
-          cityObj?.name ??
-          (typeof profileData.city === "string" ? profileData.city : null),
+        cityName: cityObj?.name ?? null,
         styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
       },
       create: {
@@ -750,9 +758,7 @@ export async function signup(
         displayName: profileData.displayName,
         imageUrl: profileData.image ?? null,
         cityId: cityObj?.id ?? null,
-        cityName:
-          cityObj?.name ??
-          (typeof profileData.city === "string" ? profileData.city : null),
+        cityName: cityObj?.name ?? null,
         styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
       },
     });
@@ -1403,14 +1409,16 @@ export async function updateUserProfile(userId: string, formData: FormData) {
       };
     }
 
-    // Parse city from JSON
+    // Parse and validate city from JSON
     let cityData: City;
     try {
-      cityData = JSON.parse(cityJson);
-    } catch {
+      const parsedCity = JSON.parse(cityJson);
+      cityData = await resolveAndUpsertCityForWrite(parsedCity);
+    } catch (error) {
       return {
         success: false,
-        error: "Invalid city data format",
+        error:
+          error instanceof Error ? error.message : "Invalid city data format",
       };
     }
 

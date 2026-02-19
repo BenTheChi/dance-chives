@@ -39,6 +39,7 @@ import { type Record as Neo4jRecord, int } from "neo4j-driver";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { prisma } from "@/lib/primsa";
 import { VideoFilters } from "@/types/video-filter";
+import { requireCityFromPostgres } from "@/db/queries/city";
 
 /**
  * Helper functions to translate between frontend types and backend Neo4j labels
@@ -1720,6 +1721,8 @@ export const insertEvent = async (
   const datesJson = eventDetails.dates
     ? JSON.stringify(eventDetails.dates)
     : null;
+  const canonicalCity = await requireCityFromPostgres(eventDetails.city.id);
+  const citySlug = canonicalCity.slug || generateCitySlug(canonicalCity);
 
   // Get admin user ID as fallback for orphaned events (only if super admin exists)
   const fallbackCreatorId = await getOrCreateSuperAdminUser();
@@ -1813,14 +1816,16 @@ export const insertEvent = async (
         c.region = $city.region,
         c.timezone = $city.timezone,
         c.latitude = $city.latitude,
-        c.longitude = $city.longitude
+        c.longitude = $city.longitude,
+        c.slug = $citySlug
       ON MATCH SET
         c.name = $city.name,
         c.countryCode = $city.countryCode,
         c.region = $city.region,
         c.timezone = $city.timezone,
         c.latitude = $city.latitude,
-        c.longitude = $city.longitude
+        c.longitude = $city.longitude,
+        c.slug = $citySlug
       MERGE (e)-[:IN]->(c)
 
       WITH e
@@ -1912,7 +1917,8 @@ export const insertEvent = async (
         updatedAt: event.updatedAt.toISOString(),
         poster: eventDetails.poster,
         originalPoster: eventDetails.originalPoster,
-        city: eventDetails.city,
+        city: canonicalCity,
+        citySlug,
         roles: event.roles,
       }
     );
@@ -2053,6 +2059,8 @@ export const editEvent = async (
   const datesJson = eventDetails.dates
     ? JSON.stringify(eventDetails.dates)
     : null;
+  const canonicalCity = await requireCityFromPostgres(eventDetails.city.id);
+  const citySlug = canonicalCity.slug || generateCitySlug(canonicalCity);
 
   try {
     // Start transaction
@@ -2143,16 +2151,18 @@ export const editEvent = async (
          c.region = $city.region,
          c.timezone = $city.timezone,
          c.latitude = $city.latitude,
-         c.longitude = $city.longitude
+         c.longitude = $city.longitude,
+         c.slug = $citySlug
        ON MATCH SET
          c.name = $city.name,
          c.countryCode = $city.countryCode,
          c.region = $city.region,
          c.timezone = $city.timezone,
          c.latitude = $city.latitude,
-         c.longitude = $city.longitude
+         c.longitude = $city.longitude,
+         c.slug = $citySlug
        MERGE (e)-[:IN]->(c)`,
-      { id, city: eventDetails.city }
+      { id, city: canonicalCity, citySlug }
     );
 
     // Update poster
@@ -3037,6 +3047,7 @@ export async function getCityFromNeo4j(placeId: string): Promise<City | null> {
  */
 export async function storeCityData(cityData: City): Promise<void> {
   const session = driver.session();
+  const citySlug = cityData.slug || generateCitySlug(cityData);
 
   try {
     await session.run(
@@ -3047,14 +3058,16 @@ export async function storeCityData(cityData: City): Promise<void> {
          c.countryCode = $countryCode,
          c.latitude = $latitude,
          c.longitude = $longitude,
-         c.timezone = $timezone
+         c.timezone = $timezone,
+         c.slug = $slug
        ON MATCH SET
          c.name = $name,
          c.region = $region,
          c.countryCode = $countryCode,
          c.latitude = $latitude,
          c.longitude = $longitude,
-         c.timezone = $timezone`,
+         c.timezone = $timezone,
+         c.slug = $slug`,
       {
         id: cityData.id,
         name: cityData.name,
@@ -3063,6 +3076,7 @@ export async function storeCityData(cityData: City): Promise<void> {
         latitude: cityData.latitude ?? null,
         longitude: cityData.longitude ?? null,
         timezone: cityData.timezone || null,
+        slug: citySlug,
       }
     );
   } catch (error) {

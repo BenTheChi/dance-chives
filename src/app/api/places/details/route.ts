@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPlaceDetails, getTimezone } from "@/lib/google-places";
 import { City } from "@/types/city";
+import { upsertCityInPostgres } from "@/db/queries/city";
 
 /**
  * Get place details with timezone (validates city-level place)
@@ -49,7 +50,9 @@ export async function GET(request: NextRequest) {
       longitude: placeDetails.geometry.location.lng,
     };
 
-    return NextResponse.json({ city });
+    const canonicalCity = await upsertCityInPostgres(city);
+
+    return NextResponse.json({ city: canonicalCity });
   } catch (error) {
     console.error("Error fetching place details:", error);
     return NextResponse.json(

@@ -2,13 +2,14 @@ import driver from "../driver";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { City } from "@/types/city";
 import { generateCitySlug } from "@/lib/utils/city-slug";
+import { resolveAndUpsertCityForWrite } from "@/db/queries/city";
 
 export interface UpdateUserInput {
   id?: string;
   username?: string;
   displayName?: string;
   date?: string;
-  city?: City | string;
+  city?: City;
   bio?: string | null;
   instagram?: string | null;
   website?: string | null;
@@ -120,7 +121,7 @@ export const signupUser = async (
     displayName: string;
     username: string;
     date: string;
-    city: City | string;
+    city: City;
     styles?: string[];
     bio?: string | null;
     instagram?: string | null;
@@ -132,24 +133,13 @@ export const signupUser = async (
 ) => {
   const session = driver.session();
   try {
-    // Parse city if it's a string (legacy support)
-    let cityData: City;
-    if (typeof user.city === "string") {
-      try {
-        cityData = JSON.parse(user.city);
-      } catch {
-        // If parsing fails, create a minimal city object from string
-        // This handles legacy data where city was just a name
-        cityData = {
-          id: "",
-          name: user.city,
-          region: "",
-          countryCode: "",
-        };
-      }
-    } else {
-      cityData = user.city;
+    if (!user.city?.id) {
+      throw new Error(
+        "City is unresolved. A valid Google Places city must be provided."
+      );
     }
+
+    const cityData = await resolveAndUpsertCityForWrite(user.city as City);
 
     // Build SET clause dynamically to only set properties that are provided
     const setClauses: string[] = [
@@ -256,16 +246,13 @@ export const updateUser = async (
     const userWithoutCity = { ...user };
 
     if (user.city) {
-      if (typeof user.city === "string") {
-        try {
-          cityData = JSON.parse(user.city);
-        } catch {
-          // If parsing fails, skip city update
-          console.warn("Failed to parse city data, skipping city update");
-        }
-      } else if (typeof user.city === "object" && user.city.id) {
-        cityData = user.city as City;
+      if (!user.city.id) {
+        throw new Error(
+          "City is unresolved. A valid Google Places city must be provided."
+        );
       }
+
+      cityData = await resolveAndUpsertCityForWrite(user.city as City);
       delete userWithoutCity.city;
     }
 
@@ -277,6 +264,7 @@ export const updateUser = async (
 
     // Update city relationship if city data is provided
     if (cityData) {
+      const citySlug = cityData.slug || generateCitySlug(cityData);
       await session.run(
         `
         MATCH (u:User {id: $id})
@@ -290,17 +278,19 @@ export const updateUser = async (
           c.region = $city.region,
           c.timezone = $city.timezone,
           c.latitude = $city.latitude,
-          c.longitude = $city.longitude
+          c.longitude = $city.longitude,
+          c.slug = $citySlug
         ON MATCH SET
           c.name = $city.name,
           c.countryCode = $city.countryCode,
           c.region = $city.region,
           c.timezone = $city.timezone,
           c.latitude = $city.latitude,
-          c.longitude = $city.longitude
+          c.longitude = $city.longitude,
+          c.slug = $citySlug
         MERGE (u)-[:LOCATED_IN]->(c)
         `,
-        { id, city: cityData }
+        { id, city: cityData, citySlug }
       );
     }
 
