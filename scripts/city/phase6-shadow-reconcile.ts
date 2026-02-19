@@ -127,12 +127,17 @@ async function main() {
       });
 
       if (applyFixes) {
+        const patchedCountryCode =
+          neo4jCity.countryCode || postgresCity.countryCode;
+        const patchedRegion = neo4jCity.region || region;
+        const patchedTimezone = neo4jCity.timezone || postgresCity.timezone;
+
         await prisma.$executeRaw`
           UPDATE "cities"
           SET
-            "countryCode" = ${neo4jCity.countryCode},
-            "region" = ${neo4jCity.region || null},
-            "timezone" = ${neo4jCity.timezone},
+            "countryCode" = ${patchedCountryCode},
+            "region" = ${patchedRegion || null},
+            "timezone" = ${patchedTimezone},
             "updatedAt" = NOW()
           WHERE "id" = ${neo4jCity.id}
         `;
