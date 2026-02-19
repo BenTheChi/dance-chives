@@ -124,6 +124,30 @@ enum EventDateKind {
   allDay
 }
 
+model City {
+  /// Google Places place_id (canonical city identity)
+  id String @id
+
+  /// Immutable public slug, generated from city metadata at first insert
+  slug String @unique
+
+  name        String
+  countryCode String
+  region      String?
+  timezone    String
+  latitude    Float
+  longitude   Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cities")
+  @@index([name])
+  @@index([region])
+  @@index([countryCode])
+  @@index([updatedAt])
+}
+
 model EventCard {
   /// Neo4j Event.id
   eventId String @id
