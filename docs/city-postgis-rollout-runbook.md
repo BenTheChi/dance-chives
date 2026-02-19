@@ -31,3 +31,12 @@
   - `npm run city:phase5:normalize:dev`
 - Phase8 strict prod delta gate:
   - `npm run city:phase8:delta-gate:prod`
+
+## Stabilization (Phase9)
+
+- Keep `CITY_READ_SOURCE=neo4j` rollback path available during soak window.
+- Keep `CITY_SHADOW_COMPARE=true` in production for parity monitoring through soak.
+- No periodic city refresh job by design; only explicit write-path upserts are allowed.
+- Regression checks to run during soak:
+  - `npm run city:phase2:audit:prod`
+  - `npm run city:phase8:delta-gate:prod`
