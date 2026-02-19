@@ -100,7 +100,28 @@ export async function upsertCityInPostgres(
   }
 
   const canonical = toCanonicalCityInput(city);
-  const rowSlug = canonical.slug || generateCitySlug(canonical);
+  const existingById = await executor.$queryRaw<Array<{ slug: string }>>`
+    SELECT "slug"
+    FROM "cities"
+    WHERE "id" = ${canonical.id}
+    LIMIT 1
+  `;
+
+  let rowSlug =
+    existingById[0]?.slug || canonical.slug || generateCitySlug(canonical);
+
+  if (!existingById[0]?.slug) {
+    const slugConflict = await executor.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "cities"
+      WHERE "slug" = ${rowSlug}
+      LIMIT 1
+    `;
+
+    if (slugConflict.length > 0 && slugConflict[0].id !== canonical.id) {
+      rowSlug = `${rowSlug}-${canonical.id.slice(-6).toLowerCase()}`;
+    }
+  }
 
   const rows = await executor.$queryRaw<CityRow[]>`
     INSERT INTO "cities" (
