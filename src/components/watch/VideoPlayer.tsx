@@ -8,7 +8,7 @@ import React, {
   forwardRef,
 } from "react";
 import { extractYouTubeVideoId } from "@/lib/utils";
-import Image from "next/image";
+import { RiveLoader } from "@/components/RiveLoader";
 
 // YouTube Player API types
 declare global {
@@ -465,12 +465,9 @@ const VideoPlayerInner = forwardRef<VideoPlayerRef, VideoPlayerProps>(
               isLoading ? "opacity-100" : "opacity-0"
             }`}
           >
-            <Image
-              src="/Dancechives_Icon_Color_onDark.svg"
-              alt="Loading"
-              width={250}
-              height={250}
-              className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
+            <RiveLoader
+              ariaLabel="Loading video"
+              className="mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
             />
           </div>
         )}

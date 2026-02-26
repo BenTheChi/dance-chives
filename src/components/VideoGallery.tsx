@@ -14,8 +14,8 @@ import { Info } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { RiveLoader } from "@/components/RiveLoader";
 import { cn } from "@/lib/utils";
 import { VideoFilterDialog } from "@/components/watch/VideoFilterDialog";
 import { DEFAULT_VIDEO_FILTERS, VideoFilters } from "@/types/video-filter";
@@ -1344,12 +1344,9 @@ export function VideoGallery({
           {/* Unified Loading Overlay - covers API fetch and video loading */}
           {isFilteringOrLoading && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-secondary-dark transition-opacity duration-700">
-              <Image
-                src="/Dancechives_Icon_Color_onDark.svg"
-                alt="Loading"
-                width={250}
-                height={250}
-                className="animate-rock mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
+              <RiveLoader
+                ariaLabel="Loading video"
+                className="mt-5 w-[130px] h-[130px] md:w-[300px] md:h-[300px] lg:w-[500px] lg:h-[500px]"
               />
             </div>
           )}

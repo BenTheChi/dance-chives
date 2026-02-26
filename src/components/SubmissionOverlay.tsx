@@ -12,8 +12,6 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 
-const OVERLAY_IMAGE = "/mascot/Mascot3_Color_onDark.svg";
-
 const LOADING_MESSAGES = [
   "Loading...",
   "Any second now",
@@ -307,11 +305,15 @@ export function SubmissionOverlayProvider({
         <div className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-sm pointer-events-auto flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Image
-              src={OVERLAY_IMAGE}
+              src="/Dancechives_Icon_Color_onDark.svg"
               alt={loadingText}
               width={imageSize}
               height={imageSize}
-              className={shouldAnimate ? "animate-rotate-medium" : ""}
+              className={
+                shouldAnimate
+                  ? "animate-rock animate-in fade-in-0 duration-100"
+                  : ""
+              }
               priority
             />
             <p className="text-sm tracking-widest uppercase text-white">
