@@ -52,9 +52,6 @@ export function HomeSubmissionForm() {
                   event details and/or copy-paste event details directly
                 </li>
                 <li>
-                  Add your email address to be updated about the event status
-                </li>
-                <li>
                   The post and details will be reviewed then turned into an
                   event on Dance Chives. It will be visible on the calendar and
                   searchable.
@@ -72,7 +69,7 @@ export function HomeSubmissionForm() {
                   >
                     sign up
                   </Link>{" "}
-                  and use the "Add Event" form.
+                  and use the Add Event form.
                 </li>
               </ul>
             </AccordionContent>
@@ -134,18 +131,6 @@ export function HomeSubmissionForm() {
                 name="blob"
                 placeholder="Optional if sending an IG URL.  Please provide: Title, City, Type (Session, Battle, Workshop), Description, Dates, Times, Location, Cost, Prize, Organizer, DJ, etc."
                 rows={7}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="email" className="block font-semibold">
-                Email (optional)
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="If you would like to be updated about the event status"
               />
             </div>
 

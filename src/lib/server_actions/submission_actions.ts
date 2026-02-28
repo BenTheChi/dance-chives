@@ -142,7 +142,7 @@ export async function submitHomepageSubmission(
     let normalizedIgUrl: string | null = null;
     const instagramUrl = String(formData.get("instagramUrl") ?? "").trim();
     const blob = String(formData.get("blob") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
+    const email = "";
 
     if (!instagramUrl && !blob) {
       return {
