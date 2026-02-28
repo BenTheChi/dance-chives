@@ -4523,6 +4523,67 @@ export const getCalendarEvents = async (
   return events;
 };
 
+/**
+ * Get calendar events across all cities for a single country.
+ * Intended for "All cities in country" calendar view.
+ */
+export const getCalendarEventsForCountry = async (
+  countryCode: string,
+  style?: string,
+  startDate?: string,
+  endDate?: string,
+  cities?: City[],
+  eventType?: string
+): Promise<CalendarEventData[]> => {
+  const normalizedCountryCode = countryCode.trim().toUpperCase();
+  if (!normalizedCountryCode) {
+    return [];
+  }
+
+  const citiesList = cities || (await getAllCities());
+  const countryCities = citiesList.filter(
+    (city) => city.countryCode?.toUpperCase() === normalizedCountryCode
+  );
+
+  if (countryCities.length === 0) {
+    return [];
+  }
+
+  const schedules = await Promise.all(
+    countryCities.map((city) => getCitySchedule(city.id, startDate, endDate))
+  );
+
+  let events = schedules.flatMap((schedule) => schedule?.events || []);
+
+  // Filter by style if provided
+  if (style) {
+    const normalizedStyle = normalizeStyleName(style);
+    events = events.filter((event) => {
+      const eventStyles = event.styles || [];
+      return eventStyles.some(
+        (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle
+      );
+    });
+  }
+
+  // Filter by event type if provided
+  if (eventType) {
+    events = events.filter(
+      (event) => event.eventType?.toLowerCase() === eventType.toLowerCase()
+    );
+  }
+
+  // Defensive dedupe in case an event is linked multiple times.
+  const seen = new Set<string>();
+  return events.filter((event) => {
+    if (!event.id || seen.has(event.id)) {
+      return false;
+    }
+    seen.add(event.id);
+    return true;
+  });
+};
+
 export const searchEvents = async (
   keyword?: string
 ): Promise<Array<{ id: string; title: string }>> => {

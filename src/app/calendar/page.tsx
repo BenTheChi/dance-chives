@@ -1,6 +1,7 @@
 import {
   getCitiesWithFutureEvents,
   getCalendarEvents,
+  getCalendarEventsForCountry,
 } from "@/db/queries/event";
 import { getUsedStylesFromFutureEvents } from "@/db/queries/event-cards";
 import { CalendarPageClient } from "@/components/CalendarPageClient";
@@ -55,11 +56,17 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   // Parse city from URL param (user-specific defaults handled client-side)
   const selectedCity = cityParam ? parseCityFromUrl(cityParam, cities) : null;
+  const isAllCitiesParam =
+    (cityParam && decodeURIComponent(cityParam).toLowerCase() === "all") ||
+    false;
   const selectedCountry = selectedCity?.countryCode
     ? selectedCity.countryCode.toUpperCase()
     : countryParam
       ? parseCountryFromUrl(countryParam, cities)
       : null;
+  const selectedAllCities = Boolean(
+    isAllCitiesParam && selectedCountry && !selectedCity
+  );
 
   const selectedStyle = styleParam
     ? parseStyleFromUrl(styleParam, styles)
@@ -83,7 +90,16 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         citiesRaw, // Reuse already-fetched cities to avoid redundant getAllCities call
         selectedEventType || undefined
       )
-    : [];
+    : selectedAllCities && selectedCountry
+      ? await getCalendarEventsForCountry(
+          selectedCountry,
+          selectedStyle || undefined,
+          startDate.toISOString().split("T")[0],
+          endDate.toISOString().split("T")[0],
+          citiesRaw,
+          selectedEventType || undefined
+        )
+      : [];
 
   return (
     <>
@@ -92,6 +108,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         styles={styles}
         initialCity={selectedCity}
         initialCountry={selectedCountry}
+        initialAllCities={selectedAllCities}
         initialStyle={selectedStyle}
         initialEventType={selectedEventType}
         events={events}

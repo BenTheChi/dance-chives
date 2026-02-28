@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCalendarEvents } from "@/db/queries/event";
+import { getCalendarEvents, getCalendarEventsForCountry } from "@/db/queries/event";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const citySlug = searchParams.get("city");
+  const country = searchParams.get("country");
   const style = searchParams.get("style");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
@@ -14,14 +15,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const events = await getCalendarEvents(
-      citySlug,
-      style || undefined,
-      startDate || undefined,
-      endDate || undefined,
-      undefined, // cities - let the function fetch them
-      eventType || undefined
-    );
+    const isAllCitiesSelection = citySlug.toLowerCase() === "all";
+    const events = isAllCitiesSelection
+      ? country
+        ? await getCalendarEventsForCountry(
+            country,
+            style || undefined,
+            startDate || undefined,
+            endDate || undefined,
+            undefined,
+            eventType || undefined
+          )
+        : []
+      : await getCalendarEvents(
+          citySlug,
+          style || undefined,
+          startDate || undefined,
+          endDate || undefined,
+          undefined, // cities - let the function fetch them
+          eventType || undefined
+        );
     return NextResponse.json({ events });
   } catch (error) {
     console.error("Error fetching calendar events:", error);
@@ -31,4 +44,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

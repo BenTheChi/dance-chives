@@ -41,6 +41,7 @@ interface CalendarPageClientProps {
   styles: string[];
   initialCity: City | null;
   initialCountry: string | null;
+  initialAllCities: boolean;
   initialStyle: string | null;
   initialEventType: EventType | null;
   events: CalendarEventData[];
@@ -51,6 +52,7 @@ export function CalendarPageClient({
   styles,
   initialCity,
   initialCountry,
+  initialAllCities,
   initialStyle,
   initialEventType,
   events,
@@ -64,6 +66,8 @@ export function CalendarPageClient({
       initialCountry?.toUpperCase() ||
       null
   );
+  const [selectedAllCities, setSelectedAllCities] =
+    useState<boolean>(initialAllCities);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(
     initialStyle
   );
@@ -127,11 +131,16 @@ export function CalendarPageClient({
   // Set user's city as default if no city is selected and user is logged in
   useEffect(() => {
     // Only run once and only if no initial city is set
-    if (hasSetUserCity.current || initialCity || status === "loading") {
+    if (
+      hasSetUserCity.current ||
+      initialCity ||
+      initialAllCities ||
+      status === "loading"
+    ) {
       return;
     }
 
-    if (session?.user?.id && !selectedCity) {
+    if (session?.user?.id && !selectedCity && !selectedAllCities) {
       hasSetUserCity.current = true;
 
       // Fetch user's city
@@ -157,7 +166,15 @@ export function CalendarPageClient({
           console.error("Error fetching user city:", err);
         });
     }
-  }, [session, status, initialCity, cities, selectedCity]);
+  }, [
+    session,
+    status,
+    initialAllCities,
+    initialCity,
+    cities,
+    selectedAllCities,
+    selectedCity,
+  ]);
 
   // Update URL when selections change
   useEffect(() => {
@@ -170,6 +187,8 @@ export function CalendarPageClient({
     if (selectedCity) {
       const citySlug = selectedCity.slug || generateCitySlug(selectedCity);
       params.set("city", citySlug);
+    } else if (selectedCountry && selectedAllCities) {
+      params.set("city", "all");
     }
 
     if (selectedStyle) {
@@ -193,6 +212,7 @@ export function CalendarPageClient({
     }
   }, [
     selectedCountry,
+    selectedAllCities,
     selectedCity,
     selectedStyle,
     selectedEventType,
@@ -213,7 +233,31 @@ export function CalendarPageClient({
       const { startDate, endDate } = getDateRange(currentDate);
 
       fetch(
-        `/api/calendar/events?city=${encodeURIComponent(citySlug)}${
+        `/api/calendar/events?country=${encodeURIComponent(selectedCountry || "")}&city=${encodeURIComponent(citySlug)}${
+          styleParam ? `&style=${encodeURIComponent(styleParam)}` : ""
+        }${
+          eventTypeParam
+            ? `&eventType=${encodeURIComponent(eventTypeParam)}`
+            : ""
+        }&startDate=${startDate}&endDate=${endDate}`
+      )
+        .then((res) => res.json())
+        .then((data) => setCurrentEvents(data.events || []))
+        .catch((err) => {
+          console.error("Error fetching events:", err);
+          setCurrentEvents([]);
+        });
+    } else if (selectedCountry && selectedAllCities) {
+      const styleParam = selectedStyle
+        ? normalizeStyleForUrl(selectedStyle)
+        : "";
+      const eventTypeParam = selectedEventType
+        ? normalizeEventTypeForUrl(selectedEventType)
+        : "";
+      const { startDate, endDate } = getDateRange(currentDate);
+
+      fetch(
+        `/api/calendar/events?country=${encodeURIComponent(selectedCountry)}&city=all${
           styleParam ? `&style=${encodeURIComponent(styleParam)}` : ""
         }${
           eventTypeParam
@@ -230,7 +274,14 @@ export function CalendarPageClient({
     } else {
       setCurrentEvents([]);
     }
-  }, [selectedCity, selectedStyle, selectedEventType, currentDate]);
+  }, [
+    selectedCountry,
+    selectedAllCities,
+    selectedCity,
+    selectedStyle,
+    selectedEventType,
+    currentDate,
+  ]);
 
   // Keep country aligned to selected city.
   useEffect(() => {
@@ -239,13 +290,17 @@ export function CalendarPageClient({
     if (selectedCountry !== cityCountryCode) {
       setSelectedCountry(cityCountryCode);
     }
-  }, [selectedCity, selectedCountry]);
+    if (selectedAllCities) {
+      setSelectedAllCities(false);
+    }
+  }, [selectedAllCities, selectedCity, selectedCountry]);
 
   // If user changes country, clear city when it no longer matches.
   useEffect(() => {
     if (!selectedCountry || !selectedCity) return;
     if (selectedCity.countryCode.toUpperCase() !== selectedCountry) {
       setSelectedCity(null);
+      setSelectedAllCities(false);
     }
   }, [selectedCountry, selectedCity]);
 
@@ -253,11 +308,13 @@ export function CalendarPageClient({
     if (countryValue === "all") {
       setSelectedCountry(null);
       setSelectedCity(null);
+      setSelectedAllCities(false);
       return;
     }
 
     const normalizedCountry = countryValue.toUpperCase();
     setSelectedCountry(normalizedCountry);
+    setSelectedAllCities(false);
 
     if (
       selectedCity &&
@@ -268,6 +325,12 @@ export function CalendarPageClient({
   };
 
   const handleCityChange = (cityValue: string) => {
+    if (cityValue === "all") {
+      setSelectedCity(null);
+      setSelectedAllCities(true);
+      return;
+    }
+
     // cityValue could be either a slug or an id
     const city = cities.find((c) => {
       const citySlug = c.slug || generateCitySlug(c);
@@ -275,6 +338,7 @@ export function CalendarPageClient({
     });
     if (city) {
       setSelectedCity(city);
+      setSelectedAllCities(false);
     }
   };
 
@@ -341,7 +405,9 @@ export function CalendarPageClient({
                 value={
                   selectedCity
                     ? selectedCity.slug || generateCitySlug(selectedCity)
-                    : ""
+                    : selectedAllCities && selectedCountry
+                      ? "all"
+                      : ""
                 }
                 onValueChange={handleCityChange}
                 disabled={!selectedCountry}
@@ -354,6 +420,9 @@ export function CalendarPageClient({
                   />
                 </SelectTrigger>
                 <SelectContent>
+                  {selectedCountry && (
+                    <SelectItem value="all">All Cities</SelectItem>
+                  )}
                   {filteredCities.map((city) => {
                     const citySlug = city.slug || generateCitySlug(city);
                     if (!citySlug || !citySlug.trim()) return null;
@@ -423,7 +492,7 @@ export function CalendarPageClient({
           </div>
 
           {/* Calendar - Only show if a city is selected */}
-          {selectedCity && (
+          {(selectedCity || (selectedCountry && selectedAllCities)) && (
             <div className="w-full min-w-0">
               <CityCalendar
                 events={currentEvents}
