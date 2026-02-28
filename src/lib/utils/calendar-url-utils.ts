@@ -32,6 +32,25 @@ export function parseCityFromUrl(
 }
 
 /**
+ * Parses a country code from URL parameter (case-insensitive)
+ * and validates it against available cities.
+ */
+export function parseCountryFromUrl(
+  countryParam: string,
+  cities: City[]
+): string | null {
+  if (!countryParam) return null;
+
+  const decodedCountry = decodeURIComponent(countryParam).toUpperCase().trim();
+  if (!decodedCountry) return null;
+
+  const exists = cities.some(
+    (city) => city.countryCode.toUpperCase() === decodedCountry
+  );
+  return exists ? decodedCountry : null;
+}
+
+/**
  * Converts style name to uppercase for URL parameter
  * @param style - Style name (any case)
  * @returns Uppercase style name for URL
@@ -85,3 +104,9 @@ export function normalizeEventTypeForUrl(eventType: EventType): string {
   return eventType;
 }
 
+/**
+ * Converts a country code to URL-safe uppercase form.
+ */
+export function normalizeCountryForUrl(countryCode: string): string {
+  return countryCode.trim().toUpperCase();
+}

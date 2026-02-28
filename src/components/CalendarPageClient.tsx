@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { City } from "@/types/city";
@@ -15,11 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  normalizeCountryForUrl,
   normalizeStyleForUrl,
   normalizeEventTypeForUrl,
 } from "@/lib/utils/calendar-url-utils";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 import { generateCitySlug } from "@/lib/utils/city-slug";
+import { formatCityDisplayLabel } from "@/lib/utils/city-display";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 
 const EVENT_TYPE_OPTIONS: EventType[] = [
@@ -38,6 +40,7 @@ interface CalendarPageClientProps {
   cities: City[];
   styles: string[];
   initialCity: City | null;
+  initialCountry: string | null;
   initialStyle: string | null;
   initialEventType: EventType | null;
   events: CalendarEventData[];
@@ -47,6 +50,7 @@ export function CalendarPageClient({
   cities,
   styles,
   initialCity,
+  initialCountry,
   initialStyle,
   initialEventType,
   events,
@@ -55,6 +59,11 @@ export function CalendarPageClient({
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [selectedCity, setSelectedCity] = useState<City | null>(initialCity);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(
+    initialCity?.countryCode?.toUpperCase() ||
+      initialCountry?.toUpperCase() ||
+      null
+  );
   const [selectedStyle, setSelectedStyle] = useState<string | null>(
     initialStyle
   );
@@ -65,6 +74,40 @@ export function CalendarPageClient({
   const [currentEvents, setCurrentEvents] =
     useState<CalendarEventData[]>(events);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const countryDisplayNames = useMemo(() => {
+    try {
+      return new Intl.DisplayNames(["en"], { type: "region" });
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const countryOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        cities
+          .map((city) => city.countryCode?.trim().toUpperCase())
+          .filter((code): code is string => Boolean(code))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+  }, [cities]);
+
+  const filteredCities = useMemo(() => {
+    const options = selectedCountry
+      ? cities.filter(
+          (city) => city.countryCode.toUpperCase() === selectedCountry
+        )
+      : cities;
+    return [...options].sort((a, b) =>
+      formatCityDisplayLabel(a).localeCompare(formatCityDisplayLabel(b))
+    );
+  }, [cities, selectedCountry]);
+
+  const formatCountryLabel = (countryCode: string): string => {
+    const normalized = countryCode.trim().toUpperCase();
+    const countryName = countryDisplayNames?.of(normalized);
+    return countryName ? `${countryName} (${normalized})` : normalized;
+  };
 
   // Calculate 3-month date range: month before, current month, month after
   const getDateRange = (date: Date) => {
@@ -114,11 +157,15 @@ export function CalendarPageClient({
           console.error("Error fetching user city:", err);
         });
     }
-  }, [session, status, initialCity, cities]);
+  }, [session, status, initialCity, cities, selectedCity]);
 
   // Update URL when selections change
   useEffect(() => {
     const params = new URLSearchParams();
+
+    if (selectedCountry) {
+      params.set("country", normalizeCountryForUrl(selectedCountry));
+    }
 
     if (selectedCity) {
       const citySlug = selectedCity.slug || generateCitySlug(selectedCity);
@@ -144,7 +191,14 @@ export function CalendarPageClient({
     if (newUrl !== currentUrl) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [selectedCity, selectedStyle, selectedEventType, router, searchParams]);
+  }, [
+    selectedCountry,
+    selectedCity,
+    selectedStyle,
+    selectedEventType,
+    router,
+    searchParams,
+  ]);
 
   // Fetch events when city, style, event type, or date changes (3-month batches)
   useEffect(() => {
@@ -177,6 +231,41 @@ export function CalendarPageClient({
       setCurrentEvents([]);
     }
   }, [selectedCity, selectedStyle, selectedEventType, currentDate]);
+
+  // Keep country aligned to selected city.
+  useEffect(() => {
+    if (!selectedCity?.countryCode) return;
+    const cityCountryCode = selectedCity.countryCode.toUpperCase();
+    if (selectedCountry !== cityCountryCode) {
+      setSelectedCountry(cityCountryCode);
+    }
+  }, [selectedCity, selectedCountry]);
+
+  // If user changes country, clear city when it no longer matches.
+  useEffect(() => {
+    if (!selectedCountry || !selectedCity) return;
+    if (selectedCity.countryCode.toUpperCase() !== selectedCountry) {
+      setSelectedCity(null);
+    }
+  }, [selectedCountry, selectedCity]);
+
+  const handleCountryChange = (countryValue: string) => {
+    if (countryValue === "all") {
+      setSelectedCountry(null);
+      setSelectedCity(null);
+      return;
+    }
+
+    const normalizedCountry = countryValue.toUpperCase();
+    setSelectedCountry(normalizedCountry);
+
+    if (
+      selectedCity &&
+      selectedCity.countryCode.toUpperCase() !== normalizedCountry
+    ) {
+      setSelectedCity(null);
+    }
+  };
 
   const handleCityChange = (cityValue: string) => {
     // cityValue could be either a slug or an id
@@ -220,6 +309,29 @@ export function CalendarPageClient({
         <div className="flex flex-col gap-4 sm:gap-8 py-3 sm:py-5 px-0 sm:px-10 lg:px-15 max-w-full sm:max-w-[1000px] lg:max-w-[1200px] w-full">
           {/* Filters */}
           <div className="flex flex-col justify-center items-center sm:flex-row gap-3 sm:gap-4 w-full">
+            {/* Country Dropdown */}
+            <div>
+              <label className="block text-3xl font-medium mb-2 text-center">
+                Country
+              </label>
+              <Select
+                value={selectedCountry ?? "all"}
+                onValueChange={handleCountryChange}
+              >
+                <SelectTrigger className="w-full min-w-0">
+                  <SelectValue placeholder="Select Country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ALL</SelectItem>
+                  {countryOptions.map((countryCode) => (
+                    <SelectItem key={countryCode} value={countryCode}>
+                      {formatCountryLabel(countryCode)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* City Dropdown */}
             <div>
               <label className="block text-3xl font-medium mb-2 text-center">
@@ -232,19 +344,23 @@ export function CalendarPageClient({
                     : ""
                 }
                 onValueChange={handleCityChange}
+                disabled={!selectedCountry}
               >
                 <SelectTrigger className="w-full min-w-0">
-                  <SelectValue placeholder="Select City" />
+                  <SelectValue
+                    placeholder={
+                      selectedCountry ? "Select City" : "Select Country First"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {cities.map((city) => {
+                  {filteredCities.map((city) => {
                     const citySlug = city.slug || generateCitySlug(city);
                     if (!citySlug || !citySlug.trim()) return null;
                     const key = city.id && city.id.trim() ? city.id : citySlug;
                     return (
                       <SelectItem key={key} value={citySlug}>
-                        {city.name}
-                        {city.region && `, ${city.region}`}
+                        {formatCityDisplayLabel(city)}
                       </SelectItem>
                     );
                   })}

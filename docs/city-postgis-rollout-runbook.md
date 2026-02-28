@@ -40,3 +40,6 @@
 - Regression checks to run during soak:
   - `npm run city:phase2:audit:prod`
   - `npm run city:phase8:delta-gate:prod`
+- City metadata reconciliation (dry-run then apply):
+  - `npm run city:phase9:reconcile:prod`
+  - `npm run city:phase9:reconcile:prod:apply`

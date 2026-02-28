@@ -6,6 +6,7 @@ import { getUsedStylesFromFutureEvents } from "@/db/queries/event-cards";
 import { CalendarPageClient } from "@/components/CalendarPageClient";
 import {
   parseCityFromUrl,
+  parseCountryFromUrl,
   parseStyleFromUrl,
   parseEventTypeFromUrl,
 } from "@/lib/utils/calendar-url-utils";
@@ -18,12 +19,18 @@ import { unstable_cache } from "next/cache";
 export const revalidate = 43200; // Revalidate every 12 hours
 
 type PageProps = {
-  searchParams: Promise<{ city?: string; style?: string; eventType?: string }>;
+  searchParams: Promise<{
+    city?: string;
+    country?: string;
+    style?: string;
+    eventType?: string;
+  }>;
 };
 
 export default async function CalendarPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const cityParam = params.city;
+  const countryParam = params.country;
   const styleParam = params.style;
   const eventTypeParam = params.eventType;
 
@@ -48,6 +55,11 @@ export default async function CalendarPage({ searchParams }: PageProps) {
 
   // Parse city from URL param (user-specific defaults handled client-side)
   const selectedCity = cityParam ? parseCityFromUrl(cityParam, cities) : null;
+  const selectedCountry = selectedCity?.countryCode
+    ? selectedCity.countryCode.toUpperCase()
+    : countryParam
+      ? parseCountryFromUrl(countryParam, cities)
+      : null;
 
   const selectedStyle = styleParam
     ? parseStyleFromUrl(styleParam, styles)
@@ -79,6 +91,7 @@ export default async function CalendarPage({ searchParams }: PageProps) {
         cities={cities}
         styles={styles}
         initialCity={selectedCity}
+        initialCountry={selectedCountry}
         initialStyle={selectedStyle}
         initialEventType={selectedEventType}
         events={events}
