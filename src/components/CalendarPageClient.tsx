@@ -419,9 +419,9 @@ export function CalendarPageClient({
       <div className="flex justify-center flex-1 min-h-0 overflow-y-auto">
         <div className="flex flex-col gap-4 sm:gap-8 py-3 sm:py-5 px-0 sm:px-10 lg:px-15 max-w-full sm:max-w-[1000px] lg:max-w-[1200px] w-full">
           {/* Filters */}
-          <div className="flex flex-col justify-center items-center sm:flex-row gap-3 sm:gap-4 w-full">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full sm:flex sm:justify-center sm:items-center">
             {/* Country Dropdown */}
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-3xl font-medium mb-2 text-center">
                 Country
               </label>
@@ -444,7 +444,7 @@ export function CalendarPageClient({
             </div>
 
             {/* City Dropdown */}
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-3xl font-medium mb-2 text-center">
                 City
               </label>
@@ -485,7 +485,7 @@ export function CalendarPageClient({
             </div>
 
             {/* Style Dropdown */}
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-3xl font-medium mb-2 text-center">
                 Style
               </label>
@@ -509,7 +509,7 @@ export function CalendarPageClient({
             </div>
 
             {/* Event Type Dropdown */}
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-3xl font-medium mb-2 text-center">
                 Type
               </label>

@@ -7,8 +7,9 @@ import { TEventCard, EventType } from "@/types/event";
 import { City } from "@/types/city";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
 import { EventFilters } from "@/components/events/EventFilters";
+import { EventTableView } from "@/components/events/EventTableView";
+import { LayoutGrid, Table2 } from "lucide-react";
 
 interface EventsClientProps {
   futureEvents: TEventCard[];
@@ -16,6 +17,8 @@ interface EventsClientProps {
   cities: City[];
   styles: string[];
 }
+
+type EventViewMode = "cards" | "table";
 
 export function EventsClient({
   futureEvents,
@@ -25,7 +28,6 @@ export function EventsClient({
 }: EventsClientProps) {
   const { data: session, status } = useSession();
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
-  const [canCreateEvents, setCanCreateEvents] = useState(false);
 
   // Applied filter values (used for actual filtering)
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
@@ -48,8 +50,7 @@ export function EventsClient({
   const [draftHasPoster, setDraftHasPoster] = useState(false);
 
   const [keyword, setKeyword] = useState("");
-
-  const [isMobile, setIsMobile] = useState(false);
+  const [viewMode, setViewMode] = useState<EventViewMode | null>(null);
 
   // Default to showing future events if there are any
   const [showFutureEvents, setShowFutureEvents] = useState(
@@ -57,21 +58,26 @@ export function EventsClient({
   );
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const smallScreenQuery = window.matchMedia("(max-width: 639px)");
+
+    const applyViewModeForViewport = (isSmallScreen: boolean) => {
+      setViewMode(isSmallScreen ? "table" : "cards");
     };
 
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
+    applyViewModeForViewport(smallScreenQuery.matches);
 
-    return () => window.removeEventListener("resize", checkMobile);
+    const handleBreakpointChange = (event: MediaQueryListEvent) => {
+      applyViewModeForViewport(event.matches);
+    };
+
+    smallScreenQuery.addEventListener("change", handleBreakpointChange);
+
+    return () =>
+      smallScreenQuery.removeEventListener("change", handleBreakpointChange);
   }, []);
 
   useEffect(() => {
     if (status === "loading") return;
-
-    const authLevel = session?.user?.auth ?? 0;
-    setCanCreateEvents(authLevel >= AUTH_LEVELS.CREATOR);
 
     if (!session?.user?.id) return;
 
@@ -331,6 +337,35 @@ export function EventsClient({
                 Future ({futureEvents.length})
               </Label>
             </div>
+            <div className="flex items-center justify-center gap-2 bg-secondary p-3 sm:rounded-sm border-secondary-light w-full border-4 sm:w-auto">
+              <span className="font-bold pr-1">View</span>
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                aria-label="Switch to card view"
+                aria-pressed={viewMode === "cards"}
+                className={`h-9 w-9 sm:h-10 sm:w-10 rounded-sm border transition-colors flex items-center justify-center ${
+                  viewMode === "cards"
+                    ? "bg-secondary-light text-charcoal border-secondary-light"
+                    : "bg-secondary text-foreground border-secondary-light hover:bg-secondary-dark"
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-light`}
+              >
+                <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                aria-label="Switch to table view"
+                aria-pressed={viewMode === "table"}
+                className={`h-9 w-9 sm:h-10 sm:w-10 rounded-sm border transition-colors flex items-center justify-center ${
+                  viewMode === "table"
+                    ? "bg-secondary-light text-charcoal border-secondary-light"
+                    : "bg-secondary text-foreground border-secondary-light hover:bg-secondary-dark"
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-light`}
+              >
+                <Table2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            </div>
           </div>
           <EventFilters
             cities={availableCities}
@@ -376,23 +411,28 @@ export function EventsClient({
           </div>
         </div>
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-12">
-        {filteredEvents.map((event: TEventCard) => (
-          <EventCard
-            key={event.id}
-            id={event.id}
-            title={event.title}
-            series={event.series}
-            imageUrl={event.imageUrl}
-            date={event.date}
-            city={event.city}
-            cityId={event.cityId}
-            styles={event.styles}
-            eventType={event.eventType}
-            isSaved={savedEventIds.has(event.id)}
-          />
-        ))}
-      </div>
+      {filteredEvents.length > 0 && viewMode === "cards" && (
+        <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-12">
+          {filteredEvents.map((event: TEventCard) => (
+            <EventCard
+              key={event.id}
+              id={event.id}
+              title={event.title}
+              series={event.series}
+              imageUrl={event.imageUrl}
+              date={event.date}
+              city={event.city}
+              cityId={event.cityId}
+              styles={event.styles}
+              eventType={event.eventType}
+              isSaved={savedEventIds.has(event.id)}
+            />
+          ))}
+        </div>
+      )}
+      {filteredEvents.length > 0 && viewMode === "table" && (
+        <EventTableView className="mt-6" events={filteredEvents} />
+      )}
       {filteredEvents.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">

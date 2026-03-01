@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tailwind UX UI"
+  short_description: "Tailwind UX/UI consistency for responsive web apps"
+  default_prompt: "Build, refactor, or fix webapp UX/UI with Tailwind and global CSS classes. Match existing project styles first, normalize inconsistent interfaces, keep classes DRY and minimal, and ensure responsive behavior across breakpoints."
