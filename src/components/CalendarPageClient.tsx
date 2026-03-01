@@ -21,10 +21,13 @@ import {
 } from "@/lib/utils/calendar-url-utils";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 import { generateCitySlug } from "@/lib/utils/city-slug";
-import { formatCityDisplayLabel } from "@/lib/utils/city-display";
+import {
+  formatCityDisplayLabel,
+  normalizeRegionForDisplay,
+} from "@/lib/utils/city-display";
 import { subMonths, addMonths, startOfMonth, endOfMonth } from "date-fns";
 
-const EVENT_TYPE_OPTIONS: EventType[] = [
+const EVENT_TYPE_ORDER: EventType[] = [
   "Battle",
   "Competition",
   "Class",
@@ -38,7 +41,6 @@ const EVENT_TYPE_OPTIONS: EventType[] = [
 
 interface CalendarPageClientProps {
   cities: City[];
-  styles: string[];
   initialCity: City | null;
   initialCountry: string | null;
   initialAllCities: boolean;
@@ -49,7 +51,6 @@ interface CalendarPageClientProps {
 
 export function CalendarPageClient({
   cities,
-  styles,
   initialCity,
   initialCountry,
   initialAllCities,
@@ -102,10 +103,46 @@ export function CalendarPageClient({
           (city) => city.countryCode.toUpperCase() === selectedCountry
         )
       : cities;
-    return [...options].sort((a, b) =>
-      formatCityDisplayLabel(a).localeCompare(formatCityDisplayLabel(b))
-    );
+
+    return [...options].sort((a, b) => {
+      const regionA = normalizeRegionForDisplay(a.region, a.countryCode);
+      const regionB = normalizeRegionForDisplay(b.region, b.countryCode);
+      const regionComparison = regionA.localeCompare(regionB, undefined, {
+        sensitivity: "base",
+      });
+      if (regionComparison !== 0) {
+        return regionComparison;
+      }
+
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
   }, [cities, selectedCountry]);
+
+  const availableStyles = useMemo(() => {
+    const styleSet = new Set<string>();
+    currentEvents.forEach((event) => {
+      (event.styles || []).forEach((style) => {
+        if (style && style.trim()) {
+          styleSet.add(style);
+        }
+      });
+    });
+
+    return Array.from(styleSet).sort((a, b) =>
+      formatStyleNameForDisplay(a).localeCompare(formatStyleNameForDisplay(b))
+    );
+  }, [currentEvents]);
+
+  const availableEventTypes = useMemo(() => {
+    const typeSet = new Set<EventType>();
+    currentEvents.forEach((event) => {
+      if (event.eventType) {
+        typeSet.add(event.eventType);
+      }
+    });
+
+    return EVENT_TYPE_ORDER.filter((eventType) => typeSet.has(eventType));
+  }, [currentEvents]);
 
   const formatCountryLabel = (countryCode: string): string => {
     const normalized = countryCode.trim().toUpperCase();
@@ -304,6 +341,22 @@ export function CalendarPageClient({
     }
   }, [selectedCountry, selectedCity]);
 
+  // Keep selected style in sync with the currently loaded events.
+  useEffect(() => {
+    if (!selectedStyle) return;
+    if (!availableStyles.includes(selectedStyle)) {
+      setSelectedStyle(null);
+    }
+  }, [availableStyles, selectedStyle]);
+
+  // Keep selected event type in sync with the currently loaded events.
+  useEffect(() => {
+    if (!selectedEventType) return;
+    if (!availableEventTypes.includes(selectedEventType)) {
+      setSelectedEventType(null);
+    }
+  }, [availableEventTypes, selectedEventType]);
+
   const handleCountryChange = (countryValue: string) => {
     if (countryValue === "all") {
       setSelectedCountry(null);
@@ -346,13 +399,7 @@ export function CalendarPageClient({
     if (styleValue === "all") {
       setSelectedStyle(null);
     } else {
-      // Find the style by matching the uppercase display name
-      const style = styles.find(
-        (s) => formatStyleNameForDisplay(s) === styleValue
-      );
-      if (style) {
-        setSelectedStyle(style);
-      }
+      setSelectedStyle(styleValue);
     }
   };
 
@@ -443,23 +490,17 @@ export function CalendarPageClient({
                 Style
               </label>
               <Select
-                value={
-                  selectedStyle
-                    ? formatStyleNameForDisplay(selectedStyle)
-                    : "all"
-                }
+                value={selectedStyle ?? "all"}
                 onValueChange={handleStyleChange}
+                disabled={availableStyles.length === 0}
               >
                 <SelectTrigger className="w-full min-w-0">
                   <SelectValue placeholder="Select a style" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">ALL</SelectItem>
-                  {styles.map((style) => (
-                    <SelectItem
-                      key={style}
-                      value={formatStyleNameForDisplay(style)}
-                    >
+                  {availableStyles.map((style) => (
+                    <SelectItem key={style} value={style}>
                       {formatStyleNameForDisplay(style)}
                     </SelectItem>
                   ))}
@@ -475,13 +516,14 @@ export function CalendarPageClient({
               <Select
                 value={selectedEventType ?? "all"}
                 onValueChange={handleEventTypeChange}
+                disabled={availableEventTypes.length === 0}
               >
                 <SelectTrigger className="w-full min-w-0">
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">ALL</SelectItem>
-                  {EVENT_TYPE_OPTIONS.map((eventType) => (
+                  {availableEventTypes.map((eventType) => (
                     <SelectItem key={eventType} value={eventType}>
                       {eventType}
                     </SelectItem>

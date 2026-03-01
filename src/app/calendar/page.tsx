@@ -105,7 +105,6 @@ export default async function CalendarPage({ searchParams }: PageProps) {
     <>
       <CalendarPageClient
         cities={cities}
-        styles={styles}
         initialCity={selectedCity}
         initialCountry={selectedCountry}
         initialAllCities={selectedAllCities}
