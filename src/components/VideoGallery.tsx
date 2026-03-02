@@ -25,6 +25,7 @@ import {
   parseFiltersFromSearchParams,
 } from "@/lib/utils/video-filters";
 import { useWatchSections } from "@/hooks/use-watch-sections";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 const FILTER_PREFERENCES_STORAGE_KEY = "watchFilterPreferences";
 
@@ -1237,10 +1238,14 @@ export function VideoGallery({
                 currentVideo.section.styles.length > 0
                   ? currentVideo.section.styles
                   : currentVideo?.video.styles || [];
+              const canonicalDisplayStyles = normalizeStyleNames(
+                displayStyles,
+                { strict: false }
+              );
 
-              return displayStyles.length > 0 ? (
+              return canonicalDisplayStyles.length > 0 ? (
                 <div className="flex justify-between gap-2 opacity-70 sm:mb-4">
-                  {displayStyles.map((style) => (
+                  {canonicalDisplayStyles.map((style) => (
                     <StyleBadge key={style} style={style} asLink={false} />
                   ))}
                 </div>

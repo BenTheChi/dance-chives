@@ -17,6 +17,7 @@ import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
 import { MaintenanceLink } from "@/components/MaintenanceLink";
 import { TagUserCircleButton } from "@/components/events/TagUserCircleButton";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface VideoCardProps {
   video: Video;
@@ -57,7 +58,9 @@ export function VideoCard({
     : "/placeholder.svg";
 
   // Use provided styles or video styles
-  const displayStyles = styles || video.styles || [];
+  const displayStyles = normalizeStyleNames(styles || video.styles || [], {
+    strict: false,
+  });
 
   // Get tagged dancers
   const taggedDancers = video.taggedDancers || [];

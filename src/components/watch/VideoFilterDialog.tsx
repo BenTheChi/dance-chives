@@ -19,7 +19,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ChevronsUpDown } from "lucide-react";
-import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import {
+  formatStyleNameForDisplay,
+  normalizeStyleNames,
+} from "@/lib/utils/style-utils";
 
 interface VideoFilterDialogProps {
   isOpen: boolean;
@@ -54,7 +57,7 @@ export function VideoFilterDialog({
     filters.cities ?? []
   );
   const [selectedStyles, setSelectedStyles] = useState<string[]>(
-    filters.styles ?? []
+    normalizeStyleNames(filters.styles ?? [], { strict: false })
   );
   const [finalsOnly, setFinalsOnly] = useState(filters.finalsOnly ?? false);
   const [noPrelims, setNoPrelims] = useState(filters.noPrelims ?? false);
@@ -76,7 +79,9 @@ export function VideoFilterDialog({
     setYearFromText(nextFilters.yearFrom ? String(nextFilters.yearFrom) : "");
     setYearToText(nextFilters.yearTo ? String(nextFilters.yearTo) : "");
     setSelectedCities(nextFilters.cities ?? []);
-    setSelectedStyles(nextFilters.styles ?? []);
+    setSelectedStyles(
+      normalizeStyleNames(nextFilters.styles ?? [], { strict: false })
+    );
     setFinalsOnly(nextFilters.finalsOnly ?? false);
     setNoPrelims(nextFilters.noPrelims ?? false);
     setSortOrder(nextFilters.sortOrder ?? "desc");
@@ -98,6 +103,10 @@ export function VideoFilterDialog({
       setSelectedStyles([...selectedStyles, style]);
     }
   };
+  const canonicalAvailableStyles = useMemo(
+    () => normalizeStyleNames(availableStyles, { strict: false }),
+    [availableStyles]
+  );
 
   const parsedYearFrom = useMemo(() => {
     const trimmed = yearFromText.trim();
@@ -156,7 +165,9 @@ export function VideoFilterDialog({
     );
     setYearToText(defaultFilters?.yearTo ? String(defaultFilters.yearTo) : "");
     setSelectedCities(defaultFilters?.cities ?? []);
-    setSelectedStyles(defaultFilters?.styles ?? []);
+    setSelectedStyles(
+      normalizeStyleNames(defaultFilters?.styles ?? [], { strict: false })
+    );
     setFinalsOnly(defaultFilters?.finalsOnly ?? false);
     setNoPrelims(defaultFilters?.noPrelims ?? false);
     setSortOrder(defaultFilters?.sortOrder ?? "desc");
@@ -263,7 +274,7 @@ export function VideoFilterDialog({
                 <Button
                   variant="outline"
                   className="w-full justify-between"
-                  disabled={availableStyles.length === 0}
+                  disabled={canonicalAvailableStyles.length === 0}
                 >
                   {selectedStyles.length > 0
                     ? `${selectedStyles.length} selected`
@@ -276,13 +287,13 @@ export function VideoFilterDialog({
                 align="start"
               >
                 <div className="max-h-[280px] overflow-auto p-1">
-                  {availableStyles.length === 0 ? (
+                  {canonicalAvailableStyles.length === 0 ? (
                     <p className="py-4 text-center text-sm text-muted-foreground">
                       No styles
                     </p>
                   ) : (
                     <div className="flex flex-col gap-0.5">
-                      {availableStyles.map((style) => (
+                      {canonicalAvailableStyles.map((style) => (
                         <label
                           key={style}
                           className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  normalizeStyleName,
   formatStyleNameForDisplay,
+  resolveCanonicalStyleName,
 } from "@/lib/utils/style-utils";
 
 interface StyleBadgeProps {
@@ -29,9 +29,10 @@ export function StyleBadge({
     className
   );
 
-  // Normalize for URL, format for display
-  const normalizedStyle = normalizeStyleName(style);
+  // Always display Title Case and prefer canonical URL segment.
+  const canonicalStyle = resolveCanonicalStyleName(style);
   const displayStyle = formatStyleNameForDisplay(style);
+  const stylePathSegment = canonicalStyle ?? displayStyle;
 
   const badgeContent = (
     <>
@@ -56,7 +57,7 @@ export function StyleBadge({
   if (asLink && !showRemoveButton) {
     return (
       <Link
-        href={`/styles/${encodeURIComponent(normalizedStyle)}`}
+        href={`/styles/${encodeURIComponent(stylePathSegment)}`}
         className={badgeClasses}
       >
         {badgeContent}

@@ -33,6 +33,7 @@ import {
   extractYouTubeVideoId,
   normalizeYouTubeThumbnailUrl,
 } from "@/lib/utils";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface VideoFormProps {
   video: Video;
@@ -445,7 +446,10 @@ export function VideoForm({
           control={control}
           name={getVideoFieldPath("styles")}
           render={({ field }) => {
-            const sectionStyles = activeSection?.styles || [];
+            const sectionStyles = normalizeStyleNames(
+              activeSection?.styles || [],
+              { strict: false }
+            );
 
             return (
               <FormItem>

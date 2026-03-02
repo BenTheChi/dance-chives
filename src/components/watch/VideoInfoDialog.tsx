@@ -17,6 +17,7 @@ import { useSession } from "next-auth/react";
 import { useTransition, useState } from "react";
 import { toast } from "sonner";
 import { removeTagFromVideo } from "@/lib/server_actions/request_actions";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface VideoInfoDialogProps {
   isOpen: boolean;
@@ -140,6 +141,7 @@ export function VideoInfoDialog({
     section.applyStylesToVideos && section.styles && section.styles.length > 0
       ? section.styles
       : video.styles || [];
+  const canonicalStyles = normalizeStyleNames(styles, { strict: false });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -175,11 +177,11 @@ export function VideoInfoDialog({
 
         <div className="space-y-4 mt-4">
           {/* Dance Styles */}
-          {styles.length > 0 && (
+          {canonicalStyles.length > 0 && (
             <div className="flex flex-col justify-center items-center">
               <p className="font-semibold text-sm mb-2">Dance Styles</p>
               <div className="flex flex-wrap gap-2 justify-center">
-                {styles.map((style) => (
+                {canonicalStyles.map((style) => (
                   <StyleBadge key={style} style={style} asLink={false} />
                 ))}
               </div>

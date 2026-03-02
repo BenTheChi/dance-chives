@@ -12,6 +12,7 @@ import { CalendarEvent, formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { EventDate } from "@/types/event";
 import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface CalendarEventPopoverProps {
   event: CalendarEvent;
@@ -26,6 +27,9 @@ export function CalendarEventPopover({
 }: CalendarEventPopoverProps) {
   const { resource } = event;
   const { originalData, poster, styles, dateEntry } = resource;
+  const canonicalStyles = normalizeStyleNames(styles || [], {
+    strict: false,
+  });
   const location = resource.location as string | undefined;
   const cityName = resource.cityName as string | undefined;
 
@@ -173,9 +177,9 @@ export function CalendarEventPopover({
               {cityName && <h3>{String(cityName)}</h3>}
             </div>
             {/* Dance style tags - Centered */}
-            {styles && styles.length > 0 && (
+            {canonicalStyles.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {styles.map((style: string) => (
+                {canonicalStyles.map((style: string) => (
                   <StyleBadge key={style} style={style} asLink={false} />
                 ))}
               </div>

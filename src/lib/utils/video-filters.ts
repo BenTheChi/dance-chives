@@ -1,4 +1,5 @@
 import { VideoFilters } from "@/types/video-filter";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 const fourDigitPattern = /^\d{4}$/;
 
@@ -98,9 +99,9 @@ export const normalizeFilters = (filters: VideoFilters): VideoFilters => {
     ).sort();
   }
   if (filters.styles && filters.styles.length > 0) {
-    normalized.styles = Array.from(
-      new Set(filters.styles.map((style) => style.trim()).filter(Boolean))
-    ).sort();
+    normalized.styles = normalizeStyleNames(filters.styles, {
+      strict: false,
+    }).sort((a, b) => a.localeCompare(b));
   }
   if (filters.finalsOnly) {
     normalized.finalsOnly = true;

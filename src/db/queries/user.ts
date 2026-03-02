@@ -370,7 +370,10 @@ export const getUserWithStyles = async (id: string) => {
 
     return {
       ...user,
-      styles: styles.filter((s: string) => s !== null),
+      styles: normalizeStyleNames(
+        styles.filter((s: string) => s !== null),
+        { strict: false }
+      ),
       city: city,
     };
   } finally {

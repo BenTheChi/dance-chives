@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface UserCardProps {
   displayName: string;
@@ -18,6 +19,10 @@ export function UserCard({
   styles,
   city,
 }: UserCardProps) {
+  const canonicalStyles = normalizeStyleNames(styles || [], {
+    strict: false,
+  });
+
   return (
     <Link
       href={`/profiles/${username}`}
@@ -50,11 +55,15 @@ export function UserCard({
         )}
       </div>
       <div className="flex flex-wrap gap-1 items-center">
-        {styles && styles.length > 0 && (
+        {canonicalStyles.length > 0 && (
           <>
-            <StyleBadge key={styles[0]} style={styles[0]} asLink={false} />
-            {styles.length > 1 && (
-              <span className="text-sm">+{styles.length - 1}</span>
+            <StyleBadge
+              key={canonicalStyles[0]}
+              style={canonicalStyles[0]}
+              asLink={false}
+            />
+            {canonicalStyles.length > 1 && (
+              <span className="text-sm">+{canonicalStyles.length - 1}</span>
             )}
           </>
         )}

@@ -25,6 +25,7 @@ import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -345,7 +346,9 @@ export default async function EventPage({ params }: PageProps) {
       });
     }
   });
-  const eventStyles = Array.from(allStyles);
+  const eventStyles = normalizeStyleNames(Array.from(allStyles), {
+    strict: false,
+  });
 
   // Group roles by title (exclude TEAM_MEMBER - team members are shown separately)
   const rolesByTitle = new Map<string, Array<(typeof event.roles)[0]>>();

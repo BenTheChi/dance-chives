@@ -19,7 +19,10 @@ import {
   normalizeStyleForUrl,
   normalizeEventTypeForUrl,
 } from "@/lib/utils/calendar-url-utils";
-import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import {
+  formatStyleNameForDisplay,
+  normalizeStyleNames,
+} from "@/lib/utils/style-utils";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import {
   formatCityDisplayLabel,
@@ -128,7 +131,9 @@ export function CalendarPageClient({
       });
     });
 
-    return Array.from(styleSet).sort((a, b) =>
+    return normalizeStyleNames(Array.from(styleSet), {
+      strict: false,
+    }).sort((a, b) =>
       formatStyleNameForDisplay(a).localeCompare(formatStyleNameForDisplay(b))
     );
   }, [currentEvents]);

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { checkUserWinnerOfSection } from "@/lib/server_actions/request_actions";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import Link from "next/link";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface SectionDetailsProps {
   section: Section;
@@ -25,6 +26,9 @@ export function SectionDetails({
   currentUserId,
 }: SectionDetailsProps) {
   const [isUserWinner, setIsUserWinner] = useState(false);
+  const canonicalDisplayStyles = normalizeStyleNames(displayStyles, {
+    strict: false,
+  });
   const formattedStart = section.startTime
     ? formatTimeToAMPM(section.startTime)
     : null;
@@ -74,9 +78,9 @@ export function SectionDetails({
         {dateTimeDisplay}
 
         {/* Style badges */}
-        {displayStyles.length > 0 && (
+        {canonicalDisplayStyles.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
-            {displayStyles.map((style) => (
+            {canonicalDisplayStyles.map((style) => (
               <StyleBadge key={style} style={style} />
             ))}
           </div>

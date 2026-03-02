@@ -25,7 +25,10 @@ import {
 } from "@/components/ui/popover";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { Check, ChevronsUpDown, ChevronDown, ChevronUp } from "lucide-react";
-import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import {
+  formatStyleNameForDisplay,
+  normalizeStyleNames,
+} from "@/lib/utils/style-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { EventType } from "@/types/event";
@@ -97,22 +100,28 @@ export function EventFilters({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  const canonicalSelectedStyles = useMemo(
+    () => normalizeStyleNames(selectedStyles, { strict: false }),
+    [selectedStyles]
+  );
+
   const toggleStyle = (style: string) => {
-    if (selectedStyles.includes(style)) {
-      onStylesChange(selectedStyles.filter((s) => s !== style));
+    const canonicalStyle = normalizeStyleNames([style], { strict: false })[0];
+    if (!canonicalStyle) {
+      return;
+    }
+
+    if (canonicalSelectedStyles.includes(canonicalStyle)) {
+      onStylesChange(
+        canonicalSelectedStyles.filter((s) => s !== canonicalStyle)
+      );
     } else {
-      onStylesChange([...selectedStyles, style]);
+      onStylesChange([...canonicalSelectedStyles, canonicalStyle]);
     }
   };
 
   const uniqueStyles = useMemo(() => {
-    const seen = new Set<string>();
-    return styles.filter((style) => {
-      const key = formatStyleNameForDisplay(style);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return normalizeStyleNames(styles, { strict: false });
   }, [styles]);
 
   const displayedStyles = useMemo(() => {
@@ -203,8 +212,8 @@ export function EventFilters({
                     variant="outline"
                     className="w-full justify-between bg-neutral-300 text-black"
                   >
-                    {selectedStyles.length > 0
-                      ? `${selectedStyles.length} selected`
+                    {canonicalSelectedStyles.length > 0
+                      ? `${canonicalSelectedStyles.length} selected`
                       : "Select styles"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-black" />
                   </Button>
@@ -225,7 +234,8 @@ export function EventFilters({
                       ) : (
                         <CommandGroup>
                           {displayedStyles.map((style) => {
-                            const isSelected = selectedStyles.includes(style);
+                            const isSelected =
+                              canonicalSelectedStyles.includes(style);
                             return (
                               <CommandItem
                                 key={style}
@@ -247,7 +257,7 @@ export function EventFilters({
                 </PopoverContent>
               </Popover>
               <div className="flex flex-wrap gap-1">
-                {selectedStyles.map((style) => (
+                {canonicalSelectedStyles.map((style) => (
                   <StyleBadge
                     key={style}
                     style={style}

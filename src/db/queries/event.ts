@@ -27,7 +27,7 @@ import {
 import { EventDate } from "../../types/event";
 import {
   normalizeStyleNames,
-  normalizeStyleName,
+  resolveCanonicalStyleName,
 } from "@/lib/utils/style-utils";
 import { format } from "date-fns";
 import { getUserByUsername } from "./user";
@@ -754,7 +754,10 @@ export const getEvent = async (
   const city = eventRecord.get("city");
   const roles = rolesResult.records[0]?.get("roles") || [];
   const gallery = galleryResult.records[0]?.get("gallery") || [];
-  const eventStyles = eventStylesResult.records[0]?.get("styles") || [];
+  const eventStyles = normalizeStyleNames(
+    (eventStylesResult.records[0]?.get("styles") || []) as string[],
+    { strict: false }
+  );
 
   // Process sections
   const sections = sectionsResult.records[0]?.get("sections") || [];
@@ -782,13 +785,23 @@ export const getEvent = async (
   // Create maps for styles
   const sectionStylesMap = new Map<string, string[]>();
   sectionStylesResult.records.forEach((record) => {
-    sectionStylesMap.set(record.get("sectionId"), record.get("styles") || []);
+    sectionStylesMap.set(
+      record.get("sectionId"),
+      normalizeStyleNames((record.get("styles") || []) as string[], {
+        strict: false,
+      })
+    );
   });
 
   const sectionVideoStylesMap = new Map<string, string[]>();
   sectionVideoStylesResult.records.forEach((record) => {
     const key = `${record.get("sectionId")}:${record.get("videoId")}`;
-    sectionVideoStylesMap.set(key, record.get("styles") || []);
+    sectionVideoStylesMap.set(
+      key,
+      normalizeStyleNames((record.get("styles") || []) as string[], {
+        strict: false,
+      })
+    );
   });
 
   const bracketVideoStylesMap = new Map<string, string[]>();
@@ -796,7 +809,12 @@ export const getEvent = async (
     const key = `${record.get("sectionId")}:${record.get(
       "bracketId"
     )}:${record.get("videoId")}`;
-    bracketVideoStylesMap.set(key, record.get("styles") || []);
+    bracketVideoStylesMap.set(
+      key,
+      normalizeStyleNames((record.get("styles") || []) as string[], {
+        strict: false,
+      })
+    );
   });
 
   const sectionApplyStylesMap = new Map<string, boolean>();
@@ -2565,12 +2583,11 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
     stylesResult.records.forEach((record) => {
       const eventId = record.get("eventId");
       const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
+      const uniqueStyles = normalizeStyleNames(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        ),
+        { strict: false }
       );
       stylesMap.set(eventId, uniqueStyles);
     });
@@ -2760,12 +2777,11 @@ export async function getUserCreatedEventCards(
     stylesResult.records.forEach((record) => {
       const eventId = record.get("eventId");
       const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
+      const uniqueStyles = normalizeStyleNames(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        ),
+        { strict: false }
       );
       stylesMap.set(eventId, uniqueStyles);
     });
@@ -2906,12 +2922,11 @@ export async function getSavedEventsForUser(
       const eventId = record.get("eventId");
       const allStyles = (record.get("allStyles") || []) as unknown[];
       // Remove duplicates and filter out nulls
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
+      const uniqueStyles = normalizeStyleNames(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        ),
+        { strict: false }
       );
       stylesMap.set(eventId, uniqueStyles);
     });
@@ -3197,14 +3212,17 @@ export const getStyleData = async (
   const session = driver.session();
 
   try {
-    // Normalize style name to lowercase for querying
-    const normalizedStyleName = normalizeStyleName(styleName);
+    const canonicalStyleName = resolveCanonicalStyleName(styleName);
+    if (!canonicalStyleName) {
+      await session.close();
+      return null;
+    }
 
     // Check if style exists
     const styleCheckResult = await session.run(
       `MATCH (s:Style {name: $styleName})
        RETURN s.name as styleName`,
-      { styleName: normalizedStyleName }
+      { styleName: canonicalStyleName }
     );
 
     if (styleCheckResult.records.length === 0) {
@@ -3244,7 +3262,7 @@ export const getStyleData = async (
                ELSE null 
              END as eventType
       ORDER BY event.startDate DESC`,
-      { styleName: normalizedStyleName }
+      { styleName: canonicalStyleName }
     );
 
     // Get sections with this style
@@ -3252,8 +3270,8 @@ export const getStyleData = async (
       `MATCH (style:Style {name: $styleName})<-[:STYLE]-(s:Section)-[:IN]->(e:Event)
        WHERE (e.status = 'visible' OR e.status IS NULL)
        RETURN s.id as sectionId, s.title as sectionTitle, e.id as eventId, e.title as eventTitle
-       ORDER BY e.startDate DESC, s.title`,
-      { styleName: normalizedStyleName }
+      ORDER BY e.startDate DESC, s.title`,
+      { styleName: canonicalStyleName }
     );
 
     // Get videos with this style (from sections and brackets)
@@ -3268,8 +3286,8 @@ export const getStyleData = async (
        RETURN v.id as videoId, v.title as videoTitle, v.src as videoSrc,
               section.id as sectionId, section.title as sectionTitle,
               event.id as eventId, event.title as eventTitle
-       ORDER BY event.startDate DESC, section.title, v.title`,
-      { styleName: normalizedStyleName }
+      ORDER BY event.startDate DESC, section.title, v.title`,
+      { styleName: canonicalStyleName }
     );
 
     // Get all styles for each event
@@ -3295,7 +3313,7 @@ export const getStyleData = async (
             [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
        RETURN eventId,
               filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-      { styleName: normalizedStyleName }
+      { styleName: canonicalStyleName }
     );
 
     // Create styles map for events
@@ -3303,12 +3321,11 @@ export const getStyleData = async (
     eventStylesResult.records.forEach((record) => {
       const eventId = record.get("eventId");
       const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
+      const uniqueStyles = normalizeStyleNames(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        ),
+        { strict: false }
       );
       eventStylesMap.set(eventId, uniqueStyles);
     });
@@ -3326,13 +3343,16 @@ export const getStyleData = async (
        WHERE section IS NOT NULL AND event IS NOT NULL
        RETURN v.id as videoId, 
               [style IN videoStyles WHERE style IS NOT NULL] as styles`,
-      { styleName: normalizedStyleName }
+      { styleName: canonicalStyleName }
     );
 
     const videoStylesMap = new Map<string, string[]>();
     videoStylesResult.records.forEach((record) => {
       const videoId = record.get("videoId");
-      const styles = (record.get("styles") || []) as string[];
+      const styles = normalizeStyleNames(
+        (record.get("styles") || []) as string[],
+        { strict: false }
+      );
       videoStylesMap.set(videoId, styles);
     });
 
@@ -3346,7 +3366,7 @@ export const getStyleData = async (
          avatar: u.avatar,
          image: u.image
        }) as taggedUsers`,
-      { styleName: normalizedStyleName }
+      { styleName: canonicalStyleName }
     );
 
     const videoUsersMap = new Map<string, UserSearchItem[]>();
@@ -3362,8 +3382,8 @@ export const getStyleData = async (
        OPTIONAL MATCH (u)-[:STYLE]->(s:Style)
        RETURN u.id as id, u.displayName as displayName, u.username as username,
               u.image as image, collect(DISTINCT s.name) as styles
-       ORDER BY u.displayName ASC, u.username ASC`,
-      { styleName: normalizedStyleName }
+      ORDER BY u.displayName ASC, u.username ASC`,
+      { styleName: canonicalStyleName }
     );
 
     // Get city-filtered events with this style (if cityId is provided)
@@ -3406,7 +3426,7 @@ export const getStyleData = async (
                   ELSE null 
                 END as eventType
          ORDER BY event.startDate DESC`,
-        { styleName: normalizedStyleName, cityId }
+        { styleName: canonicalStyleName, cityId }
       );
 
       // Get all styles for city-filtered events
@@ -3433,7 +3453,7 @@ export const getStyleData = async (
               [style IN bracketVideoStyles WHERE style IS NOT NULL] as filteredBracketVideoStyles
          RETURN eventId,
                 filteredSectionStyles + filteredVideoStyles + filteredBracketVideoStyles as allStyles`,
-        { styleName: normalizedStyleName, cityId }
+        { styleName: canonicalStyleName, cityId }
       );
     }
 
@@ -3448,7 +3468,7 @@ export const getStyleData = async (
          RETURN u.id as id, u.displayName as displayName, u.username as username,
                 u.image as image, collect(DISTINCT s.name) as styles
          ORDER BY u.displayName ASC, u.username ASC`,
-        { styleName: normalizedStyleName, cityId }
+        { styleName: canonicalStyleName, cityId }
       );
     }
 
@@ -3510,10 +3530,13 @@ export const getStyleData = async (
       displayName: record.get("displayName") || "",
       username: record.get("username") || "",
       image: record.get("image"),
-      styles: (record.get("styles") || []).filter(
-        (s: unknown): s is string =>
-          s !== null && s !== undefined && typeof s === "string"
-      ) as string[],
+      styles: normalizeStyleNames(
+        (record.get("styles") || []).filter(
+          (s: unknown): s is string =>
+            s !== null && s !== undefined && typeof s === "string"
+        ) as string[],
+        { strict: false }
+      ),
     }));
 
     // Build city-filtered events array (if cityId was provided)
@@ -3525,12 +3548,11 @@ export const getStyleData = async (
         (record: Neo4jResultRecord) => {
           const eventId = record.get("eventId");
           const allStyles = (record.get("allStyles") || []) as unknown[];
-          const uniqueStyles = Array.from(
-            new Set(
-              allStyles.filter(
-                (s): s is string => typeof s === "string" && s !== null
-              )
-            )
+          const uniqueStyles = normalizeStyleNames(
+            allStyles.filter(
+              (s): s is string => typeof s === "string" && s !== null
+            ),
+            { strict: false }
           );
           cityFilteredEventStylesMap.set(eventId, uniqueStyles);
         }
@@ -3577,16 +3599,19 @@ export const getStyleData = async (
           displayName: record.get("displayName") || "",
           username: record.get("username") || "",
           image: record.get("image"),
-          styles: (record.get("styles") || []).filter(
-            (s: unknown): s is string =>
-              s !== null && s !== undefined && typeof s === "string"
-          ) as string[],
+          styles: normalizeStyleNames(
+            (record.get("styles") || []).filter(
+              (s: unknown): s is string =>
+                s !== null && s !== undefined && typeof s === "string"
+            ) as string[],
+            { strict: false }
+          ),
         })
       );
     }
 
     return {
-      styleName: normalizedStyleName,
+      styleName: canonicalStyleName,
       events,
       cityFilteredEvents:
         cityFilteredEvents.length > 0 ? cityFilteredEvents : undefined,
@@ -3615,7 +3640,10 @@ export const getAllStyles = async (): Promise<string[]> => {
 
     await session.close();
 
-    return result.records.map((record) => record.get("styleName") as string);
+    return normalizeStyleNames(
+      result.records.map((record) => record.get("styleName") as string),
+      { strict: false }
+    ).sort((a, b) => a.localeCompare(b));
   } catch (error) {
     console.error("Error fetching all styles:", error);
     await session.close();
@@ -3638,12 +3666,15 @@ export const getStylesWithVideos = async (): Promise<string[]> => {
       `
     );
 
-    const styles = result.records
-      .map((record) => record.get("styleName") as string)
-      .filter((name): name is string => Boolean(name));
+    const styles = normalizeStyleNames(
+      result.records
+        .map((record) => record.get("styleName") as string)
+        .filter((name): name is string => Boolean(name)),
+      { strict: false }
+    );
 
     await session.close();
-    return styles;
+    return styles.sort((a, b) => a.localeCompare(b));
   } catch (error) {
     console.error("Error fetching styles with videos:", error);
     await session.close();
@@ -3874,18 +3905,20 @@ export const getFilterOptionsFromEvents = async (): Promise<{
     );
 
     const citySet = new Set<string>();
-    const styleSet = new Set<string>();
+    const rawStyles: string[] = [];
     for (const record of result.records) {
       const cityName = record.get("cityName");
       const styleName = record.get("styleName");
       if (typeof cityName === "string" && cityName) citySet.add(cityName);
-      if (typeof styleName === "string" && styleName) styleSet.add(styleName);
+      if (typeof styleName === "string" && styleName) rawStyles.push(styleName);
     }
 
     await session.close();
     return {
       cities: Array.from(citySet).sort(),
-      styles: Array.from(styleSet).sort(),
+      styles: normalizeStyleNames(rawStyles, { strict: false }).sort((a, b) =>
+        a.localeCompare(b)
+      ),
     };
   } catch (error) {
     console.error("Error fetching filter options from events:", error);
@@ -3979,12 +4012,11 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
     eventStylesResult.records.forEach((record) => {
       const eventId = record.get("eventId");
       const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
+      const uniqueStyles = normalizeStyleNames(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        ),
+        { strict: false }
       );
       eventStylesMap.set(eventId, uniqueStyles);
     });
@@ -4019,10 +4051,13 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
       displayName: record.get("displayName") || "",
       username: record.get("username") || "",
       image: record.get("image"),
-      styles: (record.get("styles") || []).filter(
-        (s: unknown): s is string =>
-          s !== null && s !== undefined && typeof s === "string"
-      ) as string[],
+      styles: normalizeStyleNames(
+        (record.get("styles") || []).filter(
+          (s: unknown): s is string =>
+            s !== null && s !== undefined && typeof s === "string"
+        ) as string[],
+        { strict: false }
+      ),
     }));
 
     await session.close();
@@ -4111,12 +4146,11 @@ export const getCitySchedule = async (
     eventStylesResult.records.forEach((record) => {
       const eventId = record.get("eventId");
       const allStyles = (record.get("allStyles") || []) as unknown[];
-      const uniqueStyles = Array.from(
-        new Set(
-          allStyles.filter(
-            (s): s is string => typeof s === "string" && s !== null
-          )
-        )
+      const uniqueStyles = normalizeStyleNames(
+        allStyles.filter(
+          (s): s is string => typeof s === "string" && s !== null
+        ),
+        { strict: false }
       );
       eventStylesMap.set(eventId, uniqueStyles);
     });
@@ -4231,7 +4265,9 @@ export const getCitySchedule = async (
     workshopStylesResult.records.forEach((record) => {
       workshopStylesMap.set(
         record.get("workshopId"),
-        record.get("styles") || []
+        normalizeStyleNames((record.get("styles") || []) as string[], {
+          strict: false,
+        })
       );
     });
 
@@ -4239,7 +4275,9 @@ export const getCitySchedule = async (
     workshopVideoStylesResult.records.forEach((record) => {
       workshopVideoStylesMap.set(
         record.get("workshopId"),
-        record.get("styles") || []
+        normalizeStyleNames((record.get("styles") || []) as string[], {
+          strict: false,
+        })
       );
     });
 
@@ -4249,8 +4287,9 @@ export const getCitySchedule = async (
         const workshopId = record.get("id");
         const workshopStyles = workshopStylesMap.get(workshopId) || [];
         const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
-        const allStyles = Array.from(
-          new Set([...workshopStyles, ...videoStyles])
+        const allStyles = normalizeStyleNames(
+          [...workshopStyles, ...videoStyles],
+          { strict: false }
         );
 
         return {
@@ -4288,8 +4327,9 @@ export const getCitySchedule = async (
         const workshopId = record.get("id");
         const workshopStyles = workshopStylesMap.get(workshopId) || [];
         const videoStyles = workshopVideoStylesMap.get(workshopId) || [];
-        const allStyles = Array.from(
-          new Set([...workshopStyles, ...videoStyles])
+        const allStyles = normalizeStyleNames(
+          [...workshopStyles, ...videoStyles],
+          { strict: false }
         );
 
         return {
@@ -4338,14 +4378,21 @@ export const getCitySchedule = async (
     // Create styles maps for sessions
     const sessionStylesMap = new Map<string, string[]>();
     sessionStylesResult.records.forEach((record) => {
-      sessionStylesMap.set(record.get("sessionId"), record.get("styles") || []);
+      sessionStylesMap.set(
+        record.get("sessionId"),
+        normalizeStyleNames((record.get("styles") || []) as string[], {
+          strict: false,
+        })
+      );
     });
 
     const sessionVideoStylesMap = new Map<string, string[]>();
     sessionVideoStylesResult.records.forEach((record) => {
       sessionVideoStylesMap.set(
         record.get("sessionId"),
-        record.get("styles") || []
+        normalizeStyleNames((record.get("styles") || []) as string[], {
+          strict: false,
+        })
       );
     });
 
@@ -4355,9 +4402,9 @@ export const getCitySchedule = async (
         const sessionId = record.get("id");
         const sessionStyles = sessionStylesMap.get(sessionId) || [];
         const videoStyles = sessionVideoStylesMap.get(sessionId) || [];
-        const allStyles = Array.from(
-          new Set([...sessionStyles, ...videoStyles])
-        );
+        const allStyles = normalizeStyleNames([...sessionStyles, ...videoStyles], {
+          strict: false,
+        });
 
         const datesStr = record.get("dates") || "[]";
         let parsedDates: EventDate[] = [];
@@ -4394,9 +4441,9 @@ export const getCitySchedule = async (
         const sessionId = record.get("id");
         const sessionStyles = sessionStylesMap.get(sessionId) || [];
         const videoStyles = sessionVideoStylesMap.get(sessionId) || [];
-        const allStyles = Array.from(
-          new Set([...sessionStyles, ...videoStyles])
-        );
+        const allStyles = normalizeStyleNames([...sessionStyles, ...videoStyles], {
+          strict: false,
+        });
 
         return {
           id: sessionId,
@@ -4503,11 +4550,15 @@ export const getCalendarEvents = async (
 
   // Filter by style if provided
   if (style) {
-    const normalizedStyle = normalizeStyleName(style);
+    const normalizedStyle = resolveCanonicalStyleName(style);
+    if (!normalizedStyle) {
+      return [];
+    }
     events = events.filter((event) => {
       const eventStyles = event.styles || [];
       return eventStyles.some(
-        (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle
+        (eventStyle) =>
+          resolveCanonicalStyleName(eventStyle) === normalizedStyle
       );
     });
   }
@@ -4557,11 +4608,15 @@ export const getCalendarEventsForCountry = async (
 
   // Filter by style if provided
   if (style) {
-    const normalizedStyle = normalizeStyleName(style);
+    const normalizedStyle = resolveCanonicalStyleName(style);
+    if (!normalizedStyle) {
+      return [];
+    }
     events = events.filter((event) => {
       const eventStyles = event.styles || [];
       return eventStyles.some(
-        (eventStyle) => normalizeStyleName(eventStyle) === normalizedStyle
+        (eventStyle) =>
+          resolveCanonicalStyleName(eventStyle) === normalizedStyle
       );
     });
   }
@@ -4904,8 +4959,11 @@ export async function getEventsWithVideosForWatch(
     const stylesMap = new Map<string, string[]>();
     for (const record of stylesResult.records) {
       const eventId = record.get("eventId") as string;
-      const styles = (record.get("allStyles") as string[]).filter(
-        (s) => s !== null
+      const styles = normalizeStyleNames(
+        ((record.get("allStyles") as string[] | null) || []).filter(
+          (s) => s !== null
+        ),
+        { strict: false }
       );
       stylesMap.set(eventId, styles);
     }
@@ -5038,9 +5096,10 @@ export async function getAllBattleSections(
         .filter((city) => city.length > 0) ?? [];
     const cityNamesLower = cityNames.map((c) => c.toLowerCase());
     const styleNames =
-      filters?.styles
-        ?.map((style) => normalizeStyleName(style.trim()))
-        .filter((style) => style.length > 0) ?? [];
+      filters?.styles && filters.styles.length > 0
+        ? normalizeStyleNames(filters.styles, { strict: false })
+        : [];
+    const styleNamesLower = styleNames.map((style) => style.toLowerCase());
 
     const eventConditions = ["(e.status = 'visible' OR e.status IS NULL)"];
     if (typeof filters?.yearFrom === "number") {
@@ -5127,7 +5186,7 @@ export async function getAllBattleSections(
       params.cityNamesLower = cityNamesLower;
     }
     if (styleNames.length > 0) {
-      params.styleNamesLower = styleNames;
+      params.styleNamesLower = styleNamesLower;
     }
     if (typeof filters?.yearFrom === "number") {
       params.yearFrom = Math.floor(filters.yearFrom);
@@ -5289,7 +5348,9 @@ export async function getAllBattleSections(
       for (const rawVideo of rawVideos) {
         if (!rawVideo?.id) continue;
         const videoStyles = Array.isArray(rawVideo.styles)
-          ? rawVideo.styles.filter(Boolean)
+          ? normalizeStyleNames(rawVideo.styles.filter(Boolean), {
+              strict: false,
+            })
           : [];
         const video: Video = {
           id: rawVideo.id,
@@ -5320,7 +5381,10 @@ export async function getAllBattleSections(
       const styles = ((record.get("styles") as string[] | null) || []).filter(
         Boolean
       );
-      sectionStylesMap.set(sectionId, styles);
+      sectionStylesMap.set(
+        sectionId,
+        normalizeStyleNames(styles, { strict: false })
+      );
     }
 
     const bracketConditions: string[] = [];
@@ -5405,7 +5469,9 @@ export async function getAllBattleSections(
         for (const rawVideo of rawVideos) {
           if (!rawVideo?.id) continue;
           const videoStyles = Array.isArray(rawVideo.styles)
-            ? rawVideo.styles.filter(Boolean)
+            ? normalizeStyleNames(rawVideo.styles.filter(Boolean), {
+                strict: false,
+              })
             : [];
           const video: Video = {
             id: rawVideo.id,

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/primsa";
 import { UserSearchItem } from "@/types/user";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 export type UserCardRow = {
   id: string;
@@ -33,7 +34,7 @@ export async function getUserCards(): Promise<UserCardRow[]> {
     displayName: r.displayName,
     username: r.username,
     image: r.imageUrl ?? null,
-    styles: r.styles ?? [],
+    styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
     city: r.cityName ?? "",
     claimed: userClaimedMap.get(r.userId) ?? true,
   }));
@@ -74,7 +75,7 @@ export async function enrichUsersWithCardData(
       uc.userId,
       {
         city: uc.cityName ?? "",
-        styles: uc.styles ?? [],
+        styles: normalizeStyleNames(uc.styles ?? [], { strict: false }),
         image: uc.imageUrl,
       },
     ])

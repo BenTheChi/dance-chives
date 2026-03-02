@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -19,7 +19,10 @@ import { StyleBadge } from "@/components/ui/style-badge";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DANCE_STYLES } from "@/lib/utils/dance-styles";
-import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import {
+  formatStyleNameForDisplay,
+  normalizeStyleNames,
+} from "@/lib/utils/style-utils";
 
 interface StyleMultiSelectProps {
   value: string[];
@@ -35,24 +38,28 @@ export function StyleMultiSelect({
   placeholder = "Select styles...",
 }: StyleMultiSelectProps) {
   const [open, setOpen] = useState(false);
+  const canonicalValue = useMemo(
+    () => normalizeStyleNames(value, { strict: false }),
+    [value]
+  );
 
   const handleSelect = (style: string) => {
-    const isSelected = value.includes(style);
+    const isSelected = canonicalValue.includes(style);
     if (isSelected) {
-      onChange(value.filter((s) => s !== style));
+      onChange(canonicalValue.filter((s) => s !== style));
     } else {
-      onChange([...value, style]);
+      onChange([...canonicalValue, style]);
     }
   };
 
   const removeStyle = (style: string) => {
-    onChange(value.filter((s) => s !== style));
+    onChange(canonicalValue.filter((s) => s !== style));
   };
 
   return (
     <div className="">
       <div className="flex flex-wrap gap-1">
-        {value.map((style) => (
+        {canonicalValue.map((style) => (
           <StyleBadge
             key={style}
             style={style}
@@ -71,7 +78,7 @@ export function StyleMultiSelect({
             aria-expanded={open}
             className={cn(
               "w-full justify-between bg-neutral-300",
-              value.length === 0 ? "text-charcoal" : "text-black"
+              canonicalValue.length === 0 ? "text-charcoal" : "text-black"
             )}
             disabled={disabled}
           >
@@ -86,7 +93,7 @@ export function StyleMultiSelect({
               <CommandEmpty>No styles found.</CommandEmpty>
               <CommandGroup>
                 {DANCE_STYLES.map((style) => {
-                  const isSelected = value.includes(style);
+                  const isSelected = canonicalValue.includes(style);
                   return (
                     <CommandItem
                       key={style}
@@ -108,7 +115,11 @@ export function StyleMultiSelect({
         </PopoverContent>
       </Popover>
       {/* Hidden input for form submission */}
-      <input type="hidden" name="styles" value={JSON.stringify(value)} />
+      <input
+        type="hidden"
+        name="styles"
+        value={JSON.stringify(canonicalValue)}
+      />
     </div>
   );
 }

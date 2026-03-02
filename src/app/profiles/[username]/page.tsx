@@ -14,6 +14,7 @@ import { TaggedVideosSection } from "@/components/profile/TaggedVideosSection";
 import { SectionsWonSection } from "@/components/profile/SectionsWonSection";
 import { ProfileClient, ProfileRolesSection } from "./profile-client";
 import type { Metadata } from "next";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -66,13 +67,16 @@ export async function generateMetadata({
           profile.city.region ? `, ${profile.city.region}` : ""
         }`
       : profile.city || "";
+  const profileStyles = normalizeStyleNames(profile.styles || [], {
+    strict: false,
+  });
   if (cityDisplay) {
     descriptionParts.push(`Based in ${cityDisplay}`);
   }
 
   // Add styles if available
-  if (profile.styles && profile.styles.length > 0) {
-    descriptionParts.push(`Dance styles: ${profile.styles.join(", ")}`);
+  if (profileStyles.length > 0) {
+    descriptionParts.push(`Dance styles: ${profileStyles.join(", ")}`);
   }
 
   // Add stats for additional context
@@ -138,8 +142,8 @@ export async function generateMetadata({
     "street dance",
     displayName || username,
   ];
-  if (profile.styles && profile.styles.length > 0) {
-    keywords.push(...profile.styles);
+  if (profileStyles.length > 0) {
+    keywords.push(...profileStyles);
   }
   if (profile.city) {
     const cityName =
@@ -265,6 +269,9 @@ export default async function ProfilePage({ params }: PageProps) {
           profile.city.region ? `, ${profile.city.region}` : ""
         }`
       : profile.city || "";
+  const profileStyles = normalizeStyleNames(profile.styles || [], {
+    strict: false,
+  });
 
   return (
     <>
@@ -309,9 +316,9 @@ export default async function ProfilePage({ params }: PageProps) {
                     {cityDisplay && <h2>{cityDisplay}</h2>}
 
                     {/* Style badges */}
-                    {profile.styles && profile.styles.length > 0 && (
+                    {profileStyles.length > 0 && (
                       <div className="flex flex-wrap gap-2 justify-center">
-                        {profile.styles.map((style: string) => (
+                        {profileStyles.map((style: string) => (
                           <StyleBadge key={style} style={style} />
                         ))}
                       </div>

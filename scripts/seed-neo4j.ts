@@ -8,6 +8,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import driver from "../src/db/driver";
 import { randomUUID } from "crypto";
 import { SEED_CITY_BY_NAME } from "../prisma/seed-cities";
+import { normalizeStyleNames } from "../src/lib/utils/style-utils";
 
 // Create a Prisma client for scripts (without server-only import)
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -32,9 +33,10 @@ async function syncEventToPostgreSQL(
     const directVideos = s.videos || [];
     return [...bracketVideos, ...directVideos].flatMap((v) => v.styles || []);
   });
-  const allStyles = [
-    ...new Set([...eventStyles, ...sectionStyles, ...videoStyles]),
-  ];
+  const allStyles = normalizeStyleNames(
+    [...eventStyles, ...sectionStyles, ...videoStyles],
+    { strict: false }
+  );
 
   const eventTimezone = eventDetails.city.timezone || null;
   const displayDateLocal = eventDetails.dates?.[0]?.date || null;
@@ -193,8 +195,9 @@ async function seedNeo4j() {
             imageUrl: user.profile.image ?? null,
             cityId: cityObj?.id ?? null,
             cityName: cityObj?.name ?? null,
-            styles: ((user.profile.styles || []) as string[]).map((s) =>
-              s.toUpperCase().trim()
+            styles: normalizeStyleNames(
+              (user.profile.styles || []) as string[],
+              { strict: false }
             ),
           },
           create: {
@@ -204,8 +207,9 @@ async function seedNeo4j() {
             imageUrl: user.profile.image ?? null,
             cityId: cityObj?.id ?? null,
             cityName: cityObj?.name ?? null,
-            styles: ((user.profile.styles || []) as string[]).map((s) =>
-              s.toUpperCase().trim()
+            styles: normalizeStyleNames(
+              (user.profile.styles || []) as string[],
+              { strict: false }
             ),
           },
         });

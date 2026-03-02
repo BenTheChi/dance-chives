@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/primsa";
 import { Prisma } from "@prisma/client";
 import { EventType, TEventCard } from "@/types/event";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 export async function getEventCards(): Promise<TEventCard[]> {
   const rows = await prisma.eventCard.findMany({
@@ -34,7 +35,7 @@ export async function getEventCards(): Promise<TEventCard[]> {
       date: r.displayDateLocal ?? "",
       city: r.cityName ?? "",
       cityId: r.cityId ?? undefined,
-      styles: r.styles ?? [],
+      styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
       eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
       additionalDatesCount: r.additionalDatesCount ?? 0,
       status: ((r as any).status as "hidden" | "visible") || "visible",
@@ -62,6 +63,8 @@ export async function getUsedStylesFromEvents(): Promise<string[]> {
   return rows
     .map((r) => r.style?.trim())
     .filter((s): s is string => Boolean(s))
+    .map((s) => normalizeStyleNames([s], { strict: false })[0] || null)
+    .filter((s): s is string => Boolean(s))
     .filter((s) => {
       const key = s.toLowerCase();
       if (seen.has(key)) return false;
@@ -87,7 +90,16 @@ export async function getUsedStylesFromFutureEvents(): Promise<string[]> {
       ORDER BY style ASC
     `
   );
-  return rows.map((r) => r.style);
+  const seen = new Set<string>();
+  return rows
+    .map((r) => normalizeStyleNames([r.style], { strict: false })[0] || null)
+    .filter((s): s is string => Boolean(s))
+    .filter((s) => {
+      const key = s.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 /**
@@ -163,7 +175,7 @@ export async function getUpcomingEventCards(limit: number = 3): Promise<TEventCa
     date: r.displayDateLocal ?? "",
     city: r.cityName ?? "",
     cityId: r.cityId ?? undefined,
-    styles: r.styles ?? [],
+    styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
     eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
     additionalDatesCount: r.additionalDatesCount ?? 0,
     status: ((r as any).status as "hidden" | "visible") || "visible",

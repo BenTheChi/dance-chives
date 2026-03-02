@@ -2,6 +2,7 @@ import Link from "next/link";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { Section, Video, Bracket } from "@/types/event";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface SectionCardProps {
   section:
@@ -114,6 +115,7 @@ export function SectionCard({
       displayStyles = aggregateVideoStyles();
     }
   }
+  displayStyles = normalizeStyleNames(displayStyles, { strict: false });
 
   // Limit to 4 visible badges, show "+X more" for overflow
   const maxVisibleBadges = 4;

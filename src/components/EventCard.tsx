@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TEventCard } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 
 interface EventCardProps extends TEventCard {
   href?: string; // Optional href for the title link, defaults to /events/${id}
@@ -26,14 +27,17 @@ export function EventCard({
   eventType,
 }: EventCardProps) {
   const titleHref = href || `/events/${id}`;
+  const canonicalStyles = normalizeStyleNames(styles || [], {
+    strict: false,
+  });
 
   // Show 1 style on mobile, 3 on desktop, then "+x more styles"
-  const firstStyle = styles?.[0];
-  const desktopStyles = styles?.slice(1, 3) || [];
+  const firstStyle = canonicalStyles[0];
+  const desktopStyles = canonicalStyles.slice(1, 3);
   const mobileAdditionalCount =
-    styles && styles.length > 1 ? styles.length - 1 : 0;
+    canonicalStyles.length > 1 ? canonicalStyles.length - 1 : 0;
   const desktopAdditionalCount =
-    styles && styles.length > 3 ? styles.length - 3 : 0;
+    canonicalStyles.length > 3 ? canonicalStyles.length - 3 : 0;
 
   // Format date for display (MM/DD/YY format)
   const formattedDate = date

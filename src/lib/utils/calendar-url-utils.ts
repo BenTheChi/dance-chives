@@ -1,6 +1,9 @@
 import { City } from "@/types/city";
 import { EventType } from "@/types/event";
-import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import {
+  normalizeStyleName,
+  resolveCanonicalStyleName,
+} from "@/lib/utils/style-utils";
 
 /** All valid EventType values for URL parsing */
 const VALID_EVENT_TYPES: EventType[] = [
@@ -51,19 +54,19 @@ export function parseCountryFromUrl(
 }
 
 /**
- * Converts style name to uppercase for URL parameter
+ * Converts style name to canonical Title Case for URL parameter
  * @param style - Style name (any case)
- * @returns Uppercase style name for URL
+ * @returns Canonical style name for URL
  */
 export function normalizeStyleForUrl(style: string): string {
-  return formatStyleNameForDisplay(style);
+  return normalizeStyleName(style);
 }
 
 /**
- * Finds a style by matching the URL parameter (uppercase) against available styles
- * @param styleParam - The style name from URL (uppercase)
- * @param styles - Array of all available styles (lowercase in DB)
- * @returns Matching style name (lowercase) or null if not found
+ * Finds a style by matching the URL parameter against available styles
+ * @param styleParam - The style name from URL (any case)
+ * @param styles - Array of available styles (any case)
+ * @returns Canonical style name or null if not found
  */
 export function parseStyleFromUrl(
   styleParam: string,
@@ -71,12 +74,23 @@ export function parseStyleFromUrl(
 ): string | null {
   if (!styleParam) return null;
 
-  const decodedStyle = decodeURIComponent(styleParam).toUpperCase();
-  const normalizedStyle = styles.find(
-    (style) => formatStyleNameForDisplay(style) === decodedStyle
+  const canonicalParam = resolveCanonicalStyleName(
+    decodeURIComponent(styleParam)
+  );
+  if (!canonicalParam) return null;
+
+  const available = new Set(
+    styles
+      .map((style) => resolveCanonicalStyleName(style))
+      .filter(
+        (
+          style
+        ): style is NonNullable<ReturnType<typeof resolveCanonicalStyleName>> =>
+          style !== null
+      )
   );
 
-  return normalizedStyle || null;
+  return available.has(canonicalParam) ? canonicalParam : null;
 }
 
 /**

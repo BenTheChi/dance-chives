@@ -1,21 +1,79 @@
-/**
- * Converts a style name to lowercase for storage in Neo4j
- */
-export function normalizeStyleName(style: string): string {
-  return style.toLowerCase().trim();
+import { DANCE_STYLES, DanceStyle } from "@/lib/utils/dance-styles";
+
+const styleByLookupKey = new Map<string, DanceStyle>(
+  DANCE_STYLES.map((style) => [toStyleLookupKey(style), style])
+);
+
+function toStyleLookupKey(style: string): string {
+  return style.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function titleCaseFallback(style: string): string {
+  const trimmed = style.trim().replace(/\s+/g, " ");
+  if (!trimmed) return trimmed;
+  return trimmed
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 }
 
 /**
- * Converts a style name to upper case for display
+ * Resolves a style string to the canonical whitelist value.
+ * Returns null for unknown styles.
+ */
+export function resolveCanonicalStyleName(style: string): DanceStyle | null {
+  return styleByLookupKey.get(toStyleLookupKey(style)) ?? null;
+}
+
+/**
+ * Converts a style to canonical Title Case.
+ * Throws when style is outside the canonical whitelist.
+ */
+export function normalizeStyleName(style: string): DanceStyle {
+  const canonical = resolveCanonicalStyleName(style);
+  if (!canonical) {
+    throw new Error(`Invalid dance style: "${style}"`);
+  }
+  return canonical;
+}
+
+/**
+ * Formats a style name for display using canonical Title Case.
+ * Unknown values are rendered in Title Case fallback form.
  */
 export function formatStyleNameForDisplay(style: string): string {
   if (!style) return style;
-  return style.toUpperCase().trim();
+  return resolveCanonicalStyleName(style) ?? titleCaseFallback(style);
 }
 
 /**
- * Formats an array of style names to uppercase
+ * Canonicalizes and deduplicates style names.
+ * strict=true throws on unknown style; strict=false skips unknown styles.
  */
-export function normalizeStyleNames(styles: string[]): string[] {
-  return styles.map(formatStyleNameForDisplay);
+export function normalizeStyleNames(
+  styles: string[],
+  options: { strict?: boolean } = {}
+): string[] {
+  const strict = options.strict ?? true;
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const style of styles) {
+    const canonical = resolveCanonicalStyleName(style);
+    if (!canonical) {
+      if (strict) {
+        throw new Error(`Invalid dance style: "${style}"`);
+      }
+      continue;
+    }
+
+    if (seen.has(canonical)) {
+      continue;
+    }
+
+    seen.add(canonical);
+    normalized.push(canonical);
+  }
+
+  return normalized;
 }

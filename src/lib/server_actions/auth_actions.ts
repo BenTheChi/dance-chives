@@ -46,6 +46,7 @@ import { deleteEvent, getEvent, getEventImages } from "@/db/queries/event";
 import { addMailerLiteSubscriber } from "@/lib/mailerlite";
 import { randomUUID } from "crypto";
 import { normalizeInstagramHandle } from "@/lib/utils/instagram";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import {
   resolveAndUpsertCityForWrite,
 } from "@/db/queries/city";
@@ -322,9 +323,7 @@ export async function executeAccountMerge(params: {
         imageUrl: profileData.image ?? null,
         cityId: profileData.city?.id ?? null,
         cityName: profileData.city?.name ?? null,
-        styles: (profileData.styles || []).map((s: string) =>
-          s.toUpperCase().trim(),
-        ),
+        styles: normalizeStyleNames(profileData.styles || []),
       },
       create: {
         userId: targetUserId,
@@ -333,9 +332,7 @@ export async function executeAccountMerge(params: {
         imageUrl: profileData.image ?? null,
         cityId: profileData.city?.id ?? null,
         cityName: profileData.city?.name ?? null,
-        styles: (profileData.styles || []).map((s: string) =>
-          s.toUpperCase().trim(),
-        ),
+        styles: normalizeStyleNames(profileData.styles || []),
       },
     });
   }
@@ -750,7 +747,7 @@ export async function signup(
         imageUrl: profileData.image ?? null,
         cityId: cityObj?.id ?? null,
         cityName: cityObj?.name ?? null,
-        styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
+        styles: normalizeStyleNames(profileData.styles || []),
       },
       create: {
         userId: targetUserId,
@@ -759,7 +756,7 @@ export async function signup(
         imageUrl: profileData.image ?? null,
         cityId: cityObj?.id ?? null,
         cityName: cityObj?.name ?? null,
-        styles: (profileData.styles || []).map((s) => s.toUpperCase().trim()),
+        styles: normalizeStyleNames(profileData.styles || []),
       },
     });
 
@@ -1578,7 +1575,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         imageUrl: (userUpdate.image as string | null) ?? null,
         cityId: cityData?.id ?? null,
         cityName: cityData?.name ?? null,
-        styles: (styles || []).map((s) => s.toUpperCase().trim()),
+        styles: normalizeStyleNames(styles || []),
       },
       create: {
         userId,
@@ -1587,7 +1584,7 @@ export async function updateUserProfile(userId: string, formData: FormData) {
         imageUrl: (userUpdate.image as string | null) ?? null,
         cityId: cityData?.id ?? null,
         cityName: cityData?.name ?? null,
-        styles: (styles || []).map((s) => s.toUpperCase().trim()),
+        styles: normalizeStyleNames(styles || []),
       },
     });
 
