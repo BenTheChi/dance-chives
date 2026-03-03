@@ -30,6 +30,7 @@ function formatDate(value: string): string {
 
 export function EventTableView({ events, className }: EventTableViewProps) {
   const router = useRouter();
+  const cellClassName = "px-4 py-3 text-sm font-medium";
 
   const handleNavigate = (eventId: string) => {
     router.push(`/events/${eventId}`);
@@ -38,13 +39,13 @@ export function EventTableView({ events, className }: EventTableViewProps) {
   return (
     <div
       className={cn(
-        "w-full max-w-[1200px] mx-auto bg-secondary sm:rounded-sm border-4 border-secondary-light overflow-hidden",
+        "w-full max-w-[1200px] mx-auto bg-primary-dark sm:rounded-sm border-4 border-primary-light overflow-hidden",
         className
       )}
     >
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] table-fixed">
-          <thead className="bg-secondary-dark text-foreground">
+          <thead className="bg-primary-light text-charcoal">
             <tr>
               <th className="px-4 py-3 text-left text-sm font-bold w-[120px]">
                 Date
@@ -67,8 +68,8 @@ export function EventTableView({ events, className }: EventTableViewProps) {
             {events.map((event, index) => {
               const rowBackground =
                 index % 2 === 0
-                  ? "bg-fog-white/95 text-charcoal"
-                  : "bg-secondary-dark/70 text-foreground";
+                  ? "bg-primary/85 text-foreground"
+                  : "bg-primary-dark text-foreground";
               const formattedStyles =
                 event.styles && event.styles.length > 0
                   ? event.styles.join(", ")
@@ -81,31 +82,31 @@ export function EventTableView({ events, className }: EventTableViewProps) {
                   onClick={() => handleNavigate(event.id)}
                   className={cn(
                     rowBackground,
-                    "cursor-pointer transition-colors hover:bg-primary-light/15 focus-within:bg-primary-light/15"
+                    "cursor-pointer border-b border-primary-light/25 transition-colors hover:bg-primary-light/20 focus-within:bg-primary-light/20"
                   )}
                 >
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                  <td className={cn(cellClassName, "whitespace-nowrap")}>
                     {formatDate(event.date)}
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className={cellClassName}>
                     <Link
                       href={eventHref}
-                      className="block truncate rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-light"
+                      className="block truncate rounded-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-light"
                       title={event.title}
                       aria-label={`Open event ${event.title}`}
                     >
                       {clampTitle(event.title)}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                  <td className={cn(cellClassName, "whitespace-nowrap")}>
                     {event.eventType || "-"}
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className={cellClassName}>
                     <span className="block truncate" title={formattedStyles}>
                       {formattedStyles}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                  <td className={cn(cellClassName, "whitespace-nowrap")}>
                     {event.city || "-"}
                   </td>
                 </tr>

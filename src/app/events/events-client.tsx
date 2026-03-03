@@ -315,8 +315,51 @@ export function EventsClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 w-full sticky sm:static top-0 z-10">
+      <div className="flex flex-col gap-4 w-full">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:gap-4 items-center mb-10 w-full">
+          <EventFilters
+            cities={availableCities}
+            styles={styles}
+            selectedCityId={draftCityId}
+            onCityChange={setDraftCityId}
+            selectedStyles={draftStyles}
+            onStylesChange={setDraftStyles}
+            availableEventTypes={availableEventTypes}
+            selectedEventType={draftEventType}
+            onEventTypeChange={setDraftEventType}
+            startDate={draftStartDate}
+            onStartDateChange={setDraftStartDate}
+            endDate={draftEndDate}
+            onEndDateChange={setDraftEndDate}
+            showPastEventFilters={!showFutureEvents}
+            hasVideos={draftHasVideos}
+            onHasVideosChange={setDraftHasVideos}
+            hasPoster={draftHasPoster}
+            onHasPosterChange={setDraftHasPoster}
+            onSave={handleSaveFilters}
+            onClear={handleClearFilters}
+          />
+
+          <div className="w-full max-w-[550px] mx-auto flex items-center gap-2 bg-secondary p-3 sm:rounded-sm border-t-0 border-b-4 border-l-4 border-r-4 sm:border-4 border-secondary-light">
+            <input
+              type="text"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Keyword filter"
+              aria-label="Keyword filter"
+              className="w-full sm:flex-1 px-3 py-2 rounded-sm border border-secondary-light bg-secondary text-foreground"
+              size={1}
+            />
+            <button
+              type="button"
+              onClick={() => setKeyword("")}
+              disabled={keyword.trim().length === 0}
+              className="px-3 py-2 rounded-sm border border-secondary-light bg-secondary text-foreground disabled:opacity-50"
+            >
+              Clear
+            </button>
+          </div>
+
           <div className="flex flex-wrap justify-center gap-5 w-full">
             <div className="flex items-center justify-center gap-3 bg-secondary p-3 sm:rounded-sm border-secondary-light w-full border-4 sm:max-w-[250px]">
               <Label
@@ -366,48 +409,6 @@ export function EventsClient({
                 <Table2 className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
-          </div>
-          <EventFilters
-            cities={availableCities}
-            styles={styles}
-            selectedCityId={draftCityId}
-            onCityChange={setDraftCityId}
-            selectedStyles={draftStyles}
-            onStylesChange={setDraftStyles}
-            availableEventTypes={availableEventTypes}
-            selectedEventType={draftEventType}
-            onEventTypeChange={setDraftEventType}
-            startDate={draftStartDate}
-            onStartDateChange={setDraftStartDate}
-            endDate={draftEndDate}
-            onEndDateChange={setDraftEndDate}
-            showPastEventFilters={!showFutureEvents}
-            hasVideos={draftHasVideos}
-            onHasVideosChange={setDraftHasVideos}
-            hasPoster={draftHasPoster}
-            onHasPosterChange={setDraftHasPoster}
-            onSave={handleSaveFilters}
-            onClear={handleClearFilters}
-          />
-
-          <div className="w-full max-w-[550px] mx-auto flex items-center gap-2 bg-secondary p-3 sm:rounded-sm border-t-0 border-b-4 border-l-4 border-r-4 sm:border-4 border-secondary-light">
-            <input
-              type="text"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder="Keyword filter"
-              aria-label="Keyword filter"
-              className="w-full sm:flex-1 px-3 py-2 rounded-sm border border-secondary-light bg-secondary text-foreground"
-              size={1}
-            />
-            <button
-              type="button"
-              onClick={() => setKeyword("")}
-              disabled={keyword.trim().length === 0}
-              className="px-3 py-2 rounded-sm border border-secondary-light bg-secondary text-foreground disabled:opacity-50"
-            >
-              Clear
-            </button>
           </div>
         </div>
       </div>

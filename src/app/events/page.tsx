@@ -23,6 +23,13 @@ function parseEventDate(dateStr: string): Date | null {
   }
 }
 
+function formatEventListDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = String(date.getFullYear());
+  return `${month}/${day}/${year}`;
+}
+
 export default async function EventsPage() {
   // Cache styles from events heavily (24h TTL + tag-based invalidation)
   const getCachedEventStyles = unstable_cache(
@@ -49,7 +56,7 @@ export default async function EventsPage() {
     (e) => e.id
   );
 
-  let allEventDates = new Map<
+  const allEventDates = new Map<
     string,
     Array<{ eventId: string; localDate: Date | null; startUtc: Date }>
   >();
@@ -105,7 +112,15 @@ export default async function EventsPage() {
       sortDate = parseEventDate(event.date);
     }
 
-    return { event, sortDate };
+    const eventWithDisplayDate: TEventCard =
+      sortDate !== null
+        ? {
+            ...event,
+            date: formatEventListDate(sortDate),
+          }
+        : event;
+
+    return { event: eventWithDisplayDate, sortDate };
   });
 
   // Separate into past and future events
