@@ -94,7 +94,12 @@ export function EventFilters({
       setIsMobile(window.innerWidth < 768);
     };
 
-    checkMobile();
+    const mobile = window.innerWidth < 768;
+    setIsMobile(mobile);
+    if (mobile) {
+      setIsExpanded(true);
+    }
+
     window.addEventListener("resize", checkMobile);
 
     return () => window.removeEventListener("resize", checkMobile);

@@ -340,7 +340,7 @@ export function EventsClient({
             onClear={handleClearFilters}
           />
 
-          <div className="w-full max-w-[550px] mx-auto flex items-center gap-2 bg-secondary p-3 sm:rounded-sm border-t-0 border-b-4 border-l-4 border-r-4 sm:border-4 border-secondary-light">
+          <div className="w-full max-w-[550px] mx-auto flex items-center gap-2 bg-secondary p-3 sm:rounded-sm border-4 border-secondary-light">
             <input
               type="text"
               value={keyword}

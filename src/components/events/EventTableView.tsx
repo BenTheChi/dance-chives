@@ -102,7 +102,10 @@ export function EventTableView({ events, className }: EventTableViewProps) {
                     {event.eventType || "-"}
                   </td>
                   <td className={cellClassName}>
-                    <span className="block truncate" title={formattedStyles}>
+                    <span
+                      className="block truncate text-sm font-medium"
+                      title={formattedStyles}
+                    >
                       {formattedStyles}
                     </span>
                   </td>
