@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlaceDetails, getTimezone } from "@/lib/google-places";
-import { City } from "@/types/city";
-import { upsertCityInPostgres } from "@/db/queries/city";
+import { resolveAndUpsertCityForWrite } from "@/db/queries/city";
 
 /**
- * Get place details with timezone (validates city-level place)
- * Called when creating/editing events with new cities
+ * Resolve a place id to canonical city metadata and upsert if needed.
+ * Called when creating/editing events with new cities.
  * GET /api/places/details?placeId=...
  */
 export async function GET(request: NextRequest) {
@@ -20,37 +18,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Get place details from Google Places API
-    const placeDetails = await getPlaceDetails(placeId);
-
-    // Extract address components
-    const addressComponents = placeDetails.address_components;
-    const region =
-      addressComponents.find((ac) =>
-        ac.types.includes("administrative_area_level_1")
-      )?.short_name || "";
-    const countryCode =
-      addressComponents.find((ac) => ac.types.includes("country"))
-        ?.short_name || "";
-
-    // Get timezone from Google Time Zone API
-    const timezoneResult = await getTimezone(
-      placeDetails.geometry.location.lat,
-      placeDetails.geometry.location.lng
-    );
-
-    // Map to City interface
-    const city: City = {
-      id: placeDetails.place_id,
-      name: placeDetails.name || placeDetails.formatted_address,
-      region,
-      countryCode,
-      timezone: timezoneResult.timeZoneId,
-      latitude: placeDetails.geometry.location.lat,
-      longitude: placeDetails.geometry.location.lng,
-    };
-
-    const canonicalCity = await upsertCityInPostgres(city);
+    // Provide minimal placeholder metadata; resolver fetches Google details
+    // when needed and canonicalizes against existing city metadata first.
+    const canonicalCity = await resolveAndUpsertCityForWrite({
+      id: placeId,
+      name: "",
+      region: "",
+      countryCode: "",
+    });
 
     return NextResponse.json({ city: canonicalCity });
   } catch (error) {

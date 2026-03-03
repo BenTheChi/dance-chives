@@ -22,7 +22,7 @@ function arraysEqual(a: string[], b: string[]): boolean {
 
 function summarizeChanges(label: string, rows: UpdateRow[]) {
   console.log(
-    `[style:phase2:backfill-postgres] ${label} rows_to_update=${rows.length}`
+    `[style:backfill] ${label} rows_to_update=${rows.length}`
   );
   for (const row of rows.slice(0, PREVIEW_LIMIT)) {
     console.log(
@@ -33,7 +33,7 @@ function summarizeChanges(label: string, rows: UpdateRow[]) {
 
 async function main() {
   console.log(
-    `[style:phase2:backfill-postgres] mode=${APPLY ? "apply" : "dry-run"}`
+    `[style:backfill] mode=${APPLY ? "apply" : "dry-run"}`
   );
 
   const invalidRows: string[] = [];
@@ -97,7 +97,7 @@ async function main() {
 
   if (invalidRows.length > 0) {
     console.error(
-      "[style:phase2:backfill-postgres] invalid style values found. Backfill aborted."
+      "[style:backfill] invalid style values found. Backfill aborted."
     );
     for (const row of invalidRows.slice(0, PREVIEW_LIMIT)) {
       console.error(`- ${row}`);
@@ -135,15 +135,15 @@ async function main() {
     });
   }
 
-  console.log("[style:phase2:backfill-postgres] apply complete");
+  console.log("[style:backfill] apply complete");
   console.log(
-    "[style:phase2:backfill-postgres] reminder: revalidate style cache tags (event-styles/watch-sections) after apply"
+    "[style:backfill] reminder: revalidate style cache tags (event-styles/watch-sections) after apply"
   );
 }
 
 main()
   .catch((error) => {
-    console.error("[style:phase2:backfill-postgres] failed", error);
+    console.error("[style:backfill] failed", error);
     process.exitCode = 1;
   })
   .finally(async () => {

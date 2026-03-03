@@ -18,7 +18,12 @@ interface CityRow {
   longitude: number;
 }
 
+interface CityCanonicalCandidateRow extends CityRow {
+  createdAt: Date | string;
+}
+
 const PLACE_ID_REGEX = /^[A-Za-z0-9_-]{10,}$/;
+const SLUG_SUFFIX_REGEX = /-[a-z0-9_]{6}$/;
 
 const normalizeCity = (row: CityRow): City => ({
   id: row.id,
@@ -41,6 +46,54 @@ const toCanonicalCityInput = (city: City): City => ({
   longitude: city.longitude,
   slug: city.slug?.trim(),
 });
+
+const normalizeMetadataForLookup = (
+  city: Partial<City>
+): { name: string; region: string; countryCode: string } | null => {
+  const name = city.name?.trim() || "";
+  const countryCode = city.countryCode?.trim().toUpperCase() || "";
+  const region = city.region?.trim().toUpperCase() || "";
+
+  if (!name || !countryCode) {
+    return null;
+  }
+
+  return {
+    name: name.toLowerCase(),
+    region,
+    countryCode,
+  };
+};
+
+const toCreatedAtMs = (value: Date | string): number => {
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+};
+
+export function chooseCanonicalCity(
+  candidates: CityCanonicalCandidateRow[]
+): CityCanonicalCandidateRow {
+  if (candidates.length === 0) {
+    throw new Error("chooseCanonicalCity requires at least one candidate");
+  }
+
+  const sorted = [...candidates].sort((a, b) => {
+    const aHasBaseSlug = !SLUG_SUFFIX_REGEX.test((a.slug || "").toLowerCase());
+    const bHasBaseSlug = !SLUG_SUFFIX_REGEX.test((b.slug || "").toLowerCase());
+    if (aHasBaseSlug !== bHasBaseSlug) {
+      return aHasBaseSlug ? -1 : 1;
+    }
+
+    const createdAtDiff = toCreatedAtMs(a.createdAt) - toCreatedAtMs(b.createdAt);
+    if (createdAtDiff !== 0) {
+      return createdAtDiff;
+    }
+
+    return a.id.localeCompare(b.id);
+  });
+
+  return sorted[0];
+}
 
 export const isLikelyGooglePlaceId = (placeId?: string | null): boolean => {
   if (!placeId) {
@@ -179,6 +232,42 @@ export async function upsertCityInPostgres(
   return normalizeCity(rows[0]);
 }
 
+export async function findCanonicalCityByMetadata(
+  city: Partial<City>,
+  executor: QueryExecutor = prisma
+): Promise<City | null> {
+  const normalized = normalizeMetadataForLookup(city);
+  if (!normalized) {
+    return null;
+  }
+
+  const rows = await executor.$queryRaw<CityCanonicalCandidateRow[]>`
+    SELECT
+      "id",
+      "slug",
+      "name",
+      "countryCode",
+      "region",
+      "timezone",
+      "latitude",
+      "longitude",
+      "createdAt"
+    FROM "cities"
+    WHERE
+      LOWER(TRIM("name")) = ${normalized.name}
+      AND UPPER(TRIM(COALESCE("region", ''))) = ${normalized.region}
+      AND UPPER(TRIM("countryCode")) = ${normalized.countryCode}
+    ORDER BY "createdAt" ASC, "id" ASC
+  `;
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const canonical = chooseCanonicalCity(rows);
+  return normalizeCity(canonical);
+}
+
 export async function searchCitiesInPostgres(
   keyword: string,
   limit = 5
@@ -308,8 +397,45 @@ export async function resolveAndUpsertCityForWrite(city: City): Promise<City> {
     return existing;
   }
 
+  const canonicalByProvidedMetadata = await findCanonicalCityByMetadata(city);
+  if (canonicalByProvidedMetadata) {
+    const normalized = normalizeMetadataForLookup(city);
+    console.info("city_canonicalized_by_metadata", {
+      inputId: city.id,
+      canonicalId: canonicalByProvidedMetadata.id,
+      normalizedMetadata: normalized,
+      source: "provided",
+    });
+    return canonicalByProvidedMetadata;
+  }
+
   const googleResolved = await resolveGooglePlaceCity(city.id);
-  return upsertCityInPostgres(googleResolved);
+  const canonicalByGoogleMetadata = await findCanonicalCityByMetadata(googleResolved);
+  if (canonicalByGoogleMetadata) {
+    const normalized = normalizeMetadataForLookup(googleResolved);
+    console.info("city_canonicalized_by_metadata", {
+      inputId: city.id,
+      canonicalId: canonicalByGoogleMetadata.id,
+      normalizedMetadata: normalized,
+      source: "google_resolved",
+    });
+    return canonicalByGoogleMetadata;
+  }
+
+  const existingAfterGoogleResolve = await getCityFromPostgres(googleResolved.id);
+  if (existingAfterGoogleResolve && isResolvedCity(existingAfterGoogleResolve)) {
+    return existingAfterGoogleResolve;
+  }
+
+  const inserted = await upsertCityInPostgres(googleResolved);
+  const normalized = normalizeMetadataForLookup(inserted);
+  console.info("city_inserted_new", {
+    inputId: city.id,
+    insertedId: inserted.id,
+    normalizedMetadata: normalized,
+  });
+
+  return inserted;
 }
 
 export async function requireCityFromPostgres(placeId: string): Promise<City> {
