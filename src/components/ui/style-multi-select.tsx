@@ -29,6 +29,7 @@ interface StyleMultiSelectProps {
   onChange: (styles: string[]) => void;
   disabled?: boolean;
   placeholder?: string;
+  selectedStylesLayout?: "wrap" | "single-row";
 }
 
 export function StyleMultiSelect({
@@ -36,6 +37,7 @@ export function StyleMultiSelect({
   onChange,
   disabled = false,
   placeholder = "Select styles...",
+  selectedStylesLayout = "wrap",
 }: StyleMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const canonicalValue = useMemo(
@@ -58,7 +60,13 @@ export function StyleMultiSelect({
 
   return (
     <div className="">
-      <div className="flex flex-wrap gap-1">
+      <div
+        className={cn(
+          selectedStylesLayout === "single-row"
+            ? "mb-1 flex h-8 items-center gap-1 overflow-x-auto overflow-y-hidden whitespace-nowrap"
+            : "flex flex-wrap gap-1"
+        )}
+      >
         {canonicalValue.map((style) => (
           <StyleBadge
             key={style}
@@ -66,7 +74,11 @@ export function StyleMultiSelect({
             asLink={false}
             showRemoveButton={!disabled}
             onRemove={() => removeStyle(style)}
-            className="mb-1"
+            className={cn(
+              selectedStylesLayout === "single-row"
+                ? "shrink-0 whitespace-nowrap"
+                : "mb-1"
+            )}
           />
         ))}
       </div>

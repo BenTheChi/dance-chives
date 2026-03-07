@@ -79,6 +79,8 @@ export default async function EditEventPage({
   const formattedDates = (currEvent.eventDetails.dates || []).map(
     (dateEntry) => ({
       ...dateEntry,
+      startTime: dateEntry.startTime ?? undefined,
+      endTime: dateEntry.endTime ?? undefined,
       isAllDay: isAllDayEvent(dateEntry.startTime, dateEntry.endTime),
     })
   );

@@ -192,6 +192,11 @@ const normalizeFacebook = (
 const dateRegex =
   /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/;
 const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+const normalizeOptionalTimeValue = (val: unknown) => {
+  if (val === null || val === undefined) return undefined;
+  if (typeof val === "string" && val.trim().length === 0) return undefined;
+  return val;
+};
 
 const sectionSchema = z
   .object({
@@ -293,9 +298,12 @@ const eventDetailsSchema = z.object({
               /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/(19|20|21|22|23)[0-9]{2}$/,
               "Date must be in MM/DD/YYYY format"
             ),
-          isAllDay: z.boolean().default(true), // Form-only field, not stored in DB
-          startTime: z.string().optional(),
-          endTime: z.string().optional(),
+          isAllDay: z.preprocess(
+            (val) => (val === null || val === undefined ? undefined : val),
+            z.boolean().default(true)
+          ), // Form-only field, not stored in DB
+          startTime: z.preprocess(normalizeOptionalTimeValue, z.string().optional()),
+          endTime: z.preprocess(normalizeOptionalTimeValue, z.string().optional()),
         })
         .refine(
           (data) => {

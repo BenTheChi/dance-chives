@@ -980,6 +980,7 @@ export function SectionForm({
                 onChange={(styles) => {
                   handleStylesChange(styles);
                 }}
+                selectedStylesLayout="single-row"
               />
             </div>
           )}

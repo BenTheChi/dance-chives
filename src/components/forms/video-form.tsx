@@ -474,6 +474,7 @@ export function VideoForm({
                         updateVideoStyles(styles);
                       }}
                       disabled={isStylesDisabled}
+                      selectedStylesLayout="single-row"
                     />
                   </FormControl>
                 )}
