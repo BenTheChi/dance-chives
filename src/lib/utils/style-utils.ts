@@ -1,11 +1,27 @@
 import { DANCE_STYLES, DanceStyle } from "@/lib/utils/dance-styles";
 
-const styleByLookupKey = new Map<string, DanceStyle>(
+const canonicalStyleByLookupKey = new Map<string, DanceStyle>(
   DANCE_STYLES.map((style) => [toStyleLookupKey(style), style])
 );
 
+const STYLE_ALIASES: Array<[string, DanceStyle]> = [
+  ["hiphop", "Hip Hop"],
+  ["all style", "Open Styles"],
+  ["all styles", "Open Styles"],
+  ["allstyle", "Open Styles"],
+  ["open style", "Open Styles"],
+];
+
+const styleAliasByLookupKey = new Map<string, DanceStyle>(
+  STYLE_ALIASES.map(([style, canonical]) => [toStyleLookupKey(style), canonical])
+);
+
 function toStyleLookupKey(style: string): string {
-  return style.trim().replace(/\s+/g, " ").toLowerCase();
+  return style
+    .trim()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 }
 
 function titleCaseFallback(style: string): string {
@@ -22,7 +38,10 @@ function titleCaseFallback(style: string): string {
  * Returns null for unknown styles.
  */
 export function resolveCanonicalStyleName(style: string): DanceStyle | null {
-  return styleByLookupKey.get(toStyleLookupKey(style)) ?? null;
+  const key = toStyleLookupKey(style);
+  return (
+    canonicalStyleByLookupKey.get(key) ?? styleAliasByLookupKey.get(key) ?? null
+  );
 }
 
 /**

@@ -257,7 +257,7 @@ async function seedNeo4j() {
         schedule:
           "6:00 PM - Doors Open\n7:00 PM - Preliminaries\n8:00 PM - Semi-Finals\n9:00 PM - Finals\n10:00 PM - Awards",
         city: VANCOUVER_CITY,
-        styles: ["Breaking", "Hip-Hop"],
+        styles: ["Breaking", "Hip Hop"],
         eventType: "Battle",
         status: "visible",
         poster: null,
@@ -378,7 +378,7 @@ async function seedNeo4j() {
         schedule:
           "7:00 PM - Open Cypher\n8:00 PM - Featured Performances\n9:00 PM - Open Freestyle",
         city: SEATTLE_CITY,
-        styles: ["Hip-Hop"],
+        styles: ["Hip Hop"],
         eventType: "Session",
         status: "visible",
         poster: null,
@@ -400,7 +400,7 @@ async function seedNeo4j() {
               title: "Freestyle Session Highlights",
               src: youtubeVideos[3],
               type: "freestyle",
-              styles: ["Hip-Hop"],
+              styles: ["Hip Hop"],
               taggedDancers: [
                 {
                   id: "test-user-0",
@@ -442,7 +442,7 @@ async function seedNeo4j() {
         schedule:
           "7:30 PM - Doors Open\n8:00 PM - Showcase Begins\n9:30 PM - Meet & Greet",
         city: TORONTO_CITY,
-        styles: ["Hip-Hop"],
+        styles: ["Hip Hop"],
         eventType: "Performance",
         status: "visible",
         poster: null,
@@ -464,7 +464,7 @@ async function seedNeo4j() {
               title: "Opening Piece",
               src: youtubeVideos[0],
               type: "choreography",
-              styles: ["Hip-Hop"],
+              styles: ["Hip Hop"],
               taggedChoreographers: [
                 {
                   id: "test-user-1",
@@ -490,7 +490,7 @@ async function seedNeo4j() {
               title: "Featured Choreography",
               src: youtubeVideos[1],
               type: "choreography",
-              styles: ["Hip-Hop"],
+              styles: ["Hip Hop"],
               taggedChoreographers: [
                 {
                   id: "test-user-3",
@@ -638,7 +638,7 @@ async function seedNeo4j() {
     const hipHopBattleEvent = makeBattleEvent(
       "Hip Hop Battle Event",
       "Hip Hop Battle Event",
-      "Hip-Hop",
+      "Hip Hop",
       hipHopBattleVideos,
       "09/14/2025"
     );
@@ -652,7 +652,7 @@ async function seedNeo4j() {
     const allStyleBattleEvent = makeBattleEvent(
       "All Style Battle Event",
       "All Style Battle Event",
-      "All Style",
+      "Open Styles",
       allStyleBattleVideos,
       "09/28/2025"
     );
