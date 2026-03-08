@@ -46,12 +46,8 @@ echo "✅ Neo4j is ready!"
 echo "🗄️  Running database migrations..."
 npx prisma migrate dev --name init
 
-echo "🌱 Seeding databases with test data using existing query functions..."
-echo "   🐘 Seeding PostgreSQL..."
+echo "🌱 Seeding PostgreSQL + Neo4j via Prisma seed..."
 npx prisma db seed
-
-echo "   🔗 Seeding Neo4j..."
-npm run neo4j:seed
 
 echo "🎉 Setup complete!"
 echo ""
