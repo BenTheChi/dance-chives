@@ -28,14 +28,14 @@ function SubmitButton() {
 export function HomeSubmissionForm() {
   const [state, formAction] = useActionState(
     submitHomepageSubmission,
-    initialSubmissionFormState
+    initialSubmissionFormState,
   );
 
   return (
     <section className="w-full bg-primary rounded-sm border-4 border-primary-light p-4 sm:p-6">
-      <div className="flex flex-col items-center max-w-3xl">
+      <div className="flex flex-col items-center max-w-3xl mx-auto w-full">
         <h3 className="!text-2xl sm:!text-3xl !font-rubik-mono-one text-outline mb-3 text-center">
-          Submit an Event
+          Submit Future Event
         </h3>
         <Accordion type="single" collapsible className="w-full mb-6">
           <AccordionItem

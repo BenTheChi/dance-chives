@@ -6,6 +6,7 @@ import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
 import { EventCard } from "@/components/EventCard";
 import { HomeSubmissionForm } from "@/components/forms/home-submission-form";
+import { HomePlaylistSubmissionForm } from "@/components/forms/home-playlist-submission-form";
 import {
   Info,
   ArrowLeft,
@@ -78,8 +79,12 @@ export default async function Home() {
               </div>
             </section>
 
-            <section className="px-2 sm:px-6">
+            <section className="max-w-6xl mx-auto w-full">
               <HomeSubmissionForm />
+            </section>
+
+            <section className="max-w-6xl mx-auto w-full">
+              <HomePlaylistSubmissionForm />
             </section>
             {/* CTA - Changes based on login status */}
             {/* <HomePageCTA variant="primary" /> */}

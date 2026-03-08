@@ -7,27 +7,27 @@ generator client {
 }
 
 model User {
-  id               String          @id @default(cuid())
-  name             String?
-  email            String          @unique
-  username         String?         @unique
-  emailVerified    DateTime? // Keep for NextAuth compatibility
-  accountVerified  DateTime? // User completed registration after OAuth
-  claimed          Boolean         @default(true) // Profile claimed status
-  termsAcceptedAt  DateTime? // Date when user accepted terms of service and privacy policy
+  id                     String          @id @default(cuid())
+  name                   String?
+  email                  String          @unique
+  username               String?         @unique
+  emailVerified          DateTime? // Keep for NextAuth compatibility
+  accountVerified        DateTime? // User completed registration after OAuth
+  claimed                Boolean         @default(true) // Profile claimed status
+  termsAcceptedAt        DateTime? // Date when user accepted terms of service and privacy policy
   contentUsageAcceptedAt DateTime? // Date when user accepted content usage and marketing policy
-  optOutOfMarketing Boolean @default(false) // User preference to opt out of marketing emails
-  image            String?
-  accounts         Account[]
-  sessions         Session[]
+  optOutOfMarketing      Boolean         @default(false) // User preference to opt out of marketing emails
+  image                  String?
+  accounts               Account[]
+  sessions               Session[]
   // Optional for WebAuthn support
-  Authenticator    Authenticator[]
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  auth             Int?
-  filterPreferences Json?
+  Authenticator          Authenticator[]
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  auth                   Int?
+  filterPreferences      Json?
 
-  events          Event[]
+  events Event[]
 
   // Request relationships
   sentTaggingRequests           TaggingRequest[]         @relation("TaggingRequestSender")
@@ -141,11 +141,11 @@ model City {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("cities")
   @@index([name])
   @@index([region])
   @@index([countryCode])
   @@index([updatedAt])
+  @@map("cities")
 }
 
 model EventCard {
@@ -155,10 +155,10 @@ model EventCard {
   title     String
   eventType String?
 
-  cityId       String?
-  cityName     String?
-  region       String?
-  countryCode  String?
+  cityId        String?
+  cityName      String?
+  region        String?
+  countryCode   String?
   eventTimezone String?
 
   posterUrl String?
@@ -168,8 +168,8 @@ model EventCard {
   styles String[] @default([])
 
   /// Primary display date in MM/DD/YYYY (keeps UI stable)
-  displayDateLocal String?
-  additionalDatesCount Int @default(0)
+  displayDateLocal     String?
+  additionalDatesCount Int     @default(0)
 
   /// Event visibility status
   status String @default("visible")
@@ -177,15 +177,15 @@ model EventCard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  eventDates    EventDate[]
-  sectionCards  SectionCard[]
+  eventDates   EventDate[]
+  sectionCards SectionCard[]
 
-  @@map("event_cards")
   @@index([cityId])
   @@index([eventType])
   @@index([updatedAt])
   @@index([status])
   @@index([styles], type: Gin)
+  @@map("event_cards")
 }
 
 model EventDate {
@@ -198,7 +198,7 @@ model EventDate {
   kind EventDateKind
 
   // Always stored as UTC instants for ordering/paging.
-  startUtc DateTime @db.Timestamptz(6)
+  startUtc DateTime  @db.Timestamptz(6)
   endUtc   DateTime? @db.Timestamptz(6)
 
   // For all-day events: authoritative local calendar day in the event timezone.
@@ -206,9 +206,9 @@ model EventDate {
 
   createdAt DateTime @default(now())
 
-  @@map("event_dates")
   @@index([eventId, startUtc])
   @@index([startUtc])
+  @@map("event_dates")
 }
 
 model SectionCard {
@@ -223,19 +223,19 @@ model SectionCard {
   sectionType String?
   posterUrl   String?
 
-  date DateTime? @db.Date
+  date      DateTime? @db.Date
   startTime String?
-  endTime String?
+  endTime   String?
 
-  styles String[] @default([])
-  totalVideoCount Int @default(0)
+  styles          String[] @default([])
+  totalVideoCount Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("section_cards")
   @@index([eventId])
   @@index([styles], type: Gin)
+  @@map("section_cards")
 }
 
 model UserCard {
@@ -255,10 +255,10 @@ model UserCard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("user_cards")
   @@index([cityId])
   @@index([styles], type: Gin)
   @@index([updatedAt])
+  @@map("user_cards")
 }
 
 // Request Models
@@ -344,9 +344,9 @@ model AuthLevelChangeRequest {
 
 model AccountClaimRequest {
   id                String        @id @default(cuid())
-  senderId          String        // User requesting to claim the account
-  targetUserId      String        // Unclaimed user being claimed
-  instagramHandle   String        // Instagram handle being claimed
+  senderId          String // User requesting to claim the account
+  targetUserId      String // Unclaimed user being claimed
+  instagramHandle   String // Instagram handle being claimed
   tagCount          Int           @default(0) // Number of tags/relationships on unclaimed account
   wipeRelationships Boolean       @default(false) // Whether to remove existing tags/relationships on merge
   status            RequestStatus @default(PENDING)
@@ -396,11 +396,11 @@ model Notification {
 }
 
 model MagicLinkToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   email     String
   userId    String?
-  tokenHash String   @unique
-  createdAt DateTime @default(now())
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
   expiresAt DateTime
   usedAt    DateTime?
 
@@ -426,14 +426,28 @@ enum SubmissionStatus {
   rejected
 }
 
+enum PlaylistSubmissionStatus {
+  waiting
+  parsing
+  reviewing
+  failed
+  approved
+  rejected
+}
+
+enum PlaylistParserMode {
+  segment
+  ai
+}
+
 model Job {
   id          String    @id @default(cuid())
   status      JobStatus @default(pending)
-  result      Json?     // Store result as JSON
+  result      Json? // Store result as JSON
   error       String?
   createdAt   DateTime  @default(now())
   completedAt DateTime?
-  expiresAt   DateTime  // When the job should be cleaned up
+  expiresAt   DateTime // When the job should be cleaned up
 
   @@index([status])
   @@index([createdAt])
@@ -444,10 +458,10 @@ model Job {
 model React {
   userId  String
   videoId String
-  fire    Int[] @default([]) // timestamps in seconds, sorted ascending
-  clap    Int[] @default([])
-  wow     Int[] @default([])
-  laugh   Int[] @default([])
+  fire    Int[]  @default([]) // timestamps in seconds, sorted ascending
+  clap    Int[]  @default([])
+  wow     Int[]  @default([])
+  laugh   Int[]  @default([])
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -457,17 +471,17 @@ model React {
 }
 
 model Submission {
-  id        String           @id @default(cuid())
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  status    SubmissionStatus @default(waiting)
-  parseAttempts Int          @default(0)
+  id            String           @id @default(cuid())
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  status        SubmissionStatus @default(waiting)
+  parseAttempts Int              @default(0)
 
-  lastParseStartedAt  DateTime?
-  lastParseFinishedAt DateTime?
-  lastParseErrorCode  String?
+  lastParseStartedAt    DateTime?
+  lastParseFinishedAt   DateTime?
+  lastParseErrorCode    String?
   lastParseErrorMessage String?
-  lastParserProviders Json?
+  lastParserProviders   Json?
 
   email     String?
   igPostUrl String?
@@ -483,12 +497,48 @@ model Submission {
 }
 
 model Reviewing {
-  id           String     @id @default(cuid())
-  updatedAt    DateTime   @updatedAt
-  submissionId String     @unique @map("submission_id")
-  eventJson    Json       @map("event_json")
+  id           String   @id @default(cuid())
+  updatedAt    DateTime @updatedAt
+  submissionId String   @unique @map("submission_id")
+  eventJson    Json     @map("event_json")
 
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@map("reviewing")
+}
+
+model PlaylistSubmission {
+  id                    String                   @id @default(cuid())
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  status                PlaylistSubmissionStatus @default(waiting)
+  parserMode            PlaylistParserMode?
+  parseAttempts         Int                      @default(0)
+  lastParseStartedAt    DateTime?
+  lastParseFinishedAt   DateTime?
+  lastParseErrorCode    String?
+  lastParseErrorMessage String?
+  lastParserProviders   Json?
+  playlistUrl           String
+  playlistId            String                   @unique
+  eventId               String?
+
+  reviewing PlaylistReviewing?
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("playlist_submissions")
+}
+
+model PlaylistReviewing {
+  id           String   @id @default(cuid())
+  updatedAt    DateTime @updatedAt
+  submissionId String   @unique @map("submission_id")
+  eventJson    Json     @map("event_json")
+  parseJson    Json?    @map("parse_json")
+
+  submission PlaylistSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("playlist_reviewing")
 }
