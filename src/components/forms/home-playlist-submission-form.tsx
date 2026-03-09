@@ -35,7 +35,6 @@ export function HomePlaylistSubmissionForm() {
         </h3>
         <p className="text-center text-sm sm:text-base mb-6 max-w-2xl">
           Submit a single playlist URL for queue review in Dance Chives console.
-          Playlist IDs are permanently deduped.
         </p>
         {state.status === "success" ? (
           <div className="rounded-sm border-2 border-secondary-light bg-charcoal p-4 text-center">
