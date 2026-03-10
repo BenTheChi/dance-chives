@@ -93,19 +93,19 @@ export function EventCard({
           <div className="flex justify-between items-center">
             {/* Title */}
             <div className="flex flex-col">
-              <h2 className="!text-[18px] sm:!text-[20px] line-clamp-2">
+              <h2 className="text-[18px] sm:text-[20px] line-clamp-2">
                 {title}
               </h2>
-              <span className="!text-[12px] sm:!text-md ">{formattedDate}</span>
+              <span className="text-[12px] sm:text-base">{formattedDate}</span>
               {(additionalDatesCount ?? 0) > 0 && (
-                <span className="!text-[12px] sm:!text-md ">
+                <span className="text-[12px] sm:text-base">
                   +{additionalDatesCount} more dates
                 </span>
               )}
             </div>
             <div className="flex flex-col gap-1 items-end">
-              {eventType && <span className="!text-[12px] ">{eventType}</span>}
-              {city && <span className="!text-[12px] ">{city}</span>}
+              {eventType && <span className="text-[12px]">{eventType}</span>}
+              {city && <span className="text-[12px]">{city}</span>}
             </div>
           </div>
 

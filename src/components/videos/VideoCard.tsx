@@ -241,7 +241,7 @@ export function VideoCard({
       {/* Use pointer-events-none on overlay to allow avatars (z-20) to receive events */}
       <div className="absolute inset-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-none z-10 flex flex-col">
         <div className="flex flex-col items-baseline bg-charcoal px-3 py-2 border-b border-black pointer-events-auto">
-          <h3 className="!text-[14px] line-clamp-1">{video.title}</h3>
+          <h3 className="text-[14px] line-clamp-1">{video.title}</h3>
 
           {/* Title */}
           <div className="flex gap-1 items-end justify-between w-full line-clamp-1">
