@@ -178,13 +178,13 @@ export function SectionCard({
 
             {/* City name - shown under section title */}
             {city && (
-              <p className="text-center !text-sm text-muted-foreground mb-2">
+              <p className="text-center text-sm text-muted-foreground mb-2">
                 {city}
               </p>
             )}
 
             {!showEventTitle && dateTimeText && (
-              <p className="text-center !text-[12px] uppercase tracking-[0.08em] mb-1">
+              <p className="text-center text-[12px] uppercase tracking-[0.08em] mb-1">
                 {dateTimeText}
               </p>
             )}

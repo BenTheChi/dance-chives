@@ -1,4 +1,5 @@
 import { City } from "@/types/city";
+import { SquareCard } from "@/components/ui/square-card";
 
 interface CityCardProps {
   city: City;
@@ -6,14 +7,12 @@ interface CityCardProps {
 }
 
 export function CityCard({ city, href }: CityCardProps) {
-  const content = (
-    <div className="card flex flex-col items-center justify-center w-full max-w-[500px] aspect-square p-6">
+  return (
+    <SquareCard href={href}>
       <h2 className="text-center mb-4">{city.name}</h2>
-      <div className="flex flex-row gap-2 items-center justify-center flex-wrap">
+      <div className="flex flex-row flex-wrap items-center justify-center gap-2">
         {city.region && <h3 className="text-center">{city.region}</h3>}
       </div>
-    </div>
+    </SquareCard>
   );
-
-  return <div className="w-full max-w-[500px]">{content}</div>;
 }
