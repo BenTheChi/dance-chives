@@ -40,17 +40,14 @@ export function EventCard({
     canonicalStyles.length > 3 ? canonicalStyles.length - 3 : 0;
 
   // Format date for display (MM/DD/YY format)
+  // Parse without Date constructor to avoid timezone shifts (date is already MM/DD/YYYY)
   const formattedDate = date
     ? (() => {
-        try {
-          const dateObj = new Date(date);
-          const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-          const day = String(dateObj.getDate()).padStart(2, "0");
-          const year = String(dateObj.getFullYear()).slice(-2);
-          return `${month}/${day}/${year}`;
-        } catch {
-          return date; // Fallback to original if parsing fails
+        const parts = date.split("/");
+        if (parts.length === 3) {
+          return `${parts[0]}/${parts[1]}/${parts[2].slice(-2)}`;
         }
+        return date;
       })()
     : "";
 

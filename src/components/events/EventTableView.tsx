@@ -19,13 +19,12 @@ function clampTitle(title: string): string {
 
 function formatDate(value: string): string {
   if (!value) return "-";
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return value;
-
-  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
-  const day = String(parsedDate.getDate()).padStart(2, "0");
-  const year = String(parsedDate.getFullYear()).slice(-2);
-  return `${month}/${day}/${year}`;
+  // Parse without Date constructor to avoid timezone shifts (value is MM/DD/YYYY)
+  const parts = value.split("/");
+  if (parts.length === 3) {
+    return `${parts[0]}/${parts[1]}/${parts[2].slice(-2)}`;
+  }
+  return value;
 }
 
 export function EventTableView({ events, className }: EventTableViewProps) {

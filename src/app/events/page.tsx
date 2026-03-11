@@ -10,11 +10,13 @@ import { unstable_cache } from "next/cache";
 export const revalidate = 43200; // Revalidate every 12 hours
 
 // Helper to parse date string (MM/DD/YYYY or YYYY-MM-DD format)
+// Always constructs local-midnight Date to avoid UTC timezone shift
 function parseEventDate(dateStr: string): Date | null {
   if (!dateStr) return null;
   try {
     if (dateStr.includes("-")) {
-      return new Date(dateStr);
+      const [year, month, day] = dateStr.split("-").map(Number);
+      return new Date(year, month - 1, day);
     }
     const [month, day, year] = dateStr.split("/").map(Number);
     return new Date(year, month - 1, day);
@@ -86,7 +88,12 @@ export default async function EventsPage() {
       dates.forEach((d) => {
         let date: Date | null = null;
         if (d.localDate) {
-          date = new Date(d.localDate);
+          // Prisma returns @db.Date as UTC midnight; use UTC getters to avoid timezone shift
+          date = new Date(
+            d.localDate.getUTCFullYear(),
+            d.localDate.getUTCMonth(),
+            d.localDate.getUTCDate()
+          );
         } else if (d.startUtc) {
           date = new Date(d.startUtc);
         }
