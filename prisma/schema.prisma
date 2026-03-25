@@ -433,6 +433,7 @@ enum PlaylistSubmissionStatus {
   failed
   approved
   rejected
+  auto_approved
 }
 
 enum PlaylistParserMode {
