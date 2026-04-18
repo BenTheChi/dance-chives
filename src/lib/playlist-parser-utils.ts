@@ -5,7 +5,7 @@
 
 import { ParsedSection, ParsedPlaylistResponse } from "./groq-llm";
 import { Section, Bracket, Video } from "@/types/event";
-import { DANCE_STYLES, validateDanceStyles } from "./utils/dance-styles";
+import { validateDanceStyles } from "./utils/dance-styles";
 
 const VALID_SECTION_TYPES = [
   "Battle",
@@ -225,7 +225,7 @@ function sanitizeSection(section: any, index: number): Section {
   // Log warning if invalid styles were filtered out
   if (rawStyles.length > 0 && (!styles || styles.length < rawStyles.length)) {
     const invalidStyles = rawStyles.filter(
-      (s: string) => !styles?.includes(s as (typeof DANCE_STYLES)[number])
+      (s: string) => !styles?.includes(s)
     );
     if (invalidStyles.length > 0) {
       console.warn(

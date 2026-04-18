@@ -1,3 +1,6 @@
+// Fallback list used at build time, in tests, and if the DB is unreachable.
+// Source of truth is the dance_styles Postgres table. Do not add styles here —
+// run the sync script in dance-chives-manager instead.
 export const DANCE_STYLES = [
   "Animation",
   "Breaking",
@@ -23,18 +26,18 @@ export const DANCE_STYLES = [
   "Waving",
 ] as const;
 
-export type DanceStyle = (typeof DANCE_STYLES)[number];
+export type DanceStyle = string;
 
-/**
- * Validates if a string is a valid dance style
- */
-export function isValidDanceStyle(style: string): style is DanceStyle {
-  return DANCE_STYLES.includes(style as DanceStyle);
+export function isValidDanceStyle(
+  style: string,
+  against: string[] = [...DANCE_STYLES]
+): style is DanceStyle {
+  return against.includes(style);
 }
 
-/**
- * Validates an array of strings to ensure all are valid dance styles
- */
-export function validateDanceStyles(styles: string[]): DanceStyle[] {
-  return styles.filter(isValidDanceStyle);
+export function validateDanceStyles(
+  styles: string[],
+  against: string[] = [...DANCE_STYLES]
+): DanceStyle[] {
+  return styles.filter((s) => against.includes(s));
 }

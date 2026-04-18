@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { callCohereAPI } from "@/lib/cohere-llm";
-import { validateDanceStyles, DANCE_STYLES } from "@/lib/utils/dance-styles";
+import { validateDanceStyles } from "@/lib/utils/dance-styles";
+import { getDanceStyles } from "@/lib/utils/dance-styles.server";
 
 // Helper functions to normalize social media links (same as in event-form.tsx)
 const normalizeInstagram = (
@@ -54,7 +55,8 @@ const normalizeFacebook = (
   return `https://facebook.com/${username}`;
 };
 
-const AUTOFILL_PROMPT = `
+function buildAutofillPrompt(styles: string[]): string {
+  return `
 You are an expert at extracting event information from dance event social media posts and text descriptions.
 
 Analyze the provided text to extract event details. Return a JSON object matching this structure:
@@ -100,7 +102,7 @@ TEXT-SPECIFIC EXTRACTION GUIDELINES:
 - Extract website URLs if mentioned
 
 DESCRIPTION FIELD RULES:
-The description field should ONLY contain promotional content, social elements, and additional context that is NOT already captured in other fields. 
+The description field should ONLY contain promotional content, social elements, and additional context that is NOT already captured in other fields.
 
 INCLUDE in description:
 - Copywrite, promotional language, taglines
@@ -123,10 +125,11 @@ EXCLUDE from description (these go to other fields):
 - Social media links → goes to respective social media fields
 
 DANCE STYLES - ONLY use these exact style names (case-sensitive):
-${DANCE_STYLES.map((style) => `- ${style}`).join("\n")}
+${styles.map((style) => `- ${style}`).join("\n")}
 
 DO NOT use any other style names. If a style is mentioned that's not in this list, omit it from the styles array. If not sure default it to Open Styles
 `;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -156,7 +159,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fullPrompt = `${AUTOFILL_PROMPT}\n\nText to analyze:\n${textInput}`;
+    const danceStyles = await getDanceStyles();
+    const fullPrompt = `${buildAutofillPrompt(danceStyles)}\n\nText to analyze:\n${textInput}`;
     let aiResponse;
     try {
       aiResponse = await callCohereAPI(fullPrompt, cohereApiKey);
@@ -184,7 +188,7 @@ export async function POST(request: NextRequest) {
       cost: aiResponse.cost ?? "",
       prize: aiResponse.prize ?? "",
       styles: Array.isArray(aiResponse.styles)
-        ? validateDanceStyles(aiResponse.styles)
+        ? validateDanceStyles(aiResponse.styles, danceStyles)
         : [],
       website: aiResponse.website ?? "",
       instagram: aiResponse.instagram ?? "",
