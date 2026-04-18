@@ -30,6 +30,7 @@ interface StyleMultiSelectProps {
   disabled?: boolean;
   placeholder?: string;
   selectedStylesLayout?: "wrap" | "single-row";
+  options?: string[];
 }
 
 export function StyleMultiSelect({
@@ -38,6 +39,7 @@ export function StyleMultiSelect({
   disabled = false,
   placeholder = "Select styles...",
   selectedStylesLayout = "wrap",
+  options = [...DANCE_STYLES],
 }: StyleMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const canonicalValue = useMemo(
@@ -104,7 +106,7 @@ export function StyleMultiSelect({
             <CommandList>
               <CommandEmpty>No styles found.</CommandEmpty>
               <CommandGroup>
-                {DANCE_STYLES.map((style) => {
+                {options.map((style) => {
                   const isSelected = canonicalValue.includes(style);
                   return (
                     <CommandItem

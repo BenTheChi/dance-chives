@@ -81,7 +81,7 @@ Auth levels:
 
 | Concern | Location |
 |---|---|
-| Dance styles whitelist (22 styles) | `src/lib/utils/dance-styles.ts` |
+| Dance styles (DB-driven)           | `dance_styles` Postgres table; `src/lib/utils/dance-styles.server.ts` |
 | LLM pipeline | `src/lib/llm.ts`, `src/lib/llm-utils.ts` |
 | Neo4j driver init | `src/db/driver.ts` |
 | Neo4j event queries + label translation | `src/db/queries/event.ts` |
@@ -116,4 +116,4 @@ APP_ENV                       # staging | production | development
 
 ### Dance Styles
 
-Exactly 22 valid styles (case-sensitive). Always validate against the whitelist in `src/lib/utils/dance-styles.ts`. Never hardcode the list elsewhere.
+Styles are DB-driven — source of truth is the `dance_styles` Postgres table (22 styles, case-sensitive). Server-side code uses `getDanceStyles()` from `src/lib/utils/dance-styles.server.ts` (cached 24h via `unstable_cache`). Client components receive the list via props defaulting to the fallback constant in `dance-styles.ts`. To add a style: run the sync script in dance-chives-manager — no code changes or deploys needed.
