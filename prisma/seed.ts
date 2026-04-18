@@ -291,6 +291,42 @@ async function main() {
     console.log(`✅ Created OAuth account for user: ${accountData.userId}`);
   }
 
+  // Seed canonical dance styles
+  console.log("🌱 Seeding dance styles...");
+  const DANCE_STYLES = [
+    { name: "Animation",        slug: "animation",         aliases: ["animation"] },
+    { name: "Breaking",         slug: "breaking",          aliases: ["break dance","break dancing","breakdance","breakdancing","breakin","b-boy","b-girl","bboy","bgirl","bboying","bgirling"] },
+    { name: "Chicago Footwork", slug: "chicago-footwork",  aliases: ["footwork","juke footwork","jukin"] },
+    { name: "Dancehall",        slug: "dancehall",         aliases: ["dance hall","ragga dancehall"] },
+    { name: "Hip Hop",          slug: "hip-hop",           aliases: ["hiphop","hip-hop","jazz hip hop"] },
+    { name: "House",            slug: "house",             aliases: ["house dance","house dancing"] },
+    { name: "Hustle",           slug: "hustle",            aliases: ["hustle"] },
+    { name: "Jazz",             slug: "jazz",              aliases: ["jazz funk","street jazz"] },
+    { name: "Jookin",           slug: "jookin",            aliases: ["gangsta walk","gangsta walking"] },
+    { name: "Krump",            slug: "krump",             aliases: ["krumping","krumpin"] },
+    { name: "Litefeet",         slug: "litefeet",          aliases: ["lite feet","lite-feet"] },
+    { name: "Locking",          slug: "locking",           aliases: ["lockin","lock and pop"] },
+    { name: "Open Styles",      slug: "open-styles",       aliases: ["open style","all styles","all-styles","open weight","openweight","open division"] },
+    { name: "Popping",          slug: "popping",           aliases: ["poppin","boogaloo","pop and lock"] },
+    { name: "Salsa",            slug: "salsa",             aliases: ["salsa"] },
+    { name: "Shuffling",        slug: "shuffling",         aliases: ["shuffle"] },
+    { name: "Swing",            slug: "swing",             aliases: ["lindy hop","lindy","east coast swing","west coast swing"] },
+    { name: "Turfing",          slug: "turfing",           aliases: ["turf"] },
+    { name: "Tutting",          slug: "tutting",           aliases: ["tutting"] },
+    { name: "Voguing",          slug: "voguing",           aliases: ["vogue","ballroom","ballroom vogue"] },
+    { name: "Waacking",         slug: "waacking",          aliases: ["waaking","whacking","waack","waak","whack"] },
+    { name: "Waving",           slug: "waving",            aliases: ["waves"] },
+  ];
+
+  for (const style of DANCE_STYLES) {
+    await (prisma as any).danceStyle.upsert({
+      where: { slug: style.slug },
+      create: style,
+      update: { name: style.name, aliases: style.aliases },
+    });
+  }
+  console.log(`✅ Seeded ${DANCE_STYLES.length} dance styles`);
+
   // Create Neo4j user profiles
   console.log("🌱 Creating Neo4j user profiles...");
   await seedNeo4j();

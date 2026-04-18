@@ -456,6 +456,17 @@ model Job {
   @@map("jobs")
 }
 
+model DanceStyle {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  aliases   String[] @default([])
+  createdAt DateTime @default(now())
+
+  @@index([slug])
+  @@map("dance_styles")
+}
+
 model React {
   userId  String
   videoId String
