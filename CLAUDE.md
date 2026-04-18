@@ -64,7 +64,7 @@ When ingesting a YouTube playlist, three sequential LLM calls process the videos
 
 Both models are configured for JSON-only responses. Each step validates and auto-fixes missing videos and duplicates. See `src/lib/llm.ts` (orchestrator) and `src/lib/llm-utils.ts` (prompts and types).
 
-Battle sections must have `hasBrackets: true` with videos nested inside `brackets[]`, never in `videos[]` directly.
+Battle sections with bracket rounds (Top 16, Semi Final, etc.) use `hasBrackets: true` with videos nested inside `brackets[]`. 7-to-Smoke format battles use `hasBrackets: false` with videos in `videos[]` directly.
 
 ### Authentication
 

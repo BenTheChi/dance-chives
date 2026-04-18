@@ -205,24 +205,6 @@ function sanitizeSection(section: any, index: number): Section {
     }
   }
 
-  // CRITICAL: Battle sections cannot have videos directly - they must be in brackets
-  if (validSectionType === "Battle" && videos.length > 0) {
-    console.warn(
-      `Section "${title}" is a Battle section but has ${videos.length} video(s) directly in section. Battle sections must have all videos in brackets. Moving to brackets.`
-    );
-    if (brackets.length === 0) {
-      brackets.push({
-        id: generateId(),
-        title: "All Battles",
-        videos: [...videos],
-      });
-    } else {
-      brackets[0].videos.push(...videos);
-    }
-    videos = [];
-    hasBrackets = true;
-  }
-
   // Validate that if hasBrackets is false, brackets array should be empty
   if (!hasBrackets && brackets.length > 0) {
     console.warn(

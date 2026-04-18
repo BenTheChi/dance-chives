@@ -162,7 +162,7 @@ CRITICAL RULES:
 - Total video count MUST equal ${videos.length}
 - If unsure which section, use "Other"
 - Determine video type: "vs"/"battle"→battle, "showcase"/"performance"→choreography, "freestyle"→freestyle, "class"/"workshop"→class, else→other
-- hasBrackets: true ONLY for Battle sectionType
+- hasBrackets: true for bracket-format Battle sections (Top 16, Semi Final, quarters, prelims, etc.); false for 7-to-Smoke format (sequential challengers, no rounds)
 
 Return ONLY valid JSON.`;
 }

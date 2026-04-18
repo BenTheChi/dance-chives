@@ -829,7 +829,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
       title: `New Section ${sections.length + 1}`,
       description: "",
       sectionType: "Battle",
-      hasBrackets: true,
+      hasBrackets: false,
       videos: [],
       brackets: [],
       bgColor: "#ffffff",
@@ -1525,6 +1525,7 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                       <div className="w-full md:w-1/2 md:flex-shrink-0">
                         {selectedSection.hasBrackets ? (
                           <SectionForm
+                            key={`${selectedSection.id}-brackets`}
                             {...commonProps}
                             mode="brackets"
                             externalActiveBracketId={
@@ -1540,7 +1541,11 @@ export default function EventForm({ initialData }: EventFormProps = {}) {
                             }}
                           />
                         ) : (
-                          <SectionForm {...commonProps} mode="videos" />
+                          <SectionForm
+                            key={`${selectedSection.id}-videos`}
+                            {...commonProps}
+                            mode="videos"
+                          />
                         )}
                       </div>
                     </div>

@@ -1078,6 +1078,9 @@ export function SectionForm({
                       ? {
                           ...section,
                           hasBrackets: checked,
+                          // Clear the opposite data structure when toggling
+                          brackets: checked ? section.brackets : [],
+                          videos: checked ? [] : section.videos,
                         }
                       : section
                   );
