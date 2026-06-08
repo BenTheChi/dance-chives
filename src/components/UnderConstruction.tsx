@@ -23,7 +23,7 @@ export function UnderConstruction({
     return (
       <div
         className={cn(
-          "bg-charcoal/20 rounded-sm p-6 md:p-8 border-4 border-primary-light w-full relative",
+          "bg-secondary rounded-sm p-6 md:p-8 border-4 border-primary-light w-full relative",
           className
         )}
       >

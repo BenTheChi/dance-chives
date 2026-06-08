@@ -43,24 +43,25 @@ export default async function Home() {
             <section className="max-w-6xl mx-auto w-full px-4">
               <UnderConstruction
                 variant="banner"
-                title="Major Overhaul Underway"
+                title="Site Under Construction"
                 message={
                   <>
                     Dance Chives is being rebuilt from the ground up. Over the
                     coming weeks we&apos;re overhauling how we collect and
-                    organize data so the archive can grow at scale &mdash; which
-                    means{" "}
+                    organize data so the archive can grow at scale which means{" "}
                     <strong>
                       the site is currently unreliable and parts of it
                       won&apos;t work.
                     </strong>{" "}
                     Events, videos, and profiles you see right now may be
-                    incomplete or disappear as we rebuild. Nothing here is final.
+                    incomplete or disappear as we rebuild. Nothing here is
+                    final.
                     <br />
                     <br />
-                    We&apos;re doing this to make Dance Chives genuinely useful:
-                    a complete, trustworthy record of street dance. Thanks for
-                    your patience &mdash;{" "}
+                    We&apos;re doing this to make Dance Chives more
+                    comprehensive and automatic: a complete and ongoing record
+                    of street dance events around the world. Thank you for your
+                    patience and support.{"  "}
                     <a
                       href="https://discord.gg/HfYg868Ay4"
                       target="_blank"
@@ -303,8 +304,8 @@ export default async function Home() {
                 features being added regularly.
                 <br /> <br /> Please use the report button (
                 <ReportButton /> in the navbar, &apos;Report&apos; in the
-                footer) to
-                report any issues or provide feedback for the platform. <br />
+                footer) to report any issues or provide feedback for the
+                platform. <br />
                 <br /> We welcome all feedback and will use it to improve the
                 platform. Thank you for your support!
               </p>
