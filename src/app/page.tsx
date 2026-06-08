@@ -1,32 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { getEventsWithVideosForWatch } from "@/db/queries/event";
-import { getUpcomingEventCards } from "@/db/queries/event-cards";
 import { ReportButton } from "@/components/report/ReportButton";
-import { EventCard } from "@/components/EventCard";
-import { HomeSubmissionForm } from "@/components/forms/home-submission-form";
-import { HomePlaylistSubmissionForm } from "@/components/forms/home-playlist-submission-form";
-import {
-  Info,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  ArrowDown,
-  Tv,
-  Plus,
-} from "lucide-react";
-
-// Enable ISR - revalidate every 60 seconds
-export const revalidate = 60;
+import { UnderConstruction } from "@/components/UnderConstruction";
 
 export default async function Home() {
-  // Fetch events with videos for watch section
-  const watchPastEvents = await getEventsWithVideosForWatch(6);
-
-  // Fetch upcoming events
-  const upcomingEvents = await getUpcomingEventCards(4);
-
   return (
     <div className="flex flex-col">
       <main className="flex-1 flex flex-col bg-charcoal/15 mb-10">
@@ -62,29 +39,40 @@ export default async function Home() {
           </section>
 
           <div className="flex flex-col items-center gap-20">
-            {/* Mobile Calendar CTA - Only visible on mobile */}
-            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-12 px-4 border-4 border-secondary-light">
-              <div className="flex flex-col items-center gap-6">
-                <h2 className="!text-4xl text-center !font-rubik-mono-one text-outline">
-                  Never Miss an Event
-                </h2>
-                <Link href="/calendar">
-                  <Button
-                    size="xl"
-                    className="font-rubik-mono-one text-xl text-charcoal !bg-accent-blue px-8 py-6 mt-4 hover:scale-105 transition-transform shadow-hover"
-                  >
-                    View Calendar
-                  </Button>
-                </Link>
-              </div>
-            </section>
-
-            <section className="max-w-6xl mx-auto w-full">
-              <HomeSubmissionForm />
-            </section>
-
-            <section className="max-w-6xl mx-auto w-full">
-              <HomePlaylistSubmissionForm />
+            {/* Major overhaul notice */}
+            <section className="max-w-6xl mx-auto w-full px-4">
+              <UnderConstruction
+                variant="banner"
+                title="Major Overhaul Underway"
+                message={
+                  <>
+                    Dance Chives is being rebuilt from the ground up. Over the
+                    coming weeks we&apos;re overhauling how we collect and
+                    organize data so the archive can grow at scale &mdash; which
+                    means{" "}
+                    <strong>
+                      the site is currently unreliable and parts of it
+                      won&apos;t work.
+                    </strong>{" "}
+                    Events, videos, and profiles you see right now may be
+                    incomplete or disappear as we rebuild. Nothing here is final.
+                    <br />
+                    <br />
+                    We&apos;re doing this to make Dance Chives genuinely useful:
+                    a complete, trustworthy record of street dance. Thanks for
+                    your patience &mdash;{" "}
+                    <a
+                      href="https://discord.gg/HfYg868Ay4"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline font-semibold"
+                    >
+                      join the Discord
+                    </a>{" "}
+                    to follow progress and help shape what comes next.
+                  </>
+                }
+              />
             </section>
             {/* CTA - Changes based on login status */}
             {/* <HomePageCTA variant="primary" /> */}
@@ -214,44 +202,6 @@ export default async function Home() {
               </div>
             </section> */}
 
-            {/* Upcoming Events */}
-            {upcomingEvents.length > 0 && (
-              <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
-                <h2 className="!text-4xl sm:!text-5xl text-center mb-12 !font-rubik-mono-one text-outline">
-                  Upcoming Events
-                </h2>
-                <div className="flex flex-wrap justify-center gap-6">
-                  {upcomingEvents.map((event) => (
-                    <EventCard key={event.id} {...event} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Watch Past Events */}
-            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
-              <h2 className="mb-12 !font-rubik-mono-one !text-4xl sm:!text-5xl text-outline text-center">
-                Watch Past Events
-              </h2>
-              {watchPastEvents.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-                  {watchPastEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      {...event}
-                      href={`/watch/${event.id}`}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    No events with videos available yet.
-                  </p>
-                </div>
-              )}
-            </section>
-
             {/* Contribute Section */}
             <section
               id="contribute"
@@ -352,7 +302,8 @@ export default async function Home() {
                 platform is still under development with bug fixes and new
                 features being added regularly.
                 <br /> <br /> Please use the report button (
-                <ReportButton /> in the navbar, 'Report' in the footer) to
+                <ReportButton /> in the navbar, &apos;Report&apos; in the
+                footer) to
                 report any issues or provide feedback for the platform. <br />
                 <br /> We welcome all feedback and will use it to improve the
                 platform. Thank you for your support!
