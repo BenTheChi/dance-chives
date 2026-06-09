@@ -1,0 +1,21 @@
+[2026-06-08T23:23:11.644Z] 
+[2026-06-08T23:23:11.644Z] ======================================================================
+[2026-06-08T23:23:11.644Z] EVENT WIPE  env=development  mode=DRY-RUN
+[2026-06-08T23:23:11.644Z] ======================================================================
+[2026-06-08T23:23:11.644Z] Args: (none)
+[2026-06-08T23:23:11.644Z] 
+[2026-06-08T23:23:11.644Z] ======================================================================
+[2026-06-08T23:23:11.644Z] PRE-COUNTS
+[2026-06-08T23:23:11.644Z] ======================================================================
+[2026-06-08T23:23:11.653Z] FATAL: Neo4jError: Failed to connect to server. Please ensure that your database is listening on the correct host and port and that you have compatible encryption settings both on Neo4j server and driver. Note that the default encryption setting has changed in Neo4j 4.0.
+
+    at captureStacktrace (/Users/benchi/Desktop/dance-chives/node_modules/neo4j-driver-core/lib/result.js:624:17)
+    at new Result (/Users/benchi/Desktop/dance-chives/node_modules/neo4j-driver-core/lib/result.js:112:23)
+    at Session._run (/Users/benchi/Desktop/dance-chives/node_modules/neo4j-driver-core/lib/session.js:224:16)
+    at Session.run (/Users/benchi/Desktop/dance-chives/node_modules/neo4j-driver-core/lib/session.js:188:27)
+    at neo4jCounts (/Users/benchi/Desktop/dance-chives/scripts/wipe-events.ts:91:31)
+    at main (/Users/benchi/Desktop/dance-chives/scripts/wipe-events.ts:329:24)
+    at driver (/Users/benchi/Desktop/dance-chives/scripts/wipe-events.ts:383:1)
+    at Object.<anonymous> (/Users/benchi/Desktop/dance-chives/scripts/wipe-events.ts:393:4)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at Object.transformer (/Users/benchi/Desktop/dance-chives/node_modules/tsx/dist/register-D46fvsV_.cjs:3:1104)

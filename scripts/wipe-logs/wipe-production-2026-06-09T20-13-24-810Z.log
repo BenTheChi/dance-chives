@@ -1,0 +1,40 @@
+[2026-06-09T20:13:24.811Z] 
+[2026-06-09T20:13:24.811Z] ======================================================================
+[2026-06-09T20:13:24.811Z] EVENT WIPE  env=production  mode=DRY-RUN
+[2026-06-09T20:13:24.811Z] ======================================================================
+[2026-06-09T20:13:24.811Z] Args: (none)
+[2026-06-09T20:13:24.811Z] 
+[2026-06-09T20:13:24.811Z] ======================================================================
+[2026-06-09T20:13:24.811Z] PRE-COUNTS
+[2026-06-09T20:13:24.811Z] ======================================================================
+[2026-06-09T20:13:39.559Z] Neo4j: {"Event":0,"Section":0,"Video":0,"Bracket":0,"Image":0,"Gallery":0,"IngestRun":0,"User":82,"City":32,"Style":22}
+[2026-06-09T20:13:39.559Z] Postgres: {"eventCards":0,"eventDates":0,"sectionCards":0,"eventLink":0,"reacts":0,"submissions":0,"playlistSubmissions":0,"reviewing":0,"playlistReviewing":0,"taggingReq":0,"ownershipReq":0,"teamReq":0,"users":108,"accounts":18,"userCards":82,"cities":32,"danceStyles":23}
+[2026-06-09T20:13:39.560Z] 
+[2026-06-09T20:13:39.560Z] ======================================================================
+[2026-06-09T20:13:39.560Z] R2: delete objects under prefix events/
+[2026-06-09T20:13:39.560Z] ======================================================================
+[2026-06-09T20:13:39.566Z] Bucket: dance-chives-images-production  Prefix: events/
+[2026-06-09T20:13:40.044Z] R2 listed: 0, deleted: 0
+[2026-06-09T20:13:40.044Z] 
+[2026-06-09T20:13:40.044Z] ======================================================================
+[2026-06-09T20:13:40.044Z] Postgres: delete event-derived + event-tied rows
+[2026-06-09T20:13:40.044Z] ======================================================================
+[2026-06-09T20:13:40.044Z] [dry-run] would DELETE: reacts, event_cards (+cascade event_dates,
+[2026-06-09T20:13:40.045Z]   section_cards), Event, TaggingRequest, OwnershipRequest,
+[2026-06-09T20:13:40.045Z]   TeamMemberRequest, reviewing+submissions,
+[2026-06-09T20:13:40.045Z]   playlist_reviewing+playlist_submissions, and the RequestApproval /
+[2026-06-09T20:13:40.045Z]   Notification rows tied to TAGGING/TEAM_MEMBER/OWNERSHIP requests.
+[2026-06-09T20:13:40.045Z] 
+[2026-06-09T20:13:40.045Z] ======================================================================
+[2026-06-09T20:13:40.045Z] Neo4j: DETACH DELETE event graph
+[2026-06-09T20:13:40.045Z] ======================================================================
+[2026-06-09T20:13:40.045Z] [dry-run] would DETACH DELETE all :Video nodes (batched)
+[2026-06-09T20:13:40.045Z] [dry-run] would DETACH DELETE all :Bracket nodes (batched)
+[2026-06-09T20:13:40.045Z] [dry-run] would DETACH DELETE all :Section nodes (batched)
+[2026-06-09T20:13:40.045Z] [dry-run] would DETACH DELETE all :Image nodes (batched)
+[2026-06-09T20:13:40.045Z] [dry-run] would DETACH DELETE all :Event nodes (batched)
+[2026-06-09T20:13:40.045Z] 
+[2026-06-09T20:13:40.045Z] ======================================================================
+[2026-06-09T20:13:40.045Z] POST-COUNTS
+[2026-06-09T20:13:40.045Z] ======================================================================
+[2026-06-09T20:13:46.409Z] Neo4j: {"Event":0,"Section":0,"Video":0,"Bracket":0,"Image":0,"Gallery":0,"IngestRun":0,"User":82,"City":32,"Style":22}

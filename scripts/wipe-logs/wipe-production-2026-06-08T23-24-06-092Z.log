@@ -1,0 +1,27 @@
+[2026-06-08T23:24:06.092Z] 
+[2026-06-08T23:24:06.092Z] ======================================================================
+[2026-06-08T23:24:06.092Z] EVENT WIPE  env=production  mode=DRY-RUN
+[2026-06-08T23:24:06.092Z] ======================================================================
+[2026-06-08T23:24:06.092Z] Args: (none)
+[2026-06-08T23:24:06.092Z] 
+[2026-06-08T23:24:06.092Z] ======================================================================
+[2026-06-08T23:24:06.092Z] PRE-COUNTS
+[2026-06-08T23:24:06.092Z] ======================================================================
+[2026-06-08T23:24:12.116Z] Neo4j: {"Event":118,"Section":153,"Video":1418,"Bracket":314,"Image":108,"Gallery":108,"User":82,"City":32,"Style":22}
+[2026-06-08T23:24:12.116Z] Postgres: {"eventCards":118,"eventDates":403,"sectionCards":150,"eventLink":118,"reacts":64,"submissions":64,"playlistSubmissions":4,"reviewing":41,"playlistReviewing":4,"taggingReq":4,"ownershipReq":0,"teamReq":0,"users":107,"accounts":18,"userCards":82,"cities":32,"danceStyles":23}
+[2026-06-08T23:24:12.116Z] 
+[2026-06-08T23:24:12.116Z] ======================================================================
+[2026-06-08T23:24:12.116Z] R2: delete objects under prefix events/
+[2026-06-08T23:24:12.116Z] ======================================================================
+[2026-06-08T23:24:12.124Z] Bucket: dance-chives-images-production  Prefix: events/
+[2026-06-08T23:24:12.651Z] FATAL: AccessDenied: Access Denied
+    at ProtocolLib.getErrorSchemaOrThrowBaseException (/Users/benchi/Desktop/dance-chives/node_modules/@aws-sdk/core/dist-cjs/submodules/protocols/index.js:69:67)
+    at AwsRestXmlProtocol.handleError (/Users/benchi/Desktop/dance-chives/node_modules/@aws-sdk/core/dist-cjs/submodules/protocols/index.js:1702:65)
+    at AwsRestXmlProtocol.deserializeResponse (/Users/benchi/Desktop/dance-chives/node_modules/@smithy/core/dist-cjs/submodules/protocols/index.js:301:24)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async /Users/benchi/Desktop/dance-chives/node_modules/@smithy/core/dist-cjs/submodules/schema/index.js:26:24
+    at async /Users/benchi/Desktop/dance-chives/node_modules/@aws-sdk/middleware-sdk-s3/dist-cjs/index.js:386:20
+    at async /Users/benchi/Desktop/dance-chives/node_modules/@smithy/middleware-retry/dist-cjs/index.js:254:46
+    at async /Users/benchi/Desktop/dance-chives/node_modules/@aws-sdk/middleware-sdk-s3/dist-cjs/index.js:63:28
+    at async /Users/benchi/Desktop/dance-chives/node_modules/@aws-sdk/middleware-sdk-s3/dist-cjs/index.js:90:20
+    at async /Users/benchi/Desktop/dance-chives/node_modules/@aws-sdk/middleware-logger/dist-cjs/index.js:5:26

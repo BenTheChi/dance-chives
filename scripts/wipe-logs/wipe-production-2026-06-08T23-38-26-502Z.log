@@ -1,0 +1,48 @@
+[2026-06-08T23:38:26.503Z] 
+[2026-06-08T23:38:26.503Z] ======================================================================
+[2026-06-08T23:38:26.503Z] EVENT WIPE  env=production  mode=DRY-RUN
+[2026-06-08T23:38:26.503Z] ======================================================================
+[2026-06-08T23:38:26.503Z] Args: (none)
+[2026-06-08T23:38:26.503Z] 
+[2026-06-08T23:38:26.503Z] ======================================================================
+[2026-06-08T23:38:26.503Z] PRE-COUNTS
+[2026-06-08T23:38:26.503Z] ======================================================================
+[2026-06-08T23:38:33.733Z] Neo4j: {"Event":118,"Section":153,"Video":1418,"Bracket":314,"Image":108,"Gallery":108,"User":82,"City":32,"Style":22}
+[2026-06-08T23:38:33.733Z] Postgres: {"eventCards":118,"eventDates":403,"sectionCards":150,"eventLink":118,"reacts":64,"submissions":64,"playlistSubmissions":4,"reviewing":41,"playlistReviewing":4,"taggingReq":4,"ownershipReq":0,"teamReq":0,"users":107,"accounts":18,"userCards":82,"cities":32,"danceStyles":23}
+[2026-06-08T23:38:33.734Z] 
+[2026-06-08T23:38:33.734Z] ======================================================================
+[2026-06-08T23:38:33.734Z] R2: delete objects under prefix events/
+[2026-06-08T23:38:33.734Z] ======================================================================
+[2026-06-08T23:38:33.741Z] Bucket: dance-chives-images-production  Prefix: events/
+[2026-06-08T23:38:33.990Z]   [dry-run] would delete events/1-vs-1-popping-battles-GDblDC/posters/044b21e5-cce5-449b-b1bf-0866787171c5-Frankenfunk.jpg
+[2026-06-08T23:38:33.990Z]   [dry-run] would delete events/1-vs-1-popping-battles-GDblDC/posters/3d248093-877b-4953-a2d1-cf1ae5f481dc-thumbnail-Frankenfunk.jpg
+[2026-06-08T23:38:33.990Z]   [dry-run] would delete events/1-vs-1-popping-battles-GDblDC/sections/b9bd0764-6aa4-4ee8-ad97-a22795d2f910/posters/485f8b33-d3c2-47d2-a869-791d84224cd5-thumbnail-Frankenfunk3.jpg
+[2026-06-08T23:38:33.990Z]   [dry-run] would delete events/1-vs-1-popping-battles-GDblDC/sections/d6e6a1a0-0bd7-4054-884a-b56738d16143/posters/282a0404-9d19-426c-869d-79b85588776b-thumbnail-frankenfunk2.jpg
+[2026-06-08T23:38:33.990Z]   [dry-run] would delete events/angle-academy-workshop-EeEs51/gallery/255fcb78-9cd3-4e21-b608-b7ca7afcb5cc-mandijuana.jpg
+[2026-06-08T23:38:33.990Z]   [dry-run] ... and 99 more
+[2026-06-08T23:38:33.990Z] R2 listed: 104, deleted: 0
+[2026-06-08T23:38:33.990Z] 
+[2026-06-08T23:38:33.990Z] ======================================================================
+[2026-06-08T23:38:33.990Z] Postgres: delete event-derived + event-tied rows
+[2026-06-08T23:38:33.990Z] ======================================================================
+[2026-06-08T23:38:33.990Z] [dry-run] would DELETE: reacts, event_cards (+cascade event_dates,
+[2026-06-08T23:38:33.990Z]   section_cards), Event, TaggingRequest, OwnershipRequest,
+[2026-06-08T23:38:33.990Z]   TeamMemberRequest, reviewing+submissions,
+[2026-06-08T23:38:33.990Z]   playlist_reviewing+playlist_submissions, and the RequestApproval /
+[2026-06-08T23:38:33.990Z]   Notification rows tied to TAGGING/TEAM_MEMBER/OWNERSHIP requests.
+[2026-06-08T23:38:33.990Z] 
+[2026-06-08T23:38:33.990Z] ======================================================================
+[2026-06-08T23:38:33.990Z] Neo4j: DETACH DELETE event graph
+[2026-06-08T23:38:33.990Z] ======================================================================
+[2026-06-08T23:38:33.990Z] [dry-run] would DETACH DELETE all :Video nodes (batched)
+[2026-06-08T23:38:33.990Z] [dry-run] would DETACH DELETE all :Bracket nodes (batched)
+[2026-06-08T23:38:33.990Z] [dry-run] would DETACH DELETE all :Section nodes (batched)
+[2026-06-08T23:38:33.990Z] [dry-run] would DETACH DELETE all :Image nodes (batched)
+[2026-06-08T23:38:33.990Z] [dry-run] would DETACH DELETE all :Event nodes (batched)
+[2026-06-08T23:38:33.990Z] 
+[2026-06-08T23:38:33.990Z] ======================================================================
+[2026-06-08T23:38:33.990Z] POST-COUNTS
+[2026-06-08T23:38:33.990Z] ======================================================================
+[2026-06-08T23:38:35.168Z] Neo4j: {"Event":118,"Section":153,"Video":1418,"Bracket":314,"Image":108,"Gallery":108,"User":82,"City":32,"Style":22}
+[2026-06-08T23:38:35.168Z] Postgres: {"eventCards":118,"eventDates":403,"sectionCards":150,"eventLink":118,"reacts":64,"submissions":64,"playlistSubmissions":4,"reviewing":41,"playlistReviewing":4,"taggingReq":4,"ownershipReq":0,"teamReq":0,"users":107,"accounts":18,"userCards":82,"cities":32,"danceStyles":23}
+[2026-06-08T23:38:35.168Z] Dry-run complete. Re-run with --confirm to execute.
