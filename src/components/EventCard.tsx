@@ -7,6 +7,7 @@ import { TEventCard } from "@/types/event";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import { formatEventDate } from "@/lib/utils/date-display";
 
 interface EventCardProps extends TEventCard {
   href?: string; // Optional href for the title link, defaults to /events/${id}
@@ -18,6 +19,7 @@ export function EventCard({
   title,
   imageUrl,
   date,
+  datePrecision,
   city,
   cityId,
   styles,
@@ -39,20 +41,9 @@ export function EventCard({
   const desktopAdditionalCount =
     canonicalStyles.length > 3 ? canonicalStyles.length - 3 : 0;
 
-  // Format date for display (MM/DD/YY format)
-  const formattedDate = date
-    ? (() => {
-        try {
-          const dateObj = new Date(date);
-          const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-          const day = String(dateObj.getDate()).padStart(2, "0");
-          const year = String(dateObj.getFullYear()).slice(-2);
-          return `${month}/${day}/${year}`;
-        } catch {
-          return date; // Fallback to original if parsing fails
-        }
-      })()
-    : "";
+  // Precision-aware display: year-only auto-imports render "2019", not a
+  // fake "01/01/19".
+  const formattedDate = formatEventDate(date, datePrecision);
 
   return (
     <div className="bg-primary-dark group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">

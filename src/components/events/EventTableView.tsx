@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { TEventCard } from "@/types/event";
+import { formatEventDate } from "@/lib/utils/date-display";
 
 const TITLE_CHAR_LIMIT = 48;
 
@@ -17,15 +18,8 @@ function clampTitle(title: string): string {
   return `${title.slice(0, TITLE_CHAR_LIMIT).trimEnd()}...`;
 }
 
-function formatDate(value: string): string {
-  if (!value) return "-";
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return value;
-
-  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
-  const day = String(parsedDate.getDate()).padStart(2, "0");
-  const year = String(parsedDate.getFullYear()).slice(-2);
-  return `${month}/${day}/${year}`;
+function formatDate(value: string, precision?: TEventCard["datePrecision"]): string {
+  return formatEventDate(value, precision) || "-";
 }
 
 export function EventTableView({ events, className }: EventTableViewProps) {
@@ -86,7 +80,7 @@ export function EventTableView({ events, className }: EventTableViewProps) {
                   )}
                 >
                   <td className={cn(cellClassName, "whitespace-nowrap")}>
-                    {formatDate(event.date)}
+                    {formatDate(event.date, event.datePrecision)}
                   </td>
                   <td className={cellClassName}>
                     <Link

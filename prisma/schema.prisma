@@ -171,6 +171,10 @@ model EventCard {
   displayDateLocal     String?
   additionalDatesCount Int     @default(0)
 
+  /// How much of displayDateLocal is real: auto-imported events often only
+  /// know their year. Drives honest rendering ("2019" vs "01/01/19").
+  datePrecision String @default("day")
+
   /// Event visibility status
   status String @default("visible")
 

@@ -122,6 +122,7 @@ export interface TEventCard {
   series?: string;
   imageUrl?: string;
   date: string;
+  datePrecision?: "day" | "month" | "year"; // How much of `date` is real (year-only auto-imports)
   city: string;
   cityId?: string;
   styles: string[];
