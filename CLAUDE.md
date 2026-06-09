@@ -81,7 +81,7 @@ Auth levels:
 
 | Concern | Location |
 |---|---|
-| Dance styles whitelist (22 styles) | `src/lib/utils/dance-styles.ts` |
+| Dance styles whitelist (generated from `dance_styles` table) | `src/lib/utils/dance-styles.ts` |
 | LLM pipeline | `src/lib/llm.ts`, `src/lib/llm-utils.ts` |
 | Neo4j driver init | `src/db/driver.ts` |
 | Neo4j event queries + label translation | `src/db/queries/event.ts` |
@@ -116,4 +116,4 @@ APP_ENV                       # staging | production | development
 
 ### Dance Styles
 
-Exactly 22 valid styles (case-sensitive). Always validate against the whitelist in `src/lib/utils/dance-styles.ts`. Never hardcode the list elsewhere.
+The `dance_styles` Postgres table is THE style registry (shared with the auto-manager). The code whitelist + alias map are **generated** from it: `src/lib/utils/dance-styles.generated.ts` — never hand-edit. To add/change a style: auto-manager Filament (Rules > Dance Styles, which also syncs the Neo4j `Style` node), then `npm run styles:generate` here and commit. `npm run styles:check` (runs as prebuild) fails loudly on drift. Always validate via `src/lib/utils/dance-styles.ts` / `style-utils.ts`; never hardcode style lists.

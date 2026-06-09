@@ -41,7 +41,10 @@
     "dev:setup": "npm run docker:up && sleep 10 && npm run dev",
     "db:setup": "docker-compose up prisma-setup",
     "postinstall": "dotenv -e .env.local -- prisma generate || (echo 'Warning: .env.local not found or prisma generate failed. This is normal on first install. Run \"npm run db:generate\" after setting up your .env.local file.' && exit 0)",
-    "nuke": "dotenv -e .env.staging -- tsx scripts/nuke-staging.ts"
+    "nuke": "dotenv -e .env.staging -- tsx scripts/nuke-staging.ts",
+    "styles:generate": "dotenv -e .env.production -- tsx scripts/generate-styles.ts",
+    "styles:check": "tsx scripts/generate-styles.ts --check",
+    "prebuild": "npm run styles:check"
   },
   "dependencies": {
     "@auth/neo4j-adapter": "^2.8.0",

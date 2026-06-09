@@ -1,16 +1,11 @@
 import { DANCE_STYLES, DanceStyle } from "@/lib/utils/dance-styles";
+// Alias knowledge lives in the dance_styles table (aliases column) and is
+// generated alongside the whitelist — one registry for both apps.
+import { STYLE_ALIASES } from "@/lib/utils/dance-styles.generated";
 
 const canonicalStyleByLookupKey = new Map<string, DanceStyle>(
   DANCE_STYLES.map((style) => [toStyleLookupKey(style), style])
 );
-
-const STYLE_ALIASES: Array<[string, DanceStyle]> = [
-  ["hiphop", "Hip Hop"],
-  ["all style", "Open Styles"],
-  ["all styles", "Open Styles"],
-  ["allstyle", "Open Styles"],
-  ["open style", "Open Styles"],
-];
 
 const styleAliasByLookupKey = new Map<string, DanceStyle>(
   STYLE_ALIASES.map(([style, canonical]) => [toStyleLookupKey(style), canonical])

@@ -1,29 +1,10 @@
-export const DANCE_STYLES = [
-  "Animation",
-  "Breaking",
-  "Dancehall",
-  "Hip Hop",
-  "House",
-  "Chicago Footwork",
-  "Hustle",
-  "Jazz",
-  "Jookin",
-  "Krump",
-  "Locking",
-  "Litefeet",
-  "Open Styles",
-  "Popping",
-  "Salsa",
-  "Shuffling",
-  "Swing",
-  "Turfing",
-  "Tutting",
-  "Voguing",
-  "Waacking",
-  "Waving",
-] as const;
+// The style whitelist is GENERATED from the dance_styles table — the single
+// style registry shared with the auto-manager. To add or change styles, use
+// the auto-manager's Filament (Rules > Dance Styles), then run
+// `npm run styles:generate`. Never hand-edit the generated file.
+export { DANCE_STYLES, type DanceStyle } from "./dance-styles.generated";
 
-export type DanceStyle = (typeof DANCE_STYLES)[number];
+import { DANCE_STYLES, type DanceStyle } from "./dance-styles.generated";
 
 /**
  * Validates if a string is a valid dance style
