@@ -25,6 +25,12 @@ export function slugify(text: string) {
 }
 
 export function extractYouTubeVideoId(url: string): string | null {
+  // Canonical form for auto-imported videos (srcType: 'youtube'): src is the
+  // bare 11-character YouTube id, not a URL.
+  if (/^[A-Za-z0-9_-]{11}$/.test(url)) {
+    return url;
+  }
+
   // Regular expressions to match different YouTube URL formats
   const patterns = [
     // Standard watch URL

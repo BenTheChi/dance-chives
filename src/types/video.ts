@@ -5,6 +5,8 @@ export interface Video {
   id: string;
   title: string;
   src: string;
+  /** Platform src came from. 'youtube' means src is the bare video id. */
+  srcType?: "youtube";
   styles?: string[];
   thumbnailUrl?: string;
   type: "battle" | "freestyle" | "choreography" | "class" | "other";

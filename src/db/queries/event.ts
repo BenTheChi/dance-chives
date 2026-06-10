@@ -485,6 +485,7 @@ export const getEvent = async (
         id: v.id,
         title: v.title,
         src: v.src,
+        srcType: v.srcType,
         type: CASE 
           WHEN 'BattleVideo' IN labels(v) THEN 'battle'
           WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
@@ -515,6 +516,7 @@ export const getEvent = async (
       id: v.id,
       title: v.title,
       src: v.src,
+      srcType: v.srcType,
       type: CASE 
         WHEN 'BattleVideo' IN labels(v) THEN 'battle'
         WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
@@ -5316,6 +5318,7 @@ export async function getAllBattleSections(
                id: v.id,
                title: v.title,
                src: v.src,
+               srcType: v.srcType,
                labels: CASE WHEN v IS NULL THEN [] ELSE
                  [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']]
                END,
@@ -5340,6 +5343,7 @@ export async function getAllBattleSections(
         id: string | null;
         title: string | null;
         src: string | null;
+        srcType?: string | null;
         labels?: string[] | null;
         styles?: string[] | null;
       }>) || [];
@@ -5356,6 +5360,7 @@ export async function getAllBattleSections(
           id: rawVideo.id,
           title: rawVideo.title || "",
           src: rawVideo.src || "",
+          srcType: rawVideo.srcType === "youtube" ? "youtube" : undefined,
           type: getVideoType(rawVideo.labels || []),
           styles: videoStyles.length > 0 ? videoStyles : undefined,
         };
@@ -5448,6 +5453,7 @@ export async function getAllBattleSections(
                  id: v.id,
                  title: v.title,
                  src: v.src,
+                 srcType: v.srcType,
                  labels: [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']],
                  styles: videoStyles
                }) as videos
@@ -5461,6 +5467,7 @@ export async function getAllBattleSections(
           id: string | null;
           title: string | null;
           src: string | null;
+          srcType?: string | null;
           labels?: string[] | null;
           styles?: string[] | null;
         }>) || [];
@@ -5477,6 +5484,7 @@ export async function getAllBattleSections(
             id: rawVideo.id,
             title: rawVideo.title || "",
             src: rawVideo.src || "",
+            srcType: rawVideo.srcType === "youtube" ? "youtube" : undefined,
             type: getVideoType(rawVideo.labels || []),
             styles: videoStyles.length > 0 ? videoStyles : undefined,
           };
@@ -5894,7 +5902,7 @@ export async function getEventSections(
           OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
           WITH v, collect(style.name) as videoStyles
           ORDER BY COALESCE(v.position, 999999) ASC
-          RETURN v.id as id, v.title as title, v.src as src,
+          RETURN v.id as id, v.title as title, v.src as src, v.srcType as srcType,
                  [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                  videoStyles
           `,
@@ -5980,6 +5988,8 @@ export async function getEventSections(
             id: videoId,
             title: videoRecord.get("title"),
             src: videoRecord.get("src"),
+            srcType:
+              videoRecord.get("srcType") === "youtube" ? "youtube" : undefined,
             type: videoType,
             styles: videoStyles.length > 0 ? videoStyles : undefined,
             taggedWinners: taggedUsers.taggedWinners || undefined,
@@ -6015,7 +6025,7 @@ export async function getEventSections(
             OPTIONAL MATCH (v)-[:STYLE]->(style:Style)
             WITH v, collect(style.name) as videoStyles
             ORDER BY COALESCE(v.position, 999999) ASC
-            RETURN v.id as id, v.title as title, v.src as src,
+            RETURN v.id as id, v.title as title, v.src as src, v.srcType as srcType,
                    [label IN labels(v) WHERE label IN ['BattleVideo', 'FreestyleVideo', 'ChoreographyVideo', 'ClassVideo', 'OtherVideo']] as videoLabels,
                    videoStyles
             `,
@@ -6105,6 +6115,8 @@ export async function getEventSections(
               id: videoId,
               title: videoRecord.get("title"),
               src: videoRecord.get("src"),
+              srcType:
+                videoRecord.get("srcType") === "youtube" ? "youtube" : undefined,
               type: videoType,
               styles: videoStyles.length > 0 ? videoStyles : undefined,
               taggedWinners: taggedUsers.taggedWinners || undefined,
