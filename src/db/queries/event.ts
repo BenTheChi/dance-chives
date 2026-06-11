@@ -955,6 +955,7 @@ export const getEvent = async (
   // Build eventDetails object with all possible properties
   const eventDetails: EventDetails = {
     title: eventData.title,
+    series: eventData.series || undefined,
     description: eventData.description,
     location: eventData.location,
     cost: eventData.cost,
@@ -1752,8 +1753,9 @@ export const insertEvent = async (
     const result = await session.run(
       `
       MERGE (e:Event {id: $eventId})
-      ON CREATE SET 
+      ON CREATE SET
         e.title = $title,
+        e.series = $series,
         e.description = $description,
         e.location = $location,
         e.cost = $cost,
@@ -1770,6 +1772,7 @@ export const insertEvent = async (
         e.updatedAt = $updatedAt
       ON MATCH SET
         e.title = $title,
+        e.series = $series,
         e.description = $description,
         e.location = $location,
         e.cost = $cost,
@@ -1794,6 +1797,7 @@ export const insertEvent = async (
         eventId: event.id,
         creatorId: eventDetails.creatorId,
         title: eventDetails.title,
+        series: eventDetails.series || null,
         description: eventDetails.description,
         location: eventDetails.location,
         cost: eventDetails.cost || null,
@@ -2104,6 +2108,7 @@ export const editEvent = async (
     await tx.run(
       `MATCH (e:Event {id: $id})
        SET e.title = $title,
+           e.series = $series,
            e.description = $description,
            e.location = $location,
            e.cost = $cost,
@@ -2120,6 +2125,7 @@ export const editEvent = async (
       {
         id,
         title: eventDetails.title,
+        series: eventDetails.series || null,
         description: eventDetails.description,
         location: eventDetails.location,
         cost: eventDetails.cost || null,
@@ -2530,7 +2536,8 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
       WITH DISTINCT e, c, p,
            [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
       RETURN e.id as eventId, 
-             e.title as title, 
+             e.title as title,
+             e.series as series,
              e.startDate as startDate,
              e.dates as dates,
              c.name as city, 
@@ -2621,7 +2628,7 @@ export async function getHiddenEvents(): Promise<TEventCard[]> {
       return {
         id: eventId,
         title: record.get("title"),
-        series: undefined,
+        series: record.get("series") ?? undefined,
         imageUrl: record.get("imageUrl"),
         date: displayDate,
         city: record.get("city") || "",
@@ -2724,7 +2731,8 @@ export async function getUserCreatedEventCards(
       WITH DISTINCT e, c, p,
            [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
       RETURN e.id as eventId, 
-             e.title as title, 
+             e.title as title,
+             e.series as series,
              e.startDate as startDate,
              e.dates as dates,
              e.status as status,
@@ -2815,7 +2823,7 @@ export async function getUserCreatedEventCards(
       return {
         id: eventId,
         title: record.get("title"),
-        series: undefined,
+        series: record.get("series") ?? undefined,
         imageUrl: record.get("imageUrl"),
         date: displayDate,
         city: record.get("city") || "",
@@ -2858,7 +2866,8 @@ export async function getSavedEventsForUser(
       WITH DISTINCT e, c, p, r.createdAt as savedAt,
            [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
       RETURN e.id as eventId, 
-             e.title as title, 
+             e.title as title,
+             e.series as series,
              e.startDate as startDate,
              e.dates as dates,
              c.name as city, 
@@ -2960,7 +2969,7 @@ export async function getSavedEventsForUser(
       return {
         id: eventId,
         title: record.get("title"),
-        series: undefined,
+        series: record.get("series") ?? undefined,
         imageUrl: record.get("imageUrl"),
         date: displayDate,
         city: record.get("city") || "",
@@ -3248,7 +3257,7 @@ export const getStyleData = async (
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
       WITH event, c, poster,
            [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
-      RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+      RETURN event.id as eventId, event.title as title, event.series as series, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
              CASE 
                WHEN size(eventTypeLabels) > 0 THEN 
                  CASE eventTypeLabels[0]
@@ -3412,7 +3421,7 @@ export const getStyleData = async (
          OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
          WITH event, c, poster,
               [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
-         RETURN event.id as eventId, event.title as title, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+         RETURN event.id as eventId, event.title as title, event.series as series, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
                 CASE 
                   WHEN size(eventTypeLabels) > 0 THEN 
                     CASE eventTypeLabels[0]
@@ -3491,7 +3500,7 @@ export const getStyleData = async (
         return {
           id: eventId,
           title: record.get("title"),
-          series: undefined,
+          series: record.get("series") ?? undefined,
           imageUrl: record.get("imageUrl"),
           date: date as string,
           city: city as string,
@@ -3574,7 +3583,7 @@ export const getStyleData = async (
           return {
             id: eventId,
             title: record.get("title"),
-            series: undefined,
+            series: record.get("series") ?? undefined,
             imageUrl: record.get("imageUrl"),
             date: date as string,
             city: city as string,
@@ -3970,7 +3979,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
        OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(e)
        WITH e, poster,
             [label IN labels(e) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
-       RETURN e.id as eventId, e.title as title, e.startDate as date, 
+       RETURN e.id as eventId, e.title as title, e.series as series, e.startDate as date,
               poster.url as imageUrl,
               CASE 
                 WHEN size(eventTypeLabels) > 0 THEN 
@@ -4030,7 +4039,7 @@ export const getCityData = async (cityId: string): Promise<CityData | null> => {
       return {
         id: eventId,
         title: record.get("title"),
-        series: undefined,
+        series: record.get("series") ?? undefined,
         imageUrl: record.get("imageUrl"),
         date: record.get("date"),
         city: city.name,

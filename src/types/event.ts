@@ -27,6 +27,8 @@ export interface EventDate {
 // EventDetails interface - unified properties for all event types
 export interface EventDetails {
   title: string;
+  /** Edition-agnostic series name (e.g. "Freestyle Session"). Optional; not surfaced in UI yet. */
+  series?: string;
   description?: string;
   schedule?: string;
   location?: string;

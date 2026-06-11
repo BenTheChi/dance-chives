@@ -31,7 +31,7 @@ export async function getEventCards(): Promise<TEventCard[]> {
     return {
       id: r.eventId,
       title: r.title,
-      series: undefined,
+      series: r.series ?? undefined,
       imageUrl: r.posterUrl ?? undefined,
       date: r.displayDateLocal ?? "",
       datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],
@@ -178,7 +178,7 @@ export async function getUpcomingEventCards(limit: number = 3): Promise<TEventCa
   return sortedEventCards.map((r) => ({
     id: r.eventId,
     title: r.title,
-    series: undefined,
+    series: r.series ?? undefined,
     imageUrl: r.posterUrl ?? undefined,
     date: r.displayDateLocal ?? "",
     datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],

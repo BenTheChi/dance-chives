@@ -153,6 +153,9 @@ model EventCard {
   eventId String @id
 
   title     String
+  /// Edition-agnostic series name (e.g. "Freestyle Session"); optional,
+  /// mirrors the Neo4j Event.series property. Not surfaced in UI yet.
+  series    String?
   eventType String?
 
   cityId        String?

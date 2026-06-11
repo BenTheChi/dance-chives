@@ -1719,6 +1719,7 @@ async function upsertEventReadModels(input: {
     where: { eventId },
     update: {
       title: eventDetails.title,
+      series: eventDetails.series?.trim() || null,
       eventType: eventDetails.eventType,
       cityId: eventDetails.city?.id ?? null,
       cityName: eventDetails.city?.name ?? null,
@@ -1735,6 +1736,7 @@ async function upsertEventReadModels(input: {
     create: {
       eventId,
       title: eventDetails.title,
+      series: eventDetails.series?.trim() || null,
       eventType: eventDetails.eventType,
       cityId: eventDetails.city?.id ?? null,
       cityName: eventDetails.city?.name ?? null,
