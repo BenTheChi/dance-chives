@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { EventCard } from "@/components/EventCard";
 import { Event } from "@/types/event";
+import { formatCityDisplayLabel } from "@/lib/utils/city-display";
 
 interface RolesTabsSectionProps {
   eventsByRole: Map<string, Event[]>;
@@ -155,7 +156,13 @@ export function RolesTabsSection({
                                 ? event.eventDetails.dates[0].date
                                 : ""
                             }
-                            city={event.eventDetails.city.name || ""}
+                            city={
+                              event.eventDetails.city.name
+                                ? formatCityDisplayLabel(
+                                    event.eventDetails.city
+                                  )
+                                : ""
+                            }
                             cityId={event.eventDetails.city.id}
                             styles={event.eventDetails.styles || []}
                             eventType={event.eventDetails.eventType}

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { getEvent } from "@/db/queries/event";
+import { formatCityDisplayLabel } from "@/lib/utils/city-display";
 import { notFound } from "next/navigation";
 import { StyleBadge } from "@/components/ui/style-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -82,7 +83,7 @@ export async function generateMetadata({
   } else {
     // Fallback description
     descriptionParts.push(
-      `${eventDetails.eventType} in ${eventDetails.city.name}`
+      `${eventDetails.eventType} in ${formatCityDisplayLabel(eventDetails.city)}`
     );
   }
 
@@ -123,7 +124,7 @@ export async function generateMetadata({
   const description = descriptionParts.join(" • ");
 
   // Build title
-  const title = `${eventDetails.title} - ${eventDetails.city.name}${
+  const title = `${eventDetails.title} - ${formatCityDisplayLabel(eventDetails.city)}${
     eventDetails.eventType ? ` • ${eventDetails.eventType}` : ""
   }`;
 
@@ -512,7 +513,7 @@ export default async function EventPage({ params }: PageProps) {
                     <div className="flex flex-row gap-5 items-center justify-center mb-4">
                       {event.eventDetails.city.name && (
                         <h2 className="!font-extrabold">
-                          {event.eventDetails.city.name}
+                          {formatCityDisplayLabel(event.eventDetails.city)}
                         </h2>
                       )}
 

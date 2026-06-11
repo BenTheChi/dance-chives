@@ -2,6 +2,7 @@ import { prisma } from "@/lib/primsa";
 import { Prisma } from "@prisma/client";
 import { EventType, TEventCard } from "@/types/event";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import { formatCityDisplayLabel } from "@/lib/utils/city-display";
 
 export async function getEventCards(): Promise<TEventCard[]> {
   const rows = await prisma.eventCard.findMany({
@@ -34,7 +35,13 @@ export async function getEventCards(): Promise<TEventCard[]> {
       imageUrl: r.posterUrl ?? undefined,
       date: r.displayDateLocal ?? "",
       datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],
-      city: r.cityName ?? "",
+      city: r.cityName
+        ? formatCityDisplayLabel({
+            name: r.cityName,
+            region: r.region ?? "",
+            countryCode: r.countryCode ?? "",
+          })
+        : "",
       cityId: r.cityId ?? undefined,
       styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
       eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
@@ -175,7 +182,13 @@ export async function getUpcomingEventCards(limit: number = 3): Promise<TEventCa
     imageUrl: r.posterUrl ?? undefined,
     date: r.displayDateLocal ?? "",
     datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],
-    city: r.cityName ?? "",
+    city: r.cityName
+      ? formatCityDisplayLabel({
+          name: r.cityName,
+          region: r.region ?? "",
+          countryCode: r.countryCode ?? "",
+        })
+      : "",
     cityId: r.cityId ?? undefined,
     styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
     eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,

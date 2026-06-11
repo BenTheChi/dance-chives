@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { getUserByUsername } from "./user";
 import { getOrCreateSuperAdminUser } from "@/lib/utils/admin-user";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
+import { formatCityDisplayLabel } from "@/lib/utils/city-display";
 import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
 import { type Record as Neo4jRecord, int } from "neo4j-driver";
@@ -4110,6 +4111,7 @@ export const getCitySchedule = async (
        RETURN e.id as id, e.title as title, e.startDate as startDate,
               e.startTime as startTime, e.endTime as endTime, e.dates as dates,
               e.location as location, c.name as cityName,
+              c.region as cityRegion, c.countryCode as cityCountryCode,
               eventTypeLabel,
               CASE WHEN poster IS NOT NULL THEN {
                 id: poster.id,
@@ -4185,7 +4187,13 @@ export const getCitySchedule = async (
             ? getEventTypeFromLabel(eventTypeLabel) || "Other"
             : "Other",
           location: record.get("location") || undefined,
-          cityName: record.get("cityName") || undefined,
+          cityName: record.get("cityName")
+            ? formatCityDisplayLabel({
+                name: record.get("cityName"),
+                region: record.get("cityRegion") ?? "",
+                countryCode: record.get("cityCountryCode") ?? "",
+              })
+            : undefined,
           poster: record.get("poster") || null,
           styles: eventStylesMap.get(eventId) || [],
         };
@@ -4234,6 +4242,7 @@ export const getCitySchedule = async (
        RETURN w.id as id, w.title as title, w.startDate as startDate,
               w.startTime as startTime, w.endTime as endTime,
               w.location as location, c.name as cityName,
+              c.region as cityRegion, c.countryCode as cityCountryCode,
               CASE WHEN wPoster IS NOT NULL THEN {
                 id: wPoster.id,
                 title: wPoster.title,
@@ -4303,7 +4312,13 @@ export const getCitySchedule = async (
           dates: undefined, // Workshops use single date
           eventType: "Workshop" as EventType,
           location: record.get("location") || undefined,
-          cityName: record.get("cityName") || undefined,
+          cityName: record.get("cityName")
+            ? formatCityDisplayLabel({
+                name: record.get("cityName"),
+                region: record.get("cityRegion") ?? "",
+                countryCode: record.get("cityCountryCode") ?? "",
+              })
+            : undefined,
           poster: record.get("poster") || null,
           styles: allStyles,
         };
@@ -4351,6 +4366,8 @@ export const getCitySchedule = async (
       `MATCH (c:City {id: $cityId})<-[:IN]-(s:Session)
        OPTIONAL MATCH (sPoster:Image)-[:POSTER_OF]->(s)
        RETURN s.id as id, s.title as title, s.dates as dates,
+              c.name as cityName,
+              c.region as cityRegion, c.countryCode as cityCountryCode,
               CASE WHEN sPoster IS NOT NULL THEN {
                 id: sPoster.id,
                 title: sPoster.title,
@@ -4430,7 +4447,13 @@ export const getCitySchedule = async (
               : undefined,
           eventType: "Session" as EventType,
           location: record.get("location") || undefined,
-          cityName: record.get("cityName") || undefined,
+          cityName: record.get("cityName")
+            ? formatCityDisplayLabel({
+                name: record.get("cityName"),
+                region: record.get("cityRegion") ?? "",
+                countryCode: record.get("cityCountryCode") ?? "",
+              })
+            : undefined,
           poster: record.get("poster") || null,
           styles: allStyles,
         };
