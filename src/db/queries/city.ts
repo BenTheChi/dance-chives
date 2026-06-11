@@ -25,6 +25,15 @@ interface CityCanonicalCandidateRow extends CityRow {
 const PLACE_ID_REGEX = /^[A-Za-z0-9_-]{10,}$/;
 const SLUG_SUFFIX_REGEX = /-[a-z0-9_]{6}$/;
 
+/**
+ * Sentinel city for online-only events. Seeded by migration; deliberately
+ * not a Google place_id so it can never be confused with a real place.
+ */
+export const ONLINE_CITY_ID = "online";
+
+export const isOnlineCityId = (cityId?: string | null): boolean =>
+  (cityId || "").trim().toLowerCase() === ONLINE_CITY_ID;
+
 const normalizeCity = (row: CityRow): City => ({
   id: row.id,
   slug: row.slug,
@@ -106,6 +115,10 @@ export const isLikelyGooglePlaceId = (placeId?: string | null): boolean => {
 export const isResolvedCity = (city?: City | null): city is City => {
   if (!city) {
     return false;
+  }
+
+  if (isOnlineCityId(city.id)) {
+    return Boolean(city.name && city.timezone);
   }
 
   return Boolean(
@@ -374,6 +387,16 @@ export async function resolveGooglePlaceCity(placeId: string): Promise<City> {
 }
 
 export async function resolveAndUpsertCityForWrite(city: City): Promise<City> {
+  if (isOnlineCityId(city.id)) {
+    const online = await getCityFromPostgres(ONLINE_CITY_ID);
+    if (!online) {
+      throw new Error(
+        "Online sentinel city is missing from the cities table (seed migration not applied)"
+      );
+    }
+    return online;
+  }
+
   if (!isLikelyGooglePlaceId(city.id)) {
     throw new Error("City must use a Google place_id");
   }
