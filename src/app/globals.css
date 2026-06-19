@@ -311,45 +311,47 @@
   }
 }
 
-h1 {
-  font-size: 50px;
-  font-family: var(--font-rubik-mono-one);
-  word-spacing: -18px;
-  line-height: 1;
-  text-align: center;
-  -webkit-text-stroke: 2px black;
-}
-
-@media (max-width: 640px) {
+@layer base {
   h1 {
-    font-size: 30px;
+    font-size: 50px;
+    font-family: var(--font-rubik-mono-one);
+    word-spacing: -18px;
+    line-height: 1;
+    text-align: center;
+    -webkit-text-stroke: 2px black;
   }
-}
 
-h2 {
-  font-size: 28px;
-  font-weight: 550;
-  font-family: var(--font-display);
-  line-height: 1;
-}
+  @media (max-width: 640px) {
+    h1 {
+      font-size: 30px;
+    }
+  }
 
-h3 {
-  font-size: 23px;
-  font-weight: 450;
-  font-family: var(--font-display);
-  line-height: 1;
-}
+  h2 {
+    font-size: 28px;
+    font-weight: 550;
+    font-family: var(--font-display);
+    line-height: 1;
+  }
 
-p {
-  font-weight: 400;
-  font-size: 18px;
-  font-family: var(--font-archivo);
-}
+  h3 {
+    font-size: 23px;
+    font-weight: 450;
+    font-family: var(--font-display);
+    line-height: 1;
+  }
 
-span {
-  font-weight: 400;
-  font-size: 18px;
-  font-family: var(--font-archivo);
+  p {
+    font-weight: 400;
+    font-size: 18px;
+    font-family: var(--font-archivo);
+  }
+
+  span {
+    font-weight: 400;
+    font-size: 18px;
+    font-family: var(--font-archivo);
+  }
 }
 
 /* Responsive styles for react-big-calendar */
