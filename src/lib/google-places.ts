@@ -175,3 +175,79 @@ export async function getTimezone(
     timeZoneName: data.timeZoneName,
   };
 }
+
+export interface CountryDetails {
+  /** Google place_id of the country geocode result. */
+  placeId: string;
+  /** ISO 3166-1 alpha-2 code, uppercased (e.g. "FR"). */
+  countryCode: string;
+  /** Canonical country name from Google (e.g. "France"). */
+  name: string;
+  /** Representative timezone at the country's centroid. */
+  timezone: string;
+  latitude: number;
+  longitude: number;
+}
+
+/**
+ * Resolve an ISO 3166-1 alpha-2 country code to canonical country metadata:
+ * name, centroid coordinates, and a representative timezone.
+ *
+ * Used only for the "Unknown, {Country}" sentinel cities the auto-manager
+ * publishes into when an event resolves to a country but no city. A country
+ * has no single timezone; we take the timezone at Google's returned centroid
+ * as a representative anchor for year/day-precision event dates.
+ *
+ * Geocoding by `components=country:{cc}` (not Places autocomplete, which is
+ * city-filtered) so the result is always the country polygon itself.
+ */
+export async function getCountryDetails(
+  countryCode: string
+): Promise<CountryDetails> {
+  const cc = countryCode.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) {
+    throw new Error(`Invalid ISO country code: "${countryCode}"`);
+  }
+  if (!GOOGLE_PLACES_API_KEY) {
+    throw new Error("Google Places API key not configured");
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  url.searchParams.set("components", `country:${cc}`);
+  url.searchParams.set("key", GOOGLE_PLACES_API_KEY);
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Google Geocoding API error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  if (data.status !== "OK" || !data.results?.length) {
+    throw new Error(`Google Geocoding API error for ${cc}: ${data.status}`);
+  }
+
+  const result = data.results[0];
+  const isCountry = (result.types || []).includes("country");
+  if (!isCountry) {
+    throw new Error(`Geocode for ${cc} is not a country-level result`);
+  }
+
+  const countryComponent = (result.address_components || []).find(
+    (c: { types: string[] }) => c.types.includes("country")
+  );
+  const resolvedCc = (countryComponent?.short_name || cc).toUpperCase();
+  const name = countryComponent?.long_name || result.formatted_address;
+
+  const lat = result.geometry.location.lat;
+  const lng = result.geometry.location.lng;
+  const tz = await getTimezone(lat, lng);
+
+  return {
+    placeId: result.place_id,
+    countryCode: resolvedCc,
+    name,
+    timezone: tz.timeZoneId,
+    latitude: lat,
+    longitude: lng,
+  };
+}
