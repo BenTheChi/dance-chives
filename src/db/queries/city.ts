@@ -54,6 +54,36 @@ export const isUnknownCountryCityId = (cityId?: string | null): boolean => {
 export const unknownCountryCityId = (countryCode: string): string =>
   `${UNKNOWN_COUNTRY_CITY_PREFIX}${countryCode.trim().toLowerCase()}`;
 
+/**
+ * Sentinel city for events with no known location at all -- neither city nor
+ * country. The country-less parent of the `unknown-{cc}` sentinels above.
+ * Seeded by migration (there is exactly one row, so it exists before anything
+ * can reference it); like `online`, deliberately not a Google place_id.
+ *
+ * Note the prefix relationship: `"unknown"` does NOT match
+ * `UNKNOWN_COUNTRY_CITY_PREFIX` ("unknown-"), so `isUnknownCountryCityId`
+ * returns false for it. That is intentional -- they are distinct sentinels --
+ * but it means any code that means "is this a placeholder city?" must use
+ * `isSentinelCityId` below rather than checking the prefix by hand.
+ */
+export const UNKNOWN_CITY_ID = "unknown";
+
+export const isUnknownCityId = (cityId?: string | null): boolean =>
+  (cityId || "").trim().toLowerCase() === UNKNOWN_CITY_ID;
+
+/**
+ * True for every non-place sentinel: `online`, `unknown`, and `unknown-{cc}`.
+ *
+ * Use this for "is this a real place?" questions -- browse surfaces, city
+ * pickers, matcher keys. Checking `isOnlineCityId` alone, or the unknown-
+ * prefix ad hoc, is what lets a new sentinel leak into a surface that forgot
+ * to be updated.
+ */
+export const isSentinelCityId = (cityId?: string | null): boolean =>
+  isOnlineCityId(cityId) ||
+  isUnknownCityId(cityId) ||
+  isUnknownCountryCityId(cityId);
+
 const normalizeCity = (row: CityRow): City => ({
   id: row.id,
   slug: row.slug,
@@ -137,7 +167,7 @@ export const isResolvedCity = (city?: City | null): city is City => {
     return false;
   }
 
-  if (isOnlineCityId(city.id) || isUnknownCountryCityId(city.id)) {
+  if (isSentinelCityId(city.id)) {
     return Boolean(city.name && city.timezone);
   }
 
@@ -533,6 +563,29 @@ export async function resolveAndUpsertUnknownCountryCity(
   }
 
   return normalizeCity(rows[0]);
+}
+
+/**
+ * Resolve the country-less "Unknown" sentinel city. This is the last-resort
+ * publish fallback: an event that resolves to neither a city nor a country
+ * publishes here, staying attached to a real City node with an audit trail
+ * back to its source channel.
+ *
+ * Unlike `resolveAndUpsertUnknownCountryCity`, this does not mint anything --
+ * the single row is seeded by migration, so this is a read with a clear error
+ * if the migration has not run. No Places/country lookup is involved because
+ * there is nothing to look up.
+ */
+export async function resolveUnknownCity(): Promise<City> {
+  const city = await getCityFromPostgres(UNKNOWN_CITY_ID);
+  if (!city || !isResolvedCity(city)) {
+    throw new Error(
+      `Sentinel city "${UNKNOWN_CITY_ID}" is missing or unresolved. ` +
+        `Run migrations (20260817120000_add_unknown_sentinel_city) before publishing location-less events.`
+    );
+  }
+
+  return city;
 }
 
 export async function requireCityFromPostgres(placeId: string): Promise<City> {
