@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { City } from "@/types/city";
+import { isSentinelCityId } from "@/lib/utils/city-display";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -196,7 +197,15 @@ export function EventFilters({
                 <SelectContent>
                   <SelectItem value="all">All cities</SelectItem>
                   {cities
-                    .filter((city) => (city.id || "").trim() !== "")
+                    .filter(
+                      (city) =>
+                        (city.id || "").trim() !== "" &&
+                        // Sentinels ("Online", "Unknown", "Unknown, France")
+                        // are placeholders, not places. Filtering by one would
+                        // mean "show me events whose location we don't know",
+                        // which is not a browse intent.
+                        !isSentinelCityId(city.id)
+                    )
                     .map((city) => (
                       <SelectItem key={city.id} value={city.id}>
                         {city.name}

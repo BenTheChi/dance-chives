@@ -2,6 +2,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/primsa";
 import { City } from "@/types/city";
 import { generateCitySlug } from "@/lib/utils/city-slug";
+import { isSentinelCityId } from "@/lib/utils/city-display";
 import { getCountryDetails, getPlaceDetails, getTimezone } from "@/lib/google-places";
 import { cityAutofixLowRisk } from "@/lib/config";
 
@@ -78,11 +79,11 @@ export const isUnknownCityId = (cityId?: string | null): boolean =>
  * pickers, matcher keys. Checking `isOnlineCityId` alone, or the unknown-
  * prefix ad hoc, is what lets a new sentinel leak into a surface that forgot
  * to be updated.
+ *
+ * Defined in lib/utils/city-display (client-safe, no Prisma) and re-exported
+ * here so server code has one import site and there is one definition.
  */
-export const isSentinelCityId = (cityId?: string | null): boolean =>
-  isOnlineCityId(cityId) ||
-  isUnknownCityId(cityId) ||
-  isUnknownCountryCityId(cityId);
+export { isSentinelCityId };
 
 const normalizeCity = (row: CityRow): City => ({
   id: row.id,
