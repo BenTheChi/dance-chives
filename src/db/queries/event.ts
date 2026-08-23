@@ -19,6 +19,7 @@ import {
 } from "../../types/video";
 import { UserSearchItem } from "../../types/user";
 import { City } from "../../types/city";
+import { isValidCountryCode, normalizeCountryCode } from "@/lib/utils/countries";
 import {
   getNeo4jRoleFormats,
   isValidRole,
@@ -1852,6 +1853,7 @@ export const insertEvent = async (
         c.longitude = $city.longitude,
         c.slug = $citySlug
       MERGE (e)-[:IN]->(c)
+      ${COUNTRY_EDGE_CYPHER}
 
       WITH e
       OPTIONAL MATCH (oldPoster:Image)-[r:POSTER_OF]->(e)
@@ -1944,6 +1946,7 @@ export const insertEvent = async (
         originalPoster: eventDetails.originalPoster,
         city: canonicalCity,
         citySlug,
+        countryCode: countryCodeForCity(canonicalCity),
         roles: event.roles,
       }
     );
@@ -2166,9 +2169,14 @@ export const editEvent = async (
       );
     }
 
-    // Update city relationship
+    // Update city relationship, and the country edges that must track it.
+    // OPTIONAL MATCH on the old city edge: an event with no city yet (a
+    // country-only event published by the auto-manager) must still be
+    // updatable — a plain MATCH here would silently skip the whole statement.
     await tx.run(
-      `MATCH (e:Event {id: $id})-[i:IN]->(c:City)
+      `MATCH (e:Event {id: $id})
+       WITH e
+       OPTIONAL MATCH (e)-[i:IN]->(:City)
        DELETE i
        WITH e
        MERGE (c:City {id: $city.id})
@@ -2188,8 +2196,13 @@ export const editEvent = async (
          c.latitude = $city.latitude,
          c.longitude = $city.longitude,
          c.slug = $citySlug
-       MERGE (e)-[:IN]->(c)`,
-      { id, city: canonicalCity, citySlug }
+       MERGE (e)-[:IN]->(c)` + COUNTRY_EDGE_CYPHER,
+      {
+        id,
+        city: canonicalCity,
+        citySlug,
+        countryCode: countryCodeForCity(canonicalCity),
+      }
     );
 
     // Update poster
@@ -2419,6 +2432,47 @@ export const editEvent = async (
 };
 
 // Save event for user
+/**
+ * Cypher that keeps an event's country edges in step with its city.
+ *
+ * Country is modelled as a real (:Country) node, and every event carries a
+ * DIRECT (:Event)-[:IN]->(:Country) edge redundantly with
+ * (:Event)-[:IN]->(:City)-[:IN]->(:Country) — see
+ * ~/.claude/plans/country-nodes.md, option B. The redundancy is what makes
+ * "events in France" one uniform hop for events that have a city and those
+ * that only know a country, but it only holds if every writer maintains it.
+ *
+ * Both writers (createEvent and updateEvent) therefore run this in the SAME
+ * statement that sets the city, so the two cannot drift.
+ *
+ * Expects `e` and `c` in scope, and a $countryCode parameter (null when the
+ * city has no real country, e.g. the `online`/`unknown` sentinels). The old
+ * direct edge is deleted first so relocating an event to another country does
+ * not leave it filed under both.
+ */
+const COUNTRY_EDGE_CYPHER = `
+      WITH e, c
+      OPTIONAL MATCH (e)-[oldCountry:IN]->(:Country)
+      DELETE oldCountry
+      WITH e, c
+      FOREACH (_ IN CASE WHEN $countryCode IS NULL THEN [] ELSE [1] END |
+        MERGE (k:Country {code: $countryCode})
+        MERGE (c)-[:IN]->(k)
+        MERGE (e)-[:IN]->(k)
+      )`;
+
+/**
+ * The country code to file an event under, or null when it has none.
+ *
+ * Sentinel cities ("online", "unknown") have no real country, and a code the
+ * static list does not know is rejected rather than guessed — an unknown
+ * (:Country) node with no name would be worse than no edge.
+ */
+function countryCodeForCity(city: Pick<City, "countryCode">): string | null {
+  const code = normalizeCountryCode(city.countryCode);
+  return isValidCountryCode(code) ? code : null;
+}
+
 export async function saveEventForUser(userId: string, eventId: string) {
   const session = driver.session();
   try {
