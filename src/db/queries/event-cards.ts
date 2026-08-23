@@ -37,12 +37,14 @@ export async function getEventCards(): Promise<TEventCard[]> {
       datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],
       city: r.cityName
         ? formatCityDisplayLabel({
+            id: r.cityId ?? undefined,
             name: r.cityName,
             region: r.region ?? "",
             countryCode: r.countryCode ?? "",
           })
         : "",
       cityId: r.cityId ?? undefined,
+      countryCode: r.countryCode ?? undefined,
       styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
       eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
       additionalDatesCount: r.additionalDatesCount ?? 0,
@@ -184,12 +186,14 @@ export async function getUpcomingEventCards(limit: number = 3): Promise<TEventCa
     datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],
     city: r.cityName
       ? formatCityDisplayLabel({
+          id: r.cityId ?? undefined,
           name: r.cityName,
           region: r.region ?? "",
           countryCode: r.countryCode ?? "",
         })
       : "",
     cityId: r.cityId ?? undefined,
+    countryCode: r.countryCode ?? undefined,
     styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
     eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
     additionalDatesCount: r.additionalDatesCount ?? 0,

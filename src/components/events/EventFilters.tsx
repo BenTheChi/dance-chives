@@ -33,10 +33,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { EventType } from "@/types/event";
+import { getCountryName } from "@/lib/utils/countries";
 
 interface EventFiltersProps {
   cities: City[];
   styles: string[];
+  /** ISO codes present in the currently displayed events, sorted by name. */
+  availableCountryCodes: string[];
+  selectedCountryCode: string | null;
+  onCountryChange: (countryCode: string | null) => void;
   selectedCityId: string | null;
   onCityChange: (cityId: string | null) => void;
   selectedStyles: string[];
@@ -60,6 +65,9 @@ interface EventFiltersProps {
 export function EventFilters({
   cities,
   styles,
+  availableCountryCodes,
+  selectedCountryCode,
+  onCountryChange,
   selectedCityId,
   onCityChange,
   selectedStyles,
@@ -178,6 +186,27 @@ export function EventFilters({
                   {availableEventTypes.map((eventType) => (
                     <SelectItem key={eventType} value={eventType}>
                       {eventType}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-white">Country</label>
+              <Select
+                value={selectedCountryCode ?? "all"}
+                onValueChange={(value) =>
+                  onCountryChange(value === "all" ? null : value)
+                }
+              >
+                <SelectTrigger className="w-full min-w-0">
+                  <SelectValue placeholder="All countries" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All countries</SelectItem>
+                  {availableCountryCodes.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {getCountryName(code)}
                     </SelectItem>
                   ))}
                 </SelectContent>

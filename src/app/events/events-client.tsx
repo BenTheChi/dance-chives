@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EventCard } from "@/components/EventCard";
 import { TEventCard, EventType } from "@/types/event";
 import { City } from "@/types/city";
+import { getCountryName } from "@/lib/utils/countries";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { EventFilters } from "@/components/events/EventFilters";
@@ -30,6 +31,9 @@ export function EventsClient({
   const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
 
   // Applied filter values (used for actual filtering)
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
+    null
+  );
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(
@@ -41,6 +45,7 @@ export function EventsClient({
   const [hasPoster, setHasPoster] = useState(false);
 
   // Draft filter values (used in the UI, not applied until save)
+  const [draftCountryCode, setDraftCountryCode] = useState<string | null>(null);
   const [draftCityId, setDraftCityId] = useState<string | null>(null);
   const [draftStyles, setDraftStyles] = useState<string[]>([]);
   const [draftEventType, setDraftEventType] = useState<EventType | null>(null);
@@ -112,13 +117,37 @@ export function EventsClient({
     return parsed;
   };
 
-  // Filter cities to only show those available in the currently displayed events (past or future)
+  // Countries present in the currently displayed events, sorted by name.
+  // Sourced from the events rather than the city list because country-only
+  // events have no real city — their cityId is the `unknown` sentinel — so the
+  // country filter is the only way to reach them at all.
+  const availableCountryCodes = useMemo(() => {
+    const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
+    const codes = new Set(
+      sourceEvents
+        .map((event) => event.countryCode)
+        .filter((code): code is string => !!code && code.trim() !== "")
+    );
+
+    return Array.from(codes).sort((a, b) =>
+      getCountryName(a).localeCompare(getCountryName(b))
+    );
+  }, [futureEvents, pastEvents, showFutureEvents]);
+
+  // Filter cities to only show those available in the currently displayed
+  // events, and — when a country is selected — only that country's cities.
+  // Nesting the two is what makes the pair usable: picking France should not
+  // leave 140 unrelated cities in the list.
   const availableCities = useMemo(() => {
     const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
 
+    const scopedEvents = draftCountryCode
+      ? sourceEvents.filter((event) => event.countryCode === draftCountryCode)
+      : sourceEvents;
+
     // Get unique cityIds from the events
     const cityIds = new Set(
-      sourceEvents
+      scopedEvents
         .map((event) => event.cityId)
         .filter(
           (cityId): cityId is string => cityId !== undefined && cityId !== null
@@ -127,7 +156,7 @@ export function EventsClient({
 
     // Filter cities to only include those that appear in the events
     return cities.filter((city) => cityIds.has(city.id));
-  }, [cities, futureEvents, pastEvents, showFutureEvents]);
+  }, [cities, futureEvents, pastEvents, showFutureEvents, draftCountryCode]);
 
   // Filter event types to only show those available in the currently displayed events (past or future)
   const availableEventTypes = useMemo(() => {
@@ -149,6 +178,7 @@ export function EventsClient({
 
   // Sync draft values with applied values when they change externally
   useEffect(() => {
+    setDraftCountryCode(selectedCountryCode);
     setDraftCityId(selectedCityId);
     setDraftStyles(selectedStyles);
     setDraftEventType(selectedEventType);
@@ -157,6 +187,7 @@ export function EventsClient({
     setDraftHasVideos(hasVideos);
     setDraftHasPoster(hasPoster);
   }, [
+    selectedCountryCode,
     selectedCityId,
     selectedStyles,
     selectedEventType,
@@ -186,8 +217,18 @@ export function EventsClient({
   }, [availableEventTypes, selectedEventType]);
 
   // Handle saving filters - apply draft values to actual filter values
+  // Nesting, derived rather than stored: a draft city that is not in the draft
+  // country's city list reads as unselected. Deriving avoids an effect that
+  // calls setState during render, which is the pattern eslint flags elsewhere
+  // in this file — and it cannot fall out of step with availableCities.
+  const effectiveDraftCityId =
+    draftCityId && availableCities.some((city) => city.id === draftCityId)
+      ? draftCityId
+      : null;
+
   const handleSaveFilters = () => {
-    setSelectedCityId(draftCityId);
+    setSelectedCountryCode(draftCountryCode);
+    setSelectedCityId(effectiveDraftCityId);
     setSelectedStyles(draftStyles);
     setSelectedEventType(draftEventType);
     setStartDate(draftStartDate);
@@ -198,6 +239,7 @@ export function EventsClient({
 
   // Handle clearing filters - reset all draft values to empty/default
   const handleClearFilters = () => {
+    setDraftCountryCode(null);
     setDraftCityId(null);
     setDraftStyles([]);
     setDraftEventType(null);
@@ -257,6 +299,10 @@ export function EventsClient({
         }
       }
 
+      if (selectedCountryCode && event.countryCode !== selectedCountryCode) {
+        return false;
+      }
+
       if (selectedCityId && event.cityId !== selectedCityId) {
         return false;
       }
@@ -303,6 +349,7 @@ export function EventsClient({
     futureEvents,
     pastEvents,
     showFutureEvents,
+    selectedCountryCode,
     selectedCityId,
     selectedEventType,
     selectedStyles,
@@ -320,7 +367,10 @@ export function EventsClient({
           <EventFilters
             cities={availableCities}
             styles={styles}
-            selectedCityId={draftCityId}
+            availableCountryCodes={availableCountryCodes}
+            selectedCountryCode={draftCountryCode}
+            onCountryChange={setDraftCountryCode}
+            selectedCityId={effectiveDraftCityId}
             onCityChange={setDraftCityId}
             selectedStyles={draftStyles}
             onStylesChange={setDraftStyles}

@@ -127,6 +127,13 @@ export interface TEventCard {
   datePrecision?: "day" | "month" | "year"; // How much of `date` is real (year-only auto-imports)
   city: string;
   cityId?: string;
+  /**
+   * ISO 3166-1 alpha-2. Present for country-only events too, whose cityId is
+   * the `unknown` sentinel — that is the point: it is the only handle the
+   * location filter has on them, since sentinels are excluded from the city
+   * picker.
+   */
+  countryCode?: string;
   styles: string[];
   eventType?: EventType;
   additionalDatesCount?: number; // Number of additional dates beyond the first one

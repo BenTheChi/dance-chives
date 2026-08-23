@@ -1,4 +1,5 @@
 import { City } from "@/types/city";
+import { getCountryName } from "@/lib/utils/countries";
 
 /**
  * Placeholder city ids that stand for "no real place":
@@ -77,7 +78,34 @@ export function normalizeRegionForDisplay(
   return normalized;
 }
 
-export function formatCityDisplayLabel(city: Pick<City, "name" | "region" | "countryCode">): string {
+/**
+ * The label a user sees for an event's location.
+ *
+ * Sentinel cities are not places, so when one carries a country we render the
+ * COUNTRY instead of the placeholder's name: an event we can correctly place
+ * in France should not read "Unknown". Measured when this landed: 171 of the
+ * 225 cards sitting on the bare `unknown` city knew their country, so they
+ * were showing "Unknown" for a location the graph could name.
+ *
+ * `id` is optional so existing callers keep working; without it the sentinel
+ * branch cannot fire and behaviour is exactly as before. Pass it wherever the
+ * city id is at hand (event_cards has it) to get the better label.
+ *
+ * The remaining sentinels stay honest: no country means "Unknown", and
+ * `online` always reads "Online" — it is a real answer, not a missing one.
+ */
+export function formatCityDisplayLabel(
+  city: Pick<City, "name" | "region" | "countryCode"> & { id?: string }
+): string {
+  // "online" is excluded inline rather than via isOnlineCityId(): that helper
+  // lives in db/queries/city.ts, which imports Prisma and cannot be pulled
+  // into a client component.
+  const id = (city.id || "").trim().toLowerCase();
+  if (isSentinelCityId(id) && id !== "online") {
+    const country = getCountryName(city.countryCode);
+    if (country) return country;
+  }
+
   const region = normalizeRegionForDisplay(city.region, city.countryCode);
   return region ? `${city.name}, ${region}` : city.name;
 }
