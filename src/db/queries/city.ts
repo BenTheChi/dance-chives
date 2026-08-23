@@ -3,7 +3,7 @@ import { prisma } from "@/lib/primsa";
 import { City } from "@/types/city";
 import { generateCitySlug } from "@/lib/utils/city-slug";
 import { isSentinelCityId } from "@/lib/utils/city-display";
-import { getCountryDetails, getPlaceDetails, getTimezone } from "@/lib/google-places";
+import { getPlaceDetails, getTimezone } from "@/lib/google-places";
 import { cityAutofixLowRisk } from "@/lib/config";
 
 type QueryExecutor = Pick<PrismaClient, "$queryRaw"> | Prisma.TransactionClient;
@@ -36,36 +36,24 @@ export const isOnlineCityId = (cityId?: string | null): boolean =>
   (cityId || "").trim().toLowerCase() === ONLINE_CITY_ID;
 
 /**
- * Prefix for the "Unknown, {Country}" sentinel cities the auto-manager
- * publishes into when an event resolves to a country but no city (a temporary
- * home until a real city is confirmed manually). Like `online`, the id is not
- * a Google place_id: it is `unknown-{cc}` (e.g. `unknown-fr`) so it can never
- * collide with a real place and city code can special-case it.
+ * Historical note: `unknown-{cc}` sentinel CITIES are retired. Country-only
+ * events now carry a real (:Country) node and a direct
+ * (:Event)-[:IN]->(:Country) edge instead of a fake city at lat/lng 0. The
+ * minting helpers and resolveAndUpsertUnknownCountryCity are gone; the id
+ * shape survives only in `isSentinelCityId`, which still recognises it so any
+ * such row left in an old database stays hidden from browse surfaces.
  */
-export const UNKNOWN_COUNTRY_CITY_PREFIX = "unknown-";
-
-export const isUnknownCountryCityId = (cityId?: string | null): boolean => {
-  const id = (cityId || "").trim().toLowerCase();
-  return (
-    id.startsWith(UNKNOWN_COUNTRY_CITY_PREFIX) &&
-    /^[a-z]{2}$/.test(id.slice(UNKNOWN_COUNTRY_CITY_PREFIX.length))
-  );
-};
-
-export const unknownCountryCityId = (countryCode: string): string =>
-  `${UNKNOWN_COUNTRY_CITY_PREFIX}${countryCode.trim().toLowerCase()}`;
 
 /**
  * Sentinel city for events with no known location at all -- neither city nor
- * country. The country-less parent of the `unknown-{cc}` sentinels above.
- * Seeded by migration (there is exactly one row, so it exists before anything
- * can reference it); like `online`, deliberately not a Google place_id.
+ * country. Seeded by migration (there is exactly one row, so it exists before
+ * anything can reference it); like `online`, deliberately not a Google
+ * place_id.
  *
- * Note the prefix relationship: `"unknown"` does NOT match
- * `UNKNOWN_COUNTRY_CITY_PREFIX` ("unknown-"), so `isUnknownCountryCityId`
- * returns false for it. That is intentional -- they are distinct sentinels --
- * but it means any code that means "is this a placeholder city?" must use
- * `isSentinelCityId` below rather than checking the prefix by hand.
+ * This is now the ONLY unknown sentinel that is ever written: an event that
+ * knows its country gets a (:Country) edge instead. Any code asking "is this a
+ * placeholder city?" must use `isSentinelCityId` below rather than checking a
+ * prefix by hand.
  */
 export const UNKNOWN_CITY_ID = "unknown";
 
@@ -73,7 +61,9 @@ export const isUnknownCityId = (cityId?: string | null): boolean =>
   (cityId || "").trim().toLowerCase() === UNKNOWN_CITY_ID;
 
 /**
- * True for every non-place sentinel: `online`, `unknown`, and `unknown-{cc}`.
+ * True for every non-place sentinel: `online`, `unknown`, and the retired
+ * `unknown-{cc}` rows, which are still recognised so any left in an old
+ * database stay hidden.
  *
  * Use this for "is this a real place?" questions -- browse surfaces, city
  * pickers, matcher keys. Checking `isOnlineCityId` alone, or the unknown-
@@ -510,60 +500,6 @@ export async function resolveAndUpsertCityForWrite(city: City): Promise<City> {
   });
 
   return inserted;
-}
-
-/**
- * Resolve an ISO country code to its "Unknown, {Country}" sentinel city,
- * creating it on first use. This is the country-level publish fallback: an
- * event that resolves to a country but no city publishes here as a temporary
- * home until a real city is confirmed manually.
- *
- * Unlike real cities, the row is not a Google place; its id is `unknown-{cc}`.
- * Coordinates come from the country centroid (used only for a representative
- * timezone), and region is null so surfaces render the bare "Unknown, France"
- * label the same way they render "Online".
- */
-export async function resolveAndUpsertUnknownCountryCity(
-  countryCode: string
-): Promise<City> {
-  const cc = countryCode.trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(cc)) {
-    throw new Error(`Invalid ISO country code: "${countryCode}"`);
-  }
-
-  const id = unknownCountryCityId(cc);
-  const existing = await getCityFromPostgres(id);
-  if (existing && isResolvedCity(existing)) {
-    return existing;
-  }
-
-  const details = await getCountryDetails(cc);
-  const name = `Unknown, ${details.name}`;
-
-  const rows = await prisma.$queryRaw<CityRow[]>`
-    INSERT INTO "cities" (
-      "id", "slug", "name", "countryCode", "region", "timezone",
-      "latitude", "longitude", "location", "createdAt", "updatedAt"
-    )
-    VALUES (
-      ${id}, ${id}, ${name}, ${details.countryCode}, NULL, ${details.timezone},
-      0, 0, NULL, NOW(), NOW()
-    )
-    ON CONFLICT ("id") DO UPDATE SET
-      "name" = EXCLUDED."name",
-      "countryCode" = EXCLUDED."countryCode",
-      "timezone" = EXCLUDED."timezone",
-      "updatedAt" = NOW()
-    RETURNING
-      "id", "slug", "name", "countryCode", "region", "timezone",
-      "latitude", "longitude"
-  `;
-
-  if (rows.length === 0) {
-    throw new Error(`Failed to upsert unknown-country city: ${id}`);
-  }
-
-  return normalizeCity(rows[0]);
 }
 
 /**

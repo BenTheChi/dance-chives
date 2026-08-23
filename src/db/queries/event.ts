@@ -34,7 +34,10 @@ import { format } from "date-fns";
 import { getUserByUsername } from "./user";
 import { getOrCreateSuperAdminUser } from "@/lib/utils/admin-user";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
-import { formatCityDisplayLabel } from "@/lib/utils/city-display";
+import {
+  formatCityDisplayLabel,
+  isSentinelCityId,
+} from "@/lib/utils/city-display";
 import { enrichUsersWithCardData } from "./user-cards";
 import { Image } from "../../types/image";
 import { type Record as Neo4jRecord, int } from "neo4j-driver";
@@ -3307,11 +3310,16 @@ export const getStyleData = async (
        WITH DISTINCT event
        WHERE (event.status = 'visible' OR event.status IS NULL)
          AND event.startDate IS NOT NULL
-      MATCH (event)-[:IN]->(c:City)
+      // OPTIONAL, plus the country: a required city excluded country-only
+      // events from style pages entirely. The city-FILTERED variant below
+      // still requires one, correctly — you cannot filter by a city an event
+      // does not have.
+      OPTIONAL MATCH (event)-[:IN]->(c:City)
+      OPTIONAL MATCH (event)-[:IN]->(k:Country)
       OPTIONAL MATCH (poster:Image)-[:POSTER_OF]->(event)
-      WITH event, c, poster,
+      WITH event, c, k, poster,
            [label IN labels(event) WHERE label IN ['BattleEvent', 'CompetitionEvent', 'ClassEvent', 'WorkshopEvent', 'SessionEvent', 'PartyEvent', 'FestivalEvent', 'PerformanceEvent']] as eventTypeLabels
-      RETURN event.id as eventId, event.title as title, event.series as series, event.startDate as date, c.name as city, c.id as cityId, poster.url as imageUrl,
+      RETURN event.id as eventId, event.title as title, event.series as series, event.startDate as date, coalesce(c.name, k.name) as city, c.id as cityId, poster.url as imageUrl,
              CASE 
                WHEN size(eventTypeLabels) > 0 THEN 
                  CASE eventTypeLabels[0]
@@ -5298,7 +5306,11 @@ export async function getAllBattleSections(
       ORDER BY eventYear ${sortDirection}, e.updatedAt DESC, e.createdAt DESC, COALESCE(s.position, 999999) ASC
       LIMIT $limit
       OPTIONAL MATCH (e)-[:IN]->(c:City)
-      RETURN e.id as eventId, e.title as eventTitle, e.startDate as eventStartDate, e.dates as eventDates, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription, c.name as cityName
+      // Country-only events reach here with no city, which rendered as a blank
+      // label. The direct (:Event)-[:IN]->(:Country) edge gives them a real
+      // one. Sentinel cities have no country edge, so they stay blank.
+      OPTIONAL MATCH (e)-[:IN]->(k:Country)
+      RETURN e.id as eventId, e.title as eventTitle, e.startDate as eventStartDate, e.dates as eventDates, e.updatedAt as eventUpdatedAt, e.createdAt as eventCreatedAt, s.id as sectionId, s.title as sectionTitle, s.description as sectionDescription, c.name as cityName, c.id as cityId, k.name as countryName
       `,
       params
     );
@@ -5688,7 +5700,17 @@ export async function getAllBattleSections(
       const eventCreatedAt = record.get("eventCreatedAt") as string | null;
       const sectionTitle = record.get("sectionTitle");
       const sectionDescription = record.get("sectionDescription");
-      const cityName = record.get("cityName") as string | null;
+      // Fall back to the country when the event has no real city: a
+      // country-only event rendered a BLANK location on /watch before the
+      // :Country edge existed (198 of 500 sections, measured). Sentinels carry
+      // no country edge, so they stay blank rather than reading "Unknown".
+      const rawCityName = record.get("cityName") as string | null;
+      const rawCityId = record.get("cityId") as string | null;
+      const countryName = record.get("countryName") as string | null;
+      const cityName =
+        rawCityName && !isSentinelCityId(rawCityId)
+          ? rawCityName
+          : (countryName ?? rawCityName);
 
       const formattedEventDate = formatEventDate(eventDates);
 

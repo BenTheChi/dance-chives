@@ -1,44 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  resolveAndUpsertUnknownCountryCity,
-  resolveUnknownCity,
-} from "@/db/queries/city";
+import { resolveUnknownCity } from "@/db/queries/city";
 
 /**
- * Resolve a publish-fallback sentinel city. One boundary for "give me a
- * fallback city", with two levels:
+ * Resolve the country-less `unknown` sentinel city.
  *
- *   GET /api/places/country?cc=FR  -> "Unknown, France" (unknown-fr)
- *   GET /api/places/country        -> "Unknown"        (unknown)
+ *   GET /api/places/country  -> "Unknown" (unknown)
  *
- * The auto-manager calls the first when an event resolves to a country but no
- * city, and the second when it resolves to neither. Parallels
+ * The publish fallback for an event with no location at all. Parallels
  * GET /api/places/details for real cities.
  *
- * Note that omitting `cc` is a distinct, valid request -- but a *present but
- * malformed* `cc` is still an error, so a caller that meant to send a country
- * and got it wrong does not silently fall through to the country-less bucket.
+ * The `cc` form is GONE. It used to mint an "Unknown, {Country}" sentinel
+ * CITY, which meant a fake place at lat/lng 0 standing in for a country, and
+ * it depended on the Geocoding API — a dependency whose silent failure
+ * stranded 163 events on the bare `unknown` city. Country is now a real
+ * (:Country) node with a direct (:Event)-[:IN]->(:Country) edge, so there is
+ * nothing left to mint. A `cc` parameter is rejected rather than ignored, so a
+ * stale caller fails loudly instead of silently filing its event as
+ * location-less.
  */
 export async function GET(request: NextRequest) {
   const raw = request.nextUrl.searchParams.get("cc");
-  const cc = raw?.trim() ?? "";
 
-  if (raw !== null && !/^[A-Za-z]{2}$/.test(cc)) {
+  if (raw !== null) {
     return NextResponse.json(
-      { error: "cc parameter must be an ISO 3166-1 alpha-2 country code" },
+      {
+        error:
+          "the cc parameter is no longer supported: countries are (:Country) nodes, not sentinel cities",
+      },
       { status: 400 }
     );
   }
 
   try {
-    const city = cc
-      ? await resolveAndUpsertUnknownCountryCity(cc)
-      : await resolveUnknownCity();
+    const city = await resolveUnknownCity();
     return NextResponse.json({ city });
   } catch (error) {
     console.error("Error resolving fallback city:", error);
     return NextResponse.json(
-      { error: cc ? "Failed to resolve country" : "Failed to resolve fallback city" },
+      { error: "Failed to resolve fallback city" },
       { status: 500 }
     );
   }
