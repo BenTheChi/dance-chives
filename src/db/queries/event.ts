@@ -2476,6 +2476,28 @@ function countryCodeForCity(city: Pick<City, "countryCode">): string | null {
   return isValidCountryCode(code) ? code : null;
 }
 
+/**
+ * The display label for a city read straight off a Neo4j record.
+ *
+ * Three city-scoped queries (events / workshops / sessions by city) built this
+ * identical block by hand. They match on `(c:City {id: $cityId})`, so the city
+ * always exists and no country fallback is needed here — unlike the /watch and
+ * style-page queries, where the event may have only a country.
+ */
+function cityLabelFromRecord(record: {
+  get: (key: string) => unknown;
+}): string | undefined {
+  const name = record.get("cityName");
+  if (!name) return undefined;
+
+  return formatCityDisplayLabel({
+    name: name as string,
+    region: (record.get("cityRegion") as string | null) ?? "",
+    countryCode: (record.get("cityCountryCode") as string | null) ?? "",
+  });
+}
+
+
 export async function saveEventForUser(userId: string, eventId: string) {
   const session = driver.session();
   try {
@@ -4258,13 +4280,7 @@ export const getCitySchedule = async (
             ? getEventTypeFromLabel(eventTypeLabel) || "Other"
             : "Other",
           location: record.get("location") || undefined,
-          cityName: record.get("cityName")
-            ? formatCityDisplayLabel({
-                name: record.get("cityName"),
-                region: record.get("cityRegion") ?? "",
-                countryCode: record.get("cityCountryCode") ?? "",
-              })
-            : undefined,
+          cityName: cityLabelFromRecord(record),
           poster: record.get("poster") || null,
           styles: eventStylesMap.get(eventId) || [],
         };
@@ -4383,13 +4399,7 @@ export const getCitySchedule = async (
           dates: undefined, // Workshops use single date
           eventType: "Workshop" as EventType,
           location: record.get("location") || undefined,
-          cityName: record.get("cityName")
-            ? formatCityDisplayLabel({
-                name: record.get("cityName"),
-                region: record.get("cityRegion") ?? "",
-                countryCode: record.get("cityCountryCode") ?? "",
-              })
-            : undefined,
+          cityName: cityLabelFromRecord(record),
           poster: record.get("poster") || null,
           styles: allStyles,
         };
@@ -4518,13 +4528,7 @@ export const getCitySchedule = async (
               : undefined,
           eventType: "Session" as EventType,
           location: record.get("location") || undefined,
-          cityName: record.get("cityName")
-            ? formatCityDisplayLabel({
-                name: record.get("cityName"),
-                region: record.get("cityRegion") ?? "",
-                countryCode: record.get("cityCountryCode") ?? "",
-              })
-            : undefined,
+          cityName: cityLabelFromRecord(record),
           poster: record.get("poster") || null,
           styles: allStyles,
         };

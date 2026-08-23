@@ -57,9 +57,6 @@ export const isOnlineCityId = (cityId?: string | null): boolean =>
  */
 export const UNKNOWN_CITY_ID = "unknown";
 
-export const isUnknownCityId = (cityId?: string | null): boolean =>
-  (cityId || "").trim().toLowerCase() === UNKNOWN_CITY_ID;
-
 /**
  * True for every non-place sentinel: `online`, `unknown`, and the retired
  * `unknown-{cc}` rows, which are still recognised so any left in an old

@@ -10,8 +10,10 @@
  * Client-safe: no Prisma, no driver imports, so both server queries and React
  * components share one definition.
  *
- * Slugs are the public URL segment (`/country/{slug}`) and are stable: change
- * one and you break links, so treat a slug edit as a migration.
+ * Slugs are stable identifiers for a future `/country/{slug}` route and are
+ * mirrored onto the (:Country) nodes, so treat a slug edit as a migration.
+ * No lookup-by-slug helper exists yet — add one with the route that needs it
+ * rather than carrying an unused export.
  */
 
 export interface Country {
@@ -96,10 +98,6 @@ const BY_CODE: ReadonlyMap<string, Country> = new Map(
   COUNTRIES.map((c) => [c.code, c])
 );
 
-const BY_SLUG: ReadonlyMap<string, Country> = new Map(
-  COUNTRIES.map((c) => [c.slug, c])
-);
-
 /** Normalize any casing/whitespace to the canonical uppercase alpha-2 form. */
 export const normalizeCountryCode = (code?: string | null): string =>
   (code || "").trim().toUpperCase();
@@ -109,9 +107,6 @@ export const isValidCountryCode = (code?: string | null): boolean =>
 
 export const getCountry = (code?: string | null): Country | null =>
   BY_CODE.get(normalizeCountryCode(code)) ?? null;
-
-export const getCountryBySlug = (slug?: string | null): Country | null =>
-  BY_SLUG.get((slug || "").trim().toLowerCase()) ?? null;
 
 /**
  * Display name for a country code, falling back to the code itself so an
