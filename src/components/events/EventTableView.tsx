@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { TEventCard } from "@/types/event";
 import { formatEventDate } from "@/lib/utils/date-display";
 import {
+  defaultDirectionFor,
   directionLabelsFor,
   type EventSortField,
   type EventSortState,
@@ -57,9 +58,8 @@ export function EventTableView({
     router.push(`/events/${eventId}`);
   };
 
-  // Clicking the active column flips direction; a new column starts at the
-  // direction that reads as "most useful first" for its type — newest for
-  // dates, A-Z for text.
+  // Clicking the active column flips direction; a new column starts at its
+  // default — A–Z for text columns, newest first for dates.
   const handleHeaderClick = (field: EventSortField) => {
     if (!sort || !onSortChange) return;
 
@@ -71,7 +71,7 @@ export function EventTableView({
       return;
     }
 
-    onSortChange({ field, direction: field === "date" ? "desc" : "asc" });
+    onSortChange({ field, direction: defaultDirectionFor(field) });
   };
 
   return (
@@ -107,7 +107,7 @@ export function EventTableView({
                 const labels = directionLabelsFor(field);
                 const nextLabel = isActive
                   ? labels[sort!.direction === "asc" ? "desc" : "asc"]
-                  : labels[field === "date" ? "desc" : "asc"];
+                  : labels[defaultDirectionFor(field)];
 
                 return (
                   <th

@@ -26,6 +26,16 @@ export const DEFAULT_EVENT_SORT: EventSortState = {
   direction: "desc",
 };
 
+/**
+ * Direction a column starts at when first selected. Text columns open A–Z;
+ * dates open at the server's existing newest-first order.
+ */
+export function defaultDirectionFor(
+  field: EventSortField
+): EventSortDirection {
+  return field === "date" ? "desc" : "asc";
+}
+
 const FIELD_LABELS: Record<EventSortField, string> = {
   date: "Date",
   title: "Title",
@@ -38,14 +48,14 @@ export function sortFieldLabel(field: EventSortField): string {
 }
 
 /**
- * Direction labels are field-specific: "Newest first" means nothing for a
+ * Direction labels are field-specific: "Newer first" means nothing for a
  * title, and "A–Z" means nothing for a date.
  */
 const DIRECTION_LABELS: Record<
   EventSortField,
   Record<EventSortDirection, string>
 > = {
-  date: { desc: "Closest first", asc: "Furthest first" },
+  date: { desc: "Newer first", asc: "Older first" },
   title: { asc: "A–Z", desc: "Z–A" },
   eventType: { asc: "A–Z", desc: "Z–A" },
   city: { asc: "A–Z", desc: "Z–A" },

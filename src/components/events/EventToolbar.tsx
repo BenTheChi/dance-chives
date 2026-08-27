@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import {
   EVENT_SORT_FIELDS,
+  defaultDirectionFor,
   directionLabelsFor,
   sortFieldLabel,
   type EventSortField,
@@ -142,9 +143,12 @@ export function EventToolbar({
           <span className="text-sm font-bold text-white shrink-0">Sort</span>
           <Select
             value={sort.field}
-            onValueChange={(value) =>
-              onSortChange({ ...sort, field: value as EventSortField })
-            }
+            onValueChange={(value) => {
+              const field = value as EventSortField;
+              // Match the table headers: a newly picked column starts at its
+              // own default rather than inheriting the previous direction.
+              onSortChange({ field, direction: defaultDirectionFor(field) });
+            }}
           >
             <SelectTrigger className="h-10 min-w-0 flex-1 sm:w-[130px]" aria-label="Sort field">
               <SelectValue />
