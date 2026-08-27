@@ -58,8 +58,6 @@ interface EventFiltersProps {
   onHasVideosChange: (checked: boolean) => void;
   hasPoster: boolean;
   onHasPosterChange: (checked: boolean) => void;
-  onSave?: () => void; // Callback when save button is clicked
-  onClear?: () => void; // Callback when clear button is clicked
 }
 
 export function EventFilters({
@@ -84,8 +82,6 @@ export function EventFilters({
   onHasVideosChange,
   hasPoster,
   onHasPosterChange,
-  onSave,
-  onClear,
 }: EventFiltersProps) {
   const [styleSearch, setStyleSearch] = useState("");
   const [stylePopoverOpen, setStylePopoverOpen] = useState(false);
@@ -361,32 +357,6 @@ export function EventFilters({
                   Has Poster
                 </Label>
               </div>
-            </div>
-          )}
-          {(onSave || onClear) && (
-            <div className="mt-4 col-span-2 flex gap-2">
-              {onClear && (
-                <Button
-                  onClick={() => {
-                    onClear();
-                  }}
-                  variant="outline"
-                  className="flex-1 bg-neutral-300 text-charcoal font-bold border-charcoal"
-                >
-                  Clear
-                </Button>
-              )}
-              {onSave && (
-                <Button
-                  onClick={() => {
-                    onSave();
-                    setIsExpanded(false);
-                  }}
-                  className="flex-1 bg-primary-light text-primary font-bold"
-                >
-                  Save
-                </Button>
-              )}
             </div>
           )}
         </div>

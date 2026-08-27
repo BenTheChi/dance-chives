@@ -1,16 +1,23 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
-import { EventCard } from "@/components/EventCard";
 import { TEventCard, EventType } from "@/types/event";
 import { City } from "@/types/city";
 import { getCountryName } from "@/lib/utils/countries";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventTableView } from "@/components/events/EventTableView";
-import { LayoutGrid, Table2 } from "lucide-react";
+import { EventPagination } from "@/components/events/EventPagination";
+import {
+  EventSort,
+  DEFAULT_EVENT_SORT,
+  type EventSortState,
+} from "@/components/events/EventSort";
+
+/** Events rendered per page. */
+const PAGE_SIZE = 50;
 
 interface EventsClientProps {
   futureEvents: TEventCard[];
@@ -19,17 +26,12 @@ interface EventsClientProps {
   styles: string[];
 }
 
-type EventViewMode = "cards" | "table";
-
 export function EventsClient({
   futureEvents,
   pastEvents,
   cities,
   styles,
 }: EventsClientProps) {
-  const { data: session, status } = useSession();
-  const [savedEventIds, setSavedEventIds] = useState<Set<string>>(new Set());
-
   // Applied filter values (used for actual filtering)
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
     null
@@ -55,60 +57,25 @@ export function EventsClient({
   const [draftHasPoster, setDraftHasPoster] = useState(false);
 
   const [keyword, setKeyword] = useState("");
-  const [viewMode, setViewMode] = useState<EventViewMode | null>(null);
+
+  // Applied and draft sort, mirroring the filter draft/apply pattern so the
+  // shared Save button commits both at once.
+  const [sort, setSort] = useState<EventSortState>(DEFAULT_EVENT_SORT);
+  const [draftSort, setDraftSort] = useState<EventSortState>(DEFAULT_EVENT_SORT);
+
+  // Paired with the result set it belongs to: when filters, sort, or the
+  // past/future toggle change, the key no longer matches and the page falls
+  // back to 1 during render. Deriving this beats an effect, which would flash
+  // the wrong page for a render and trips react-hooks/set-state-in-effect.
+  const [pageState, setPageState] = useState<{ key: string; page: number }>({
+    key: "",
+    page: 1,
+  });
 
   // Default to showing future events if there are any
   const [showFutureEvents, setShowFutureEvents] = useState(
     futureEvents.length > 0
   );
-
-  useEffect(() => {
-    const smallScreenQuery = window.matchMedia("(max-width: 639px)");
-
-    const applyViewModeForViewport = (isSmallScreen: boolean) => {
-      setViewMode(isSmallScreen ? "table" : "cards");
-    };
-
-    applyViewModeForViewport(smallScreenQuery.matches);
-
-    const handleBreakpointChange = (event: MediaQueryListEvent) => {
-      applyViewModeForViewport(event.matches);
-    };
-
-    smallScreenQuery.addEventListener("change", handleBreakpointChange);
-
-    return () =>
-      smallScreenQuery.removeEventListener("change", handleBreakpointChange);
-  }, []);
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    if (!session?.user?.id) return;
-
-    const fetchSavedEvents = async () => {
-      try {
-        const response = await fetch("/api/events/saved");
-        if (response.ok) {
-          const data = await response.json();
-          setSavedEventIds(new Set(data?.eventIds ?? []));
-        } else if (response.status === 401) {
-          setSavedEventIds(new Set());
-        } else {
-          const errorData = await response.json().catch(() => null);
-          console.error(
-            "Failed to fetch saved events:",
-            errorData?.error || response.statusText
-          );
-        }
-      } catch (error) {
-        console.error("Failed to fetch saved events:", error);
-        setSavedEventIds(new Set());
-      }
-    };
-
-    fetchSavedEvents();
-  }, [session, status]);
 
   const parseEventDate = (value: string): Date | null => {
     const parsed = new Date(value);
@@ -186,6 +153,7 @@ export function EventsClient({
     setDraftEndDate(endDate);
     setDraftHasVideos(hasVideos);
     setDraftHasPoster(hasPoster);
+    setDraftSort(sort);
   }, [
     selectedCountryCode,
     selectedCityId,
@@ -195,6 +163,7 @@ export function EventsClient({
     endDate,
     hasVideos,
     hasPoster,
+    sort,
   ]);
 
   // Reset selectedCityId if it's no longer in available cities
@@ -235,6 +204,7 @@ export function EventsClient({
     setEndDate(draftEndDate);
     setHasVideos(draftHasVideos);
     setHasPoster(draftHasPoster);
+    setSort(draftSort);
   };
 
   // Handle clearing filters - reset all draft values to empty/default
@@ -247,6 +217,7 @@ export function EventsClient({
     setDraftEndDate("");
     setDraftHasVideos(false);
     setDraftHasPoster(false);
+    setDraftSort(DEFAULT_EVENT_SORT);
   };
 
   const filteredEvents = useMemo(() => {
@@ -360,35 +331,148 @@ export function EventsClient({
     keyword,
   ]);
 
+  // Server-side order is already "closest to today first" for whichever list is
+  // showing, so the default date sort is a pass-through and only its reverse
+  // needs work. Non-date fields fall back to that existing order for ties,
+  // which keeps equal titles/types/cities chronological.
+  const sortedEvents = useMemo(() => {
+    if (sort.field === "date") {
+      return sort.direction === "desc"
+        ? filteredEvents
+        : [...filteredEvents].reverse();
+    }
+
+    const collator = new Intl.Collator(undefined, {
+      sensitivity: "base",
+      numeric: true,
+    });
+
+    const valueFor = (event: TEventCard): string => {
+      switch (sort.field) {
+        case "title":
+          return event.title || "";
+        case "eventType":
+          return event.eventType || "";
+        case "city":
+          return event.city || "";
+        default:
+          return "";
+      }
+    };
+
+    const multiplier = sort.direction === "asc" ? 1 : -1;
+
+    return [...filteredEvents]
+      .map((event, index) => ({ event, index }))
+      .sort((a, b) => {
+        const valueA = valueFor(a.event);
+        const valueB = valueFor(b.event);
+
+        // Blanks sort last in both directions rather than clumping at
+        // whichever end the collator happens to put the empty string.
+        if (!valueA && !valueB) return a.index - b.index;
+        if (!valueA) return 1;
+        if (!valueB) return -1;
+
+        const comparison = collator.compare(valueA, valueB);
+        if (comparison !== 0) return comparison * multiplier;
+
+        return a.index - b.index;
+      })
+      .map(({ event }) => event);
+  }, [filteredEvents, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedEvents.length / PAGE_SIZE));
+
+  // Identifies the current result set. Any change to it means the page the
+  // user was on refers to a different list, so paging restarts at 1.
+  const resultKey = JSON.stringify([
+    showFutureEvents,
+    selectedCountryCode,
+    selectedCityId,
+    selectedEventType,
+    selectedStyles,
+    startDate,
+    endDate,
+    hasVideos,
+    hasPoster,
+    keyword,
+    sort,
+  ]);
+
+  // Clamp as well as reset: filtering down to fewer pages while on a high page
+  // should render the last page immediately, not an empty list.
+  const safePage = Math.min(
+    pageState.key === resultKey ? pageState.page : 1,
+    totalPages
+  );
+
+  const pageStartIndex = (safePage - 1) * PAGE_SIZE;
+  const paginatedEvents = useMemo(
+    () => sortedEvents.slice(pageStartIndex, pageStartIndex + PAGE_SIZE),
+    [sortedEvents, pageStartIndex]
+  );
+
+  const handlePageChange = (page: number) => {
+    setPageState({
+      key: resultKey,
+      page: Math.min(Math.max(page, 1), totalPages),
+    });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col gap-4 w-full">
         <div className="max-w-[1000px] mx-auto flex flex-col sm:gap-4 items-center mb-10 w-full">
-          <EventFilters
-            cities={availableCities}
-            styles={styles}
-            availableCountryCodes={availableCountryCodes}
-            selectedCountryCode={draftCountryCode}
-            onCountryChange={setDraftCountryCode}
-            selectedCityId={effectiveDraftCityId}
-            onCityChange={setDraftCityId}
-            selectedStyles={draftStyles}
-            onStylesChange={setDraftStyles}
-            availableEventTypes={availableEventTypes}
-            selectedEventType={draftEventType}
-            onEventTypeChange={setDraftEventType}
-            startDate={draftStartDate}
-            onStartDateChange={setDraftStartDate}
-            endDate={draftEndDate}
-            onEndDateChange={setDraftEndDate}
-            showPastEventFilters={!showFutureEvents}
-            hasVideos={draftHasVideos}
-            onHasVideosChange={setDraftHasVideos}
-            hasPoster={draftHasPoster}
-            onHasPosterChange={setDraftHasPoster}
-            onSave={handleSaveFilters}
-            onClear={handleClearFilters}
-          />
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-4 sm:gap-4 w-full">
+            <EventFilters
+              cities={availableCities}
+              styles={styles}
+              availableCountryCodes={availableCountryCodes}
+              selectedCountryCode={draftCountryCode}
+              onCountryChange={setDraftCountryCode}
+              selectedCityId={effectiveDraftCityId}
+              onCityChange={setDraftCityId}
+              selectedStyles={draftStyles}
+              onStylesChange={setDraftStyles}
+              availableEventTypes={availableEventTypes}
+              selectedEventType={draftEventType}
+              onEventTypeChange={setDraftEventType}
+              startDate={draftStartDate}
+              onStartDateChange={setDraftStartDate}
+              endDate={draftEndDate}
+              onEndDateChange={setDraftEndDate}
+              showPastEventFilters={!showFutureEvents}
+              hasVideos={draftHasVideos}
+              onHasVideosChange={setDraftHasVideos}
+              hasPoster={draftHasPoster}
+              onHasPosterChange={setDraftHasPoster}
+            />
+
+            <EventSort sort={draftSort} onSortChange={setDraftSort} />
+          </div>
+
+          {/* Sticky on mobile to match the Filters panel above, which pins
+              itself there and auto-expands — otherwise Save/Clear scroll out
+              of reach while the form stays on screen. */}
+          <div className="w-full max-w-[550px] mx-auto flex gap-2 px-4 sm:px-0 py-2 sm:py-0 mt-0 sm:mt-0 sticky bottom-0 z-50 bg-charcoal sm:static sm:bg-transparent">
+            <Button
+              onClick={handleClearFilters}
+              variant="outline"
+              className="flex-1 bg-neutral-300 text-charcoal font-bold border-charcoal"
+            >
+              Clear
+            </Button>
+            <Button
+              onClick={handleSaveFilters}
+              className="flex-1 bg-primary-light text-primary font-bold"
+            >
+              Save
+            </Button>
+          </div>
 
           <div className="w-full max-w-[550px] mx-auto flex items-center gap-2 bg-secondary p-3 sm:rounded-sm border-4 border-secondary-light">
             <input
@@ -430,61 +514,24 @@ export function EventsClient({
                 Future ({futureEvents.length})
               </Label>
             </div>
-            <div className="flex items-center justify-center gap-2 bg-secondary p-3 sm:rounded-sm border-secondary-light w-full border-4 sm:w-auto">
-              <span className="font-bold pr-1">View</span>
-              <button
-                type="button"
-                onClick={() => setViewMode("cards")}
-                aria-label="Switch to card view"
-                aria-pressed={viewMode === "cards"}
-                className={`h-9 w-9 sm:h-10 sm:w-10 rounded-sm border transition-colors flex items-center justify-center ${
-                  viewMode === "cards"
-                    ? "bg-secondary-light text-charcoal border-secondary-light"
-                    : "bg-secondary text-foreground border-secondary-light hover:bg-secondary-dark"
-                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-light`}
-              >
-                <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("table")}
-                aria-label="Switch to table view"
-                aria-pressed={viewMode === "table"}
-                className={`h-9 w-9 sm:h-10 sm:w-10 rounded-sm border transition-colors flex items-center justify-center ${
-                  viewMode === "table"
-                    ? "bg-secondary-light text-charcoal border-secondary-light"
-                    : "bg-secondary text-foreground border-secondary-light hover:bg-secondary-dark"
-                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-light`}
-              >
-                <Table2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            </div>
           </div>
         </div>
       </div>
-      {filteredEvents.length > 0 && viewMode === "cards" && (
-        <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-12">
-          {filteredEvents.map((event: TEventCard) => (
-            <EventCard
-              key={event.id}
-              id={event.id}
-              title={event.title}
-              series={event.series}
-              imageUrl={event.imageUrl}
-              date={event.date}
-              city={event.city}
-              cityId={event.cityId}
-              styles={event.styles}
-              eventType={event.eventType}
-              isSaved={savedEventIds.has(event.id)}
-            />
-          ))}
-        </div>
+      {sortedEvents.length > 0 && (
+        <>
+          <EventTableView className="mt-6" events={paginatedEvents} />
+          <EventPagination
+            className="mt-6"
+            currentPage={safePage}
+            totalPages={totalPages}
+            rangeStart={pageStartIndex + 1}
+            rangeEnd={pageStartIndex + paginatedEvents.length}
+            totalItems={sortedEvents.length}
+            onPageChange={handlePageChange}
+          />
+        </>
       )}
-      {filteredEvents.length > 0 && viewMode === "table" && (
-        <EventTableView className="mt-6" events={filteredEvents} />
-      )}
-      {filteredEvents.length === 0 && (
+      {sortedEvents.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">
             {showFutureEvents
