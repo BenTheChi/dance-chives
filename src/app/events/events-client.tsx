@@ -1,23 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { TEventCard, EventType } from "@/types/event";
 import { City } from "@/types/city";
 import { getCountryName } from "@/lib/utils/countries";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { useDebounce } from "@/hooks/use-debounce";
 import { EventFilters } from "@/components/events/EventFilters";
 import { EventTableView } from "@/components/events/EventTableView";
 import { EventPagination } from "@/components/events/EventPagination";
+import { EventToolbar } from "@/components/events/EventToolbar";
 import {
-  EventSort,
+  ActiveFilterChips,
+  type ActiveFilterChip,
+} from "@/components/events/ActiveFilterChips";
+import {
   DEFAULT_EVENT_SORT,
+  sortEvents,
   type EventSortState,
-} from "@/components/events/EventSort";
+} from "@/components/events/event-sort";
+import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
 
 /** Events rendered per page. */
 const PAGE_SIZE = 50;
+
+/**
+ * Keystrokes update the input immediately but only re-filter after this pause.
+ * Filtering itself is cheap; this keeps typing smooth as the archive grows.
+ */
+const KEYWORD_DEBOUNCE_MS = 200;
 
 interface EventsClientProps {
   futureEvents: TEventCard[];
@@ -32,7 +42,9 @@ export function EventsClient({
   cities,
   styles,
 }: EventsClientProps) {
-  // Applied filter values (used for actual filtering)
+  // Filters apply on change. Everything is already in memory, so there is no
+  // round trip to batch behind a Save button — and pagination recomputes from
+  // the full filtered set, not just the visible page.
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
     null
   );
@@ -46,36 +58,21 @@ export function EventsClient({
   const [hasVideos, setHasVideos] = useState(false);
   const [hasPoster, setHasPoster] = useState(false);
 
-  // Draft filter values (used in the UI, not applied until save)
-  const [draftCountryCode, setDraftCountryCode] = useState<string | null>(null);
-  const [draftCityId, setDraftCityId] = useState<string | null>(null);
-  const [draftStyles, setDraftStyles] = useState<string[]>([]);
-  const [draftEventType, setDraftEventType] = useState<EventType | null>(null);
-  const [draftStartDate, setDraftStartDate] = useState("");
-  const [draftEndDate, setDraftEndDate] = useState("");
-  const [draftHasVideos, setDraftHasVideos] = useState(false);
-  const [draftHasPoster, setDraftHasPoster] = useState(false);
-
   const [keyword, setKeyword] = useState("");
+  const debouncedKeyword = useDebounce(keyword, KEYWORD_DEBOUNCE_MS);
 
-  // Applied and draft sort, mirroring the filter draft/apply pattern so the
-  // shared Save button commits both at once.
   const [sort, setSort] = useState<EventSortState>(DEFAULT_EVENT_SORT);
-  const [draftSort, setDraftSort] = useState<EventSortState>(DEFAULT_EVENT_SORT);
-
-  // Paired with the result set it belongs to: when filters, sort, or the
-  // past/future toggle change, the key no longer matches and the page falls
-  // back to 1 during render. Deriving this beats an effect, which would flash
-  // the wrong page for a render and trips react-hooks/set-state-in-effect.
-  const [pageState, setPageState] = useState<{ key: string; page: number }>({
-    key: "",
-    page: 1,
-  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Default to showing future events if there are any
   const [showFutureEvents, setShowFutureEvents] = useState(
     futureEvents.length > 0
   );
+
+  const [pageState, setPageState] = useState<{ key: string; page: number }>({
+    key: "",
+    page: 1,
+  });
 
   const parseEventDate = (value: string): Date | null => {
     const parsed = new Date(value);
@@ -108,11 +105,12 @@ export function EventsClient({
   const availableCities = useMemo(() => {
     const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
 
-    const scopedEvents = draftCountryCode
-      ? sourceEvents.filter((event) => event.countryCode === draftCountryCode)
+    const scopedEvents = selectedCountryCode
+      ? sourceEvents.filter(
+          (event) => event.countryCode === selectedCountryCode
+        )
       : sourceEvents;
 
-    // Get unique cityIds from the events
     const cityIds = new Set(
       scopedEvents
         .map((event) => event.cityId)
@@ -121,15 +119,13 @@ export function EventsClient({
         )
     );
 
-    // Filter cities to only include those that appear in the events
     return cities.filter((city) => cityIds.has(city.id));
-  }, [cities, futureEvents, pastEvents, showFutureEvents, draftCountryCode]);
+  }, [cities, futureEvents, pastEvents, showFutureEvents, selectedCountryCode]);
 
-  // Filter event types to only show those available in the currently displayed events (past or future)
+  // Filter event types to only show those available in the currently displayed events
   const availableEventTypes = useMemo(() => {
     const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
 
-    // Get unique event types from the events
     const eventTypes = new Set(
       sourceEvents
         .map((event) => event.eventType)
@@ -139,94 +135,40 @@ export function EventsClient({
         )
     );
 
-    // Return sorted array of available event types
     return Array.from(eventTypes).sort();
   }, [futureEvents, pastEvents, showFutureEvents]);
 
-  // Sync draft values with applied values when they change externally
-  useEffect(() => {
-    setDraftCountryCode(selectedCountryCode);
-    setDraftCityId(selectedCityId);
-    setDraftStyles(selectedStyles);
-    setDraftEventType(selectedEventType);
-    setDraftStartDate(startDate);
-    setDraftEndDate(endDate);
-    setDraftHasVideos(hasVideos);
-    setDraftHasPoster(hasPoster);
-    setDraftSort(sort);
-  }, [
-    selectedCountryCode,
-    selectedCityId,
-    selectedStyles,
-    selectedEventType,
-    startDate,
-    endDate,
-    hasVideos,
-    hasPoster,
-    sort,
-  ]);
-
-  // Reset selectedCityId if it's no longer in available cities
-  useEffect(() => {
-    if (
-      selectedCityId &&
-      !availableCities.some((city) => city.id === selectedCityId)
-    ) {
-      setSelectedCityId(null);
-      setDraftCityId(null);
-    }
-  }, [availableCities, selectedCityId]);
-
-  // Reset selectedEventType if it's no longer in available event types
-  useEffect(() => {
-    if (selectedEventType && !availableEventTypes.includes(selectedEventType)) {
-      setSelectedEventType(null);
-      setDraftEventType(null);
-    }
-  }, [availableEventTypes, selectedEventType]);
-
-  // Handle saving filters - apply draft values to actual filter values
-  // Nesting, derived rather than stored: a draft city that is not in the draft
-  // country's city list reads as unselected. Deriving avoids an effect that
-  // calls setState during render, which is the pattern eslint flags elsewhere
-  // in this file — and it cannot fall out of step with availableCities.
-  const effectiveDraftCityId =
-    draftCityId && availableCities.some((city) => city.id === draftCityId)
-      ? draftCityId
+  // Derived rather than stored: a selected city that is not in the selected
+  // country's city list reads as unselected, and a selected type that the
+  // current half of the archive does not contain reads as unselected. Deriving
+  // avoids effects that call setState during render.
+  const effectiveCityId =
+    selectedCityId && availableCities.some((city) => city.id === selectedCityId)
+      ? selectedCityId
       : null;
 
-  const handleSaveFilters = () => {
-    setSelectedCountryCode(draftCountryCode);
-    setSelectedCityId(effectiveDraftCityId);
-    setSelectedStyles(draftStyles);
-    setSelectedEventType(draftEventType);
-    setStartDate(draftStartDate);
-    setEndDate(draftEndDate);
-    setHasVideos(draftHasVideos);
-    setHasPoster(draftHasPoster);
-    setSort(draftSort);
-  };
+  const effectiveEventType =
+    selectedEventType && availableEventTypes.includes(selectedEventType)
+      ? selectedEventType
+      : null;
 
-  // Handle clearing filters - reset all draft values to empty/default
   const handleClearFilters = () => {
-    setDraftCountryCode(null);
-    setDraftCityId(null);
-    setDraftStyles([]);
-    setDraftEventType(null);
-    setDraftStartDate("");
-    setDraftEndDate("");
-    setDraftHasVideos(false);
-    setDraftHasPoster(false);
-    setDraftSort(DEFAULT_EVENT_SORT);
+    setSelectedCountryCode(null);
+    setSelectedCityId(null);
+    setSelectedStyles([]);
+    setSelectedEventType(null);
+    setStartDate("");
+    setEndDate("");
+    setHasVideos(false);
+    setHasPoster(false);
   };
 
   const filteredEvents = useMemo(() => {
-    // Use the pre-sorted arrays based on showFutureEvents
     const sourceEvents = showFutureEvents ? futureEvents : pastEvents;
 
     if (!sourceEvents || sourceEvents.length === 0) return [];
 
-    const normalizedKeyword = keyword.trim().toLowerCase();
+    const normalizedKeyword = debouncedKeyword.trim().toLowerCase();
 
     let parsedStartDate: Date | null = null;
     if (startDate) {
@@ -246,8 +188,6 @@ export function EventsClient({
       }
     }
 
-    // Filter events based on city, styles, date range, and past event filters (hasVideos, hasPoster)
-    // No need to filter by past/future since arrays are already separated
     return sourceEvents.filter((event) => {
       if (!event.date) return false;
 
@@ -274,11 +214,11 @@ export function EventsClient({
         return false;
       }
 
-      if (selectedCityId && event.cityId !== selectedCityId) {
+      if (effectiveCityId && event.cityId !== effectiveCityId) {
         return false;
       }
 
-      if (selectedEventType && event.eventType !== selectedEventType) {
+      if (effectiveEventType && event.eventType !== effectiveEventType) {
         return false;
       }
 
@@ -315,93 +255,47 @@ export function EventsClient({
 
       return true;
     });
-    // No sorting needed - events are already sorted server-side
   }, [
     futureEvents,
     pastEvents,
     showFutureEvents,
     selectedCountryCode,
-    selectedCityId,
-    selectedEventType,
+    effectiveCityId,
+    effectiveEventType,
     selectedStyles,
     startDate,
     endDate,
     hasVideos,
     hasPoster,
-    keyword,
+    debouncedKeyword,
   ]);
 
-  // Server-side order is already "closest to today first" for whichever list is
-  // showing, so the default date sort is a pass-through and only its reverse
-  // needs work. Non-date fields fall back to that existing order for ties,
-  // which keeps equal titles/types/cities chronological.
-  const sortedEvents = useMemo(() => {
-    if (sort.field === "date") {
-      return sort.direction === "desc"
-        ? filteredEvents
-        : [...filteredEvents].reverse();
-    }
-
-    const collator = new Intl.Collator(undefined, {
-      sensitivity: "base",
-      numeric: true,
-    });
-
-    const valueFor = (event: TEventCard): string => {
-      switch (sort.field) {
-        case "title":
-          return event.title || "";
-        case "eventType":
-          return event.eventType || "";
-        case "city":
-          return event.city || "";
-        default:
-          return "";
-      }
-    };
-
-    const multiplier = sort.direction === "asc" ? 1 : -1;
-
-    return [...filteredEvents]
-      .map((event, index) => ({ event, index }))
-      .sort((a, b) => {
-        const valueA = valueFor(a.event);
-        const valueB = valueFor(b.event);
-
-        // Blanks sort last in both directions rather than clumping at
-        // whichever end the collator happens to put the empty string.
-        if (!valueA && !valueB) return a.index - b.index;
-        if (!valueA) return 1;
-        if (!valueB) return -1;
-
-        const comparison = collator.compare(valueA, valueB);
-        if (comparison !== 0) return comparison * multiplier;
-
-        return a.index - b.index;
-      })
-      .map(({ event }) => event);
-  }, [filteredEvents, sort]);
+  const sortedEvents = useMemo(
+    () => sortEvents(filteredEvents, sort),
+    [filteredEvents, sort]
+  );
 
   const totalPages = Math.max(1, Math.ceil(sortedEvents.length / PAGE_SIZE));
 
-  // Identifies the current result set. Any change to it means the page the
-  // user was on refers to a different list, so paging restarts at 1.
+  // Identifies the current result set. Any change means the page the user was
+  // on refers to a different list, so paging restarts at 1 — derived during
+  // render rather than through an effect, which would flash the wrong page.
   const resultKey = JSON.stringify([
     showFutureEvents,
     selectedCountryCode,
-    selectedCityId,
-    selectedEventType,
+    effectiveCityId,
+    effectiveEventType,
     selectedStyles,
     startDate,
     endDate,
     hasVideos,
     hasPoster,
-    keyword,
+    debouncedKeyword,
     sort,
   ]);
 
   // Clamp as well as reset: filtering down to fewer pages while on a high page
-  // should render the last page immediately, not an empty list.
+  // should land on the last page, not an empty list.
   const safePage = Math.min(
     pageState.key === resultKey ? pageState.page : 1,
     totalPages
@@ -423,105 +317,143 @@ export function EventsClient({
     }
   };
 
+  // Keyword is deliberately excluded — it has its own visible input with a
+  // clear affordance, so a chip would be redundant.
+  const activeChips = useMemo(() => {
+    const chips: ActiveFilterChip[] = [];
+
+    if (effectiveEventType) {
+      chips.push({
+        id: "type",
+        label: effectiveEventType,
+        onRemove: () => setSelectedEventType(null),
+      });
+    }
+
+    if (selectedCountryCode) {
+      chips.push({
+        id: "country",
+        label: getCountryName(selectedCountryCode),
+        onRemove: () => setSelectedCountryCode(null),
+      });
+    }
+
+    if (effectiveCityId) {
+      const city = availableCities.find((c) => c.id === effectiveCityId);
+      chips.push({
+        id: "city",
+        label: city?.name ?? "City",
+        onRemove: () => setSelectedCityId(null),
+      });
+    }
+
+    selectedStyles.forEach((style) => {
+      chips.push({
+        id: `style-${style}`,
+        label: formatStyleNameForDisplay(style),
+        onRemove: () =>
+          setSelectedStyles((current) => current.filter((s) => s !== style)),
+      });
+    });
+
+    if (startDate) {
+      chips.push({
+        id: "start-date",
+        label: `From ${startDate}`,
+        onRemove: () => setStartDate(""),
+      });
+    }
+
+    if (endDate) {
+      chips.push({
+        id: "end-date",
+        label: `Until ${endDate}`,
+        onRemove: () => setEndDate(""),
+      });
+    }
+
+    if (!showFutureEvents && hasVideos) {
+      chips.push({
+        id: "has-videos",
+        label: "Has videos",
+        onRemove: () => setHasVideos(false),
+      });
+    }
+
+    if (!showFutureEvents && hasPoster) {
+      chips.push({
+        id: "has-poster",
+        label: "Has poster",
+        onRemove: () => setHasPoster(false),
+      });
+    }
+
+    return chips;
+  }, [
+    effectiveEventType,
+    selectedCountryCode,
+    effectiveCityId,
+    availableCities,
+    selectedStyles,
+    startDate,
+    endDate,
+    hasVideos,
+    hasPoster,
+    showFutureEvents,
+  ]);
+
   return (
-    <>
-      <div className="flex flex-col gap-4 w-full">
-        <div className="max-w-[1000px] mx-auto flex flex-col sm:gap-4 items-center mb-10 w-full">
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-4 sm:gap-4 w-full">
-            <EventFilters
-              cities={availableCities}
-              styles={styles}
-              availableCountryCodes={availableCountryCodes}
-              selectedCountryCode={draftCountryCode}
-              onCountryChange={setDraftCountryCode}
-              selectedCityId={effectiveDraftCityId}
-              onCityChange={setDraftCityId}
-              selectedStyles={draftStyles}
-              onStylesChange={setDraftStyles}
-              availableEventTypes={availableEventTypes}
-              selectedEventType={draftEventType}
-              onEventTypeChange={setDraftEventType}
-              startDate={draftStartDate}
-              onStartDateChange={setDraftStartDate}
-              endDate={draftEndDate}
-              onEndDateChange={setDraftEndDate}
-              showPastEventFilters={!showFutureEvents}
-              hasVideos={draftHasVideos}
-              onHasVideosChange={setDraftHasVideos}
-              hasPoster={draftHasPoster}
-              onHasPosterChange={setDraftHasPoster}
-            />
+    <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-4">
+      <EventToolbar
+        pastCount={pastEvents.length}
+        futureCount={futureEvents.length}
+        showFutureEvents={showFutureEvents}
+        onShowFutureEventsChange={setShowFutureEvents}
+        keyword={keyword}
+        onKeywordChange={setKeyword}
+        sort={sort}
+        onSortChange={setSort}
+        activeFilterCount={activeChips.length}
+        filtersOpen={filtersOpen}
+        onFiltersOpenChange={setFiltersOpen}
+      />
 
-            <EventSort sort={draftSort} onSortChange={setDraftSort} />
-          </div>
+      {filtersOpen && (
+        <EventFilters
+          cities={availableCities}
+          styles={styles}
+          availableCountryCodes={availableCountryCodes}
+          selectedCountryCode={selectedCountryCode}
+          onCountryChange={setSelectedCountryCode}
+          selectedCityId={effectiveCityId}
+          onCityChange={setSelectedCityId}
+          selectedStyles={selectedStyles}
+          onStylesChange={setSelectedStyles}
+          availableEventTypes={availableEventTypes}
+          selectedEventType={effectiveEventType}
+          onEventTypeChange={setSelectedEventType}
+          startDate={startDate}
+          onStartDateChange={setStartDate}
+          endDate={endDate}
+          onEndDateChange={setEndDate}
+          showPastEventFilters={!showFutureEvents}
+          hasVideos={hasVideos}
+          onHasVideosChange={setHasVideos}
+          hasPoster={hasPoster}
+          onHasPosterChange={setHasPoster}
+        />
+      )}
 
-          {/* Sticky on mobile to match the Filters panel above, which pins
-              itself there and auto-expands — otherwise Save/Clear scroll out
-              of reach while the form stays on screen. */}
-          <div className="w-full max-w-[550px] mx-auto flex gap-2 px-4 sm:px-0 py-2 sm:py-0 mt-0 sm:mt-0 sticky bottom-0 z-50 bg-charcoal sm:static sm:bg-transparent">
-            <Button
-              onClick={handleClearFilters}
-              variant="outline"
-              className="flex-1 bg-neutral-300 text-charcoal font-bold border-charcoal"
-            >
-              Clear
-            </Button>
-            <Button
-              onClick={handleSaveFilters}
-              className="flex-1 bg-primary-light text-primary font-bold"
-            >
-              Save
-            </Button>
-          </div>
+      <ActiveFilterChips chips={activeChips} onClearAll={handleClearFilters} />
 
-          <div className="w-full max-w-[550px] mx-auto flex items-center gap-2 bg-secondary p-3 sm:rounded-sm border-4 border-secondary-light">
-            <input
-              type="text"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder="Keyword filter"
-              aria-label="Keyword filter"
-              className="w-full sm:flex-1 px-3 py-2 rounded-sm border border-secondary-light bg-secondary text-foreground"
-              size={1}
-            />
-            <button
-              type="button"
-              onClick={() => setKeyword("")}
-              disabled={keyword.trim().length === 0}
-              className="px-3 py-2 rounded-sm border border-secondary-light bg-secondary text-foreground disabled:opacity-50"
-            >
-              Clear
-            </button>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-5 w-full">
-            <div className="flex items-center justify-center gap-3 bg-secondary p-3 sm:rounded-sm border-secondary-light w-full border-4 sm:max-w-[250px]">
-              <Label
-                htmlFor="future-events-switch"
-                className="font-bold cursor-pointer"
-              >
-                ({pastEvents.length}) Past
-              </Label>
-              <Switch
-                id="future-events-switch"
-                checked={showFutureEvents}
-                onCheckedChange={setShowFutureEvents}
-              />
-              <Label
-                htmlFor="future-events-switch"
-                className="font-bold cursor-pointer"
-              >
-                Future ({futureEvents.length})
-              </Label>
-            </div>
-          </div>
-        </div>
-      </div>
-      {sortedEvents.length > 0 && (
+      {sortedEvents.length > 0 ? (
         <>
-          <EventTableView className="mt-6" events={paginatedEvents} />
+          <EventTableView
+            events={paginatedEvents}
+            sort={sort}
+            onSortChange={setSort}
+          />
           <EventPagination
-            className="mt-6"
             currentPage={safePage}
             totalPages={totalPages}
             rangeStart={pageStartIndex + 1}
@@ -530,16 +462,24 @@ export function EventsClient({
             onPageChange={handlePageChange}
           />
         </>
-      )}
-      {sortedEvents.length === 0 && (
+      ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground">
             {showFutureEvents
               ? "No future events found."
               : "No past events found."}
           </p>
+          {activeChips.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="mt-3 text-sm font-bold underline underline-offset-4 hover:text-foreground cursor-pointer"
+            >
+              Clear all filters
+            </button>
+          )}
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -2,16 +2,37 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TEventCard } from "@/types/event";
 import { formatEventDate } from "@/lib/utils/date-display";
+import {
+  directionLabelsFor,
+  type EventSortField,
+  type EventSortState,
+} from "./event-sort";
 
 const TITLE_CHAR_LIMIT = 48;
 
 interface EventTableViewProps {
   events: TEventCard[];
   className?: string;
+  sort?: EventSortState;
+  onSortChange?: (sort: EventSortState) => void;
 }
+
+/** Columns in render order. `field` omitted for columns that cannot sort. */
+const COLUMNS: Array<{
+  label: string;
+  width: string;
+  field?: EventSortField;
+}> = [
+  { label: "Date", width: "w-[120px]", field: "date" },
+  { label: "Title", width: "w-[300px]", field: "title" },
+  { label: "Type", width: "w-[130px]", field: "eventType" },
+  { label: "Styles", width: "w-[250px]" },
+  { label: "City", width: "w-[170px]", field: "city" },
+];
 
 function clampTitle(title: string): string {
   if (title.length <= TITLE_CHAR_LIMIT) return title;
@@ -22,12 +43,35 @@ function formatDate(value: string, precision?: TEventCard["datePrecision"]): str
   return formatEventDate(value, precision) || "-";
 }
 
-export function EventTableView({ events, className }: EventTableViewProps) {
+export function EventTableView({
+  events,
+  className,
+  sort,
+  onSortChange,
+}: EventTableViewProps) {
   const router = useRouter();
   const cellClassName = "px-4 py-3 text-sm font-medium";
+  const sortable = Boolean(sort && onSortChange);
 
   const handleNavigate = (eventId: string) => {
     router.push(`/events/${eventId}`);
+  };
+
+  // Clicking the active column flips direction; a new column starts at the
+  // direction that reads as "most useful first" for its type — newest for
+  // dates, A-Z for text.
+  const handleHeaderClick = (field: EventSortField) => {
+    if (!sort || !onSortChange) return;
+
+    if (sort.field === field) {
+      onSortChange({
+        field,
+        direction: sort.direction === "asc" ? "desc" : "asc",
+      });
+      return;
+    }
+
+    onSortChange({ field, direction: field === "date" ? "desc" : "asc" });
   };
 
   return (
@@ -41,21 +85,68 @@ export function EventTableView({ events, className }: EventTableViewProps) {
         <table className="w-full min-w-[760px] table-fixed">
           <thead className="bg-primary-light text-charcoal">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-bold w-[120px]">
-                Date
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-bold w-[300px]">
-                Title
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-bold w-[130px]">
-                Type
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-bold w-[250px]">
-                Styles
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-bold w-[170px]">
-                City
-              </th>
+              {COLUMNS.map((column) => {
+                const isActive = sort?.field === column.field;
+                const canSort = sortable && column.field !== undefined;
+
+                if (!canSort) {
+                  return (
+                    <th
+                      key={column.label}
+                      className={cn(
+                        "px-4 py-3 text-left text-sm font-bold",
+                        column.width
+                      )}
+                    >
+                      {column.label}
+                    </th>
+                  );
+                }
+
+                const field = column.field as EventSortField;
+                const labels = directionLabelsFor(field);
+                const nextLabel = isActive
+                  ? labels[sort!.direction === "asc" ? "desc" : "asc"]
+                  : labels[field === "date" ? "desc" : "asc"];
+
+                return (
+                  <th
+                    key={column.label}
+                    aria-sort={
+                      isActive
+                        ? sort!.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                    className={cn("text-left text-sm font-bold", column.width)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleHeaderClick(field)}
+                      title={`Sort by ${column.label}: ${nextLabel}`}
+                      className="w-full flex items-center gap-1.5 px-4 py-3 text-left font-bold transition-colors hover:bg-charcoal/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-charcoal cursor-pointer"
+                    >
+                      {column.label}
+                      {isActive ? (
+                        sort!.direction === "asc" ? (
+                          <ArrowUp aria-hidden="true" className="h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowDown
+                            aria-hidden="true"
+                            className="h-3.5 w-3.5"
+                          />
+                        )
+                      ) : (
+                        <ChevronsUpDown
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 opacity-40"
+                        />
+                      )}
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>

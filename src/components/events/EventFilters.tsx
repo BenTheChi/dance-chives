@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { City } from "@/types/city";
 import { isSentinelCityId } from "@/lib/utils/city-display";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { StyleBadge } from "@/components/ui/style-badge";
-import { Check, ChevronsUpDown, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import {
   formatStyleNameForDisplay,
   normalizeStyleNames,
@@ -85,30 +85,15 @@ export function EventFilters({
 }: EventFiltersProps) {
   const [styleSearch, setStyleSearch] = useState("");
   const [stylePopoverOpen, setStylePopoverOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    if (!stylePopoverOpen) {
+  // Clearing the search on close is an event, not state to synchronize, so it
+  // belongs in the open-change handler rather than an effect.
+  const handleStylePopoverOpenChange = (open: boolean) => {
+    setStylePopoverOpen(open);
+    if (!open) {
       setStyleSearch("");
     }
-  }, [stylePopoverOpen]);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    const mobile = window.innerWidth < 768;
-    setIsMobile(mobile);
-    if (mobile) {
-      setIsExpanded(true);
-    }
-
-    window.addEventListener("resize", checkMobile);
-
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  };
 
   const canonicalSelectedStyles = useMemo(
     () => normalizeStyleNames(selectedStyles, { strict: false }),
@@ -144,26 +129,11 @@ export function EventFilters({
 
   return (
     <div
-      className={`flex flex-col w-full bg-secondary sm:rounded-sm border-t-0 border-b-4 border-l-4 border-r-4 sm:border-t-4 border-secondary-light max-w-[550px] mx-auto ${
-        isMobile ? "sticky top-0 z-50" : ""
-      }`}
+      id="event-filters-panel"
+      className="w-full bg-secondary sm:rounded-sm border-4 border-t-0 sm:border-t-4 border-secondary-light"
     >
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between p-2 w-full text-left"
-      >
-        <span className="!font-bold !text-xl text-white text-center w-full">
-          Filters
-        </span>
-        {isExpanded ? (
-          <ChevronUp className="h-5 w-5 text-white" />
-        ) : (
-          <ChevronDown className="h-5 w-5 text-white" />
-        )}
-      </button>
-      {isExpanded && (
-        <div className="px-4 pb-4">
-          <div className="grid gap-4 grid-cols-2">
+      <div className="p-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-white">Type</label>
               <Select
@@ -244,7 +214,7 @@ export function EventFilters({
               <label className="text-sm font-bold text-white">Styles</label>
               <Popover
                 open={stylePopoverOpen}
-                onOpenChange={setStylePopoverOpen}
+                onOpenChange={handleStylePopoverOpenChange}
               >
                 <PopoverTrigger asChild>
                   <Button
@@ -359,8 +329,7 @@ export function EventFilters({
               </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -170,7 +170,7 @@ export default async function EventsPage() {
         <div className="relative flex-1 flex flex-col">
           {/* Content */}
           <div className="relative z-10 flex justify-center flex-1 min-h-0">
-            <div className="flex flex-col items-center py-2 sm:py-8 w-full">
+            <div className="flex flex-col items-center px-0 sm:px-6 py-2 sm:py-8 w-full">
               {/* Client component handles auth-dependent features */}
               <EventsClient
                 futureEvents={futureEvents}
