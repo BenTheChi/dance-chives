@@ -34,7 +34,7 @@ npm run wipe:events:prod:run     # prod execute (includes --i-understand-product
 
 **Postgres** (one transaction): `reacts`, `event_cards` (cascades `event_dates` +
 `section_cards`), `Event`, `TaggingRequest`, `OwnershipRequest`, `TeamMemberRequest`,
-`submissions` (cascades `reviewing`), `playlist_submissions` (cascades `playlist_reviewing`),
+`submissions` (cascades `reviewing`),
 plus `RequestApproval` / `Notification` rows tied to TAGGING/TEAM_MEMBER/OWNERSHIP requests.
 
 **R2**: every object under the **`events/`** prefix in the env's bucket

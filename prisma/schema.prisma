@@ -433,20 +433,6 @@ enum SubmissionStatus {
   rejected
 }
 
-enum PlaylistSubmissionStatus {
-  waiting
-  parsing
-  reviewing
-  failed
-  approved
-  rejected
-}
-
-enum PlaylistParserMode {
-  segment
-  ai
-}
-
 model Job {
   id          String    @id @default(cuid())
   status      JobStatus @default(pending)
@@ -512,40 +498,4 @@ model Reviewing {
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@map("reviewing")
-}
-
-model PlaylistSubmission {
-  id                    String                   @id @default(cuid())
-  createdAt             DateTime                 @default(now())
-  updatedAt             DateTime                 @updatedAt
-  status                PlaylistSubmissionStatus @default(waiting)
-  parserMode            PlaylistParserMode?
-  parseAttempts         Int                      @default(0)
-  lastParseStartedAt    DateTime?
-  lastParseFinishedAt   DateTime?
-  lastParseErrorCode    String?
-  lastParseErrorMessage String?
-  lastParserProviders   Json?
-  playlistUrl           String
-  playlistId            String                   @unique
-  eventId               String?
-
-  reviewing PlaylistReviewing?
-
-  @@index([status])
-  @@index([createdAt])
-  @@index([updatedAt])
-  @@map("playlist_submissions")
-}
-
-model PlaylistReviewing {
-  id           String   @id @default(cuid())
-  updatedAt    DateTime @updatedAt
-  submissionId String   @unique @map("submission_id")
-  eventJson    Json     @map("event_json")
-  parseJson    Json?    @map("parse_json")
-
-  submission PlaylistSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-
-  @@map("playlist_reviewing")
 }

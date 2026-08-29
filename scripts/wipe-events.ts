@@ -110,9 +110,7 @@ async function pgCounts(): Promise<Record<string, number>> {
     eventLink,
     reacts,
     submissions,
-    playlistSubmissions,
     reviewing,
-    playlistReviewing,
     taggingReq,
     ownershipReq,
     teamReq,
@@ -128,9 +126,7 @@ async function pgCounts(): Promise<Record<string, number>> {
     prisma.event.count(),
     prisma.react.count(),
     prisma.submission.count(),
-    prisma.playlistSubmission.count(),
     prisma.reviewing.count(),
-    prisma.playlistReviewing.count(),
     prisma.taggingRequest.count(),
     prisma.ownershipRequest.count(),
     prisma.teamMemberRequest.count(),
@@ -152,9 +148,7 @@ async function pgCounts(): Promise<Record<string, number>> {
     eventLink,
     reacts,
     submissions,
-    playlistSubmissions,
     reviewing,
-    playlistReviewing,
     taggingReq,
     ownershipReq,
     teamReq,
@@ -244,8 +238,7 @@ async function wipePostgres(execute: boolean) {
   if (!execute) {
     log("[dry-run] would DELETE: reacts, event_cards (+cascade event_dates,");
     log("  section_cards), Event, TaggingRequest, OwnershipRequest,");
-    log("  TeamMemberRequest, reviewing+submissions,");
-    log("  playlist_reviewing+playlist_submissions, and the RequestApproval /");
+    log("  TeamMemberRequest, reviewing+submissions, and the RequestApproval /");
     log("  Notification rows tied to TAGGING/TEAM_MEMBER/OWNERSHIP requests.");
     return;
   }
@@ -260,7 +253,6 @@ async function wipePostgres(execute: boolean) {
     log(`TeamMemberRequest: ${(await tx.teamMemberRequest.deleteMany({})).count}`);
     // reviewing cascades from submissions, but delete explicitly first to be safe
     log(`submissions: ${(await tx.submission.deleteMany({})).count}`);
-    log(`playlist_submissions: ${(await tx.playlistSubmission.deleteMany({})).count}`);
     const approvals = await tx.requestApproval.deleteMany({
       where: { requestType: { in: ["TAGGING", "TEAM_MEMBER", "OWNERSHIP"] } },
     });
@@ -369,7 +361,7 @@ async function main() {
       if (postNeo[label] !== preNeo[label])
         problems.push(`Neo4j :${label} changed ${preNeo[label]} -> ${postNeo[label]} (should be unchanged)`);
     }
-    const zeroPg = ["eventCards", "eventDates", "sectionCards", "eventLink", "reacts", "submissions", "playlistSubmissions", "reviewing", "playlistReviewing", "taggingReq", "ownershipReq", "teamReq"] as const;
+    const zeroPg = ["eventCards", "eventDates", "sectionCards", "eventLink", "reacts", "submissions", "reviewing", "taggingReq", "ownershipReq", "teamReq"] as const;
     for (const k of zeroPg) {
       if (postPg[k] !== 0) problems.push(`Postgres ${k} = ${postPg[k]} (expected 0)`);
     }
