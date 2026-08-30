@@ -157,7 +157,7 @@ export function SectionCard({
           {/* Event title - shown only when showEventTitle is true - more prominent */}
           {showEventTitle && eventTitle && (
             <>
-              <h2 className="text-center my-2">{eventTitle}</h2>
+              <h2 className="event-title text-center my-2">{eventTitle}</h2>
               {dateTimeText && (
                 <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">
                   {dateTimeText}

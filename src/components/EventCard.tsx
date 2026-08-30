@@ -70,7 +70,7 @@ export function EventCard({
             </div>
             {/* Bottom half - event title */}
             <div className="flex-1 flex items-start justify-center">
-              <h2 className="text-center px-4 text-black line-clamp-1">
+              <h2 className="event-title text-center px-4 text-black line-clamp-1">
                 {title}
               </h2>
             </div>
@@ -84,7 +84,7 @@ export function EventCard({
           <div className="flex justify-between items-center">
             {/* Title */}
             <div className="flex flex-col">
-              <h2 className="!text-[18px] sm:!text-[20px] line-clamp-2">
+              <h2 className="event-title !text-[18px] sm:!text-[20px] line-clamp-2">
                 {title}
               </h2>
               <span className="!text-[12px] sm:!text-md ">{formattedDate}</span>

@@ -187,6 +187,26 @@
 }
 
 @layer utilities {
+  /*
+   * Event titles render uppercase regardless of how they are stored.
+   *
+   * The stored casing is inconsistent by nature: titles are derived from
+   * YouTube video titles, and channels differ in whether they shout. Roughly
+   * a sixth of the corpus is all-caps ("BATTLE OF THE YEAR 2021") sitting
+   * beside properly-cased siblings ("Battle of the Year 2014"). Normalising
+   * the DATA cannot fix this without deciding, name by name, whether the caps
+   * are a brand (FLAVOURAMA, BBIC) or just shouting — a judgement no rule can
+   * make from the string alone.
+   *
+   * So normalise at render instead. text-transform leaves the underlying
+   * value intact, so the cased form stays available for APIs, exports and any
+   * future cased display, and screen readers still receive the real string.
+   * Apply this to event titles only — not to user-authored text.
+   */
+  .event-title {
+    text-transform: uppercase;
+  }
+
   .text-outline {
     -webkit-text-stroke: 2px black;
   }

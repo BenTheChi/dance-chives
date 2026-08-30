@@ -275,7 +275,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
         <h1 className="py-7 border-b-2 border-primary-light bg-charcoal ">
           <Link
             href={`/events/${event.id}`}
-            className="hover:text-primary-light hover:underline hover:decoration-primary-light transition-colors text-center"
+            className="event-title hover:text-primary-light hover:underline hover:decoration-primary-light transition-colors text-center"
           >
             {event.eventDetails.title}
           </Link>

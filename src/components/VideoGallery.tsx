@@ -1206,7 +1206,7 @@ export function VideoGallery({
               <div className="!text-[14px] sm:!text-[16px] flex flex-col sm:flex-row items-baseline gap-1 sm:gap-8">
                 <Link
                   href={`/events/${currentVideo.eventId}`}
-                  className="hover:underline font-bold leading-tight"
+                  className="event-title hover:underline font-bold leading-tight"
                 >
                   {currentVideo.eventTitle}
                 </Link>

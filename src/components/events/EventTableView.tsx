@@ -176,7 +176,7 @@ export function EventTableView({
                   <td className={cellClassName}>
                     <Link
                       href={eventHref}
-                      className="block truncate rounded-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-light"
+                      className="event-title block truncate rounded-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-light"
                       title={event.title}
                       aria-label={`Open event ${event.title}`}
                     >
