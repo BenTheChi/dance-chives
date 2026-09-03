@@ -58,7 +58,9 @@ describe("resolveEventThumbnail", () => {
             ],
           },
           {
-            title: "Trailer 1",
+            // The section is titled "Other" like every other non-structural
+            // one; only the video's type marks it as a trailer.
+            title: "Other",
             position: 3,
             videos: [{ src: "MRVaReHdhzk", position: 0, type: "trailer" }],
           },
@@ -100,7 +102,9 @@ describe("resolveEventThumbnail", () => {
 
   it("finds a trailer whatever its section is titled", () => {
     // The old title heuristic could only see a section composed as "Trailer"
-    // or "Trailer N". Typing the video finds it in a mixed section too.
+    // or "Trailer N" — titles that no longer exist, since every non-structural
+    // section now composes to "Other". Typing the video finds it regardless,
+    // including in a section holding footage alongside the trailer.
     expect(
       resolveEventThumbnail({
         sections: [
@@ -201,11 +205,11 @@ describe("resolveEventThumbnail", () => {
     expect(resolved?.videoSrc).toBe("FIRST");
   });
 
-  it("falls through a trailer section that holds no video", () => {
+  it("falls through an empty section that could have held a trailer", () => {
     expect(
       resolveEventThumbnail({
         sections: [
-          { title: "Trailer 1", position: 0, videos: [] },
+          { title: "Other", position: 0, videos: [] },
           {
             title: "B",
             position: 1,
