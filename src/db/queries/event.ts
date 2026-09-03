@@ -5139,6 +5139,23 @@ export async function getEventsWithVideosForWatch(
       return 0;
     };
 
+    // Thumbnails live on the Postgres read model, resolved at publish time —
+    // see lib/utils/event-thumbnail.ts. Reading them back here rather than
+    // re-walking the graph keeps one ladder rather than two.
+    const cardRows = await prisma.eventCard.findMany({
+      where: { eventId: { in: eventIds } },
+      select: {
+        eventId: true,
+        series: true,
+        datePrecision: true,
+        thumbnailVideoSrc: true,
+        thumbnailTier: true,
+        videoCount: true,
+        sectionCount: true,
+      },
+    });
+    const cardById = new Map(cardRows.map((row) => [row.eventId, row]));
+
     // Build TEventCard array
     const result: TEventCard[] = eventsResult.records.map((record) => {
       const eventId = record.get("eventId") as string;
@@ -5154,11 +5171,16 @@ export async function getEventsWithVideosForWatch(
       const displayDate = formatDisplayDate(eventDates, eventStartDate);
       const additionalDatesCount = countAdditionalDates(eventDates);
 
+      const card = cardById.get(eventId);
+
       return {
         id: eventId,
         title: eventTitle,
+        series: card?.series ?? undefined,
         imageUrl: posterUrl || undefined,
         date: displayDate,
+        datePrecision: (card?.datePrecision ??
+          "day") as TEventCard["datePrecision"],
         city: cityName || "",
         cityId: cityId || undefined,
         styles: styles,
@@ -5166,6 +5188,11 @@ export async function getEventsWithVideosForWatch(
         additionalDatesCount: additionalDatesCount,
         status: "visible",
         hasVideos: true, // All events returned have videos by definition
+        thumbnailVideoSrc: card?.thumbnailVideoSrc ?? undefined,
+        thumbnailTier: (card?.thumbnailTier ??
+          undefined) as TEventCard["thumbnailTier"],
+        videoCount: card?.videoCount ?? 0,
+        sectionCount: card?.sectionCount ?? 0,
       };
     });
 

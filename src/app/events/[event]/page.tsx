@@ -27,6 +27,12 @@ import { Globe, Instagram, Youtube, Facebook } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import { prisma } from "@/lib/primsa";
+import {
+  DatePrecisionTag,
+  GapAffordance,
+} from "@/components/events/GapAffordance";
+import { hasCityGap } from "@/lib/utils/event-gaps";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -351,6 +357,21 @@ export default async function EventPage({ params }: PageProps) {
     strict: false,
   });
 
+  // `datePrecision` lives on the read model, not on the graph node the rest of
+  // this page reads. One indexed lookup rather than plumbing it through the
+  // large Cypher query — and it carries the rolled-up counts too.
+  const eventCard = await prisma.eventCard.findUnique({
+    where: { eventId: event.id },
+    select: {
+      datePrecision: true,
+      cityId: true,
+      videoCount: true,
+      sectionCount: true,
+    },
+  });
+  const datePrecision = (eventCard?.datePrecision ??
+    "day") as "day" | "month" | "year";
+
   // Group roles by title (exclude TEAM_MEMBER - team members are shown separately)
   const rolesByTitle = new Map<string, Array<(typeof event.roles)[0]>>();
   event.roles.forEach((role) => {
@@ -509,9 +530,16 @@ export default async function EventPage({ params }: PageProps) {
               <div className="w-full sm:flex-2 lg:max-w-[800px]">
                 <section className="border-2 border-primary-light py-4 px-4 bg-primary-dark rounded-sm w-full flex flex-col">
                   <div className="flex flex-col items-center">
-                    {/* City | Event type */}
-                    <div className="flex flex-row gap-5 items-center justify-center mb-4">
-                      {event.eventDetails.city.name && (
+                    {/* City | Event type. A missing city becomes an
+                        invitation rather than a blank — 249 events have none,
+                        and someone who watched the footage may recognise it. */}
+                    <div className="flex flex-row gap-5 items-center justify-center mb-2 flex-wrap">
+                      {hasCityGap(
+                        eventCard?.cityId,
+                        event.eventDetails.city.name
+                      ) ? (
+                        <GapAffordance label="Add city" size="md" />
+                      ) : (
                         <h2 className="!font-extrabold">
                           {formatCityDisplayLabel(event.eventDetails.city)}
                         </h2>
@@ -522,14 +550,26 @@ export default async function EventPage({ params }: PageProps) {
                       )}
                     </div>
 
-                    {/* Style badges */}
-                    {eventStyles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
-                        {eventStyles.map((style) => (
-                          <StyleBadge key={style} style={style} />
-                        ))}
+                    {/* Precision is stated rather than hidden: the date below
+                        renders honestly ("2019", never a fake "01/01/19"), and
+                        this says why it is short. */}
+                    {datePrecision !== "day" && (
+                      <div className="flex items-center gap-2 mb-4 flex-wrap justify-center">
+                        <DatePrecisionTag precision={datePrecision} />
+                        <GapAffordance label="Add exact date" />
                       </div>
                     )}
+
+                    {/* Style badges */}
+                    <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
+                      {eventStyles.length > 0 ? (
+                        eventStyles.map((style) => (
+                          <StyleBadge key={style} style={style} />
+                        ))
+                      ) : (
+                        <GapAffordance label="Add styles" size="md" />
+                      )}
+                    </div>
 
                     {/* Dates, Location, Cost, Prize - dynamic layout */}
                     {(() => {

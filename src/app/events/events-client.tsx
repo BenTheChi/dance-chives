@@ -19,6 +19,12 @@ import {
   type EventSortState,
 } from "@/components/events/event-sort";
 import { formatStyleNameForDisplay } from "@/lib/utils/style-utils";
+import { EventCard } from "@/components/EventCard";
+import {
+  DEFAULT_EVENT_VIEW,
+  needsInfo,
+  type EventView,
+} from "@/components/events/event-view";
 
 /** Events rendered per page. */
 const PAGE_SIZE = 50;
@@ -63,6 +69,8 @@ export function EventsClient({
 
   const [sort, setSort] = useState<EventSortState>(DEFAULT_EVENT_SORT);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [view, setView] = useState<EventView>(DEFAULT_EVENT_VIEW);
+  const [needsInfoOnly, setNeedsInfoOnly] = useState(false);
 
   // Default to showing future events if there are any
   const [showFutureEvents, setShowFutureEvents] = useState(
@@ -161,6 +169,7 @@ export function EventsClient({
     setEndDate("");
     setHasVideos(false);
     setHasPoster(false);
+    setNeedsInfoOnly(false);
   };
 
   const filteredEvents = useMemo(() => {
@@ -242,6 +251,10 @@ export function EventsClient({
         return false;
       }
 
+      if (needsInfoOnly && !needsInfo(event)) {
+        return false;
+      }
+
       // Past event filters (only apply when showing past events)
       if (!showFutureEvents) {
         if (hasVideos && !event.hasVideos) {
@@ -267,6 +280,7 @@ export function EventsClient({
     endDate,
     hasVideos,
     hasPoster,
+    needsInfoOnly,
     debouncedKeyword,
   ]);
 
@@ -290,6 +304,7 @@ export function EventsClient({
     endDate,
     hasVideos,
     hasPoster,
+    needsInfoOnly,
     debouncedKeyword,
     sort,
   ]);
@@ -388,6 +403,14 @@ export function EventsClient({
       });
     }
 
+    if (needsInfoOnly) {
+      chips.push({
+        id: "needs-info",
+        label: "Needs info",
+        onRemove: () => setNeedsInfoOnly(false),
+      });
+    }
+
     return chips;
   }, [
     effectiveEventType,
@@ -399,8 +422,18 @@ export function EventsClient({
     endDate,
     hasVideos,
     hasPoster,
+    needsInfoOnly,
     showFutureEvents,
   ]);
+
+  // Counted over the half of the archive currently shown, and before the other
+  // filters apply — the badge is an invitation to look at the gaps, so it must
+  // not shrink as unrelated filters narrow the list.
+  const needsInfoCount = useMemo(
+    () =>
+      (showFutureEvents ? futureEvents : pastEvents).filter(needsInfo).length,
+    [futureEvents, pastEvents, showFutureEvents]
+  );
 
   return (
     <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-4">
@@ -416,6 +449,11 @@ export function EventsClient({
         activeFilterCount={activeChips.length}
         filtersOpen={filtersOpen}
         onFiltersOpenChange={setFiltersOpen}
+        view={view}
+        onViewChange={setView}
+        needsInfoCount={needsInfoCount}
+        needsInfoOnly={needsInfoOnly}
+        onNeedsInfoOnlyChange={setNeedsInfoOnly}
       />
 
       {filtersOpen && (
@@ -448,11 +486,19 @@ export function EventsClient({
 
       {sortedEvents.length > 0 ? (
         <>
-          <EventTableView
-            events={paginatedEvents}
-            sort={sort}
-            onSortChange={setSort}
-          />
+          {view === "list" ? (
+            <EventTableView
+              events={paginatedEvents}
+              sort={sort}
+              onSortChange={setSort}
+            />
+          ) : (
+            <div className="flex flex-wrap justify-center gap-6">
+              {paginatedEvents.map((event) => (
+                <EventCard key={event.id} {...event} />
+              ))}
+            </div>
+          )}
           <EventPagination
             currentPage={safePage}
             totalPages={totalPages}

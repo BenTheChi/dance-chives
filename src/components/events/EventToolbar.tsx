@@ -1,6 +1,13 @@
 "use client";
 
-import { Search, SlidersHorizontal, X, ChevronDown } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  List,
+  LayoutGrid,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -17,6 +24,7 @@ import {
   type EventSortField,
   type EventSortState,
 } from "./event-sort";
+import type { EventView } from "./event-view";
 
 interface EventToolbarProps {
   pastCount: number;
@@ -33,6 +41,14 @@ interface EventToolbarProps {
   activeFilterCount: number;
   filtersOpen: boolean;
   onFiltersOpenChange: (open: boolean) => void;
+
+  view: EventView;
+  onViewChange: (view: EventView) => void;
+
+  /** Events missing a city, a precise date, or styles. */
+  needsInfoCount: number;
+  needsInfoOnly: boolean;
+  onNeedsInfoOnlyChange: (value: boolean) => void;
 }
 
 export function EventToolbar({
@@ -47,6 +63,11 @@ export function EventToolbar({
   activeFilterCount,
   filtersOpen,
   onFiltersOpenChange,
+  view,
+  onViewChange,
+  needsInfoCount,
+  needsInfoOnly,
+  onNeedsInfoOnlyChange,
 }: EventToolbarProps) {
   const directionLabels = directionLabelsFor(sort.field);
 
@@ -114,6 +135,7 @@ export function EventToolbar({
 
       {/* Row 2: filters toggle and sort */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => onFiltersOpenChange(!filtersOpen)}
@@ -136,6 +158,77 @@ export function EventToolbar({
             )}
           />
         </button>
+
+        {/* The archive's own gaps, as a filter. This is the Phase 1 entry to
+            the contribution work: the count is the ask, and it is honest
+            because it is computed from the rows rather than asserted. */}
+        {needsInfoCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onNeedsInfoOnlyChange(!needsInfoOnly)}
+            aria-pressed={needsInfoOnly}
+            title="Events missing a city, an exact date, or styles"
+            className={cn(
+              "inline-flex items-center gap-2 h-10 px-4 rounded-sm border font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-light",
+              needsInfoOnly
+                ? "border-[#b4801f] bg-[#b4801f] text-charcoal"
+                : "border-[#b4801f]/60 text-[#e0a942] hover:bg-[#b4801f]/10"
+            )}
+          >
+            Needs info
+            <span
+              className={cn(
+                "inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-xs font-bold",
+                needsInfoOnly
+                  ? "bg-charcoal text-[#e0a942]"
+                  : "bg-[#b4801f]/25 text-[#e0a942]"
+              )}
+            >
+              {needsInfoCount.toLocaleString()}
+            </span>
+          </button>
+        )}
+
+        {/* List is the default: the archive is a record to scan, and a grid of
+            330px cards shows 6 events where a table shows 50. The grid stays
+            because it is the better shape for browsing a short, curated set. */}
+        <div
+          role="group"
+          aria-label="Result layout"
+          className="flex items-center gap-1 p-1 bg-secondary-dark/60 rounded-sm border border-secondary-light"
+        >
+          <button
+            type="button"
+            onClick={() => onViewChange("list")}
+            aria-pressed={view === "list"}
+            title="List view"
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-sm transition-colors",
+              view === "list"
+                ? "bg-secondary-light text-charcoal"
+                : "text-foreground hover:bg-secondary-dark"
+            )}
+          >
+            <List className="h-4 w-4" />
+            <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange("grid")}
+            aria-pressed={view === "grid"}
+            title="Grid view"
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-sm transition-colors",
+              view === "grid"
+                ? "bg-secondary-light text-charcoal"
+                : "text-foreground hover:bg-secondary-dark"
+            )}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            <span className="hidden sm:inline">Grid</span>
+          </button>
+        </div>
+        </div>
 
         {/* Mirrors the sortable table headers, which are the primary control on
             desktop but scroll out of reach on a narrow screen. */}

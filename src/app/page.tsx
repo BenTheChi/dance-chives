@@ -3,28 +3,24 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getEventsWithVideosForWatch } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
+import { getArchiveStats, getBrowseFacets } from "@/db/queries/archive-stats";
 import { ReportButton } from "@/components/report/ReportButton";
 import { EventCard } from "@/components/EventCard";
-import { HomeSubmissionForm } from "@/components/forms/home-submission-form";
-import {
-  Info,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  ArrowDown,
-  Tv,
-  Plus,
-} from "lucide-react";
+import { ChannelSubmissionForm } from "@/components/forms/channel-submission-form";
+import { ArchiveScaleStrip } from "@/components/home/ArchiveScaleStrip";
+import { BrowseArchive } from "@/components/home/BrowseArchive";
+import { HelpCompleteArchive } from "@/components/home/HelpCompleteArchive";
 
 // Enable ISR - revalidate every 60 seconds
 export const revalidate = 60;
 
 export default async function Home() {
-  // Fetch events with videos for watch section
-  const watchPastEvents = await getEventsWithVideosForWatch(6);
-
-  // Fetch upcoming events
-  const upcomingEvents = await getUpcomingEventCards(4);
+  const [watchPastEvents, upcomingEvents, stats, facets] = await Promise.all([
+    getEventsWithVideosForWatch(6),
+    getUpcomingEventCards(4),
+    getArchiveStats(),
+    getBrowseFacets(8),
+  ]);
 
   return (
     <div className="flex flex-col">
@@ -60,155 +56,17 @@ export default async function Home() {
             </div>
           </section>
 
-          <div className="flex flex-col items-center gap-20">
-            {/* Mobile Calendar CTA - Only visible on mobile */}
-            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-12 px-4 border-4 border-secondary-light">
-              <div className="flex flex-col items-center gap-6">
-                <h2 className="!text-4xl text-center !font-rubik-mono-one text-outline">
-                  Never Miss an Event
-                </h2>
-                <Link href="/calendar">
-                  <Button
-                    size="xl"
-                    className="font-rubik-mono-one text-xl text-charcoal !bg-accent-blue px-8 py-6 mt-4 hover:scale-105 transition-transform shadow-hover"
-                  >
-                    View Calendar
-                  </Button>
-                </Link>
-              </div>
-            </section>
+          <div className="flex flex-col items-center gap-16">
+            {/* 1. Scale strip — the numbers are the product. Sits BELOW the
+                   logo/Open Beta hero, never in place of it. */}
+            <ArchiveScaleStrip stats={stats} />
 
-            <section className="max-w-6xl mx-auto w-full">
-              <HomeSubmissionForm />
-            </section>
+            {/* 2. Browse the archive — the real navigation, promoted out of
+                   the burial it was in. */}
+            <BrowseArchive styles={facets.styles} cities={facets.cities} />
 
-            {/* CTA - Changes based on login status */}
-            {/* <HomePageCTA variant="primary" /> */}
-            {/* <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
-              <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
-                Tired of bouncing between Youtube, Facebook, and Instagram?
-              </h2>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="flex flex-col items-center gap-4">
-                  <Image
-                    src="/screenshots/videos.png"
-                    alt="Video Gallery Screenshot"
-                    width={500}
-                    height={500}
-                    className="border-4 border-primary-light rounded-sm"
-                  />
-                  <p className="text-center !text-xl">
-                    Watch all videos for an event in a row
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <Image
-                    src="/screenshots/event-details.png"
-                    alt="Event Details Screenshot"
-                    width={500}
-                    height={500}
-                    className="border-4 border-primary-light rounded-sm"
-                  />
-                  <p className="text-center !text-xl">
-                    Learn more about the event itself
-                  </p>
-                </div>
-              </div>
-              <MaintenanceLink href="/events">
-                <Button
-                  size="xl"
-                  className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal mx-auto block mt-6 !bg-accent-blue px-4 sm:px-6 md:px-10"
-                >
-                  Discover Events
-                </Button>
-              </MaintenanceLink>
-            </section>
-
-            <section className="max-w-6xl mx-auto bg-secondary-dark rounded-sm py-8 px-2 sm:px-4 border-4 border-secondary-light w-full">
-              <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
-                Never miss an event again with the community calendar
-              </h2>
-              <div className="grid md:grid-cols-2 gap-8 mb-12">
-                <div className="flex flex-col items-center gap-4">
-                  <Image
-                    src="/screenshots/calendar-event.png"
-                    alt="Calendar Event Screenshot"
-                    width={500}
-                    height={500}
-                    className="border-4 border-secondary-light rounded-sm"
-                  />
-                  <p className="text-center !text-xl">
-                    See all events for any city. Perfect for traveling!
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <Image
-                    src="/screenshots/saved-event.png"
-                    alt="Saved Event Screenshot"
-                    width={500}
-                    height={500}
-                    className="border-4 border-secondary-light rounded-sm"
-                  />
-                  <p className="text-center !text-xl">
-                    Save events so they show up on your personal calendar
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <MaintenanceLink href="/calendar">
-                  <Button
-                    size="xl"
-                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-4 sm:px-6 md:px-10"
-                  >
-                    View Calendar
-                  </Button>
-                </MaintenanceLink>
-              </div>
-            </section>
-
-            <section className="max-w-6xl mx-auto bg-primary rounded-sm py-8 px-2 sm:px-4 border-4 border-primary-light w-full">
-              <h2 className="sm:!text-3xl !font-extrabold text-center mb-8">
-                A structured public record of event and battle roles
-              </h2>
-              <div className="grid md:grid-cols-2 gap-8 mb-12">
-                <div className="flex flex-col items-center gap-4">
-                  <Image
-                    src="/screenshots/profile-tag.png"
-                    alt="Profile Tag Screenshot"
-                    width={500}
-                    height={500}
-                    className="border-4 border-primary-light rounded-sm"
-                  />
-                  <p className="text-center !text-xl">
-                    Tag yourself as a dancer, organizer, dj, and more to build
-                    your dance community profile
-                  </p>
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <Image
-                    src="/screenshots/profile.png"
-                    alt="Profile Screenshot"
-                    width={500}
-                    height={500}
-                    className="border-4 border-primary-light rounded-sm"
-                  />
-                  <p className="text-center !text-xl">
-                    Browse profiles from dancers in your community and around
-                    the world
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <MaintenanceLink href="/profiles">
-                  <Button
-                    size="xl"
-                    className="font-rubik-mono-one text-base sm:text-xl md:!text-2xl text-charcoal !bg-accent-blue px-4 sm:px-6 md:px-10"
-                  >
-                    Explore Community
-                  </Button>
-                </MaintenanceLink>
-              </div>
-            </section> */}
+            {/* 3. Help complete the archive — live gap counts. */}
+            <HelpCompleteArchive stats={stats} />
 
             {/* Upcoming Events */}
             {upcomingEvents.length > 0 && (
@@ -224,10 +82,11 @@ export default async function Home() {
               </section>
             )}
 
-            {/* Watch Past Events */}
+            {/* 4. Recently added — machine-driven, always fresh. Proves the
+                   archive is live without needing a single user submission. */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
               <h2 className="mb-12 !font-rubik-mono-one !text-4xl sm:!text-5xl text-outline text-center">
-                Watch Past Events
+                Recently Added
               </h2>
               {watchPastEvents.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
@@ -246,6 +105,33 @@ export default async function Home() {
                   </p>
                 </div>
               )}
+            </section>
+
+            {/* 5. Submit a YouTube channel — one field. */}
+            <section className="max-w-6xl mx-auto w-full">
+              <ChannelSubmissionForm />
+            </section>
+
+            {/* Calendar: demoted out of the hero position. It is future-facing
+                and this is an archive, so it follows the archive bands rather
+                than leading them. /calendar itself is untouched. */}
+            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
+              <div className="flex flex-col items-center gap-4">
+                <h2 className="!text-3xl text-center !font-rubik-mono-one text-outline">
+                  Never Miss an Event
+                </h2>
+                <p className="text-center max-w-xl">
+                  The archive looks backwards. The calendar looks forwards.
+                </p>
+                <Link href="/calendar">
+                  <Button
+                    size="xl"
+                    className="font-rubik-mono-one text-xl text-charcoal !bg-accent-blue px-8 py-6 mt-2 hover:scale-105 transition-transform shadow-hover"
+                  >
+                    View Calendar
+                  </Button>
+                </Link>
+              </div>
             </section>
 
             {/* Contribute Section */}

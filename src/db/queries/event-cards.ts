@@ -50,6 +50,10 @@ export async function getEventCards(): Promise<TEventCard[]> {
       additionalDatesCount: r.additionalDatesCount ?? 0,
       status: ((r as any).status as "hidden" | "visible") || "visible",
       hasVideos: eventIdsWithVideos.has(r.eventId),
+      thumbnailVideoSrc: r.thumbnailVideoSrc ?? undefined,
+      thumbnailTier: (r.thumbnailTier ?? undefined) as TEventCard["thumbnailTier"],
+      videoCount: r.videoCount ?? 0,
+      sectionCount: r.sectionCount ?? 0,
     };
   });
 }
@@ -198,5 +202,9 @@ export async function getUpcomingEventCards(limit: number = 3): Promise<TEventCa
     eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
     additionalDatesCount: r.additionalDatesCount ?? 0,
     status: ((r as any).status as "hidden" | "visible") || "visible",
+    thumbnailVideoSrc: r.thumbnailVideoSrc ?? undefined,
+    thumbnailTier: (r.thumbnailTier ?? undefined) as TEventCard["thumbnailTier"],
+    videoCount: r.videoCount ?? 0,
+    sectionCount: r.sectionCount ?? 0,
   }));
 }

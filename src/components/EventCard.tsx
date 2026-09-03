@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import React from "react";
 import Link from "next/link";
 import { TEventCard } from "@/types/event";
@@ -8,6 +7,7 @@ import { StyleBadge } from "@/components/ui/style-badge";
 import { EventShareSaveButtons } from "@/components/events/EventShareSaveButtons";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { formatEventDate } from "@/lib/utils/date-display";
+import { EventThumbnail } from "@/components/events/EventThumbnail";
 
 interface EventCardProps extends TEventCard {
   href?: string; // Optional href for the title link, defaults to /events/${id}
@@ -27,6 +27,7 @@ export function EventCard({
   isSaved,
   additionalDatesCount,
   eventType,
+  thumbnailVideoSrc,
 }: EventCardProps) {
   const titleHref = href || `/events/${id}`;
   const canonicalStyles = normalizeStyleNames(styles || [], {
@@ -47,35 +48,20 @@ export function EventCard({
 
   return (
     <div className="bg-primary-dark group card overflow-hidden transition-all duration-300 w-[330px] h-[466px] sm:w-[355px] sm:h-[354px] sm:relative">
-      {/* Poster square - clickable */}
+      {/* Poster square - clickable. There are zero posters in the archive, so
+          in practice this renders the YouTube frame the publish-time ladder
+          chose; the mascot inside EventThumbnail is the unreachable fallback. */}
       <Link
         href={titleHref}
         prefetch={false}
         className="block relative w-full aspect-square bg-neutral-400"
       >
-        {imageUrl ? (
-          <Image src={imageUrl} alt={title} fill className="object-cover" />
-        ) : (
-          <div className="w-full h-full flex flex-col">
-            {/* Top half - mascot image */}
-            <div className="flex-3 flex items-center justify-center">
-              <div className="relative w-full h-full">
-                <Image
-                  src="/mascot/Dancechives_Mascot1_Mono_onLight_slim.png"
-                  alt=""
-                  fill
-                  className="object-contain"
-                />
-              </div>
-            </div>
-            {/* Bottom half - event title */}
-            <div className="flex-1 flex items-start justify-center">
-              <h2 className="event-title text-center px-4 text-black line-clamp-1">
-                {title}
-              </h2>
-            </div>
-          </div>
-        )}
+        <EventThumbnail
+          videoSrc={thumbnailVideoSrc}
+          posterUrl={imageUrl}
+          title={title}
+          sizes="(max-width: 640px) 330px, 355px"
+        />
       </Link>
 
       {/* Expanded section - always visible on mobile, fades in overlay on desktop hover */}

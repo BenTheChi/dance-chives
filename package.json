@@ -42,6 +42,8 @@
     "db:setup": "docker-compose up prisma-setup",
     "postinstall": "dotenv -e .env.local -- prisma generate || (echo 'Warning: .env.local not found or prisma generate failed. This is normal on first install. Run \"npm run db:generate\" after setting up your .env.local file.' && exit 0)",
     "nuke": "dotenv -e .env.staging -- tsx scripts/nuke-staging.ts",
+    "thumbnails:backfill:staging": "APP_ENV=staging dotenv -e .env.staging -- tsx scripts/backfill-event-thumbnails.ts",
+    "thumbnails:backfill:production": "APP_ENV=production dotenv -e .env.production -- tsx scripts/backfill-event-thumbnails.ts",
     "styles:generate": "dotenv -e .env.production -- tsx scripts/generate-styles.ts",
     "styles:check": "tsx scripts/generate-styles.ts --check",
     "prebuild": "npm run styles:check"

@@ -4,8 +4,10 @@ import { TEventCard } from "@/types/event";
 export const EVENT_SORT_FIELDS = [
   "date",
   "title",
-  "eventType",
   "city",
+  "videoCount",
+  "sectionCount",
+  "eventType",
 ] as const;
 
 export type EventSortField = (typeof EVENT_SORT_FIELDS)[number];
@@ -33,7 +35,13 @@ export const DEFAULT_EVENT_SORT: EventSortState = {
 export function defaultDirectionFor(
   field: EventSortField
 ): EventSortDirection {
-  return field === "date" ? "desc" : "asc";
+  // Counts open largest-first: "which events have the most footage" is the
+  // question worth asking of them, and it matches the date column's habit of
+  // opening on the most interesting end rather than alphabetically.
+  if (field === "date" || field === "videoCount" || field === "sectionCount") {
+    return "desc";
+  }
+  return "asc";
 }
 
 const FIELD_LABELS: Record<EventSortField, string> = {
@@ -41,6 +49,8 @@ const FIELD_LABELS: Record<EventSortField, string> = {
   title: "Title",
   eventType: "Type",
   city: "City",
+  videoCount: "Videos",
+  sectionCount: "Sections",
 };
 
 export function sortFieldLabel(field: EventSortField): string {
@@ -59,6 +69,8 @@ const DIRECTION_LABELS: Record<
   title: { asc: "A–Z", desc: "Z–A" },
   eventType: { asc: "A–Z", desc: "Z–A" },
   city: { asc: "A–Z", desc: "Z–A" },
+  videoCount: { desc: "Most first", asc: "Fewest first" },
+  sectionCount: { desc: "Most first", asc: "Fewest first" },
 };
 
 export function directionLabelsFor(
@@ -80,6 +92,23 @@ export function sortEvents(
 ): TEventCard[] {
   if (sort.field === "date") {
     return sort.direction === "desc" ? events : [...events].reverse();
+  }
+
+  // Counts are numbers, not text: comparing them through the collator would
+  // order 100 before 20. Handled before the text path rather than inside it.
+  if (sort.field === "videoCount" || sort.field === "sectionCount") {
+    const multiplier = sort.direction === "asc" ? 1 : -1;
+    const countFor = (event: TEventCard): number =>
+      (sort.field === "videoCount" ? event.videoCount : event.sectionCount) ?? 0;
+
+    return [...events]
+      .map((event, index) => ({ event, index }))
+      .sort((a, b) => {
+        const difference = countFor(a.event) - countFor(b.event);
+        if (difference !== 0) return difference * multiplier;
+        return a.index - b.index;
+      })
+      .map(({ event }) => event);
   }
 
   const collator = new Intl.Collator(undefined, {

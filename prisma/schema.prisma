@@ -42,6 +42,9 @@ model User {
   // Notification relationships
   notifications Notification[]
 
+  // Member-submitted YouTube channels
+  channelSubmissions ChannelSubmission[]
+
   // Request approvals
   requestApprovals RequestApproval[]
 
@@ -167,6 +170,14 @@ model EventCard {
   posterUrl String?
   ig        String? @unique @map("IG")
 
+  /// YouTube id of the video whose thumbnail represents this event, and which
+  /// rung of the resolution ladder chose it (trailer | bracket | any). Resolved
+  /// at publish time rather than at render: picking it live costs a graph
+  /// traversal per card, which the list view cannot afford.
+  /// See src/lib/utils/event-thumbnail.ts for the ladder.
+  thumbnailVideoSrc String?
+  thumbnailTier     String?
+
   // Denormalized tags for fast card rendering / filtering
   styles String[] @default([])
 
@@ -180,6 +191,11 @@ model EventCard {
 
   /// Event visibility status
   status String @default("visible")
+
+  /// Rolled up from SectionCard at publish time so the list view can show
+  /// "76 videos across 4 sections" without an aggregate per row.
+  videoCount   Int @default(0)
+  sectionCount Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -487,6 +503,54 @@ model Submission {
   @@index([createdAt])
   @@index([updatedAt])
   @@map("submissions")
+}
+
+/// A member-submitted YouTube channel we might not be archiving yet.
+///
+/// Deliberately NOT written straight into `channel_discovery_channel`: that
+/// table has no proposed state — `is_active` is, in the manager's own words,
+/// "a claim about the world" and the rules engine gates ingest on it — so a
+/// public write there would enrol an unvetted channel into the pipeline. This
+/// table holds the claim until a human promotes it.
+model ChannelSubmission {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Canonical channel URL, and the raw text as pasted (kept for diagnosing
+  /// a parse that went wrong).
+  channelUrl String
+  rawInput   String
+
+  /// Resolved from the YouTube API when a key is configured. Null means
+  /// unresolved, not absent — the submission still stands on its URL.
+  youtubeChannelId String?
+  channelName      String?
+  videoCount       Int?
+
+  /// True when the channel is already in `channel_discovery_channel`. Recorded
+  /// at submit time so a duplicate can be answered instantly and honestly
+  /// rather than silently discarded.
+  alreadyArchived Boolean @default(false)
+
+  /// Members only (decision 1) — never null.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status ChannelSubmissionStatus @default(pending)
+  notes  String?
+
+  @@unique([userId, channelUrl])
+  @@index([status])
+  @@index([createdAt])
+  @@map("channel_submissions")
+}
+
+enum ChannelSubmissionStatus {
+  pending
+  accepted
+  rejected
+  duplicate
 }
 
 model Reviewing {

@@ -1,4 +1,5 @@
 import { City } from "./city";
+import { ThumbnailTier } from "@/lib/utils/event-thumbnail";
 import { UserSearchItem } from "./user";
 import { Image } from "./image";
 import { Video } from "./video";
@@ -139,4 +140,15 @@ export interface TEventCard {
   additionalDatesCount?: number; // Number of additional dates beyond the first one
   status?: "hidden" | "visible"; // Event visibility status
   hasVideos?: boolean; // Whether the event has any sections with videos
+  /**
+   * YouTube id backing this event's thumbnail, resolved at publish time by the
+   * ladder in `lib/utils/event-thumbnail.ts`. There are no posters in the
+   * archive, so this is what every card and row actually renders.
+   */
+  thumbnailVideoSrc?: string;
+  /** Which rung chose it — `trailer` | `bracket` | `any`. */
+  thumbnailTier?: ThumbnailTier;
+  /** Rolled up from the event's sections at publish time. */
+  videoCount?: number;
+  sectionCount?: number;
 }
