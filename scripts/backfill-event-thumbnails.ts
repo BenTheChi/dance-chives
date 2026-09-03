@@ -34,16 +34,20 @@ const PREVIEW_LIMIT = 15;
  *
  * Videos are gathered from both places they can live — directly under a
  * section, and under a bracket — because the ladder has to see both.
+ *
+ * `type` is carried because the trailer rung matches on it. It is read from
+ * the `type` property rather than the node label: publish writes both, and the
+ * property is the one the app's own Video type mirrors.
  */
 const STRUCTURE_QUERY = `
 MATCH (e:Event)
 OPTIONAL MATCH (e)<-[:IN]-(sec:Section)
 OPTIONAL MATCH (sec)<-[:IN]-(sv:Video)
-WITH e, sec, collect(DISTINCT {src: sv.src, position: sv.position}) AS directVideos
+WITH e, sec, collect(DISTINCT {src: sv.src, position: sv.position, type: sv.type}) AS directVideos
 OPTIONAL MATCH (sec)<-[:IN]-(br:Bracket)
 OPTIONAL MATCH (br)<-[:IN]-(bv:Video)
 WITH e, sec, directVideos, br,
-     collect(DISTINCT {src: bv.src, position: bv.position}) AS bracketVideos
+     collect(DISTINCT {src: bv.src, position: bv.position, type: bv.type}) AS bracketVideos
 WITH e, sec, directVideos,
      collect(CASE WHEN br IS NULL THEN NULL ELSE
        {title: br.title, position: br.position, videos: bracketVideos}
@@ -72,6 +76,7 @@ function toNumber(value: unknown): number | null {
 interface RawVideo {
   src?: string | null;
   position?: unknown;
+  type?: string | null;
 }
 interface RawBracket {
   title?: string | null;
@@ -93,6 +98,7 @@ function normalizeVideos(videos: RawVideo[] | null | undefined) {
     .map((video) => ({
       src: video.src as string,
       position: toNumber(video.position),
+      type: video.type ?? null,
     }));
 }
 

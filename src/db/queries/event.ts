@@ -127,13 +127,20 @@ export function getSectionTypeFromLabel(label: string): string | null {
 
 // Video type label translation
 export function getVideoTypeLabel(
-  videoType: "battle" | "freestyle" | "choreography" | "class" | "other"
+  videoType:
+    | "battle"
+    | "freestyle"
+    | "choreography"
+    | "class"
+    | "trailer"
+    | "other"
 ): string {
   const labelMap: Record<string, string> = {
     battle: "BattleVideo",
     freestyle: "FreestyleVideo",
     choreography: "ChoreographyVideo",
     class: "ClassVideo",
+    trailer: "TrailerVideo",
     other: "OtherVideo",
   };
   return labelMap[videoType] || "FreestyleVideo";
@@ -141,15 +148,16 @@ export function getVideoTypeLabel(
 
 export function getVideoTypeFromLabel(
   label: string
-): "battle" | "freestyle" | "choreography" | "class" | "other" {
+): "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other" {
   const reverseMap: Record<
     string,
-    "battle" | "freestyle" | "choreography" | "class" | "other"
+    "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other"
   > = {
     BattleVideo: "battle",
     FreestyleVideo: "freestyle",
     ChoreographyVideo: "choreography",
     ClassVideo: "class",
+    TrailerVideo: "trailer",
     OtherVideo: "other",
   };
   return reverseMap[label] || "freestyle";
@@ -191,6 +199,7 @@ export function getAllVideoTypeLabels(): string[] {
     "FreestyleVideo",
     "ChoreographyVideo",
     "ClassVideo",
+    "TrailerVideo",
     "OtherVideo",
   ];
 }
@@ -496,6 +505,7 @@ export const getEvent = async (
           WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
           WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
           WHEN 'ClassVideo' IN labels(v) THEN 'class'
+          WHEN 'TrailerVideo' IN labels(v) THEN 'trailer'
           WHEN 'OtherVideo' IN labels(v) THEN 'other'
           ELSE 'battle'
         END,
@@ -527,6 +537,7 @@ export const getEvent = async (
         WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
         WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
         WHEN 'ClassVideo' IN labels(v) THEN 'class'
+        WHEN 'TrailerVideo' IN labels(v) THEN 'trailer'
         WHEN 'OtherVideo' IN labels(v) THEN 'other'
         ELSE 'battle'
       END
@@ -582,6 +593,7 @@ export const getEvent = async (
            WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
            WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
            WHEN 'ClassVideo' IN labels(v) THEN 'class'
+           WHEN 'TrailerVideo' IN labels(v) THEN 'trailer'
            WHEN 'OtherVideo' IN labels(v) THEN 'other'
            ELSE 'battle'
          END as videoType
@@ -643,6 +655,7 @@ export const getEvent = async (
            WHEN 'FreestyleVideo' IN labels(v) THEN 'freestyle'
            WHEN 'ChoreographyVideo' IN labels(v) THEN 'choreography'
            WHEN 'ClassVideo' IN labels(v) THEN 'class'
+           WHEN 'TrailerVideo' IN labels(v) THEN 'trailer'
            WHEN 'OtherVideo' IN labels(v) THEN 'other'
            ELSE 'battle'
          END as videoType

@@ -36,7 +36,7 @@ export interface ParsedSection {
     id?: string;
     title: string;
     src: string;
-    type: "battle" | "freestyle" | "choreography" | "class" | "other";
+    type: "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other";
     styles?: string[];
   }>;
   brackets: Array<{
@@ -46,7 +46,7 @@ export interface ParsedSection {
       id?: string;
       title: string;
       src: string;
-      type: "battle" | "freestyle" | "choreography" | "class" | "other";
+      type: "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other";
       styles?: string[];
     }>;
   }>;
@@ -148,7 +148,7 @@ OUTPUT FORMAT (JSON only):
         {
           "title": "full title from input",
           "src": "videoId (11 chars, copy exactly from input)",
-          "type": "battle|freestyle|choreography|class|other"
+          "type": "battle|freestyle|choreography|class|trailer|other"
         }
       ],
       "description": ""

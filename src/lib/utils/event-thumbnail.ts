@@ -71,39 +71,23 @@ export function bracketRank(title: string | null | undefined): number {
 }
 
 /**
- * Whether a SECTION title marks a trailer section.
+ * Is this a trailer video?
  *
- * Read the caveat carefully, because the obvious implementations are both
- * wrong:
+ * Read off the video's own `type`, which the manager sets from the Gemini
+ * category and publishes as the `TrailerVideo` node label. Section titles used
+ * to carry this: Trailer/Highlights/Livestream/Other all collapse into the
+ * `OtherSection` label, so the section label discriminated nothing and the
+ * composed section title ("Trailer", "Trailer 2") was the only signal left.
+ * The video type is now the real one, so match on it instead of parsing a
+ * string.
  *
- *  - **Not the node label.** The manager collapses Trailer, Highlights,
- *    Livestream and Other all into the `OtherSection` label
- *    (`PublishProposedEvent::sectionTypeLabel`), and writes `sectionType =
- *    'Other'` to Postgres for every one of them. Of the 17 `OtherSection`
- *    nodes live today, 16 are untyped *battle* sections ("Battle — 1v1 /
- *    breaking", "Kids · Battle — cypher"). The label discriminates nothing.
- *
- *  - **Not the video title.** Five videos in the corpus say trailer/teaser/
- *    promo and four are battles between dancers named Promo and Teaser
- *    ("TEASER vs BOYHAPY", "Miel vs Teaser", "Tata vs Promo", "Promo vs
- *    Wealthy"). A video-title regex is 80% wrong.
- *
- * What does work is the SECTION title, which is machine-composed rather than
- * human-written: `SectionTitle::compose` builds it from the section's own
- * `sectionType`, and its docblock states the composed title is "the *only*
- * record of these fields once a section reaches Neo4j". The manager reads
- * published sections back this way itself (`SectionTitle::parse`), so this is
- * that same documented inverse, not a guess. A trailer section carries no
- * format and no styles, so it composes to the bare fallback form — "Trailer",
- * or "Trailer 2" with a positional index.
- *
- * Zero of the 2,403 section titles live today collide with this.
+ * Note the video TITLE is still useless here and must not be used: five videos
+ * in the corpus say trailer/teaser/promo and four are battles between dancers
+ * named Promo and Teaser ("TEASER vs BOYHAPY", "Miel vs Teaser", "Tata vs
+ * Promo", "Promo vs Wealthy").
  */
-export function isTrailerSectionTitle(title: string | null | undefined): boolean {
-  if (!title) return false;
-  const normalized = title.trim().toLowerCase();
-  // Bare type, or the fallback form with compose()'s positional index.
-  return normalized === "trailer" || /^trailer \d+$/.test(normalized);
+export function isTrailerVideo(video: ThumbnailVideo): boolean {
+  return video.type === "trailer";
 }
 
 /** Minimal shapes — deliberately structural, so both Neo4j rows and the app's
@@ -111,6 +95,8 @@ export function isTrailerSectionTitle(title: string | null | undefined): boolean
 export interface ThumbnailVideo {
   src?: string | null;
   position?: number | null;
+  /** The video's own type, as published (`TrailerVideo` -> "trailer"). */
+  type?: string | null;
 }
 
 export interface ThumbnailBracket {
@@ -183,13 +169,15 @@ export function resolveEventThumbnail(
     tier,
   });
 
-  // 1. Trailer. A trailer section never has brackets, so only direct videos
-  //    are considered — a bracket under a trailer-titled section would mean
-  //    the section is not really a trailer.
+  // 1. Trailer, matched on the video's own type. Only a section's direct
+  //    videos are considered: a trailer is never inside a bracket, so a
+  //    bracketed video typed as one would be a data error, not a trailer.
   for (const section of byPosition(sections)) {
-    if (!isTrailerSectionTitle(section.title)) continue;
-    const src = firstVideo(section.videos);
-    if (src) return pick(src, "trailer");
+    for (const video of byPosition(section.videos ?? [])) {
+      if (!isTrailerVideo(video)) continue;
+      const src = video.src?.trim();
+      if (src) return pick(src, "trailer");
+    }
   }
 
   // 2. Bracket, ranked across the whole event rather than within one section:

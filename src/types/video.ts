@@ -9,7 +9,7 @@ export interface Video {
   srcType?: "youtube";
   styles?: string[];
   thumbnailUrl?: string;
-  type: "battle" | "freestyle" | "choreography" | "class" | "other";
+  type: "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other";
   taggedDancers?: UserSearchItem[];
   taggedWinners?: UserSearchItem[];
   taggedChoreographers?: UserSearchItem[];
@@ -42,6 +42,13 @@ export interface ClassVideo extends Video {
   type: "class";
   taggedTeachers?: UserSearchItem[];
   taggedDancers?: UserSearchItem[];
+}
+
+// Trailer Video - promotional material for the event it sits on. Tags nobody:
+// a trailer advertises the event rather than showing a dancer's performance,
+// so it carries no dancers, winners, choreographers or teachers.
+export interface TrailerVideo extends Video {
+  type: "trailer";
 }
 
 // Other Video - allows all potential video tag types

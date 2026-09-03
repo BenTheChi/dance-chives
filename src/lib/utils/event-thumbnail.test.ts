@@ -1,32 +1,21 @@
 import {
   bracketRank,
-  isTrailerSectionTitle,
+  isTrailerVideo,
   resolveEventThumbnail,
 } from "@/lib/utils/event-thumbnail";
 
-describe("isTrailerSectionTitle", () => {
-  // The section title is the ONLY record of a section's type once it reaches
-  // Neo4j: Trailer, Highlights, Livestream and Other all collapse to the
-  // `OtherSection` label, and Postgres stores sectionType 'Other' for each.
-  it("matches the composed trailer titles", () => {
-    expect(isTrailerSectionTitle("Trailer")).toBe(true);
-    // SectionTitle::compose appends a positional index when a section has no
-    // format and no styles, which is always true of a trailer.
-    expect(isTrailerSectionTitle("Trailer 1")).toBe(true);
-    expect(isTrailerSectionTitle("  trailer 12  ")).toBe(true);
+describe("isTrailerVideo", () => {
+  // The video's own type is the record now: the manager sets it from the
+  // Gemini category and publishes it as the `TrailerVideo` node label.
+  it("matches a video typed as a trailer", () => {
+    expect(isTrailerVideo({ src: "a", type: "trailer" })).toBe(true);
   });
 
-  it("does not match battle sections that share the OtherSection label", () => {
-    expect(isTrailerSectionTitle("Battle — 1v1 / breaking")).toBe(false);
-    expect(isTrailerSectionTitle("Kids · Battle — cypher / breaking")).toBe(
-      false,
-    );
-  });
-
-  it("does not match a section merely containing the word", () => {
-    expect(isTrailerSectionTitle("Trailer Park Battle")).toBe(false);
-    expect(isTrailerSectionTitle(null)).toBe(false);
-    expect(isTrailerSectionTitle("")).toBe(false);
+  it("does not match other video types", () => {
+    expect(isTrailerVideo({ src: "a", type: "battle" })).toBe(false);
+    expect(isTrailerVideo({ src: "a", type: "freestyle" })).toBe(false);
+    expect(isTrailerVideo({ src: "a", type: null })).toBe(false);
+    expect(isTrailerVideo({ src: "a" })).toBe(false);
   });
 });
 
@@ -71,7 +60,7 @@ describe("resolveEventThumbnail", () => {
           {
             title: "Trailer 1",
             position: 3,
-            videos: [{ src: "MRVaReHdhzk", position: 0 }],
+            videos: [{ src: "MRVaReHdhzk", position: 0, type: "trailer" }],
           },
         ],
       }),
@@ -83,9 +72,8 @@ describe("resolveEventThumbnail", () => {
   });
 
   it("does not mistake an untyped battle section for a trailer", () => {
-    // 16 of the 17 OtherSection nodes live are battle sections. Selecting on
-    // the label rather than the title would thumbnail these from a loose
-    // battle clip and call it a trailer.
+    // 16 of the 17 OtherSection nodes live are battle sections, so the
+    // section label discriminates nothing. Untyped videos are not trailers.
     expect(
       resolveEventThumbnail({
         sections: [
@@ -108,6 +96,29 @@ describe("resolveEventThumbnail", () => {
         ],
       })?.tier,
     ).toBe("bracket");
+  });
+
+  it("finds a trailer whatever its section is titled", () => {
+    // The old title heuristic could only see a section composed as "Trailer"
+    // or "Trailer N". Typing the video finds it in a mixed section too.
+    expect(
+      resolveEventThumbnail({
+        sections: [
+          {
+            title: "Other",
+            position: 0,
+            videos: [
+              { src: "CLIP", position: 0 },
+              { src: "TRAILER", position: 1, type: "trailer" },
+            ],
+          },
+        ],
+      }),
+    ).toEqual({
+      videoSrc: "TRAILER",
+      url: "https://i.ytimg.com/vi/TRAILER/hqdefault.jpg",
+      tier: "trailer",
+    });
   });
 
   it("ranks brackets across the whole event, not within a section", () => {

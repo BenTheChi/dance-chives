@@ -20,7 +20,7 @@ export interface ParsedSection {
     id?: string;
     title: string;
     src: string;
-    type: "battle" | "freestyle" | "choreography" | "class" | "other";
+    type: "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other";
     styles?: string[];
   }>;
   brackets: Array<{
@@ -30,7 +30,7 @@ export interface ParsedSection {
       id?: string;
       title: string;
       src: string;
-      type: "battle" | "freestyle" | "choreography" | "class" | "other";
+      type: "battle" | "freestyle" | "choreography" | "class" | "trailer" | "other";
       styles?: string[];
     }>;
   }>;
