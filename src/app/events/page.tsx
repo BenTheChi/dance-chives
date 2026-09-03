@@ -30,7 +30,17 @@ function formatEventListDate(date: Date): string {
   return `${month}/${day}/${year}`;
 }
 
-export default async function EventsPage() {
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // Browse deep links from the homepage. Read here rather than through
+  // useSearchParams in the client component, which would make the whole list
+  // client-only and ship an empty page until hydration.
+  const params = await searchParams;
+  const first = (value: string | string[] | undefined): string | null =>
+    Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
   // Cache styles from events heavily (24h TTL + tag-based invalidation)
   const getCachedEventStyles = unstable_cache(
     () => getUsedStylesFromEvents(),
@@ -171,12 +181,15 @@ export default async function EventsPage() {
           {/* Content */}
           <div className="relative z-10 flex justify-center flex-1 min-h-0">
             <div className="flex flex-col items-center px-0 sm:px-6 py-2 sm:py-8 w-full">
-              {/* Client component handles auth-dependent features */}
+              {/* Client component handles auth-dependent features. */}
               <EventsClient
                 futureEvents={futureEvents}
                 pastEvents={pastEvents}
                 cities={cities}
                 styles={styles}
+                initialStyle={first(params.style)}
+                initialCityId={first(params.city)}
+                initialNeedsInfo={first(params.needsInfo) === "1"}
               />
             </div>
           </div>

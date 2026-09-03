@@ -28,10 +28,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { prisma } from "@/lib/primsa";
-import {
-  DatePrecisionTag,
-  GapAffordance,
-} from "@/components/events/GapAffordance";
+import { GapAffordance } from "@/components/events/GapAffordance";
 import { hasCityGap } from "@/lib/utils/event-gaps";
 
 type PageProps = {
@@ -367,6 +364,7 @@ export default async function EventPage({ params }: PageProps) {
       cityId: true,
       videoCount: true,
       sectionCount: true,
+      thumbnailVideoSrc: true,
     },
   });
   const datePrecision = (eventCard?.datePrecision ??
@@ -523,6 +521,7 @@ export default async function EventPage({ params }: PageProps) {
                     height={400}
                     className="w-full h-full object-cover"
                     eventTitle={event.eventDetails.title}
+                    fallbackVideoSrc={eventCard?.thumbnailVideoSrc}
                   />
                 </div>
               </div>
@@ -549,16 +548,6 @@ export default async function EventPage({ params }: PageProps) {
                         <h3>{event.eventDetails.eventType}</h3>
                       )}
                     </div>
-
-                    {/* Precision is stated rather than hidden: the date below
-                        renders honestly ("2019", never a fake "01/01/19"), and
-                        this says why it is short. */}
-                    {datePrecision !== "day" && (
-                      <div className="flex items-center gap-2 mb-4 flex-wrap justify-center">
-                        <DatePrecisionTag precision={datePrecision} />
-                        <GapAffordance label="Add exact date" />
-                      </div>
-                    )}
 
                     {/* Style badges */}
                     <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
@@ -651,6 +640,12 @@ export default async function EventPage({ params }: PageProps) {
                               )}
                               {showMoreDatesButton && (
                                 <EventDatesDialog eventId={event.id} />
+                              )}
+                              {/* Sits directly beneath the date it refers to:
+                                  the ask only makes sense next to the
+                                  imprecise value that prompted it. */}
+                              {datePrecision !== "day" && (
+                                <GapAffordance label="Add exact date" />
                               )}
                             </div>
                           ),

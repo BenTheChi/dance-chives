@@ -40,6 +40,18 @@ interface EventsClientProps {
   pastEvents: TEventCard[];
   cities: City[];
   styles: string[];
+  /**
+   * Filters to open with, from the homepage's browse chips
+   * (?style=Breaking, ?city=<placeId>, ?needsInfo=1).
+   *
+   * Read on the SERVER and passed down, rather than via useSearchParams here:
+   * that hook opts this whole subtree into client-only rendering, which left
+   * /events shipping an empty table until hydration — the archive's main page
+   * with no server-rendered content.
+   */
+  initialStyle?: string | null;
+  initialCityId?: string | null;
+  initialNeedsInfo?: boolean;
 }
 
 export function EventsClient({
@@ -47,15 +59,25 @@ export function EventsClient({
   pastEvents,
   cities,
   styles,
+  initialStyle = null,
+  initialCityId = null,
+  initialNeedsInfo = false,
 }: EventsClientProps) {
+  // Used as the INITIAL state only, not synced continuously: once the page is
+  // open the toolbar owns the filters, and writing back to the URL on every
+  // keystroke would fight the controls.
   // Filters apply on change. Everything is already in memory, so there is no
   // round trip to batch behind a Save button — and pagination recomputes from
   // the full filtered set, not just the visible page.
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(
     null
   );
-  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(
+    initialCityId
+  );
+  const [selectedStyles, setSelectedStyles] = useState<string[]>(
+    initialStyle ? [initialStyle] : []
+  );
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(
     null
   );
@@ -70,11 +92,16 @@ export function EventsClient({
   const [sort, setSort] = useState<EventSortState>(DEFAULT_EVENT_SORT);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [view, setView] = useState<EventView>(DEFAULT_EVENT_VIEW);
-  const [needsInfoOnly, setNeedsInfoOnly] = useState(false);
+  const [needsInfoOnly, setNeedsInfoOnly] = useState(initialNeedsInfo);
 
-  // Default to showing future events if there are any
+  // Default to future events when there are any — except when a deep link
+  // arrives, which always means the archive: every browse chip counts past
+  // events, so landing on an empty "Future" tab would look broken.
   const [showFutureEvents, setShowFutureEvents] = useState(
-    futureEvents.length > 0
+    futureEvents.length > 0 &&
+      !initialStyle &&
+      !initialCityId &&
+      !initialNeedsInfo
   );
 
   const [pageState, setPageState] = useState<{ key: string; page: number }>({

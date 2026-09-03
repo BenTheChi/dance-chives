@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { getEventsWithVideosForWatch } from "@/db/queries/event";
 import { getUpcomingEventCards } from "@/db/queries/event-cards";
-import { getArchiveStats, getBrowseFacets } from "@/db/queries/archive-stats";
+import {
+  getArchiveStats,
+  getBrowseFacets,
+  getRecentEventCards,
+} from "@/db/queries/archive-stats";
 import { ReportButton } from "@/components/report/ReportButton";
 import { EventCard } from "@/components/EventCard";
 import { ChannelSubmissionForm } from "@/components/forms/channel-submission-form";
@@ -15,8 +17,8 @@ import { HelpCompleteArchive } from "@/components/home/HelpCompleteArchive";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [watchPastEvents, upcomingEvents, stats, facets] = await Promise.all([
-    getEventsWithVideosForWatch(6),
+  const [recentEvents, upcomingEvents, stats, facets] = await Promise.all([
+    getRecentEventCards(6),
     getUpcomingEventCards(4),
     getArchiveStats(),
     getBrowseFacets(8),
@@ -82,15 +84,17 @@ export default async function Home() {
               </section>
             )}
 
-            {/* 4. Recently added — machine-driven, always fresh. Proves the
-                   archive is live without needing a single user submission. */}
+            {/* 4. Recent events — ordered by when the event HAPPENED, not by
+                   when the pipeline reached it. Ingest order surfaced a 2013
+                   jam above one from last month purely because it was
+                   processed more recently. */}
             <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
               <h2 className="mb-12 !font-rubik-mono-one !text-4xl sm:!text-5xl text-outline text-center">
-                Recently Added
+                Recent Events
               </h2>
-              {watchPastEvents.length > 0 ? (
+              {recentEvents.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-                  {watchPastEvents.map((event) => (
+                  {recentEvents.map((event) => (
                     <EventCard
                       key={event.id}
                       {...event}
@@ -110,28 +114,6 @@ export default async function Home() {
             {/* 5. Submit a YouTube channel — one field. */}
             <section className="max-w-6xl mx-auto w-full">
               <ChannelSubmissionForm />
-            </section>
-
-            {/* Calendar: demoted out of the hero position. It is future-facing
-                and this is an archive, so it follows the archive bands rather
-                than leading them. /calendar itself is untouched. */}
-            <section className="max-w-6xl mx-auto w-full bg-secondary-dark rounded-sm py-8 px-4 border-4 border-secondary-light">
-              <div className="flex flex-col items-center gap-4">
-                <h2 className="!text-3xl text-center !font-rubik-mono-one text-outline">
-                  Never Miss an Event
-                </h2>
-                <p className="text-center max-w-xl">
-                  The archive looks backwards. The calendar looks forwards.
-                </p>
-                <Link href="/calendar">
-                  <Button
-                    size="xl"
-                    className="font-rubik-mono-one text-xl text-charcoal !bg-accent-blue px-8 py-6 mt-2 hover:scale-105 transition-transform shadow-hover"
-                  >
-                    View Calendar
-                  </Button>
-                </Link>
-              </div>
             </section>
 
             {/* Contribute Section */}

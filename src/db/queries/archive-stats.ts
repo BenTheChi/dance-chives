@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/primsa";
+import { EventType, TEventCard } from "@/types/event";
+import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import { formatCityDisplayLabel } from "@/lib/utils/city-display";
 
 /**
  * The numbers on the homepage.
@@ -12,9 +15,6 @@ export interface ArchiveStats {
   videoCount: number;
   eventCount: number;
   cityCount: number;
-  /** Inclusive span of event years, for the "2013–2026" strip. */
-  firstYear: number | null;
-  lastYear: number | null;
   /** Events with no real city — the sentinels are not cities. */
   missingCityCount: number;
   /** Events whose date is only known to the month or the year. */
@@ -36,8 +36,6 @@ export async function getArchiveStats(): Promise<ArchiveStats> {
       videos: bigint | number | null;
       events: bigint | number | null;
       cities: bigint | number | null;
-      first_year: string | null;
-      last_year: string | null;
       missing_city: bigint | number | null;
       imprecise_date: bigint | number | null;
     }>
@@ -48,12 +46,6 @@ export async function getArchiveStats(): Promise<ArchiveStats> {
       COUNT(DISTINCT "cityId") FILTER (
         WHERE "cityId" IS NOT NULL AND "cityId" NOT IN ('unknown', 'online')
       )                                                    AS cities,
-      MIN(RIGHT("displayDateLocal", 4)) FILTER (
-        WHERE "displayDateLocal" IS NOT NULL
-      )                                                    AS first_year,
-      MAX(RIGHT("displayDateLocal", 4)) FILTER (
-        WHERE "displayDateLocal" IS NOT NULL
-      )                                                    AS last_year,
       COUNT(*) FILTER (
         WHERE "cityId" IS NULL OR "cityId" = 'unknown'
       )                                                    AS missing_city,
@@ -67,18 +59,10 @@ export async function getArchiveStats(): Promise<ArchiveStats> {
   const toNumber = (value: bigint | number | null): number =>
     value === null ? 0 : Number(value);
 
-  const toYear = (value: string | null): number | null => {
-    if (!value) return null;
-    const year = Number(value);
-    return Number.isFinite(year) && year > 1900 ? year : null;
-  };
-
   return {
     videoCount: toNumber(row?.videos ?? 0),
     eventCount: toNumber(row?.events ?? 0),
     cityCount: toNumber(row?.cities ?? 0),
-    firstYear: toYear(row?.first_year ?? null),
-    lastYear: toYear(row?.last_year ?? null),
     missingCityCount: toNumber(row?.missing_city ?? 0),
     impreciseDateCount: toNumber(row?.imprecise_date ?? 0),
   };
@@ -111,36 +95,118 @@ export async function getBrowseFacets(limit: number = 8): Promise<{
       LIMIT ${limit}
     `,
     prisma.$queryRaw<
-      Array<{ city: string; slug: string | null; count: bigint | number }>
+      Array<{ city: string; cityId: string; count: bigint | number }>
     >`
-      SELECT ec."cityName" AS city, c.slug AS slug, COUNT(*) AS count
+      SELECT ec."cityName" AS city, ec."cityId" AS "cityId", COUNT(*) AS count
       FROM "event_cards" ec
-      LEFT JOIN "cities" c ON c.id = ec."cityId"
       WHERE ec.status = 'visible'
         AND ec."cityId" IS NOT NULL
         AND ec."cityId" NOT IN ('unknown', 'online')
         AND ec."cityName" IS NOT NULL
-      GROUP BY ec."cityName", c.slug
+      GROUP BY ec."cityName", ec."cityId"
       ORDER BY count DESC
       LIMIT ${limit}
     `,
   ]);
 
   return {
+    // Both point at /events with a filter applied rather than at the
+    // /styles/[style] and /cities/[slug] pages. Those are separate surfaces
+    // with their own layouts; the browse chips are navigation INTO the
+    // archive, so they should land on the archive itself with the filter set,
+    // where every other control (search, sort, the other filters) is to hand.
     styles: styleRows.map((row) => ({
       label: row.style,
       count: Number(row.count),
-      // /styles/[style] takes the decoded style name, not a slug.
-      href: `/styles/${encodeURIComponent(row.style)}`,
+      href: `/events?style=${encodeURIComponent(row.style)}`,
     })),
-    cities: cityRows
-      // A city with no slug has no page to link to; dropping it is better than
-      // offering a link that 404s.
-      .filter((row) => row.slug)
-      .map((row) => ({
-        label: row.city,
-        count: Number(row.count),
-        href: `/cities/${row.slug}`,
-      })),
+    // Filtered by cityId, which is what the events page matches on — the
+    // display name is ambiguous across countries, the id never is.
+    cities: cityRows.map((row) => ({
+      label: row.city,
+      count: Number(row.count),
+      href: `/events?city=${encodeURIComponent(row.cityId)}`,
+    })),
   };
+}
+
+/**
+ * The most recent events by EVENT DATE, not by ingest time.
+ *
+ * The homepage used to show "Recently Added", which ordered by `updatedAt` —
+ * that is when the pipeline happened to reach an event, so a 2013 jam ingested
+ * yesterday outranked a jam from last month. Ordering by the date the event
+ * actually happened answers the question a visitor is really asking.
+ *
+ * Only events with at least one video, since the card links into footage.
+ * Dates come from `event_dates` (the authoritative instants), and an event
+ * with several takes its latest.
+ */
+export async function getRecentEventCards(
+  limit: number = 6,
+): Promise<TEventCard[]> {
+  const rows = await prisma.$queryRaw<
+    Array<{
+      eventId: string;
+      title: string;
+      series: string | null;
+      posterUrl: string | null;
+      displayDateLocal: string | null;
+      datePrecision: string | null;
+      cityId: string | null;
+      cityName: string | null;
+      region: string | null;
+      countryCode: string | null;
+      styles: string[] | null;
+      eventType: string | null;
+      thumbnailVideoSrc: string | null;
+      thumbnailTier: string | null;
+      videoCount: number | null;
+      sectionCount: number | null;
+    }>
+  >`
+    SELECT ec."eventId", ec.title, ec.series, ec."posterUrl",
+           ec."displayDateLocal", ec."datePrecision",
+           ec."cityId", ec."cityName", ec.region, ec."countryCode",
+           ec.styles, ec."eventType",
+           ec."thumbnailVideoSrc", ec."thumbnailTier",
+           ec."videoCount", ec."sectionCount"
+    FROM "event_cards" ec
+    JOIN (
+      SELECT "eventId", MAX("startUtc") AS started
+      FROM "event_dates"
+      GROUP BY "eventId"
+    ) d ON d."eventId" = ec."eventId"
+    WHERE ec.status = 'visible'
+      AND ec."videoCount" > 0
+    ORDER BY d.started DESC
+    LIMIT ${limit}
+  `;
+
+  return rows.map((r) => ({
+    id: r.eventId,
+    title: r.title,
+    series: r.series ?? undefined,
+    imageUrl: r.posterUrl ?? undefined,
+    date: r.displayDateLocal ?? "",
+    datePrecision: (r.datePrecision ?? "day") as TEventCard["datePrecision"],
+    city: r.cityName
+      ? formatCityDisplayLabel({
+          id: r.cityId ?? undefined,
+          name: r.cityName,
+          region: r.region ?? "",
+          countryCode: r.countryCode ?? "",
+        })
+      : "",
+    cityId: r.cityId ?? undefined,
+    countryCode: r.countryCode ?? undefined,
+    styles: normalizeStyleNames(r.styles ?? [], { strict: false }),
+    eventType: r.eventType ? (r.eventType as unknown as EventType) : undefined,
+    status: "visible" as const,
+    hasVideos: true,
+    thumbnailVideoSrc: r.thumbnailVideoSrc ?? undefined,
+    thumbnailTier: (r.thumbnailTier ?? undefined) as TEventCard["thumbnailTier"],
+    videoCount: r.videoCount ?? 0,
+    sectionCount: r.sectionCount ?? 0,
+  }));
 }

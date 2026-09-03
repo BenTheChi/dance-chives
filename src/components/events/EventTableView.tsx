@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { TEventCard } from "@/types/event";
 import { formatEventDate } from "@/lib/utils/date-display";
 import { EventThumbnail } from "./EventThumbnail";
-import { DatePrecisionTag, GapAffordance } from "./GapAffordance";
+import { GapAffordance } from "./GapAffordance";
 import { hasCityGap } from "@/lib/utils/event-gaps";
 import {
   defaultDirectionFor,
@@ -251,16 +251,12 @@ export function EventTableView({
                     )}
                   </td>
 
-                  {/* Date renders at its real precision — "2019", not a
-                      fabricated "01/01/19" — with a tag saying why it is short. */}
+                  {/* Renders at its real precision — "2019" rather than a
+                      fabricated "01/01/19". The short form is self-evidently
+                      short, so it needs no tag explaining itself. */}
                   <td className={cn(cellClassName, "whitespace-nowrap")}>
                     {event.date ? (
-                      <>
-                        <span className="block">
-                          {formatEventDate(event.date, event.datePrecision)}
-                        </span>
-                        <DatePrecisionTag precision={event.datePrecision} />
-                      </>
+                      formatEventDate(event.date, event.datePrecision)
                     ) : (
                       <GapAffordance label="Add date" />
                     )}

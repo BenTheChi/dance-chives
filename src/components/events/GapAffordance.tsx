@@ -66,36 +66,3 @@ export function GapAffordance({
     </Link>
   );
 }
-
-/**
- * Precision tag beside a date that is not day-accurate.
- *
- * The value itself still renders honestly through `formatEventDate` — "2019"
- * rather than a fabricated "01/01/19". This tag says why it is short, so a
- * reader does not mistake an imprecise date for a missing one.
- */
-export function DatePrecisionTag({
-  precision,
-  className,
-}: {
-  precision?: "day" | "month" | "year";
-  className?: string;
-}) {
-  if (!precision || precision === "day") return null;
-
-  return (
-    <span
-      className={cn(
-        "text-[10px] uppercase tracking-wide font-bold text-muted-foreground",
-        className,
-      )}
-      title={
-        precision === "year"
-          ? "Only the year is known for this event"
-          : "Only the month and year are known for this event"
-      }
-    >
-      {precision === "year" ? "Year only" : "Month"}
-    </span>
-  );
-}

@@ -2,6 +2,7 @@ import SectionBracketTabSelector from "@/components/SectionBracketTabSelector";
 import { getEvent } from "@/db/queries/event";
 import { notFound } from "next/navigation";
 import { PosterImage } from "@/components/PosterImage";
+import { resolveEventThumbnail } from "@/lib/utils/event-thumbnail";
 import { auth } from "@/auth";
 import { isEventCreator, isTeamMember } from "@/db/queries/team-member";
 import { AUTH_LEVELS } from "@/lib/utils/auth-constants";
@@ -295,6 +296,13 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                     height={400}
                     className="w-full h-full object-cover"
                     type="section"
+                    eventTitle={section.title}
+                    // The same ladder the event uses, run over THIS section
+                    // only, so a section shows its own footage rather than the
+                    // event's cover.
+                    fallbackVideoSrc={
+                      resolveEventThumbnail({ sections: [section] })?.videoSrc
+                    }
                   />
                 </div>
               </div>

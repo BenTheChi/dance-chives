@@ -10,11 +10,6 @@ import type { ArchiveStats } from "@/db/queries/archive-stats";
  * never in place of it.
  */
 export function ArchiveScaleStrip({ stats }: { stats: ArchiveStats }) {
-  const span =
-    stats.firstYear && stats.lastYear && stats.firstYear !== stats.lastYear
-      ? `${stats.firstYear}–${stats.lastYear}`
-      : (stats.lastYear?.toString() ?? null);
-
   const items: Array<{ value: string; label: string; href: string }> = [
     {
       value: stats.videoCount.toLocaleString(),
@@ -51,14 +46,6 @@ export function ArchiveScaleStrip({ stats }: { stats: ArchiveStats }) {
               </span>
             </Link>
           ))}
-          {span && (
-            <div className="flex flex-col items-center min-w-[110px]">
-              <span className="font-rubik-mono-one text-2xl sm:text-4xl text-primary-light tabular-nums">
-                {span}
-              </span>
-              <span className="text-sm sm:text-base tracking-wide">covered</span>
-            </div>
-          )}
         </div>
       </div>
     </section>
