@@ -26,20 +26,29 @@ export interface ResolvedThumbnail {
 /**
  * Bracket rank, best first — the round whose video best represents an event.
  *
- * Measured against the live corpus. Two quirks worth keeping in mind:
+ * This mirrors the manager's `BracketPosition::rank()`, which is the pipeline's
+ * own bracket-vocabulary parser and therefore the authority; the two must agree
+ * or a publish and a backfill will disagree about the same event.
  *
- *  - `Semis` (919) and `Quarterfinals` (73) coexist with the numeric labels as
- *    separate vocabularies. Events use one or the other, rarely both, so the
- *    word-labels are slotted where they read correctly against the numbers:
- *    Semis above `Top 4`, Quarterfinals just below `Top 32`.
+ * Measured against the live corpus, with two things worth keeping in mind:
+ *
+ *  - `Semis` (920) and `Quarterfinals` (73) coexist with the numeric labels as
+ *    separate vocabularies. The word-labels sit where the manager puts them on
+ *    the shared scale: Semis just above `Top 4`, and Quarterfinals between
+ *    `Top 6` and `Top 8`, because a quarterfinal IS the round of eight. It was
+ *    previously slotted below `Top 32` here, which cost the two live events
+ *    carrying `Top 16` + `Quarterfinals` and nothing else the correct pick.
  *  - `Other` (494) is a real bracket title the manager emits for rounds it
- *    could not name, not a fallback. It ranks last but is still a bracket.
+ *    could not name, not a fallback. It ranks last but is still a bracket —
+ *    285 events carry one and 222 carry it alongside a real Finals, so ranking
+ *    it any higher would misthumbnail a fifth of the archive.
  */
 const BRACKET_RANK: readonly string[] = [
   "Finals",
   "Semis",
   "Top 4",
   "Top 6",
+  "Quarterfinals",
   "Top 8",
   "Top 10",
   "Top 12",
@@ -51,7 +60,6 @@ const BRACKET_RANK: readonly string[] = [
   "Top 28",
   "Top 30",
   "Top 32",
-  "Quarterfinals",
   "Top 42",
   "Top 48",
   "Prelims",

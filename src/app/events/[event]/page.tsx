@@ -30,6 +30,7 @@ import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { prisma } from "@/lib/primsa";
 import { GapAffordance } from "@/components/events/GapAffordance";
 import { hasCityGap } from "@/lib/utils/event-gaps";
+import { formatEventDate } from "@/lib/utils/date-display";
 
 type PageProps = {
   params: Promise<{ event: string }>;
@@ -597,7 +598,12 @@ export default async function EventPage({ params }: PageProps) {
                                           key={`past-${d.date}-${idx}`}
                                           className="flex flex-col leading-tight"
                                         >
-                                          <span>{d.date}</span>
+                                          <span>
+                                            {formatEventDate(
+                                              d.date,
+                                              datePrecision,
+                                            )}
+                                          </span>
                                           {!isAllDay && (
                                             <span className="!text-[15px] italic">
                                               {timeStr}
@@ -626,7 +632,12 @@ export default async function EventPage({ params }: PageProps) {
                                           key={`upcoming-${d.date}-${idx}`}
                                           className="flex flex-col"
                                         >
-                                          <span>{d.date}</span>
+                                          <span>
+                                            {formatEventDate(
+                                              d.date,
+                                              datePrecision,
+                                            )}
+                                          </span>
                                           {!isAllDay && (
                                             <span className="!text-[15px] italic">
                                               {timeStr}

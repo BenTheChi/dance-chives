@@ -15,20 +15,42 @@ export function formatEventDate(
 ): string {
   if (!date) return "";
 
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return date;
+  // A calendar date is read off the string, never off a Date's local getters.
+  // `new Date("2023-01-01")` is UTC midnight by spec, so `getFullYear()` in any
+  // negative-offset zone returns 2022 — which would render every year-only
+  // event, the archive's most common precision, as the year before it happened.
+  // (`MM/DD/YYYY` parses as LOCAL midnight instead, so the two input shapes
+  // disagreed with each other as well.)
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(date);
 
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const fullYear = String(parsed.getFullYear());
+  let year: string;
+  let month: string;
+  let day: string;
+
+  if (iso) {
+    [, year, month, day] = iso;
+  } else if (slash) {
+    [, month, day, year] = slash;
+  } else {
+    // Anything else falls back to Date parsing, read in UTC to match the
+    // literal above rather than re-introducing the shift.
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return date;
+    year = String(parsed.getUTCFullYear());
+    month = String(parsed.getUTCMonth() + 1);
+    day = String(parsed.getUTCDate());
+  }
+
+  month = month.padStart(2, "0");
+  day = day.padStart(2, "0");
 
   switch (precision) {
     case "year":
-      return fullYear;
+      return year;
     case "month":
-      return `${month}/${fullYear}`;
-    default: {
-      const day = String(parsed.getDate()).padStart(2, "0");
-      return `${month}/${day}/${fullYear.slice(-2)}`;
-    }
+      return `${month}/${year}`;
+    default:
+      return `${month}/${day}/${year.slice(-2)}`;
   }
 }

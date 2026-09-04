@@ -29,9 +29,11 @@ async function resolveChannel(
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) return null;
 
-  // `channels` resolves an id or a legacy username directly. Handles and
-  // vanity urls are not addressable there, so they go through `search`, which
-  // costs more quota but is the only route that reads them.
+  // Every ref shape goes through `channels`: `id` and `forUsername` for the
+  // older forms, `forHandle` for an @handle. That keeps the whole lookup at 1
+  // quota unit — `search` would read a handle too, but costs 100, and this key
+  // is shared with the ingest pipeline, whose sweep budget is the archive's
+  // real ceiling. A public form must not be able to spend it.
   const endpoint = new URL("https://www.googleapis.com/youtube/v3/channels");
   endpoint.searchParams.set("part", "snippet,statistics");
   endpoint.searchParams.set("key", key);

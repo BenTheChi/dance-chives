@@ -28,9 +28,13 @@ describe("bracketRank", () => {
   });
 
   it("slots the word-labels against the numeric vocabulary", () => {
-    // Events use one vocabulary or the other, rarely both.
-    expect(bracketRank("Quarterfinals")).toBeGreaterThan(bracketRank("Top 32"));
-    expect(bracketRank("Quarterfinals")).toBeLessThan(bracketRank("Prelims"));
+    // A quarterfinal is the round of eight, so it sits between Top 6 and
+    // Top 8 — matching the manager's BracketPosition::rank(), which is what
+    // the publish path uses. Two live events carry Top 16 + Quarterfinals and
+    // no named final; ranking Quarterfinals below Top 32 picked Top 16 there.
+    expect(bracketRank("Quarterfinals")).toBeGreaterThan(bracketRank("Top 6"));
+    expect(bracketRank("Quarterfinals")).toBeLessThan(bracketRank("Top 8"));
+    expect(bracketRank("Quarterfinals")).toBeLessThan(bracketRank("Top 32"));
   });
 
   it("sorts unknown titles after every known one", () => {

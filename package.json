@@ -46,7 +46,8 @@
     "thumbnails:backfill:production": "APP_ENV=production dotenv -e .env.production -- tsx scripts/backfill-event-thumbnails.ts",
     "styles:generate": "dotenv -e .env.production -- tsx scripts/generate-styles.ts",
     "styles:check": "tsx scripts/generate-styles.ts --check",
-    "prebuild": "npm run styles:check"
+    "prebuild": "npm run styles:check",
+    "test": "jest"
   },
   "dependencies": {
     "@auth/neo4j-adapter": "^2.8.0",

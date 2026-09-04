@@ -28,9 +28,15 @@ npm run docker:reset      # Full local DB reset
 
 # Full reset (staging)
 npm run db:reset          # Clear Neo4j + reset PostgreSQL + reseed
+
+# Tests
+npm test                  # Jest (next/jest transform, node environment)
 ```
 
-No test runner is configured (no `npm run test` script). Jest is installed but not wired up.
+Tests live beside the code they cover (`src/**/*.test.ts`) and are scoped to
+`src/`. Only pure-logic modules are tested today; a DOM suite would need
+`jest-environment-jsdom` added and `testEnvironment` switched in
+`jest.config.mjs`.
 
 ## Architecture Overview
 
