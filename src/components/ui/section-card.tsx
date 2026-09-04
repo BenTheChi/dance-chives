@@ -3,6 +3,7 @@ import { StyleBadge } from "@/components/ui/style-badge";
 import { formatTimeToAMPM } from "@/lib/utils/calendar-utils";
 import { Section, Video, Bracket } from "@/types/event";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
+import { sectionDisplayTitle } from "@/lib/utils/section-title";
 
 interface SectionCardProps {
   section:
@@ -58,7 +59,10 @@ export function SectionCard({
   city,
 }: SectionCardProps) {
   const sectionId = section.id;
-  const sectionTitle = section.title;
+  // Derived from the videos rather than read off the stored string: the title
+  // is composed once at publish time and never recomputed, so any later style
+  // correction leaves it asserting the old ones.
+  const sectionTitle = sectionDisplayTitle(section);
   const sectionType = section.sectionType || "Other";
   const sectionWithDate = hasSectionDateTime(section) ? section : undefined;
   const formattedStart = sectionWithDate?.startTime

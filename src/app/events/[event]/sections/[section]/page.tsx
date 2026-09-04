@@ -19,6 +19,7 @@ import { canUpdateEvent } from "@/lib/utils/auth-utils";
 import { extractYouTubeVideoId } from "@/lib/utils";
 import { Section, Video } from "@/types/event";
 import type { Metadata } from "next";
+import { sectionDisplayTitle } from "@/lib/utils/section-title";
 
 type PageProps = {
   params: Promise<{ event: string; section: string }>;
@@ -143,11 +144,15 @@ export async function generateMetadata({
     }
   }
 
-  // Default section metadata
-  const title = `${section.title} - ${event.eventDetails.title}`;
+  // Default section metadata. Derived, not the stored string: the title is
+  // composed once at publish and never recomputed, so a later style correction
+  // leaves it (and therefore the tab title and share preview) asserting styles
+  // the section no longer carries.
+  const displayTitle = sectionDisplayTitle(section);
+  const title = `${displayTitle} - ${event.eventDetails.title}`;
   const description =
     section.description ||
-    `View videos from ${section.title} at ${event.eventDetails.title}`;
+    `View videos from ${displayTitle} at ${event.eventDetails.title}`;
 
   const sectionPosterUrl = section.poster?.url
     ? section.poster.url.startsWith("http")
@@ -296,7 +301,7 @@ export default async function SectionPage({ params, searchParams }: PageProps) {
                     height={400}
                     className="w-full h-full object-cover"
                     type="section"
-                    eventTitle={section.title}
+                    eventTitle={sectionDisplayTitle(section)}
                     // The same ladder the event uses, run over THIS section
                     // only, so a section shows its own footage rather than the
                     // event's cover.
