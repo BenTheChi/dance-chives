@@ -1,750 +1,352 @@
-"use client";
-
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import Image from "next/image";
 import Link from "next/link";
+import { getArchiveStats } from "@/db/queries/archive-stats";
+import { HelpSearch } from "./help-search";
 
-export default function FAQPage() {
+/**
+ * The help hub.
+ *
+ * ## Why this was rewritten rather than edited
+ *
+ * The previous version documented a different product. Every page was written
+ * for someone who created an event and manages it — request ownership, wait for
+ * approval, open the event form. But the archive is now ~1,073 events built by
+ * machine from YouTube, essentially none of which have a creator, so that path
+ * could never work for the people actually reading it.
+ *
+ * ## Two tracks
+ *
+ * Almost everyone here is a visitor who noticed something wrong; a few are
+ * organisers managing their own page. Those are different jobs and they now
+ * have different tracks, rather than one undifferentiated FAQ that served the
+ * rarer case first.
+ *
+ * ## Numbers are live
+ *
+ * The gap counts come from `getArchiveStats`, the same source as the homepage.
+ * A help page that states a number is a help page that goes stale; this one
+ * cannot, and the counts double as the argument for contributing.
+ */
+
+export const revalidate = 3600;
+
+export const metadata = {
+  title: "Help — Dance Chives",
+  description:
+    "How to fix, add to, and manage events on the Dance Chives archive.",
+};
+
+/** A step in a numbered walkthrough. Deliberately capped at four per task. */
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <>
-      <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto p-6 md:p-8 pb-16">
-        {/* Page Header */}
-        <h1 className="mb-2">Frequently Asked Questions</h1>
-
-        {/* Overview Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Overview
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="what-is-dance-chives"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What is Dance Chives?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Dance Chives is a platform dedicated to freestyle dance
-                    culture, media, and community. We provide a space for
-                    dancers, event organizers, and enthusiasts to document,
-                    discover, and celebrate dance events, performances, and
-                    competitions. Whether you're looking to find upcoming events
-                    in your city, showcase your performances, or connect with
-                    the dance community, Dance Chives is your hub for all things
-                    freestyle dance.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="how-different"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How is Dance Chives different from existing social media?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Unlike traditional social media platforms, Dance Chives is
-                    purpose-built for the dance community. We focus on events,
-                    performances, and competitions with structured organization
-                    through sections and brackets. Our tagging system connects
-                    dancers to their contributions across events, creating a
-                    comprehensive record of their dance journey. We prioritize
-                    community-driven content organization, making it easy to
-                    find events by city, style, and date, while ensuring proper
-                    recognition for everyone involved in the dance scene.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="cost"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Does it cost anything to use Dance Chives?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    All the features in the beta are free and will continue to
-                    be free after. Paid tiers for enhanced members like crews
-                    and businesses will be available in the next launch.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="beta-duration"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How long will the beta last?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    We're committed to building the best platform for the dance
-                    community. The beta period allows us to gather feedback and
-                    refine features based on real user needs. We'll announce the
-                    transition to our full launch well in advance, ensuring
-                    everyone has time to prepare for any new features or
-                    changes.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        {/* Getting Started Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Getting Started
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="create-account"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I create an account?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Creating an account on Dance Chives is simple. Click the
-                    "Sign Up" button in the navigation, and you'll be prompted
-                    to enter your email address. We'll send you a magic link to
-                    verify your email and complete your registration.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Sign up page with email input field
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="register"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2 mb-3"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I register?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    After clicking the sign up link, check your email for a
-                    magic link. Click the link to verify your email address and
-                    complete your registration. You'll then be able to set up
-                    your profile with your display name, username, city, and
-                    dance styles.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Email verification and profile setup flow
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-    
-
-           <AccordionItem
-              value="register-instagram"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors pt-4">
-                What if my Instagram is already on Dance Chives?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="text-muted-foreground">In some cases your Instagram may already be on Dance Chives. This happens when an Instagram account is tagged in an event, section, or video for a particular role associated with a dance event. If your Instagram has been tagged on an event, you will see an account on the community page which looks like this: </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light text-black text-center">
-                    <p className="text-black mb-2">
-                      Screenshot: Community page showing an example unclaimed account
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <Image
-                        src="/screenshots/exampleunclaimedaccount.png"
-                        alt="Sample Unclaimed Account"
-                        width={1000}
-                        height={1000}
-                        className="border-4 border-secondary-light rounded-sm"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground">If you are the Instagram account owner and would like to claim your account please sign up and add your Instagram handle during registration. It must also be verified by sending a DM to{" "}
-                      <Link
-                        href="https://instagram.com/dancechives"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-light hover:text-white underline"
-                      >
-                        dancechives
-                      </Link>{" "}on Instagram with the username of the account you are claiming.</p>
-                  <p className="text-muted-foreground">If you are the Instagram account owner and would like to remove this account please DM{" "}
-                      <Link
-                        href="https://instagram.com/dancechives"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-light hover:text-white underline"
-                      >
-                        dancechives
-                      </Link>{" "}
-                      on Instagram with your request and it will be removed
-                      within 24 hours.</p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        {/* Dashboard Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Dashboard
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="dashboard-content"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What is on the Dashboard?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Your dashboard is your central hub for managing your Dance
-                    Chives activity. Here you'll find:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
-                    <li>
-                      <strong>Tagging Requests:</strong> Requests from other
-                      users to tag you in events, sections, or videos
-                    </li>
-                    <li>
-                      <strong>Your Events:</strong> Events you've created or are
-                      involved in
-                    </li>
-                    <li>
-                      <strong>Saved Events:</strong> Events you've bookmarked
-                      for easy access
-                    </li>
-                    <li>
-                      <strong>Notifications:</strong> Updates about your
-                      requests, tags, and event activity
-                    </li>
-                  </ul>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Dashboard view showing tagging requests and
-                      event overview
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="tagging-requests"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What are tagging requests?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Tagging requests allow users to request to be tagged in
-                    events, sections, or videos. When you see a green "Tag
-                    Yourself" button on an event page, you can request to be
-                    tagged with a specific role. Event owners and team members
-                    will review and approve or deny these requests. You'll
-                    receive notifications when your requests are approved or
-                    denied.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Tagging request interface and approval process
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        {/* Profile Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Profile
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="profile-content"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What's on my profile?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Your profile showcases your dance journey and contributions
-                    to the community:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
-                    <li>
-                      <strong>Basic Info:</strong> Display name, username, bio,
-                      city, and dance styles
-                    </li>
-                    <li>
-                      <strong>Roles:</strong> Events where you've been tagged
-                      with roles like Organizer, DJ, MC, Photographer, Teacher,
-                      etc.
-                    </li>
-                    <li>
-                      <strong>Sections Won:</strong> Sections where you've been
-                      tagged as a winner
-                    </li>
-                    <li>
-                      <strong>Tagged Videos:</strong> All videos where you've
-                      been tagged as a dancer, winner, choreographer, or teacher
-                    </li>
-                    <li>
-                      <strong>Events Created:</strong> Events you've organized
-                      and created
-                    </li>
-                  </ul>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Profile page showing all sections
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="edit-profile"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I edit my profile?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    To edit your profile, navigate to your profile page and
-                    click the "Edit Profile" button. You can update your display
-                    name, bio, city, dance styles, and profile picture. Changes
-                    are saved automatically.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Profile edit page with form fields
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        {/* Events Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Events
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="events-video"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Video Walkthrough: Understanding Events
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Video embed placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="what-is-event"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What is an event?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    An event is any organized dance gathering, competition, or
-                    activity. Events can be battles, competitions, classes,
-                    workshops, sessions, parties, festivals, performances, or
-                    other types of dance gatherings. All events share common
-                    features:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
-                    <li>
-                      <strong>Location & Date:</strong> City, venue, and date(s)
-                      when the event takes place
-                    </li>
-                    <li>
-                      <strong>Organization:</strong> Event creator, organizers,
-                      and team members who manage the event
-                    </li>
-                    <li>
-                      <strong>Sections:</strong> Different parts of the event
-                      (battles, performances, classes, etc.)
-                    </li>
-                    <li>
-                      <strong>Media:</strong> Videos, photos, and posters
-                      documenting the event
-                    </li>
-                    <li>
-                      <strong>Roles:</strong> People involved like DJs, MCs,
-                      photographers, videographers, and designers
-                    </li>
-                  </ul>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Event page showing all components
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="what-is-section"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What is a section?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Sections are the main organizational units within an event
-                    where videos are stored. Different types of sections serve
-                    different purposes:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
-                    <li>
-                      <strong>Battle:</strong> Competitive dance battles with
-                      brackets
-                    </li>
-                    <li>
-                    </li>
-                    <li>
-                      <strong>Competition:</strong> Judged dance competitions
-                    </li>
-                    <li>
-                      <strong>Performance:</strong> Showcase performances
-                    </li>
-                    <li>
-                      <strong>Showcase:</strong> Featured dance showcases
-                    </li>
-                    <li>
-                      <strong>Class:</strong> Dance classes and workshops
-                    </li>
-                    <li>
-                      <strong>Session:</strong> Open dance sessions
-                    </li>
-                  </ul>
-                  <p className="mb-4">
-                    Sections can contain videos directly or be organized into
-                    brackets for structured competitions.
-                  </p>
-                  <div className="bg-muted p-4 rounded-sm border-2 border-secondary-light">
-                    <p className="text-muted-foreground mb-2">
-                      Screenshot: Section view showing videos or brackets
-                    </p>
-                    <div className="aspect-video bg-background border-2 border-border flex items-center justify-center">
-                      <span className="text-muted-foreground">
-                        [Screenshot placeholder]
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="what-is-bracket"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                What is a bracket?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-4 text-base leading-relaxed">
-                  <p className="mb-4">
-                    Brackets are organizational tools for battles and
-                    competitions that help subdivide groups within a section.
-                    Common bracket examples include:
-                  </p>
-                  <ul className="list-disc list-inside space-y-2 mb-4 ml-4">
-                    <li>Top 8, Top 16, Top 32</li>
-                    <li>Prelims, Semifinals, Finals</li>
-                    <li>Round 1, Round 2, etc.</li>
-                    <li>
-                      Style-specific brackets (e.g., "Popping", "Breaking")
-                    </li>
-                  </ul>
-                  <p>
-                    Brackets help organize videos within competitive sections,
-                    making it easy to navigate through different rounds and
-                    stages of a competition.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        {/* Adding Events Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Adding/Editing Events
-          </h2>
-          <div className="space-y-3 text-base leading-relaxed text-white">
-            <p>
-              For detailed information on how to add and manage events,
-              including adding roles, sections, brackets, videos, and photos,
-              please see our{" "}
-              <Link
-                href="/help/add-edit-events"
-                className="text-primary-light underline hover:text-secondary-light"
-              >
-                Add/Edit Events
-              </Link>{" "}
-              guide.
-            </p>
-          </div>
-        </section>
-
-        {/* Event Admin Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Event Admin
-          </h2>
-          <div className="space-y-3 text-base leading-relaxed text-white">
-            <p>
-              For information on managing team members, hiding events, and
-              deleting events, please see our{" "}
-              <Link
-                href="/help/event-management"
-                className="text-primary-light underline hover:text-secondary-light"
-              >
-                Event Management
-              </Link>{" "}
-              guide.
-            </p>
-            <p>
-              For information on transferring event ownership and requesting
-              ownership of events, please see our{" "}
-              <Link
-                href="/help/page-ownership"
-                className="text-primary-light underline hover:text-secondary-light"
-              >
-                Page Ownership
-              </Link>{" "}
-              guide.
-            </p>
-          </div>
-        </section>
-
-        {/* Tagging and Roles Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Tagging and Roles
-          </h2>
-          <div className="space-y-3 text-base leading-relaxed text-white">
-            <p>
-              For detailed information on how to tag yourself with roles at the
-              event, section, and video levels, including how to request roles,
-              who can approve requests, and what roles are available, please see
-              our{" "}
-              <Link
-                href="/help/role-tagging"
-                className="text-primary-light underline hover:text-secondary-light"
-              >
-                Role Tagging
-              </Link>{" "}
-              guide.
-            </p>
-          </div>
-        </section>
-
-        {/* Calendar Section */}
-        <section className="bg-primary-dark/80 rounded-sm border-4 border-secondary-light p-6 md:p-8 space-y-4">
-          <h2 className="text-2xl font-bold mb-6 text-white border-b-2 border-secondary-light pb-3">
-            Calendar
-          </h2>
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem
-              value="use-calendar"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I use the calendar?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    The calendar helps you discover upcoming dance events. You
-                    can filter events by city and dance style to find what's
-                    happening near you or in your areas of interest. The
-                    calendar shows events for a three-month period (previous
-                    month, current month, and next month) to give you a good
-                    overview of upcoming activities.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="filter-by-city"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I filter events by city?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Use the city dropdown at the top of the calendar page to
-                    select a city. If you're logged in, the calendar will
-                    default to your city. You can change this to any city to see
-                    events happening there.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="filter-by-style"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I filter events by dance style?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Use the style dropdown to filter events by specific dance
-                    styles like Breaking, Popping, Locking, House, etc. You can
-                    combine city and style filters to find exactly what you're
-                    looking for.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="view-event-details"
-              className="border-2 border-secondary-light rounded-sm mb-3 bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                How do I view event details from the calendar?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    Click on any event in the calendar to view its full details,
-                    including description, location, schedule, sections, videos,
-                    and photos. You can also save events you're interested in by
-                    clicking the save button.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              value="past-events"
-              className="border-2 border-secondary-light rounded-sm bg-background/50 !border-b-2"
-            >
-              <AccordionTrigger className="text-left text-xl font-medium font-display leading-none px-4 py-5 hover:bg-secondary-light/20 transition-colors">
-                Can I see past events on the calendar?
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <div className="space-y-3 text-base leading-relaxed">
-                  <p>
-                    The calendar focuses on upcoming events, showing the current
-                    month and surrounding months. To view past events, use the
-                    search feature or browse events by city or style. Past
-                    events remain accessible on the platform so you can view
-                    videos, photos, and other content from previous gatherings.
-                  </p>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
+    <li className="flex gap-4">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-secondary-light font-bold">
+        {n}
+      </span>
+      <div className="space-y-1 pt-0.5">
+        <h4 className="font-bold leading-tight">{title}</h4>
+        <div className="text-sm text-muted-foreground leading-relaxed">
+          {children}
+        </div>
       </div>
-    </>
+    </li>
+  );
+}
+
+function Card({
+  title,
+  children,
+  href,
+  cta,
+}: {
+  title: string;
+  children: React.ReactNode;
+  href?: string;
+  cta?: string;
+}) {
+  return (
+    <div className="rounded-sm border-2 border-secondary-light bg-background/50 p-5 space-y-3">
+      <h3 className="text-lg font-bold">{title}</h3>
+      <div className="text-sm leading-relaxed space-y-2">{children}</div>
+      {href && cta ? (
+        <Link href={href} className="inline-block text-sm underline">
+          {cta} →
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+export default async function HelpPage() {
+  const stats = await getArchiveStats();
+
+  return (
+    <div className="flex flex-col gap-10 w-full max-w-5xl mx-auto p-6 md:p-8 pb-16">
+      <header className="space-y-3">
+        <h1>Help</h1>
+        <p className="text-lg leading-relaxed max-w-3xl">
+          Dance Chives is an archive of{" "}
+          <strong>{stats.videoCount.toLocaleString()} videos</strong> across{" "}
+          <strong>{stats.eventCount.toLocaleString()} events</strong>, built
+          automatically from YouTube channels. Because a machine assembled it,
+          parts of it are wrong or missing — and anyone with an account can fix
+          them.
+        </p>
+      </header>
+
+      <HelpSearch />
+
+      {/* ── Track 1: contributing ─────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="border-b-2 border-secondary-light pb-2">
+          <h2 className="text-2xl font-bold">Fixing and adding information</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            For anyone with an account. No permission needed.
+          </p>
+        </div>
+
+        <div className="rounded-sm border-2 border-secondary-light bg-background/50 p-6">
+          <h3 className="text-lg font-bold mb-4">Fix a fact in two steps</h3>
+          <ol className="space-y-4">
+            <Step n={1} title="Hover or tap the fact on an event page">
+              City, date, and styles each show what we know and how sure we are.
+              A missing one appears as a dashed{" "}
+              <span className="whitespace-nowrap">&ldquo;+ Add city&rdquo;</span>{" "}
+              button instead of a blank.
+            </Step>
+            <Step n={2} title="Enter what you know and save">
+              That&apos;s it. Your change is live immediately — no review queue,
+              no waiting for approval.
+            </Step>
+          </ol>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card title="What happens to my change?">
+            <p>
+              It applies right away and is recorded under your name. Moderators
+              can undo any change, and the previous value is always kept — so
+              nothing is ever lost, and an honest mistake is not a disaster.
+            </p>
+          </Card>
+
+          <Card title="Do I need to own the event?">
+            <p>
+              No. Almost no event here has an owner — they were imported
+              automatically. Owning a page is only needed to manage it (posters,
+              sections, team), never to correct a fact.
+            </p>
+          </Card>
+
+          <Card title="What if I&rsquo;m only half sure?">
+            <p>
+              Say so. When you fix a date you choose how certain you are — exact
+              day, month, or just the year. Saying &ldquo;month only&rdquo; is
+              genuinely useful: it keeps the event on the list of things we still
+              want to pin down, instead of pretending we know the day.
+            </p>
+          </Card>
+
+          <Card title="Can I break something?">
+            <p>
+              Not permanently. Every change keeps the value it replaced, and a
+              moderator can restore it in one click. Cities are matched against a
+              real place list, and styles against the site&apos;s style list, so
+              typos can&apos;t create phantom entries.
+            </p>
+          </Card>
+        </div>
+
+        {/* The live gap band: the reason to contribute, stated as fact. */}
+        <div className="rounded-sm border-4 border-[#b4801f] bg-[#b4801f]/12 p-6">
+          <h3 className="text-lg font-bold mb-3 text-[#e0a942]">
+            What needs help right now
+          </h3>
+          <div className="flex flex-wrap gap-x-10 gap-y-4 mb-4">
+            <div className="flex flex-col">
+              <span className="text-3xl font-bold text-[#e0a942] tabular-nums">
+                {stats.missingCityCount.toLocaleString()}
+              </span>
+              <span className="text-sm">events missing a city</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-3xl font-bold text-[#e0a942] tabular-nums">
+                {stats.impreciseDateCount.toLocaleString()}
+              </span>
+              <span className="text-sm">
+                events without an exact date
+              </span>
+            </div>
+          </div>
+          <p className="text-sm mb-4">
+            If you were there, you probably know more than the machine did.
+          </p>
+          <Link
+            href="/events"
+            className="inline-block rounded-sm border-2 border-[#b4801f] bg-[#b4801f] px-5 py-2 font-bold text-charcoal transition-transform hover:scale-105"
+          >
+            See what&apos;s missing
+          </Link>
+        </div>
+      </section>
+
+      {/* ── Track 2: managing ─────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="border-b-2 border-secondary-light pb-2">
+          <h2 className="text-2xl font-bold">Managing an event</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            For organisers and their teams. Needs ownership or team access.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card
+            title="Claim an event page"
+            href="/help/page-ownership"
+            cta="How ownership works"
+          >
+            <p>
+              If an event is yours, request ownership to manage its page,
+              posters, and team. This is the one thing that still needs approval.
+            </p>
+          </Card>
+
+          <Card
+            title="Add or edit an event"
+            href="/help/add-edit-events"
+            cta="The event form, tab by tab"
+          >
+            <p>
+              Details, roles, sections, brackets, and photos — the full form for
+              events you own or help run.
+            </p>
+          </Card>
+
+          <Card
+            title="Team, visibility, deletion"
+            href="/help/event-management"
+            cta="Managing your event"
+          >
+            <p>
+              Add team members, hide an event from public listings, transfer
+              ownership, or remove an event entirely.
+            </p>
+          </Card>
+
+          <Card
+            title="Tag yourself and others"
+            href="/help/role-tagging"
+            cta="Roles and tagging"
+          >
+            <p>
+              Credit dancers, judges, DJs, and hosts on events and battles,
+              including people who aren&apos;t registered yet.
+            </p>
+          </Card>
+        </div>
+      </section>
+
+      {/* ── Roadmap ───────────────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="border-b-2 border-secondary-light pb-2">
+          <h2 className="text-2xl font-bold">What&apos;s coming</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Dance Chives is in beta. Themes, not promises — no dates attached.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-sm border-2 border-secondary-light bg-background/50 p-5 space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-[#e0a942]">
+              Now
+            </span>
+            <h3 className="font-bold">Corrections</h3>
+            <p className="text-sm leading-relaxed">
+              Fixing a city, date, or style from the event page itself, with
+              every change reversible. Live today.
+            </p>
+          </div>
+
+          <div className="rounded-sm border-2 border-secondary-light bg-background/50 p-5 space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-[#e0a942]">
+              Next
+            </span>
+            <h3 className="font-bold">One question at a time</h3>
+            <p className="text-sm leading-relaxed">
+              A queue that asks one thing you might know — &ldquo;what city was
+              this?&rdquo; — instead of asking you to hunt for gaps. Plus
+              tagging who danced in a battle.
+            </p>
+          </div>
+
+          <div className="rounded-sm border-2 border-secondary-light bg-background/50 p-5 space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-[#e0a942]">
+              Exploring
+            </span>
+            <h3 className="font-bold">Dancer profiles</h3>
+            <p className="text-sm leading-relaxed">
+              Once enough battles are tagged, a profile that shows where
+              you&apos;ve danced and who you&apos;ve battled — built from the
+              archive itself.
+            </p>
+          </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          Everything in the beta is free and stays free. Paid tiers for crews and
+          businesses are planned for a later launch.{" "}
+          <Link href="/about" className="underline">
+            More about the project
+          </Link>
+          .
+        </p>
+      </section>
+
+      {/* ── Basics ────────────────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="border-b-2 border-secondary-light pb-2">
+          <h2 className="text-2xl font-bold">The basics</h2>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card title="How the archive is organised">
+            <p>
+              An <strong>event</strong> holds <strong>sections</strong> (prelims,
+              top 16, showcases), and a section holds <strong>videos</strong>.
+              Battle sections are split into <strong>brackets</strong> — the
+              rounds of the competition.
+            </p>
+          </Card>
+
+          <Card title="Finding things">
+            <p>
+              Filter events by city, style, or date, or switch{" "}
+              <Link href="/events" className="underline">
+                the events list
+              </Link>{" "}
+              to &ldquo;Needs info&rdquo; to see what&apos;s incomplete. The{" "}
+              <Link href="/calendar" className="underline">
+                calendar
+              </Link>{" "}
+              shows upcoming and past events by month.
+            </p>
+          </Card>
+
+          <Card title="Accounts">
+            <p>
+              Sign in with Google or a magic link. You need an account to
+              contribute, be tagged, or manage an event — browsing needs nothing.
+            </p>
+          </Card>
+
+          <Card title="Something wrong that isn&rsquo;t a fact?">
+            <p>
+              Corrections handle wrong information. For anything else — a video
+              that shouldn&apos;t be here, a dispute, a takedown — use the report
+              link in the footer.
+            </p>
+          </Card>
+        </div>
+      </section>
+    </div>
   );
 }

@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { normalizeStyleNames } from "@/lib/utils/style-utils";
 import { prisma } from "@/lib/primsa";
-import { GapAffordance } from "@/components/events/GapAffordance";
+import { ContributableFact } from "@/components/events/ContributableFact";
 import { hasCityGap } from "@/lib/utils/event-gaps";
 import { formatEventDate } from "@/lib/utils/date-display";
 
@@ -371,6 +371,11 @@ export default async function EventPage({ params }: PageProps) {
   const datePrecision = (eventCard?.datePrecision ??
     "day") as "day" | "month" | "year";
 
+  // Any signed-in member may correct a fact — corrections are not gated on
+  // page ownership, which almost no one has on an auto-published event. The
+  // server action is the real gate; this only decides what the page offers.
+  const canContribute = Boolean(currentUserId);
+
   // Group roles by title (exclude TEAM_MEMBER - team members are shown separately)
   const rolesByTitle = new Map<string, Array<(typeof event.roles)[0]>>();
   event.roles.forEach((role) => {
@@ -534,16 +539,21 @@ export default async function EventPage({ params }: PageProps) {
                         invitation rather than a blank — 249 events have none,
                         and someone who watched the footage may recognise it. */}
                     <div className="flex flex-row gap-5 items-center justify-center mb-2 flex-wrap">
-                      {hasCityGap(
-                        eventCard?.cityId,
-                        event.eventDetails.city.name
-                      ) ? (
-                        <GapAffordance label="Add city" size="md" />
-                      ) : (
+                      <ContributableFact
+                        eventId={event.id}
+                        kind="city"
+                        isGap={hasCityGap(
+                          eventCard?.cityId,
+                          event.eventDetails.city.name
+                        )}
+                        canContribute={canContribute}
+                        gapLabel="Add city"
+                        gapSize="md"
+                      >
                         <h2 className="!font-extrabold">
                           {formatCityDisplayLabel(event.eventDetails.city)}
                         </h2>
-                      )}
+                      </ContributableFact>
 
                       {event.eventDetails.eventType && (
                         <h3>{event.eventDetails.eventType}</h3>
@@ -552,13 +562,21 @@ export default async function EventPage({ params }: PageProps) {
 
                     {/* Style badges */}
                     <div className="flex flex-wrap gap-2 mb-6 sm:mb-10 justify-center">
-                      {eventStyles.length > 0 ? (
-                        eventStyles.map((style) => (
-                          <StyleBadge key={style} style={style} />
-                        ))
-                      ) : (
-                        <GapAffordance label="Add styles" size="md" />
-                      )}
+                      <ContributableFact
+                        eventId={event.id}
+                        kind="styles"
+                        isGap={eventStyles.length === 0}
+                        canContribute={canContribute}
+                        gapLabel="Add styles"
+                        gapSize="md"
+                        currentStyles={eventStyles}
+                      >
+                        <span className="flex flex-wrap gap-2 justify-center">
+                          {eventStyles.map((style) => (
+                            <StyleBadge key={style} style={style} />
+                          ))}
+                        </span>
+                      </ContributableFact>
                     </div>
 
                     {/* Dates, Location, Cost, Prize - dynamic layout */}
@@ -656,7 +674,14 @@ export default async function EventPage({ params }: PageProps) {
                                   the ask only makes sense next to the
                                   imprecise value that prompted it. */}
                               {datePrecision !== "day" && (
-                                <GapAffordance label="Add exact date" />
+                                <ContributableFact
+                                  eventId={event.id}
+                                  kind="date"
+                                  isGap
+                                  canContribute={canContribute}
+                                  gapLabel="Add exact date"
+                                  datePrecision={datePrecision}
+                                />
                               )}
                             </div>
                           ),

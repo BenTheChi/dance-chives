@@ -124,6 +124,16 @@ export default function EventManagementPage() {
                 </span>{" "}
                 button.
               </p>
+              <p className="text-base leading-relaxed text-white mt-3">
+                This is about the full event form. Correcting a single fact — a
+                wrong city, an imprecise date, missing styles — needs no
+                ownership at all: any signed-in member can do it directly from
+                the event page.{" "}
+                <Link href="/help" className="text-primary-light underline">
+                  How corrections work
+                </Link>
+                .
+              </p>
             </div>
 
             <div className="p-4 bg-neutral-700/50 rounded-sm border-l-4 border-amber-500">

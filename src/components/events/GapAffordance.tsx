@@ -21,12 +21,15 @@ import { cn } from "@/lib/utils";
  * them. The amber below is deliberately outside the app palette for that
  * reason.
  *
- * ## Phase 1 is inert
+ * ## Two behaviours, one look
  *
- * These link to sign-in rather than writing anything. Placing the affordances
- * before the write path exists means Phase 2 is purely backend: the UI hooks
- * are already in the right places, and wiring them is a change of `href` to a
- * server action rather than a redesign.
+ * Signed out, this is a link to sign-in — the Phase 1 behaviour, and still the
+ * right one: the invitation is real, it just needs an account first. Signed in,
+ * `onActivate` turns it into a button that opens the correction directly.
+ *
+ * Same styling either way on purpose. The affordance means "this could be
+ * filled in"; whether that costs a sign-in first is not something the archive
+ * should look different about.
  */
 
 /** Gap amber, light and dark. Not in the app palette — see the note above. */
@@ -35,8 +38,13 @@ const GAP_CLASSES =
 
 interface GapAffordanceProps {
   label: string;
-  /** Where the invitation goes. Phase 1 sends everything to sign-in. */
+  /** Where the invitation goes when the viewer cannot yet contribute. */
   href?: string;
+  /**
+   * Handle the invitation in place instead of navigating. Supplied for a
+   * signed-in member, for whom the gap is directly fixable.
+   */
+  onActivate?: () => void;
   className?: string;
   size?: "sm" | "md";
 }
@@ -44,24 +52,50 @@ interface GapAffordanceProps {
 export function GapAffordance({
   label,
   href = "/login",
+  onActivate,
   className,
   size = "sm",
 }: GapAffordanceProps) {
+  const classes = cn(
+    "inline-flex items-center gap-1 rounded-sm border border-dashed font-medium transition-colors whitespace-nowrap",
+    size === "sm" ? "text-xs px-1.5 py-0.5" : "text-sm px-2.5 py-1",
+    GAP_CLASSES,
+    className,
+  );
+
+  const icon = (
+    <Plus aria-hidden="true" className={size === "sm" ? "h-3 w-3" : "h-4 w-4"} />
+  );
+
+  if (onActivate) {
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          // The row itself is clickable in the table; without this a click on
+          // the affordance would navigate to the event as well as opening the
+          // correction.
+          event.stopPropagation();
+          event.preventDefault();
+          onActivate();
+        }}
+        className={classes}
+        title={label}
+      >
+        {icon}
+        {label}
+      </button>
+    );
+  }
+
   return (
     <Link
       href={href}
-      // The row itself is clickable in the table; without this a click on the
-      // affordance would navigate to the event instead of the sign-in.
       onClick={(event) => event.stopPropagation()}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-sm border border-dashed font-medium transition-colors whitespace-nowrap",
-        size === "sm" ? "text-xs px-1.5 py-0.5" : "text-sm px-2.5 py-1",
-        GAP_CLASSES,
-        className,
-      )}
+      className={classes}
       title={`${label} — sign in to contribute`}
     >
-      <Plus aria-hidden="true" className={size === "sm" ? "h-3 w-3" : "h-4 w-4"} />
+      {icon}
       {label}
     </Link>
   );
