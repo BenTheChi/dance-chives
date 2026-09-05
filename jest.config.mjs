@@ -16,4 +16,10 @@ export default createJestConfig({
   // Scoped to src/: scripts/ and prisma/ hold no tests, and .next/ contains
   // built copies of test files that would otherwise run twice.
   roots: ["<rootDir>/src"],
+  // `next/jest` compiles `@/…` imports through SWC but supplies no runtime
+  // resolver for them, so `jest.mock("@/…")` cannot find its target. Tests that
+  // mock a module by alias need this mapping.
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+  },
 });

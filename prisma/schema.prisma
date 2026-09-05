@@ -45,6 +45,10 @@ model User {
   // Member-submitted YouTube channels
   channelSubmissions ChannelSubmission[]
 
+  // Fact corrections submitted against published events
+  contributions         Contribution[] @relation("ContributionAuthor")
+  revertedContributions Contribution[] @relation("ContributionReverter")
+
   // Request approvals
   requestApprovals RequestApproval[]
 
@@ -562,4 +566,49 @@ model Reviewing {
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@map("reviewing")
+}
+
+/// A single factual correction against a published event.
+///
+/// Corrections are deliberately NOT routed through page ownership: most events
+/// are auto-published and have no creator, so `canUpdateEvent` can never pass
+/// for a stranger. A correction is a fact, not an edit.
+///
+/// `oldValue` is load-bearing — it is the only thing that makes a revert
+/// possible, and the audit trail is the only safety mechanism here. A row that
+/// cannot reconstruct the prior state is a bug, not a degraded record. It is
+/// captured inside the same transaction that writes the new value.
+model Contribution {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  eventId   String
+  sectionId String?
+  videoId   String?
+
+  /// city | date | styles | title | series | participant
+  field    String
+  /// Exact prior value — never null in practice; nullable only for fields that
+  /// genuinely had no value before (an unset city).
+  oldValue Json?
+  newValue Json
+  /// Optional supporting URL or note supplied by the member.
+  evidence String?
+
+  /// Never null — members only. Anonymous writes are rejected at the server
+  /// action, not merely hidden in the UI.
+  userId String
+  user   User   @relation("ContributionAuthor", fields: [userId], references: [id])
+
+  /// applied | reverted | superseded
+  status     String    @default("applied")
+  revertedBy String?
+  reverter   User?     @relation("ContributionReverter", fields: [revertedBy], references: [id])
+  revertedAt DateTime?
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([field, createdAt])
+  @@index([status])
+  @@map("contributions")
 }

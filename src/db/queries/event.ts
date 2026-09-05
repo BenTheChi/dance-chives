@@ -6329,3 +6329,232 @@ export async function getEventSections(
     await session.close();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Contribution write path (Phase 2)
+//
+// These are deliberately narrow single-field writes. They exist because the
+// full `editEvent` path requires page ownership, and auto-published events have
+// no creator — so `canUpdateEvent` can never pass for a stranger. A correction
+// is a fact, not an edit.
+//
+// Each returns the exact prior value so the caller can persist it as
+// `Contribution.oldValue` in the same transaction that records the change. A
+// correction that cannot reconstruct the prior state is a bug: revert is the
+// only safety mechanism these writes have.
+// ---------------------------------------------------------------------------
+
+/**
+ * Repoint an event at a different city.
+ *
+ * Goes through the same MERGE + country-edge path as `editEvent`: a raw string
+ * write here would create orphan (:City) nodes with no slug and break
+ * /cities/[slug]. The caller must have already run the place_id through
+ * `resolveAndUpsertCityForWrite`.
+ */
+export async function setEventCityInGraph(
+  eventId: string,
+  canonicalCity: City
+): Promise<{ id: string; name: string } | null> {
+  const session = driver.session();
+  const citySlug = canonicalCity.slug || generateCitySlug(canonicalCity);
+
+  try {
+    const prior = await session.run(
+      `MATCH (e:Event {id: $eventId})
+       OPTIONAL MATCH (e)-[:IN]->(c:City)
+       RETURN c.id AS id, c.name AS name`,
+      { eventId }
+    );
+
+    if (prior.records.length === 0) {
+      throw new Error(`Event ${eventId} not found in graph`);
+    }
+
+    const priorId = prior.records[0].get("id");
+    const oldCity = priorId
+      ? { id: priorId, name: prior.records[0].get("name") }
+      : null;
+
+    await session.run(
+      `MATCH (e:Event {id: $eventId})
+       WITH e
+       OPTIONAL MATCH (e)-[i:IN]->(:City)
+       DELETE i
+       WITH e
+       MERGE (c:City {id: $city.id})
+       ON CREATE SET
+         c.name = $city.name,
+         c.countryCode = $city.countryCode,
+         c.region = $city.region,
+         c.timezone = $city.timezone,
+         c.latitude = $city.latitude,
+         c.longitude = $city.longitude,
+         c.slug = $citySlug
+       ON MATCH SET
+         c.name = $city.name,
+         c.countryCode = $city.countryCode,
+         c.region = $city.region,
+         c.timezone = $city.timezone,
+         c.latitude = $city.latitude,
+         c.longitude = $city.longitude,
+         c.slug = $citySlug
+       MERGE (e)-[:IN]->(c)
+       SET e.updatedAt = $updatedAt` + COUNTRY_EDGE_CYPHER,
+      {
+        eventId,
+        city: canonicalCity,
+        citySlug,
+        countryCode: countryCodeForCity(canonicalCity),
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
+    return oldCity;
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Set an event's title, returning the prior one.
+ */
+export async function setEventTitleInGraph(
+  eventId: string,
+  title: string
+): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (e:Event {id: $eventId})
+       WITH e, e.title AS oldTitle
+       SET e.title = $title, e.updatedAt = $updatedAt
+       RETURN oldTitle`,
+      { eventId, title, updatedAt: new Date().toISOString() }
+    );
+
+    if (result.records.length === 0) {
+      throw new Error(`Event ${eventId} not found in graph`);
+    }
+
+    return result.records[0].get("oldTitle");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Set an event's series (the edition-agnostic name), returning the prior one.
+ */
+export async function setEventSeriesInGraph(
+  eventId: string,
+  series: string | null
+): Promise<string | null> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (e:Event {id: $eventId})
+       WITH e, e.series AS oldSeries
+       SET e.series = $series, e.updatedAt = $updatedAt
+       RETURN oldSeries`,
+      { eventId, series, updatedAt: new Date().toISOString() }
+    );
+
+    if (result.records.length === 0) {
+      throw new Error(`Event ${eventId} not found in graph`);
+    }
+
+    return result.records[0].get("oldSeries");
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Replace an event's date, returning the prior `startDate` / `dates` pair.
+ *
+ * `dates` is stored as a JSON string on the node (matching `insertEvent`), so
+ * the prior value is handed back verbatim for the audit row rather than parsed.
+ */
+export async function setEventDateInGraph(
+  eventId: string,
+  startDate: string,
+  datesJson: string | null
+): Promise<{ startDate: string | null; dates: string | null }> {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (e:Event {id: $eventId})
+       WITH e, e.startDate AS oldStartDate, e.dates AS oldDates
+       SET e.startDate = $startDate,
+           e.dates = $dates,
+           e.updatedAt = $updatedAt
+       RETURN oldStartDate, oldDates`,
+      {
+        eventId,
+        startDate,
+        dates: datesJson,
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
+    if (result.records.length === 0) {
+      throw new Error(`Event ${eventId} not found in graph`);
+    }
+
+    return {
+      startDate: result.records[0].get("oldStartDate"),
+      dates: result.records[0].get("oldDates"),
+    };
+  } finally {
+    await session.close();
+  }
+}
+
+/**
+ * Replace the event-level style set, returning the prior styles.
+ *
+ * Styles must already be canonical (`normalizeStyleNames`): the `dance_styles`
+ * registry is the authority and an unregistered name would MERGE a (:Style)
+ * node that nothing else recognises.
+ */
+export async function setEventStylesInGraph(
+  eventId: string,
+  styles: string[]
+): Promise<string[]> {
+  const session = driver.session();
+  try {
+    const prior = await session.run(
+      `MATCH (e:Event {id: $eventId})
+       OPTIONAL MATCH (e)-[:STYLE]->(s:Style)
+       RETURN collect(s.name) AS styles`,
+      { eventId }
+    );
+
+    if (prior.records.length === 0) {
+      throw new Error(`Event ${eventId} not found in graph`);
+    }
+
+    const oldStyles = (prior.records[0].get("styles") as string[]) ?? [];
+
+    await session.run(
+      `MATCH (e:Event {id: $eventId})
+       WITH e
+       OPTIONAL MATCH (e)-[r:STYLE]->(:Style)
+       DELETE r
+       WITH e, $styles AS styles
+       SET e.updatedAt = $updatedAt
+       WITH e, styles
+       UNWIND (CASE WHEN size(styles) = 0 THEN [null] ELSE styles END) AS styleName
+       FOREACH (_ IN CASE WHEN styleName IS NULL THEN [] ELSE [1] END |
+         MERGE (style:Style {name: styleName})
+         MERGE (e)-[:STYLE]->(style)
+       )`,
+      { eventId, styles, updatedAt: new Date().toISOString() }
+    );
+
+    return oldStyles;
+  } finally {
+    await session.close();
+  }
+}
