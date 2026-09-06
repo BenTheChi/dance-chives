@@ -41,6 +41,7 @@ export const COUNTRIES: readonly Country[] = [
   { code: "CL", name: "Chile", slug: "chile" },
   { code: "CN", name: "China", slug: "china" },
   { code: "CO", name: "Colombia", slug: "colombia" },
+  { code: "CY", name: "Cyprus", slug: "cyprus" },
   { code: "CZ", name: "Czechia", slug: "czechia" },
   { code: "DE", name: "Germany", slug: "germany" },
   { code: "DK", name: "Denmark", slug: "denmark" },
