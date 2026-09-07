@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { submitChannel } from "@/lib/server_actions/channel_submission_actions";
 import { initialChannelSubmissionState } from "@/lib/submissions/channel-submission-state";
+import { ArchivedChannelList } from "@/components/forms/ArchivedChannelList";
+import type { ArchivedChannel } from "@/db/queries/archived-channels";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -36,12 +38,20 @@ function SubmitButton() {
  * echo-back of channel name and video count is the whole UX: it proves the
  * submission was understood before the user walks away.
  */
-export function ChannelSubmissionForm() {
+export function ChannelSubmissionForm({
+  archivedChannels = [],
+}: {
+  archivedChannels?: ArchivedChannel[];
+}) {
   const { status: sessionStatus } = useSession();
   const [state, formAction] = useActionState(
     submitChannel,
     initialChannelSubmissionState,
   );
+  // Mirrors the input so the archived list can filter on every keystroke. The
+  // field stays uncontrolled-in-spirit — this only observes it, so the form
+  // action still reads the value straight from FormData.
+  const [query, setQuery] = useState("");
 
   const isAuthenticated = sessionStatus === "authenticated";
 
@@ -77,6 +87,8 @@ export function ChannelSubmissionForm() {
                 )}
               </div>
             </div>
+
+            <ArchivedChannelList channels={archivedChannels} query="" />
           </div>
         ) : isAuthenticated ? (
           <form action={formAction} className="w-full">
@@ -92,7 +104,9 @@ export function ChannelSubmissionForm() {
                   type="text"
                   required
                   autoComplete="off"
-                  placeholder="youtube.com/@channelname"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search or paste a channel URL"
                   aria-label="YouTube channel URL"
                   className="pl-10 h-11"
                 />
@@ -105,17 +119,26 @@ export function ChannelSubmissionForm() {
                 {state.message}
               </p>
             )}
+
+            <ArchivedChannelList channels={archivedChannels} query={query} />
           </form>
         ) : (
           // Membership is the bar for every write on the site, so the form is
           // not shown to a signed-out visitor at all — an input that rejects
           // you after you have typed into it is worse than one that says up
           // front what it needs.
-          <div className="w-full rounded-sm border-2 border-dashed border-primary-light/60 p-6 text-center">
-            <p className="mb-4">Sign in to suggest a channel.</p>
-            <Link href="/login">
-              <Button className="font-bold">Sign in</Button>
-            </Link>
+          <div className="w-full">
+            <div className="rounded-sm border-2 border-dashed border-primary-light/60 p-6 text-center">
+              <p className="mb-4">Sign in to suggest a channel.</p>
+              <Link href="/login">
+                <Button className="font-bold">Sign in</Button>
+              </Link>
+            </div>
+
+            {/* Reading which channels are archived is not a write, so the
+                list is shown to everyone — it is also the most concrete
+                argument for signing in. */}
+            <ArchivedChannelList channels={archivedChannels} query="" />
           </div>
         )}
       </div>

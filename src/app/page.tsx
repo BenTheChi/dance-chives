@@ -9,6 +9,7 @@ import {
 import { ReportButton } from "@/components/report/ReportButton";
 import { EventCard } from "@/components/EventCard";
 import { ChannelSubmissionForm } from "@/components/forms/channel-submission-form";
+import { getArchivedChannels } from "@/db/queries/archived-channels";
 import { ArchiveScaleStrip } from "@/components/home/ArchiveScaleStrip";
 import { BrowseArchive } from "@/components/home/BrowseArchive";
 import { HelpCompleteArchive } from "@/components/home/HelpCompleteArchive";
@@ -17,12 +18,14 @@ import { HelpCompleteArchive } from "@/components/home/HelpCompleteArchive";
 export const revalidate = 60;
 
 export default async function Home() {
-  const [recentEvents, upcomingEvents, stats, facets] = await Promise.all([
-    getRecentEventCards(6),
-    getUpcomingEventCards(4),
-    getArchiveStats(),
-    getBrowseFacets(8),
-  ]);
+  const [recentEvents, upcomingEvents, stats, facets, archivedChannels] =
+    await Promise.all([
+      getRecentEventCards(6),
+      getUpcomingEventCards(4),
+      getArchiveStats(),
+      getBrowseFacets(8),
+      getArchivedChannels(),
+    ]);
 
   return (
     <div className="flex flex-col">
@@ -113,7 +116,7 @@ export default async function Home() {
 
             {/* 5. Submit a YouTube channel — one field. */}
             <section className="max-w-6xl mx-auto w-full">
-              <ChannelSubmissionForm />
+              <ChannelSubmissionForm archivedChannels={archivedChannels} />
             </section>
 
             {/* Contribute Section */}
