@@ -58,6 +58,65 @@ describe("parseYouTubeChannelUrl", () => {
     ).toBe("is_video");
   });
 
+  it("folds handle case so one channel is one canonical url", () => {
+    // The dedupe hole this closes: whenever the YouTube lookup fails there is
+    // no channel id to match on, and the canonical url is the only key left.
+    // `@Name` and `@name` must not become two rows for one channel.
+    const spellings = [
+      "@BoogStudio_TW",
+      "@boogstudio_tw",
+      "https://www.youtube.com/@BOOGSTUDIO_TW",
+      "youtube.com/@BoogStudio_tw",
+    ];
+
+    const urls = spellings.map((s) => parseYouTubeChannelUrl(s).ref?.url);
+
+    expect(new Set(urls).size).toBe(1);
+    expect(urls[0]).toBe("https://www.youtube.com/@boogstudio_tw");
+
+    // `value` and `url` must agree — a caller matching on either gets the
+    // same answer.
+    expect(parseYouTubeChannelUrl("@BoogStudio_TW").ref?.value).toBe(
+      "@boogstudio_tw",
+    );
+
+    // Legacy vanity and /user/ names fold for the same reason.
+    expect(parseYouTubeChannelUrl("https://www.youtube.com/c/SomeName").ref).toEqual(
+      {
+        kind: "custom",
+        value: "somename",
+        url: "https://www.youtube.com/c/somename",
+      },
+    );
+    expect(
+      parseYouTubeChannelUrl("https://www.youtube.com/user/SomeBody").ref?.url,
+    ).toBe("https://www.youtube.com/user/somebody");
+  });
+
+  it("NEVER folds a channel id", () => {
+    // `UC` + 22 chars is case-sensitive base64. Lowercasing it returns zero
+    // results from the YouTube API — verified against the live endpoint — so
+    // folding here would silently orphan the channel. This is the regression
+    // that matters most in this file.
+    const id = "UCr0T5S5UhRZ9RESlMckKKmg";
+
+    expect(parseYouTubeChannelUrl(id).ref).toEqual({
+      kind: "id",
+      value: id,
+      url: `https://www.youtube.com/channel/${id}`,
+    });
+
+    expect(
+      parseYouTubeChannelUrl(`https://www.youtube.com/channel/${id}`).ref?.url,
+    ).toBe(`https://www.youtube.com/channel/${id}`);
+
+    // A lowercased id is not a valid id at all, so it must not quietly pass
+    // as a `custom` vanity name under the bare-segment branch.
+    expect(parseYouTubeChannelUrl(`https://www.youtube.com/channel/${id.toLowerCase()}`).error).toBe(
+      "unrecognized",
+    );
+  });
+
   it("rejects everything else with a reason", () => {
     expect(parseYouTubeChannelUrl("https://vimeo.com/12345").error).toBe(
       "not_youtube",

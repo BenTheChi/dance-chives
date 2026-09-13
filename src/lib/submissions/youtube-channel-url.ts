@@ -55,6 +55,27 @@ export const CHANNEL_URL_ERROR_MESSAGES: Record<ChannelUrlError, string> = {
 };
 
 /**
+ * Case folding, and the line it must not cross.
+ *
+ * Handles and legacy vanity names are case-INSENSITIVE: YouTube resolves
+ * `@BoogStudio_TW` and itself reports the channel's handle as
+ * `@boogstudio_tw`. Folding them is therefore not merely safe, it produces the
+ * spelling YouTube considers canonical — and it is load-bearing for dedupe,
+ * because whenever the API lookup fails (no key, API down) `youtubeChannelId`
+ * is null and the canonical url is the ONLY thing two submissions can be
+ * matched on. Without this, `@Name` and `@name` are two rows for one channel.
+ *
+ * Channel ids (`UC` + 22 chars) and the `UU…` uploads playlist ids derived
+ * from them are case-SENSITIVE base64: `UCr0T5S5UhRZ9RESlMckKKmg` resolves and
+ * `ucr0t5s5uhrz9reslmckkmg` returns nothing at all. They are never folded.
+ * That asymmetry is the whole reason this is a helper rather than a
+ * `.toLowerCase()` on the way out.
+ */
+function foldName(name: string): string {
+  return name.toLowerCase();
+}
+
+/**
  * Accepts a full url or a bare handle (`@bitgoeuldancers`), since a handle is
  * what people actually copy off a channel page.
  */
@@ -64,12 +85,13 @@ export function parseYouTubeChannelUrl(input: string): ChannelUrlResult {
 
   // A bare handle, with no url around it.
   if (/^@[\w.-]+$/.test(trimmed)) {
+    const handle = foldName(trimmed);
     return {
       ok: true,
       ref: {
         kind: "handle",
-        value: trimmed,
-        url: `https://www.youtube.com/${trimmed}`,
+        value: handle,
+        url: `https://www.youtube.com/${handle}`,
       },
     };
   }
@@ -122,12 +144,13 @@ export function parseYouTubeChannelUrl(input: string): ChannelUrlResult {
   }
 
   if (first.startsWith("@")) {
+    const handle = foldName(first);
     return {
       ok: true,
       ref: {
         kind: "handle",
-        value: first,
-        url: `https://www.youtube.com/${first}`,
+        value: handle,
+        url: `https://www.youtube.com/${handle}`,
       },
     };
   }
@@ -147,35 +170,38 @@ export function parseYouTubeChannelUrl(input: string): ChannelUrlResult {
   }
 
   if (first === "user" && second) {
+    const user = foldName(second);
     return {
       ok: true,
       ref: {
         kind: "user",
-        value: second,
-        url: `https://www.youtube.com/user/${second}`,
+        value: user,
+        url: `https://www.youtube.com/user/${user}`,
       },
     };
   }
 
   // Legacy vanity urls (`/c/Name`, and the bare `/Name` that predates handles).
   if (first === "c" && second) {
+    const custom = foldName(second);
     return {
       ok: true,
       ref: {
         kind: "custom",
-        value: second,
-        url: `https://www.youtube.com/c/${second}`,
+        value: custom,
+        url: `https://www.youtube.com/c/${custom}`,
       },
     };
   }
 
   if (segments.length === 1 && /^[\w.-]+$/.test(first)) {
+    const custom = foldName(first);
     return {
       ok: true,
       ref: {
         kind: "custom",
-        value: first,
-        url: `https://www.youtube.com/c/${first}`,
+        value: custom,
+        url: `https://www.youtube.com/c/${custom}`,
       },
     };
   }
