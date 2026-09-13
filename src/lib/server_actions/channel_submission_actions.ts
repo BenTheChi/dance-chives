@@ -123,6 +123,97 @@ async function resolveChannel(
 }
 
 /**
+ * What happened to one submitted channel.
+ *
+ * `known` covers already-queued and previously-rejected alike: the submitter
+ * is told the same thing either way, since telling a stranger their suggestion
+ * was turned down invites argument and leaks an editorial judgement.
+ */
+type SubmissionOutcome = {
+  kind: "recorded" | "archived" | "known";
+  name?: string;
+  videoCount?: number;
+};
+
+/**
+ * Resolve, dedupe and record one channel.
+ *
+ * The single and bulk paths share this so they cannot drift: a channel that is
+ * a duplicate when submitted alone must be a duplicate when submitted in a
+ * list of fifty.
+ */
+async function recordSubmission(
+  ref: ParsedChannelRef,
+  rawInput: string,
+  ip: string,
+): Promise<SubmissionOutcome> {
+  const info = await resolveChannel(ref);
+
+  // Is it already in the pipeline? Answered from the manager's own table so
+  // the reply is true rather than reassuring. Matched on the YouTube channel
+  // id when we have one, and on the url otherwise.
+  const archivedRows = await prisma.$queryRaw<Array<{ channel_name: string }>>`
+    SELECT channel_name
+    FROM channel_discovery_channel
+    WHERE channel_id = ${info?.channelId ?? ""}
+       OR lower(channel_url) = lower(${ref.url})
+    LIMIT 1
+  `;
+  const alreadyArchived = archivedRows.length > 0;
+
+  // A channel a human already turned down does not come back into the queue.
+  // With no membership wall anyone can re-submit indefinitely, so without this
+  // one unwanted channel would generate review work forever.
+  //
+  // findFirst rather than findUnique: the uniqueness of `youtubeChannelId` is
+  // a PARTIAL index created in SQL (Prisma cannot express one), so the
+  // generated client does not know the column is unique. The database still
+  // enforces it — this is the read side agreeing with what Prisma can see.
+  const existing = await prisma.channelSubmission.findFirst({
+    where: info?.channelId
+      ? { youtubeChannelId: info.channelId }
+      : { channelUrl: ref.url },
+  });
+
+  if (existing?.status === "rejected") {
+    return { kind: "known" };
+  }
+
+  const shared = {
+    channelUrl: ref.url,
+    rawInput: rawInput.trim(),
+    youtubeChannelId: info?.channelId,
+    channelName: info?.title,
+    videoCount: info?.videoCount,
+    alreadyArchived,
+    submitterIp: ip === "unknown" ? undefined : ip,
+  };
+
+  // Re-submitting the same channel is the same claim, not a new one — keyed on
+  // the channel rather than on a member, since there is no member. An existing
+  // row is updated in place so a second submitter refreshes the metadata
+  // instead of stacking a duplicate for review.
+  if (existing) {
+    await prisma.channelSubmission.update({
+      where: { id: existing.id },
+      data: shared,
+    });
+  } else {
+    await prisma.channelSubmission.create({
+      data: { ...shared, status: alreadyArchived ? "duplicate" : "pending" },
+    });
+  }
+
+  const name = info?.title ?? archivedRows[0]?.channel_name;
+
+  return {
+    kind: alreadyArchived ? "archived" : "recorded",
+    name,
+    videoCount: info?.videoCount,
+  };
+}
+
+/**
  * Accept anyone's claim that a channel is worth archiving.
  *
  * Open to the public. The review status is the gate: a submission does nothing
@@ -156,77 +247,21 @@ export async function submitChannel(
   }
 
   const ref = parsed.ref;
-  const info = await resolveChannel(ref);
+  const outcome = await recordSubmission(ref, rawInput, ip);
 
-  // Is it already in the pipeline? Answered from the manager's own table so
-  // the reply is true rather than reassuring. Matched on the YouTube channel
-  // id when we have one, and on the url otherwise.
-  const archivedRows = await prisma.$queryRaw<Array<{ channel_name: string }>>`
-    SELECT channel_name
-    FROM channel_discovery_channel
-    WHERE channel_id = ${info?.channelId ?? ""}
-       OR lower(channel_url) = lower(${ref.url})
-    LIMIT 1
-  `;
-  const alreadyArchived = archivedRows.length > 0;
-
-  // A channel a human already turned down does not come back into the queue.
-  // With no membership wall anyone can re-submit indefinitely, so without this
-  // one unwanted channel would generate review work forever. The submitter is
-  // deliberately NOT told it was rejected — that invites argument and leaks an
-  // editorial judgement — so this returns the same wording as any other
-  // already-known channel.
-  // findFirst rather than findUnique: the uniqueness of `youtubeChannelId` is
-  // a PARTIAL index created in SQL (Prisma cannot express one), so the
-  // generated client does not know the column is unique. The database still
-  // enforces it — this is the read side agreeing with what Prisma can see.
-  const existing = await prisma.channelSubmission.findFirst({
-    where: info?.channelId
-      ? { youtubeChannelId: info.channelId }
-      : { channelUrl: ref.url },
-  });
-
-  if (existing?.status === "rejected") {
+  if (outcome.kind === "known") {
     return { status: "success", message: ALREADY_KNOWN_MESSAGE };
   }
 
-  const shared = {
-    channelUrl: ref.url,
-    rawInput: rawInput.trim(),
-    youtubeChannelId: info?.channelId,
-    channelName: info?.title,
-    videoCount: info?.videoCount,
-    alreadyArchived,
-    submitterIp: ip === "unknown" ? undefined : ip,
-  };
+  const displayName = outcome.name ?? ref.value;
 
-  // Re-submitting the same channel is the same claim, not a new one — now
-  // keyed on the channel rather than on a member, since there is no member.
-  // An existing row is updated in place so a second submitter refreshes the
-  // metadata instead of stacking a duplicate for review.
-  if (existing) {
-    await prisma.channelSubmission.update({
-      where: { id: existing.id },
-      data: shared,
-    });
-  } else {
-    await prisma.channelSubmission.create({
-      data: {
-        ...shared,
-        status: alreadyArchived ? "duplicate" : "pending",
-      },
-    });
-  }
-
-  const displayName = info?.title ?? archivedRows[0]?.channel_name ?? ref.value;
-
-  if (alreadyArchived) {
+  if (outcome.kind === "archived") {
     return {
       status: "success",
       message: `${displayName} is already being archived — thanks for checking.`,
       resolved: {
         name: displayName,
-        videoCount: info?.videoCount,
+        videoCount: outcome.videoCount,
         alreadyArchived: true,
       },
     };
@@ -237,8 +272,117 @@ export async function submitChannel(
     message: "Thank you — we'll take a look at this channel.",
     resolved: {
       name: displayName,
-      videoCount: info?.videoCount,
+      videoCount: outcome.videoCount,
       alreadyArchived: false,
     },
+  };
+}
+
+/**
+ * Lines accepted in one bulk paste.
+ *
+ * Not a quota limit — the manager resolves 50 ids in a single call for one
+ * unit — but this form resolves one at a time, so each line is a unit against
+ * the budget the ingest pipeline depends on. Combined with the IP rate limit
+ * (5 pastes per 10 minutes) that caps a single submitter at 1,000 units of the
+ * 10,000/day budget, which is a real ceiling rather than a comfortable one.
+ */
+const MAX_BULK_LINES = 20;
+
+/**
+ * Accept a pasted list of channels.
+ *
+ * Deduping is automatic and reported: the counts answer "how many were
+ * actually added", which is the question someone pasting fifty lines is
+ * asking. A large review queue is the intended outcome of this feature, not a
+ * failure of it — the queue is where volume is meant to accumulate.
+ *
+ * Every line goes through the same recordSubmission as a single submission, so
+ * the two paths cannot dedupe differently.
+ */
+export async function submitChannels(
+  _previous: ChannelSubmissionFormState,
+  formData: FormData,
+): Promise<ChannelSubmissionFormState> {
+  const ip = getClientIp(await headers());
+  if (!withinRateLimit(ip, Date.now())) {
+    return {
+      status: "error",
+      message: "That's a lot of submissions. Try again in a few minutes.",
+    };
+  }
+
+  const rawInput = String(formData.get("channels") ?? "");
+
+  // Commas AND newlines: a list off a spreadsheet uses one, a list out of a
+  // chat message uses the other, and a hand-typed list uses both.
+  const lines = rawInput
+    .split(/[\s,]+/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+
+  if (lines.length === 0) {
+    return { status: "error", message: "Paste at least one channel URL." };
+  }
+
+  if (lines.length > MAX_BULK_LINES) {
+    return {
+      status: "error",
+      message: `That's ${lines.length} channels — please paste at most ${MAX_BULK_LINES} at a time.`,
+    };
+  }
+
+  let added = 0;
+  let known = 0;
+  let unreadable = 0;
+  const seen = new Set<string>();
+
+  for (const line of lines) {
+    const parsed = parseYouTubeChannelUrl(line);
+
+    if (!parsed.ok || !parsed.ref) {
+      unreadable += 1;
+      continue;
+    }
+
+    // The same channel written three ways in one paste is one claim. Caught
+    // here rather than by the database so the count reported back is honest
+    // about what the paste contained. Case is not a factor: the parser folds
+    // handles, so `@Name` and `@name` produce one url.
+    if (seen.has(parsed.ref.url)) {
+      continue;
+    }
+    seen.add(parsed.ref.url);
+
+    const outcome = await recordSubmission(parsed.ref, line, ip);
+
+    if (outcome.kind === "recorded") {
+      added += 1;
+    } else {
+      known += 1;
+    }
+  }
+
+  const parts: string[] = [];
+  if (added > 0) {
+    parts.push(`${added} channel${added === 1 ? "" : "s"} added`);
+  }
+  if (known > 0) {
+    parts.push(`${known} already known`);
+  }
+  if (unreadable > 0) {
+    parts.push(`${unreadable} we couldn't read`);
+  }
+
+  if (added === 0 && known === 0) {
+    return {
+      status: "error",
+      message: "None of those looked like YouTube channel links.",
+    };
+  }
+
+  return {
+    status: "success",
+    message: `Thank you — ${parts.join(", ")}.`,
   };
 }

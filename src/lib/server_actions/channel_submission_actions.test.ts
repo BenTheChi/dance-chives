@@ -28,7 +28,10 @@ jest.mock("next/headers", () => ({
   headers: () => mockHeaders(),
 }));
 
-import { submitChannel } from "@/lib/server_actions/channel_submission_actions";
+import {
+  submitChannel,
+  submitChannels,
+} from "@/lib/server_actions/channel_submission_actions";
 import { initialChannelSubmissionState } from "@/lib/submissions/channel-submission-state";
 
 function formWith(url: string): FormData {
@@ -154,5 +157,96 @@ describe("submitChannel", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
 
     fetchSpy.mockRestore();
+  });
+});
+
+describe("submitChannels (bulk)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHeaders.mockImplementation(() => freshIp());
+    mockPrisma.$queryRaw.mockResolvedValue([]);
+    mockPrisma.channelSubmission.findFirst.mockResolvedValue(null);
+    mockPrisma.channelSubmission.create.mockResolvedValue({ id: "new" });
+    mockPrisma.channelSubmission.update.mockResolvedValue({ id: "existing" });
+    delete process.env.YOUTUBE_API_KEY;
+  });
+
+  const bulkSubmit = (channels: string) => {
+    const data = new FormData();
+    data.set("channels", channels);
+    return submitChannels(initialChannelSubmissionState, data);
+  };
+
+  it("splits on newlines and commas alike", async () => {
+    const result = await bulkSubmit(
+      "https://www.youtube.com/@one, https://www.youtube.com/@two\n@three",
+    );
+
+    expect(result.status).toBe("success");
+    expect(mockPrisma.channelSubmission.create).toHaveBeenCalledTimes(3);
+    expect(result.message).toContain("3 channels added");
+  });
+
+  /**
+   * The count reported back has to be honest about what the paste contained,
+   * so a channel named three ways is caught before the write — including
+   * across case, since the parser folds handles.
+   */
+  it("dedupes within a single paste, case included", async () => {
+    const result = await bulkSubmit(
+      "@example\nhttps://www.youtube.com/@example\n@EXAMPLE",
+    );
+
+    expect(mockPrisma.channelSubmission.create).toHaveBeenCalledTimes(1);
+    expect(result.message).toContain("1 channel added");
+  });
+
+  it("reports what was added, already known, and unreadable", async () => {
+    mockPrisma.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ channel_name: "Known" }]);
+
+    // Splitting is on any whitespace, so each junk token counts separately —
+    // these are two tokens, not one line.
+    const result = await bulkSubmit(
+      "@fresh\n@known\nhttps://vimeo.com/12345\ngibberish",
+    );
+
+    expect(result.message).toContain("1 channel added");
+    expect(result.message).toContain("1 already known");
+    expect(result.message).toContain("2 we couldn't read");
+  });
+
+  it("refuses a paste longer than the cap without writing anything", async () => {
+    const tooMany = Array.from(
+      { length: 21 },
+      (_, i) => `https://www.youtube.com/@channel${i}`,
+    ).join("\n");
+
+    const result = await bulkSubmit(tooMany);
+
+    expect(result.status).toBe("error");
+    expect(result.message).toMatch(/at most 20/);
+    expect(mockPrisma.channelSubmission.create).not.toHaveBeenCalled();
+  });
+
+  it("errors when nothing in the paste was a channel", async () => {
+    const result = await bulkSubmit("not a link\nalso not a link");
+
+    expect(result.status).toBe("error");
+    expect(mockPrisma.channelSubmission.create).not.toHaveBeenCalled();
+  });
+
+  it("is rate limited by the same counter as single submissions", async () => {
+    const sameIp = new Headers({ "x-forwarded-for": "198.51.100.44" });
+    mockHeaders.mockImplementation(() => sameIp);
+
+    for (let i = 0; i < 5; i++) {
+      await bulkSubmit("https://www.youtube.com/@example");
+    }
+
+    const blocked = await bulkSubmit("https://www.youtube.com/@example");
+    expect(blocked.status).toBe("error");
+    expect(blocked.message).toMatch(/try again/i);
   });
 });

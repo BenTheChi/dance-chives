@@ -7,7 +7,10 @@ import Link from "next/link";
 import { Check, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { submitChannel } from "@/lib/server_actions/channel_submission_actions";
+import {
+  submitChannel,
+  submitChannels,
+} from "@/lib/server_actions/channel_submission_actions";
 import { initialChannelSubmissionState } from "@/lib/submissions/channel-submission-state";
 import { ArchivedChannelList } from "@/components/forms/ArchivedChannelList";
 import type { ArchivedChannel } from "@/db/queries/archived-channels";
@@ -50,8 +53,13 @@ export function ChannelSubmissionForm({
   archivedChannels?: ArchivedChannel[];
 }) {
   const { status: sessionStatus } = useSession();
+  // Bulk is a deliberate second mode rather than a textarea that always
+  // accepts lists: one field with an archived-channel list under it is the
+  // affordance for "is this one missing?", which is the common case. Pasting
+  // twenty at once is a different, rarer intent and gets its own surface.
+  const [bulk, setBulk] = useState(false);
   const [state, formAction] = useActionState(
-    submitChannel,
+    bulk ? submitChannels : submitChannel,
     initialChannelSubmissionState,
   );
   // Mirrors the input so the archived list can filter on every keystroke. The
@@ -67,10 +75,20 @@ export function ChannelSubmissionForm({
         <h3 className="!text-2xl sm:!text-3xl !font-rubik-mono-one text-outline mb-2 text-center">
           Know a channel we&apos;re missing?
         </h3>
-        <p className="text-center mb-6 max-w-xl">
+        <p className="text-center mb-4 max-w-xl">
           Paste a YouTube channel that posts battle footage and we&apos;ll look
           at archiving it.
         </p>
+
+        {state.status !== "success" && (
+          <button
+            type="button"
+            onClick={() => setBulk((on) => !on)}
+            className="mb-4 text-sm underline underline-offset-2 hover:no-underline"
+          >
+            {bulk ? "Just one channel" : "Got a whole list? Add several at once"}
+          </button>
+        )}
 
         {state.status === "success" ? (
           <div className="w-full rounded-sm border-2 border-primary-light bg-charcoal p-4">
@@ -114,27 +132,53 @@ export function ChannelSubmissionForm({
           </div>
         ) : (
           <form action={formAction} className="w-full">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1 min-w-0">
-                <Youtube
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"
-                />
-                <Input
-                  id="channelUrl"
-                  name="channelUrl"
-                  type="text"
+            {bulk ? (
+              <div className="flex flex-col gap-3">
+                <textarea
+                  id="channels"
+                  name="channels"
                   required
-                  autoComplete="off"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search or paste a channel URL"
-                  aria-label="YouTube channel URL"
-                  className="pl-10 h-11"
+                  rows={6}
+                  placeholder={
+                    "One per line, or separated by commas:\n" +
+                    "https://www.youtube.com/@example\n" +
+                    "@another\n" +
+                    "https://www.youtube.com/@onemore"
+                  }
+                  aria-label="YouTube channel URLs"
+                  className="w-full rounded-sm border-2 border-primary-light bg-charcoal p-3 text-sm font-mono"
                 />
+                <p className="text-sm text-muted-foreground">
+                  Up to 20 at a time. We&apos;ll skip any we already have and
+                  tell you how many were added.
+                </p>
+                <div>
+                  <SubmitButton />
+                </div>
               </div>
-              <SubmitButton />
-            </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 min-w-0">
+                  <Youtube
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"
+                  />
+                  <Input
+                    id="channelUrl"
+                    name="channelUrl"
+                    type="text"
+                    required
+                    autoComplete="off"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search or paste a channel URL"
+                    aria-label="YouTube channel URL"
+                    className="pl-10 h-11"
+                  />
+                </div>
+                <SubmitButton />
+              </div>
+            )}
 
             {state.status === "error" && (
               <p className="text-red-300 font-semibold mt-3" role="alert">
@@ -142,7 +186,12 @@ export function ChannelSubmissionForm({
               </p>
             )}
 
-            <ArchivedChannelList channels={archivedChannels} query={query} />
+            {/* The archived list is the single-channel affordance: it answers
+                "is this one already here?" as you type. A bulk paste is not a
+                search, so it would only be noise there. */}
+            {!bulk && (
+              <ArchivedChannelList channels={archivedChannels} query={query} />
+            )}
           </form>
         )}
       </div>
