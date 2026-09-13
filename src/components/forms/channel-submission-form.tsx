@@ -143,14 +143,15 @@ export function ChannelSubmissionForm({
                     "One per line, or separated by commas:\n" +
                     "https://www.youtube.com/@example\n" +
                     "@another\n" +
-                    "https://www.youtube.com/@onemore"
+                    "onemore"
                   }
                   aria-label="YouTube channel URLs"
                   className="w-full rounded-sm border-2 border-primary-light bg-charcoal p-3 text-sm font-mono"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Up to 20 at a time. We&apos;ll skip any we already have and
-                  tell you how many were added.
+                  Up to 50 at a time — URLs, @handles, or just the channel
+                  name. We&apos;ll skip any we already have and tell you how
+                  many were added.
                 </p>
                 <div>
                   <SubmitButton />
@@ -171,7 +172,7 @@ export function ChannelSubmissionForm({
                     autoComplete="off"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search or paste a channel URL"
+                    placeholder="Search, or paste a channel URL or name"
                     aria-label="YouTube channel URL"
                     className="pl-10 h-11"
                   />

@@ -108,6 +108,34 @@ export function parseYouTubeChannelUrl(input: string): ChannelUrlResult {
     };
   }
 
+  // A bare handle with the @ left off — `bitgoeuldancers` rather than
+  // `@bitgoeuldancers`. People copy the name off a channel page or type it
+  // from memory, and the @ is the easiest character in the world to drop.
+  //
+  // Placed after the channel-id check so a `UC…` id is still read as an id,
+  // and before the url parsing below because that is what currently swallows
+  // these: `new URL("https://bitgoeuldancers")` parses cleanly as a HOSTNAME,
+  // so a bare name was being rejected as "not a YouTube link" — a confusing
+  // message for something that is exactly what was asked for.
+  //
+  // Deliberately narrow: no dot and no slash. A token containing either is far
+  // more likely to be a malformed url or a different site, and should keep
+  // falling through to the url parser so it gets the specific error it
+  // deserves. That also means a legacy vanity name with a dot in it is not
+  // caught here, which is the right trade — it is rare, and `@name` and full
+  // urls both still work.
+  if (/^[\w-]{3,60}$/.test(trimmed)) {
+    const handle = foldName(`@${trimmed}`);
+    return {
+      ok: true,
+      ref: {
+        kind: "handle",
+        value: handle,
+        url: `https://www.youtube.com/${handle}`,
+      },
+    };
+  }
+
   let url: URL;
   try {
     url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);

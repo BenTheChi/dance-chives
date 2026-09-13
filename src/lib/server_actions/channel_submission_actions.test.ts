@@ -206,10 +206,11 @@ describe("submitChannels (bulk)", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ channel_name: "Known" }]);
 
-    // Splitting is on any whitespace, so each junk token counts separately —
-    // these are two tokens, not one line.
+    // Unreadable now means genuinely unreadable: since a bare word is a valid
+    // channel name, only things that cannot be one — another site's url, a
+    // video link — land in that bucket.
     const result = await bulkSubmit(
-      "@fresh\n@known\nhttps://vimeo.com/12345\ngibberish",
+      "@fresh\n@known\nhttps://vimeo.com/12345\nhttps://youtu.be/abc123",
     );
 
     expect(result.message).toContain("1 channel added");
@@ -219,19 +220,65 @@ describe("submitChannels (bulk)", () => {
 
   it("refuses a paste longer than the cap without writing anything", async () => {
     const tooMany = Array.from(
-      { length: 21 },
+      { length: 51 },
       (_, i) => `https://www.youtube.com/@channel${i}`,
     ).join("\n");
 
     const result = await bulkSubmit(tooMany);
 
     expect(result.status).toBe("error");
-    expect(result.message).toMatch(/at most 20/);
+    expect(result.message).toMatch(/at most 50/);
     expect(mockPrisma.channelSubmission.create).not.toHaveBeenCalled();
   });
 
-  it("errors when nothing in the paste was a channel", async () => {
-    const result = await bulkSubmit("not a link\nalso not a link");
+  it("accepts a full 50 and takes bare names among them", async () => {
+    const fifty = Array.from({ length: 50 }, (_, i) => `channel${i}`).join(
+      "\n",
+    );
+
+    const result = await bulkSubmit(fifty);
+
+    expect(result.status).toBe("success");
+    expect(mockPrisma.channelSubmission.create).toHaveBeenCalledTimes(50);
+  });
+
+  /**
+   * 50 ids in one call for one quota unit is what makes the cap affordable —
+   * without batching each line would spend its own unit against the budget
+   * the ingest pipeline depends on.
+   */
+  it("resolves channel ids in a single batched call", async () => {
+    process.env.YOUTUBE_API_KEY = "test-key";
+    const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [] }),
+    } as unknown as Response);
+
+    const ids = [
+      "UCdC6TCuRwCUWExa5XhtVVNQ",
+      "UCKHOlclseeJlvy07RHiMI-A",
+      "UCr0T5S5UhRZ9RESlMckKKmg",
+    ];
+    await bulkSubmit(ids.join("\n"));
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const url = String(fetchSpy.mock.calls[0][0]);
+    for (const id of ids) {
+      expect(decodeURIComponent(url)).toContain(id);
+    }
+
+    fetchSpy.mockRestore();
+  });
+
+  /**
+   * The cost of accepting bare names: a single mistyped word is now a
+   * submission rather than an error, because it is indistinguishable from a
+   * channel name. Only input that CANNOT be a name still errors. That is the
+   * right trade for a review-gated queue — a junk row costs one glance,
+   * whereas rejecting a real channel name costs the submission.
+   */
+  it("errors only when nothing in the paste could be a channel at all", async () => {
+    const result = await bulkSubmit("https://vimeo.com/1\nhttps://vimeo.com/2");
 
     expect(result.status).toBe("error");
     expect(mockPrisma.channelSubmission.create).not.toHaveBeenCalled();

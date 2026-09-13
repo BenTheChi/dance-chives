@@ -117,6 +117,51 @@ describe("parseYouTubeChannelUrl", () => {
     );
   });
 
+  /**
+   * The @ is the easiest character in the world to drop, and a bare name used
+   * to be rejected as "not a YouTube link" — because `new URL("https://name")`
+   * parses cleanly as a hostname — which is a baffling answer to something
+   * that is exactly what the form asked for.
+   */
+  it("accepts a bare channel name with the @ left off", () => {
+    expect(parseYouTubeChannelUrl("bitgoeuldancers").ref).toEqual({
+      kind: "handle",
+      value: "@bitgoeuldancers",
+      url: "https://www.youtube.com/@bitgoeuldancers",
+    });
+
+    // And it folds, so the @-less spelling dedupes against every other one.
+    const spellings = [
+      "BitgoeulDancers",
+      "@bitgoeuldancers",
+      "https://www.youtube.com/@BitgoeulDancers",
+    ].map((s) => parseYouTubeChannelUrl(s).ref?.url);
+
+    expect(new Set(spellings).size).toBe(1);
+  });
+
+  /**
+   * The bare-name branch must not swallow things that deserve a specific
+   * error, so it is deliberately narrow: no dots, no slashes.
+   */
+  it("does not let the bare-name rule swallow real urls or junk", () => {
+    // Still a channel id, not a handle.
+    expect(parseYouTubeChannelUrl("UCKHOlclseeJlvy07RHiMI-A").ref?.kind).toBe(
+      "id",
+    );
+    // A dot means it is a url, and a non-YouTube one gets the right message.
+    expect(parseYouTubeChannelUrl("vimeo.com").error).toBe("not_youtube");
+    // A path still reads as a vanity url, not a bare name.
+    expect(
+      parseYouTubeChannelUrl("https://www.youtube.com/c/SomeName").ref?.kind,
+    ).toBe("custom");
+    // Too short to be a handle, and multi-word text is not a name.
+    expect(parseYouTubeChannelUrl("ab").error).toBe("not_youtube");
+    expect(parseYouTubeChannelUrl("not a url at all !!").error).toBe(
+      "unrecognized",
+    );
+  });
+
   it("rejects everything else with a reason", () => {
     expect(parseYouTubeChannelUrl("https://vimeo.com/12345").error).toBe(
       "not_youtube",

@@ -123,6 +123,63 @@ async function resolveChannel(
 }
 
 /**
+ * Resolve many channel ids in ONE call.
+ *
+ * `channels.list` takes up to 50 ids per request and parts are unbilled, so
+ * the whole batch costs a single quota unit — the same economics the manager's
+ * sweep relies on. This is what makes a 50-line paste affordable; without it
+ * each line would be its own unit against the budget the ingest pipeline
+ * depends on.
+ *
+ * Only `UC…` ids can be batched: `forHandle` accepts one handle per call, so
+ * handle-form lines still fall back to resolveChannel individually.
+ *
+ * Failure is non-fatal, as everywhere else here: an unresolved channel is
+ * still a lead worth recording.
+ */
+async function resolveChannelsBatch(
+  ids: string[],
+): Promise<Map<string, YouTubeChannelInfo>> {
+  const found = new Map<string, YouTubeChannelInfo>();
+  const key = process.env.YOUTUBE_API_KEY;
+  if (!key || ids.length === 0) return found;
+
+  const endpoint = new URL("https://www.googleapis.com/youtube/v3/channels");
+  endpoint.searchParams.set("part", "snippet,statistics");
+  endpoint.searchParams.set("key", key);
+  endpoint.searchParams.set("id", ids.join(","));
+  endpoint.searchParams.set("maxResults", "50");
+
+  try {
+    const response = await fetch(endpoint, { cache: "no-store" });
+    if (!response.ok) return found;
+
+    const data = (await response.json()) as {
+      items?: Array<{
+        id?: string;
+        snippet?: { title?: string };
+        statistics?: { videoCount?: string };
+      }>;
+    };
+
+    for (const item of data.items ?? []) {
+      if (!item.id || !item.snippet?.title) continue;
+
+      const videoCount = Number(item.statistics?.videoCount);
+      found.set(item.id, {
+        channelId: item.id,
+        title: item.snippet.title,
+        videoCount: Number.isFinite(videoCount) ? videoCount : undefined,
+      });
+    }
+  } catch {
+    // Fall through: the caller records what it could not resolve.
+  }
+
+  return found;
+}
+
+/**
  * What happened to one submitted channel.
  *
  * `known` covers already-queued and previously-rejected alike: the submitter
@@ -146,8 +203,10 @@ async function recordSubmission(
   ref: ParsedChannelRef,
   rawInput: string,
   ip: string,
+  /** Already resolved by the batch call, when the caller had one. */
+  prefetched?: YouTubeChannelInfo | null,
 ): Promise<SubmissionOutcome> {
-  const info = await resolveChannel(ref);
+  const info = prefetched !== undefined ? prefetched : await resolveChannel(ref);
 
   // Is it already in the pipeline? Answered from the manager's own table so
   // the reply is true rather than reassuring. Matched on the YouTube channel
@@ -281,13 +340,17 @@ export async function submitChannel(
 /**
  * Lines accepted in one bulk paste.
  *
- * Not a quota limit — the manager resolves 50 ids in a single call for one
- * unit — but this form resolves one at a time, so each line is a unit against
- * the budget the ingest pipeline depends on. Combined with the IP rate limit
- * (5 pastes per 10 minutes) that caps a single submitter at 1,000 units of the
- * 10,000/day budget, which is a real ceiling rather than a comfortable one.
+ * 50 is the YouTube API's own per-call id ceiling, so a paste of channel ids
+ * resolves in a single request for one quota unit — see resolveChannelsBatch.
+ *
+ * Handles are the expensive case: `forHandle` takes one handle per call, so a
+ * paste of 50 handles is 50 units. With the 5-per-10-minute IP limit that
+ * bounds one submitter to 2,500 units of the 10,000/day budget shared with the
+ * ingest pipeline. Tolerable, but it is the number to watch if the form is
+ * ever abused — the cheap fix is dropping the per-handle fallback, not
+ * lowering this.
  */
-const MAX_BULK_LINES = 20;
+const MAX_BULK_LINES = 50;
 
 /**
  * Accept a pasted list of channels.
@@ -337,9 +400,22 @@ export async function submitChannels(
   let unreadable = 0;
   const seen = new Set<string>();
 
-  for (const line of lines) {
-    const parsed = parseYouTubeChannelUrl(line);
+  // Parse everything first so the id-form lines can be resolved together: 50
+  // ids, one call, one quota unit. Handles still cost a unit each, so this is
+  // only a partial saving — but it is the difference between a paste of ids
+  // being free and being 50 units.
+  const parsedLines = lines.map((line) => ({
+    line,
+    parsed: parseYouTubeChannelUrl(line),
+  }));
 
+  const batched = await resolveChannelsBatch(
+    parsedLines
+      .filter(({ parsed }) => parsed.ok && parsed.ref?.kind === "id")
+      .map(({ parsed }) => parsed.ref!.value),
+  );
+
+  for (const { line, parsed } of parsedLines) {
     if (!parsed.ok || !parsed.ref) {
       unreadable += 1;
       continue;
@@ -354,7 +430,15 @@ export async function submitChannels(
     }
     seen.add(parsed.ref.url);
 
-    const outcome = await recordSubmission(parsed.ref, line, ip);
+    // An id line was covered by the batch above — pass what came back (or
+    // null, meaning "resolved to nothing") so it is not looked up again.
+    // A handle line passes undefined and resolves individually.
+    const prefetched =
+      parsed.ref.kind === "id"
+        ? (batched.get(parsed.ref.value) ?? null)
+        : undefined;
+
+    const outcome = await recordSubmission(parsed.ref, line, ip, prefetched);
 
     if (outcome.kind === "recorded") {
       added += 1;
