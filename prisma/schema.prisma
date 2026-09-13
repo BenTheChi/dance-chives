@@ -42,8 +42,8 @@ model User {
   // Notification relationships
   notifications Notification[]
 
-  // Member-submitted YouTube channels
-  channelSubmissions ChannelSubmission[]
+  // Channel submissions are deliberately NOT related to a user — they are
+  // public and detached. See the ChannelSubmission model.
 
   // Fact corrections submitted against published events
   contributions         Contribution[] @relation("ContributionAuthor")
@@ -537,14 +537,37 @@ model ChannelSubmission {
   /// rather than silently discarded.
   alreadyArchived Boolean @default(false)
 
-  /// Members only (decision 1) — never null.
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Deliberately NOT tied to a user. The review status is the gate — nothing
+  /// acts on a row until a human accepts it in the manager — so membership was
+  /// a second, redundant one, and the members-only form produced zero
+  /// submissions while it was live. Detached also means a submission survives
+  /// the deletion of whatever account happened to send it: it is an archival
+  /// claim about the world, not a piece of someone's profile.
+  ///
+  /// Kept only for abuse triage. Never displayed, never used to identify a
+  /// person.
+  submitterIp String?
 
   status ChannelSubmissionStatus @default(pending)
   notes  String?
 
-  @@unique([userId, channelUrl])
+  /// One row per channel: a second submitter updates the same claim rather
+  /// than stacking another, and rejection is recorded against this value, so
+  /// it has to identify the channel's standing decision.
+  ///
+  /// The real constraint is a PARTIAL unique index —
+  /// `UNIQUE (youtubeChannelId) WHERE youtubeChannelId IS NOT NULL` — created
+  /// by migration, because Prisma cannot express a partial index. It is
+  /// deliberately not declared as `@@unique` here: Postgres already treats
+  /// nulls as distinct, so the two agree in practice, but writing it as a
+  /// plain unique would make this file claim a constraint whose real shape
+  /// lives in SQL. The null case is load-bearing rather than incidental —
+  /// `youtubeChannelId` is null whenever the YouTube lookup failed, and
+  /// refusing those submissions would discard leads for a reason the submitter
+  /// can neither see nor fix. They fall back to `channelUrl` and are deduped
+  /// by eye in review.
+  @@index([youtubeChannelId])
+  @@index([channelUrl])
   @@index([status])
   @@index([createdAt])
   @@map("channel_submissions")

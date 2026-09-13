@@ -37,6 +37,12 @@ function SubmitButton() {
  * anyone can answer it, including someone who has never run an event. The
  * echo-back of channel name and video count is the whole UX: it proves the
  * submission was understood before the user walks away.
+ *
+ * Open to signed-out visitors. The review queue in the manager is the gate —
+ * nothing acts on a submission until a human accepts it — so requiring an
+ * account was a second, redundant one that cost every drive-by suggestion.
+ * Signed-out submitters get the sign-up pitch AFTER they have contributed
+ * something, which is the only moment it has earned a hearing.
  */
 export function ChannelSubmissionForm({
   archivedChannels = [],
@@ -88,9 +94,25 @@ export function ChannelSubmissionForm({
               </div>
             </div>
 
+            {!isAuthenticated && (
+              <div className="mt-4 pt-4 border-t-2 border-primary-light/40">
+                <p className="text-sm">
+                  Want to do more? An account lets you correct event details —
+                  dates, cities, dancer names — across the archive.{" "}
+                  <Link
+                    href="/signup"
+                    className="font-bold underline underline-offset-2"
+                  >
+                    Create one
+                  </Link>
+                  .
+                </p>
+              </div>
+            )}
+
             <ArchivedChannelList channels={archivedChannels} query="" />
           </div>
-        ) : isAuthenticated ? (
+        ) : (
           <form action={formAction} className="w-full">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1 min-w-0">
@@ -122,24 +144,6 @@ export function ChannelSubmissionForm({
 
             <ArchivedChannelList channels={archivedChannels} query={query} />
           </form>
-        ) : (
-          // Membership is the bar for every write on the site, so the form is
-          // not shown to a signed-out visitor at all — an input that rejects
-          // you after you have typed into it is worse than one that says up
-          // front what it needs.
-          <div className="w-full">
-            <div className="rounded-sm border-2 border-dashed border-primary-light/60 p-6 text-center">
-              <p className="mb-4">Sign in to suggest a channel.</p>
-              <Link href="/login">
-                <Button className="font-bold">Sign in</Button>
-              </Link>
-            </div>
-
-            {/* Reading which channels are archived is not a write, so the
-                list is shown to everyone — it is also the most concrete
-                argument for signing in. */}
-            <ArchivedChannelList channels={archivedChannels} query="" />
-          </div>
         )}
       </div>
     </section>

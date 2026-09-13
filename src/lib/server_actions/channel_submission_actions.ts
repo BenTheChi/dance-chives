@@ -1,18 +1,67 @@
 "use server";
 
-import { auth } from "@/auth";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/primsa";
 import {
   CHANNEL_URL_ERROR_MESSAGES,
   parseYouTubeChannelUrl,
   type ParsedChannelRef,
 } from "@/lib/submissions/youtube-channel-url";
-import type { ChannelSubmissionFormState } from "@/lib/submissions/channel-submission-state";
+import {
+  ALREADY_KNOWN_MESSAGE,
+  type ChannelSubmissionFormState,
+} from "@/lib/submissions/channel-submission-state";
 
 interface YouTubeChannelInfo {
   channelId: string;
   title: string;
   videoCount?: number;
+}
+
+/**
+ * Rate limiting, ported from the playlist submission flow this replaces.
+ *
+ * Membership used to be the throttle. Without it, this is the only thing
+ * between a public form and the YouTube quota the ingest pipeline depends on —
+ * so the limit is checked BEFORE any API call, and a blocked request costs
+ * nothing.
+ *
+ * The counter lives in process memory, which means it resets on cold start and
+ * is not shared between serverless instances: a soft limit, not a hard one.
+ * That was judged acceptable for the old flow against the same threat model —
+ * a low-value target where the real gate is that nothing acts on a submission
+ * until a human accepts it. If abuse ever materialises, this moves to a table.
+ */
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX = 5;
+
+const ipSubmissionTimestamps = new Map<string, number[]>();
+
+function getClientIp(allHeaders: Headers): string {
+  const forwardedFor = allHeaders.get("x-forwarded-for");
+  const firstIp = forwardedFor?.split(",")[0]?.trim();
+  if (firstIp) return firstIp;
+
+  return (
+    allHeaders.get("x-real-ip")?.trim() ??
+    allHeaders.get("cf-connecting-ip")?.trim() ??
+    "unknown"
+  );
+}
+
+function withinRateLimit(ip: string, nowMs: number): boolean {
+  const recent = (ipSubmissionTimestamps.get(ip) ?? []).filter(
+    (ts) => ts >= nowMs - RATE_LIMIT_WINDOW_MS,
+  );
+
+  if (recent.length >= RATE_LIMIT_MAX) {
+    ipSubmissionTimestamps.set(ip, recent);
+    return false;
+  }
+
+  recent.push(nowMs);
+  ipSubmissionTimestamps.set(ip, recent);
+  return true;
 }
 
 /**
@@ -74,24 +123,25 @@ async function resolveChannel(
 }
 
 /**
- * Accept a member's claim that a channel is worth archiving.
+ * Accept anyone's claim that a channel is worth archiving.
  *
- * Membership is the bar (decision 1): there is no anonymous path. Unlike a
- * correction, this does not write through to anything live — the manager's
- * `channel_discovery_channel` has no proposed state, and `is_active` gates
- * real ingest, so promoting a submission stays a human act.
+ * Open to the public. The review status is the gate: a submission does nothing
+ * until someone accepts it in the manager, where it becomes a *queued* backlog
+ * row rather than a live channel — `channel_discovery_channel` has no proposed
+ * state and `is_active` gates real ingest, so enrolling a channel stays a
+ * human act. Membership was a second, redundant gate, and the members-only
+ * version of this form produced zero submissions while it was live.
  */
 export async function submitChannel(
   _previous: ChannelSubmissionFormState,
   formData: FormData,
 ): Promise<ChannelSubmissionFormState> {
-  const session = await auth();
-  const userId = session?.user?.id;
-
-  if (!userId) {
+  // Before the YouTube call, so a throttled request spends no quota.
+  const ip = getClientIp(await headers());
+  if (!withinRateLimit(ip, Date.now())) {
     return {
       status: "error",
-      message: "Sign in to submit a channel.",
+      message: "That's a lot of submissions. Try again in a few minutes.",
     };
   }
 
@@ -120,27 +170,53 @@ export async function submitChannel(
   `;
   const alreadyArchived = archivedRows.length > 0;
 
-  // Re-submitting the same channel is the same claim, not a new one.
-  await prisma.channelSubmission.upsert({
-    where: { userId_channelUrl: { userId, channelUrl: ref.url } },
-    create: {
-      userId,
-      channelUrl: ref.url,
-      rawInput: rawInput.trim(),
-      youtubeChannelId: info?.channelId,
-      channelName: info?.title,
-      videoCount: info?.videoCount,
-      alreadyArchived,
-      status: alreadyArchived ? "duplicate" : "pending",
-    },
-    update: {
-      rawInput: rawInput.trim(),
-      youtubeChannelId: info?.channelId,
-      channelName: info?.title,
-      videoCount: info?.videoCount,
-      alreadyArchived,
-    },
+  // A channel a human already turned down does not come back into the queue.
+  // With no membership wall anyone can re-submit indefinitely, so without this
+  // one unwanted channel would generate review work forever. The submitter is
+  // deliberately NOT told it was rejected — that invites argument and leaks an
+  // editorial judgement — so this returns the same wording as any other
+  // already-known channel.
+  // findFirst rather than findUnique: the uniqueness of `youtubeChannelId` is
+  // a PARTIAL index created in SQL (Prisma cannot express one), so the
+  // generated client does not know the column is unique. The database still
+  // enforces it — this is the read side agreeing with what Prisma can see.
+  const existing = await prisma.channelSubmission.findFirst({
+    where: info?.channelId
+      ? { youtubeChannelId: info.channelId }
+      : { channelUrl: ref.url },
   });
+
+  if (existing?.status === "rejected") {
+    return { status: "success", message: ALREADY_KNOWN_MESSAGE };
+  }
+
+  const shared = {
+    channelUrl: ref.url,
+    rawInput: rawInput.trim(),
+    youtubeChannelId: info?.channelId,
+    channelName: info?.title,
+    videoCount: info?.videoCount,
+    alreadyArchived,
+    submitterIp: ip === "unknown" ? undefined : ip,
+  };
+
+  // Re-submitting the same channel is the same claim, not a new one — now
+  // keyed on the channel rather than on a member, since there is no member.
+  // An existing row is updated in place so a second submitter refreshes the
+  // metadata instead of stacking a duplicate for review.
+  if (existing) {
+    await prisma.channelSubmission.update({
+      where: { id: existing.id },
+      data: shared,
+    });
+  } else {
+    await prisma.channelSubmission.create({
+      data: {
+        ...shared,
+        status: alreadyArchived ? "duplicate" : "pending",
+      },
+    });
+  }
 
   const displayName = info?.title ?? archivedRows[0]?.channel_name ?? ref.value;
 
@@ -158,7 +234,7 @@ export async function submitChannel(
 
   return {
     status: "success",
-    message: "Got it. We'll take a look at this channel.",
+    message: "Thank you — we'll take a look at this channel.",
     resolved: {
       name: displayName,
       videoCount: info?.videoCount,

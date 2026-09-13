@@ -18,6 +18,17 @@ export interface ChannelSubmissionFormState {
   resolved?: ResolvedChannel;
 }
 
+/**
+ * Wording shared by every "we already know about this one" answer.
+ *
+ * Deliberately identical whether the channel is archived, already queued, or
+ * was rejected: telling a stranger their suggestion was turned down invites
+ * argument and leaks an editorial judgement, and the three cases are
+ * indistinguishable from outside anyway.
+ */
+export const ALREADY_KNOWN_MESSAGE =
+  "Thanks — we've already got this one on our radar.";
+
 export const initialChannelSubmissionState: ChannelSubmissionFormState = {
   status: "idle",
   message: "",
